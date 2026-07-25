@@ -3,6 +3,9 @@ plugins {
     groovy
 }
 
+group = providers.gradleProperty("group").get()
+version = providers.gradleProperty("version").get()
+
 val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 java {
