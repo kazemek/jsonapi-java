@@ -1,4 +1,4 @@
-package io.github.jsonapi.core
+package io.github.kazemek.jsonapi.core
 
 import spock.lang.Specification
 
