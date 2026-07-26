@@ -3,7 +3,7 @@
 > **Module:** `jsonapi-java-core`  
 > **Packages:** `io.github.kazemek.jsonapi.core.model` and `io.github.kazemek.jsonapi.core.validation`  
 > **Dependencies:** None beyond `java.base`  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -133,13 +133,26 @@ Create Spock specifications mirroring the core packages. Cover:
 
 Wire-format assertions belong to Phase 2.1; Phase 1 tests assert model semantics and validation without a Jackson dependency.
 
+## Module documentation
+
+In-branch amendment (completed while Phase 1.1 was still open): thin dual-audience documentation for `jsonapi-java-core` without duplicating vision, ADRs, or the conformance checklist.
+
+- Module README (`jsonapi-java-core/README.md`) covering purpose, package map, minimal validate flow, non-goals, and a short contributors/agents subsection.
+- `package-info.java` for `core.model`, `core.validation`, and `core.internal`.
+- Focused Javadoc on public entry points (`JsonApiDocument`, sealed data/link types, `JsonApiDocumentValidator`, `ValidationContext`, `ValidationRuleCode`).
+- Root README and `AGENTS.md` links pointing at the module README.
+
 ## Acceptance criteria
 
-- [ ] Every JSON:API v1.1 base document shape needed by the codec is representable without conflating absence and explicit null.
-- [ ] Local invariants cannot be bypassed through a public raw constructor.
-- [ ] Aggregate validation covers included identity, full linkage, local identifiers, and configured additional members.
-- [ ] Collections and nested open JSON containers are defensively copied.
-- [ ] The module has zero third-party runtime dependencies.
-- [ ] Tests cover every enforced MUST/MUST NOT rule with stable diagnostic codes.
-- [ ] `./gradlew :jsonapi-java-core:test` passes.
+- [x] Every JSON:API v1.1 base document shape needed by the codec is representable without conflating absence and explicit null.
+- [x] Local invariants cannot be bypassed through a public raw constructor.
+- [x] Aggregate validation covers included identity, full linkage, local identifiers, and configured additional members.
+- [x] Collections and nested open JSON containers are defensively copied.
+- [x] The module has zero third-party runtime dependencies.
+- [x] Tests cover every enforced MUST/MUST NOT rule with stable diagnostic codes.
+- [x] `./gradlew :jsonapi-java-core:test` passes.
 - [x] The verified base package namespace is documented (ADR-008 / Phase 0.1).
+- [x] Module README orients humans and agents to packages, validate flow, and non-goals.
+- [x] Package docs exist for `core.model`, `core.validation`, and `core.internal`.
+- [x] Public entry-point Javadoc covers construction versus aggregate validation and wire-state distinctions.
+- [x] Root README and `AGENTS.md` link to the module README.

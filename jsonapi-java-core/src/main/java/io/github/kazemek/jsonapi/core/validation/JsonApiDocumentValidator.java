@@ -1,0 +1,958 @@
+package io.github.kazemek.jsonapi.core.validation;
+
+import io.github.kazemek.jsonapi.core.internal.MemberNames;
+import io.github.kazemek.jsonapi.core.internal.SyntaxValidators;
+import io.github.kazemek.jsonapi.core.model.DocumentData;
+import io.github.kazemek.jsonapi.core.model.ErrorObject;
+import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
+import io.github.kazemek.jsonapi.core.model.JsonApiObject;
+import io.github.kazemek.jsonapi.core.model.Link;
+import io.github.kazemek.jsonapi.core.model.Links;
+import io.github.kazemek.jsonapi.core.model.Meta;
+import io.github.kazemek.jsonapi.core.model.Relationship;
+import io.github.kazemek.jsonapi.core.model.RelationshipData;
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
+import io.github.kazemek.jsonapi.core.model.ResourceObject;
+import java.util.ArrayDeque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+
+/**
+ * Aggregate document validation requiring full document context.
+ *
+ * <p>Call after constructing a {@link JsonApiDocument}. Local construction already enforces
+ * single-value invariants; this validator covers identity uniqueness, full linkage,
+ * local-identifier consistency, context-specific links, pagination cardinality, and
+ * extension/profile member policy according to the supplied {@link ValidationContext}.
+ */
+public final class JsonApiDocumentValidator {
+
+  private static final String PATH_DATA = "/data";
+  private static final String PATH_META = "/meta";
+  private static final String PATH_LINKS = "/links";
+  private static final Set<String> PAGINATION_LINKS = Set.of("first", "last", "prev", "next");
+
+  public void validate(JsonApiDocument document, ValidationContext context) {
+    validateAdditionalMembers(document.additionalMembers(), "", context);
+    if (document.meta() != null) {
+      validateMeta(document.meta(), PATH_META, context);
+    }
+    if (document.jsonapi() != null) {
+      validateJsonApiObject(document.jsonapi(), "/jsonapi", context);
+    }
+    if (document.links() != null) {
+      validateLinks(
+          document.links(),
+          PATH_LINKS,
+          context.withLinksContext(LinksContext.TOP_LEVEL),
+          null,
+          null,
+          document.data(),
+          null);
+    }
+    if (document.errors() != null) {
+      validateErrors(document.errors(), context);
+    }
+    if (document.data() != null) {
+      validatePrimaryData(document.data(), context);
+    }
+    if (document.included() != null || document.data() != null) {
+      validateCompoundDocument(document.included(), document.data(), context);
+    }
+  }
+
+  private void validateErrors(List<ErrorObject> errors, ValidationContext context) {
+    for (int index = 0; index < errors.size(); index++) {
+      validateError(errors.get(index), "/errors/" + index, context);
+    }
+  }
+
+  private void validatePrimaryData(DocumentData data, ValidationContext context) {
+    switch (data) {
+      case DocumentData.NullData ignored -> {
+        // Explicit null primary data has no nested members to validate.
+      }
+      case DocumentData.SingleResource(ResourceObject resource) ->
+          validateResource(resource, PATH_DATA, context);
+      case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
+        for (int index = 0; index < resources.size(); index++) {
+          validateResource(resources.get(index), PATH_DATA + "/" + index, context);
+        }
+      }
+      case DocumentData.SingleIdentifier(ResourceIdentifier identifier) ->
+          validateIdentifier(identifier, PATH_DATA, context);
+      case DocumentData.IdentifierCollection(List<ResourceIdentifier> identifiers) -> {
+        ensureUniqueIdentifierIdentities(identifiers, PATH_DATA);
+        for (int index = 0; index < identifiers.size(); index++) {
+          validateIdentifier(identifiers.get(index), PATH_DATA + "/" + index, context);
+        }
+      }
+    }
+  }
+
+  private void validateResource(ResourceObject resource, String path, ValidationContext context) {
+    validateResourceIdentity(resource, path, context);
+    if (resource.attributes() != null) {
+      validateAdditionalMembers(
+          resource.attributes().additionalMembers(), path + "/attributes", context);
+    }
+    if (resource.relationships() != null) {
+      validateResourceRelationships(resource, path, context);
+    }
+    if (resource.links() != null) {
+      validateLinks(
+          resource.links(),
+          path + PATH_LINKS,
+          context.withLinksContext(LinksContext.RESOURCE),
+          resource.type(),
+          null,
+          null,
+          null);
+    }
+    if (resource.meta() != null) {
+      validateMeta(resource.meta(), path + PATH_META, context);
+    }
+    validateAdditionalMembers(resource.additionalMembers(), path, context);
+  }
+
+  private void validateResourceRelationships(
+      ResourceObject resource, String path, ValidationContext context) {
+    validateAdditionalMembers(
+        resource.relationships().additionalMembers(), path + "/relationships", context);
+    for (Map.Entry<String, Relationship> entry :
+        resource.relationships().relationships().entrySet()) {
+      validateRelationship(
+          entry.getValue(),
+          path + "/relationships/" + entry.getKey(),
+          context,
+          resource.type(),
+          entry.getKey());
+    }
+  }
+
+  private void validateRelationship(
+      Relationship relationship,
+      String path,
+      ValidationContext context,
+      String resourceType,
+      String relationshipName) {
+    if (relationship.data() != null) {
+      validateRelationshipData(relationship.data(), path + PATH_DATA, context);
+    }
+    validateAdditionalMembers(relationship.additionalMembers(), path, context);
+    // Qualify links-only relationships before link-context checks so non-qualifying
+    // relations (e.g. alternate-only) report MISSING_RELATIONSHIP_MEMBER.
+    validateLinksOnlyRelationshipQualification(relationship, path, context);
+    if (relationship.links() != null) {
+      validateLinks(
+          relationship.links(),
+          path + PATH_LINKS,
+          context.withLinksContext(LinksContext.RELATIONSHIP),
+          resourceType,
+          relationshipName,
+          null,
+          relationship.data());
+    }
+    if (relationship.meta() != null) {
+      validateMeta(relationship.meta(), path + PATH_META, context);
+    }
+  }
+
+  private void validateLinksOnlyRelationshipQualification(
+      Relationship relationship, String path, ValidationContext context) {
+    if (relationship.data() != null || relationship.meta() != null) {
+      return;
+    }
+    if (hasExtensionMemberName(relationship.additionalMembers())) {
+      return;
+    }
+    Links links = relationship.links();
+    if (links == null) {
+      return;
+    }
+    for (String name : links.links().keySet()) {
+      // Extension-shaped link keys defer to namespace policy in validateLinks.
+      if (MemberNames.isExtensionMember(name)) {
+        return;
+      }
+      if (isQualifyingRelationshipLink(name, context)) {
+        return;
+      }
+    }
+    throw new JsonApiValidationException(
+        ValidationRuleCode.MISSING_RELATIONSHIP_MEMBER,
+        path,
+        "Links-only relationship must contain self, related, an allowed extension link,"
+            + " or an allowed profile relation");
+  }
+
+  private static boolean hasExtensionMemberName(Map<String, ?> members) {
+    if (members == null || members.isEmpty()) {
+      return false;
+    }
+    for (String name : members.keySet()) {
+      if (MemberNames.isExtensionMember(name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isQualifyingRelationshipLink(String name, ValidationContext context) {
+    if ("self".equals(name) || "related".equals(name)) {
+      return true;
+    }
+    if (MemberNames.isExtensionMember(name)) {
+      String namespace = name.substring(0, name.indexOf(':'));
+      return context.allowedExtensionNamespaces().contains(namespace);
+    }
+    return context.allowedProfileMemberNames().contains(name);
+  }
+
+  private void validateRelationshipData(
+      RelationshipData data, String path, ValidationContext context) {
+    switch (data) {
+      case RelationshipData.NullLinkage ignored -> {
+        // Explicit null to-one linkage has no identifiers to validate.
+      }
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          validateIdentifier(identifier, path, context);
+      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
+        ensureUniqueIdentifierIdentities(identifiers, path);
+        for (int index = 0; index < identifiers.size(); index++) {
+          validateIdentifier(identifiers.get(index), path + "/" + index, context);
+        }
+      }
+    }
+  }
+
+  private void ensureUniqueIdentifierIdentities(List<ResourceIdentifier> identifiers, String path) {
+    Set<ResourceIdentity> seen = new HashSet<>();
+    for (int index = 0; index < identifiers.size(); index++) {
+      ResourceIdentifier identifier = identifiers.get(index);
+      if (identifier.hasId()) {
+        ResourceIdentity id = ResourceIdentity.ofId(identifier.type(), identifier.id());
+        if (!seen.add(id)) {
+          throw duplicateIdentity(path + "/" + index, id);
+        }
+      }
+      if (identifier.hasLid()) {
+        ResourceIdentity lid = ResourceIdentity.ofLid(identifier.type(), identifier.lid());
+        if (!seen.add(lid)) {
+          throw duplicateIdentity(path + "/" + index, lid);
+        }
+      }
+    }
+  }
+
+  private static JsonApiValidationException duplicateIdentity(String path, ResourceIdentity alias) {
+    return new JsonApiValidationException(
+        ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY,
+        path,
+        "Duplicate resource identity: " + alias);
+  }
+
+  private void validateIdentifier(
+      ResourceIdentifier identifier, String path, ValidationContext context) {
+    if (context.documentUsage() != DocumentUsage.CREATE_REQUEST && !identifier.hasId()) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.RESOURCE_ID_REQUIRED,
+          path + "/id",
+          "Resource identifier requires id outside create-request context");
+    }
+    if (identifier.meta() != null) {
+      validateMeta(identifier.meta(), path + PATH_META, context);
+    }
+    validateAdditionalMembers(identifier.additionalMembers(), path, context);
+  }
+
+  private void validateResourceIdentity(
+      ResourceObject resource, String path, ValidationContext context) {
+    if (context.documentUsage() == DocumentUsage.CREATE_REQUEST) {
+      return;
+    }
+    if (!resource.hasId()) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.RESOURCE_ID_REQUIRED,
+          path + "/id",
+          "Resource requires id outside create-request context");
+    }
+  }
+
+  private void validateError(ErrorObject error, String path, ValidationContext context) {
+    if (error.links() != null) {
+      validateLinks(
+          error.links(),
+          path + PATH_LINKS,
+          context.withLinksContext(LinksContext.ERROR),
+          null,
+          null,
+          null,
+          null);
+    }
+    if (error.source() != null) {
+      validateAdditionalMembers(error.source().additionalMembers(), path + "/source", context);
+    }
+    if (error.meta() != null) {
+      validateMeta(error.meta(), path + PATH_META, context);
+    }
+    validateAdditionalMembers(error.additionalMembers(), path, context);
+  }
+
+  private void validateMeta(Meta meta, String path, ValidationContext context) {
+    for (String name : meta.members().keySet()) {
+      if (!MemberNames.isExtensionMember(name)) {
+        continue;
+      }
+      String namespace = name.substring(0, name.indexOf(':'));
+      if (!context.allowedExtensionNamespaces().contains(namespace)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
+            path + "/" + name,
+            "Extension namespace not allowed: " + namespace);
+      }
+    }
+  }
+
+  private void validateJsonApiObject(
+      JsonApiObject jsonapi, String path, ValidationContext context) {
+    if (jsonapi.profile() != null) {
+      validateProfileUris(jsonapi.profile(), path, context);
+    }
+    if (jsonapi.meta() != null) {
+      validateMeta(jsonapi.meta(), path + PATH_META, context);
+    }
+    validateAdditionalMembers(jsonapi.additionalMembers(), path, context);
+  }
+
+  private void validateProfileUris(List<String> profile, String path, ValidationContext context) {
+    if (context.allowedProfileUris().isEmpty()) {
+      return;
+    }
+    for (int i = 0; i < profile.size(); i++) {
+      String uri = profile.get(i);
+      if (!context.allowedProfileUris().contains(uri)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
+            path + "/profile/" + i,
+            "Profile URI not allowed: " + uri);
+      }
+    }
+  }
+
+  private void validateCompoundDocument(
+      List<ResourceObject> included, DocumentData primaryData, ValidationContext context) {
+    IdentityRegistry registry = new IdentityRegistry();
+    registerPrimaryResources(primaryData, registry);
+    registerLinkageIdentifiers(primaryData, PATH_DATA, registry);
+    if (included != null) {
+      for (int index = 0; index < included.size(); index++) {
+        ResourceObject resource = included.get(index);
+        String path = "/included/" + index;
+        validateResource(resource, path, context);
+        registerIncludedResource(resource, path, registry);
+        registerLinkageFromResource(resource, path, registry);
+      }
+    }
+    if (included == null || context.sparseFieldsetException()) {
+      return;
+    }
+    Set<ResourceIdentity> linked = collectLinkedIdentities(primaryData, registry);
+    for (ResourceIdentity identity : registry.includedIdentities()) {
+      if (!linked.contains(identity)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.FULL_LINKAGE_VIOLATION,
+            "/included",
+            "Included resource lacks full linkage: " + identity);
+      }
+    }
+  }
+
+  private void registerLinkageIdentifiers(
+      DocumentData data, String path, IdentityRegistry registry) {
+    if (data == null) {
+      return;
+    }
+    switch (data) {
+      case DocumentData.NullData ignored -> {
+        // No linkage.
+      }
+      case DocumentData.SingleResource(ResourceObject resource) ->
+          registerLinkageFromResource(resource, path, registry);
+      case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
+        for (int index = 0; index < resources.size(); index++) {
+          registerLinkageFromResource(resources.get(index), path + "/" + index, registry);
+        }
+      }
+      case DocumentData.SingleIdentifier(ResourceIdentifier identifier) ->
+          registry.registerIdentifier(identifier, path);
+      case DocumentData.IdentifierCollection(List<ResourceIdentifier> identifiers) -> {
+        for (int index = 0; index < identifiers.size(); index++) {
+          registry.registerIdentifier(identifiers.get(index), path + "/" + index);
+        }
+      }
+    }
+  }
+
+  private void registerLinkageFromResource(
+      ResourceObject resource, String path, IdentityRegistry registry) {
+    if (resource.relationships() == null) {
+      return;
+    }
+    for (Map.Entry<String, Relationship> entry :
+        resource.relationships().relationships().entrySet()) {
+      Relationship relationship = entry.getValue();
+      if (relationship.data() == null) {
+        continue;
+      }
+      String relPath = path + "/relationships/" + entry.getKey() + PATH_DATA;
+      registerLinkageFromRelationshipData(relationship.data(), relPath, registry);
+    }
+  }
+
+  private void registerLinkageFromRelationshipData(
+      RelationshipData data, String path, IdentityRegistry registry) {
+    switch (data) {
+      case RelationshipData.NullLinkage ignored -> {
+        // No identifiers.
+      }
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          registry.registerIdentifier(identifier, path);
+      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
+        for (int index = 0; index < identifiers.size(); index++) {
+          registry.registerIdentifier(identifiers.get(index), path + "/" + index);
+        }
+      }
+    }
+  }
+
+  private void registerPrimaryResources(DocumentData data, IdentityRegistry registry) {
+    if (data == null) {
+      return;
+    }
+    switch (data) {
+      case DocumentData.NullData ignored -> {
+        // No primary resources.
+      }
+      case DocumentData.SingleResource(ResourceObject resource) ->
+          registry.registerPrimary(resource, PATH_DATA);
+      case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
+        for (int index = 0; index < resources.size(); index++) {
+          registry.registerPrimary(resources.get(index), PATH_DATA + "/" + index);
+        }
+      }
+      case DocumentData.SingleIdentifier(ResourceIdentifier identifier) ->
+          registry.registerIdentifier(identifier, PATH_DATA);
+      case DocumentData.IdentifierCollection(List<ResourceIdentifier> identifiers) -> {
+        for (int index = 0; index < identifiers.size(); index++) {
+          registry.registerIdentifier(identifiers.get(index), PATH_DATA + "/" + index);
+        }
+      }
+    }
+  }
+
+  private void registerIncludedResource(
+      ResourceObject resource, String path, IdentityRegistry registry) {
+    if (!resource.hasId() && !resource.hasLid()) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.INCLUDED_RESOURCE_IDENTITY_REQUIRED,
+          path,
+          "Included resource requires id or lid");
+    }
+    registry.registerIncluded(resource, path);
+  }
+
+  private Set<ResourceIdentity> collectLinkedIdentities(
+      DocumentData primaryData, IdentityRegistry registry) {
+    Set<ResourceIdentity> linked = new HashSet<>();
+    Queue<ResourceIdentity> queue = new ArrayDeque<>();
+    collectFromPrimaryData(primaryData, linked, queue, registry);
+    while (!queue.isEmpty()) {
+      expandIncludedRelationships(queue.poll(), linked, queue, registry);
+    }
+    return linked;
+  }
+
+  private void expandIncludedRelationships(
+      ResourceIdentity identity,
+      Set<ResourceIdentity> linked,
+      Queue<ResourceIdentity> queue,
+      IdentityRegistry registry) {
+    ResourceObject included = registry.resourceFor(identity);
+    if (included == null || included.relationships() == null) {
+      return;
+    }
+    for (Relationship relationship : included.relationships().relationships().values()) {
+      if (relationship.data() != null) {
+        collectFromRelationshipData(relationship.data(), linked, queue, registry);
+      }
+    }
+  }
+
+  private void collectFromPrimaryData(
+      DocumentData data,
+      Set<ResourceIdentity> linked,
+      Queue<ResourceIdentity> queue,
+      IdentityRegistry registry) {
+    if (data == null) {
+      return;
+    }
+    switch (data) {
+      case DocumentData.NullData ignored -> {
+        // No linkage from explicit null primary data.
+      }
+      case DocumentData.SingleResource(ResourceObject resource) ->
+          collectFromResource(resource, linked, queue, registry);
+      case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
+        for (ResourceObject resource : resources) {
+          collectFromResource(resource, linked, queue, registry);
+        }
+      }
+      case DocumentData.SingleIdentifier(ResourceIdentifier identifier) ->
+          addLinked(identifier.identityKey(), linked, queue, registry);
+      case DocumentData.IdentifierCollection(List<ResourceIdentifier> identifiers) -> {
+        for (ResourceIdentifier identifier : identifiers) {
+          addLinked(identifier.identityKey(), linked, queue, registry);
+        }
+      }
+    }
+  }
+
+  private void collectFromResource(
+      ResourceObject resource,
+      Set<ResourceIdentity> linked,
+      Queue<ResourceIdentity> queue,
+      IdentityRegistry registry) {
+    addLinked(resource.identityKey(), linked, queue, registry);
+    if (resource.hasId() && resource.hasLid()) {
+      addLinked(ResourceIdentity.ofLid(resource.type(), resource.lid()), linked, queue, registry);
+    }
+    if (resource.relationships() == null) {
+      return;
+    }
+    for (Relationship relationship : resource.relationships().relationships().values()) {
+      if (relationship.data() != null) {
+        collectFromRelationshipData(relationship.data(), linked, queue, registry);
+      }
+    }
+  }
+
+  private void collectFromRelationshipData(
+      RelationshipData data,
+      Set<ResourceIdentity> linked,
+      Queue<ResourceIdentity> queue,
+      IdentityRegistry registry) {
+    switch (data) {
+      case RelationshipData.NullLinkage ignored -> {
+        // Explicit null linkage contributes no identifiers.
+      }
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          addLinked(identifier.identityKey(), linked, queue, registry);
+      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
+        for (ResourceIdentifier identifier : identifiers) {
+          addLinked(identifier.identityKey(), linked, queue, registry);
+        }
+      }
+    }
+  }
+
+  private void addLinked(
+      ResourceIdentity identity,
+      Set<ResourceIdentity> linked,
+      Queue<ResourceIdentity> queue,
+      IdentityRegistry registry) {
+    if (identity == null) {
+      return;
+    }
+    ResourceIdentity canonical = registry.canonicalIdentity(identity);
+    ResourceIdentity key = canonical != null ? canonical : identity;
+    if (linked.add(key)) {
+      queue.add(key);
+      linked.addAll(registry.aliasesOf(key));
+    }
+  }
+
+  private void validateLinks(
+      Links links,
+      String path,
+      ValidationContext context,
+      String resourceType,
+      String relationshipName,
+      DocumentData primaryData,
+      RelationshipData relationshipData) {
+    validateAdditionalMembers(links.additionalMembers(), path, context);
+    for (Map.Entry<String, Link> entry : links.links().entrySet()) {
+      Link link = entry.getValue();
+      if (link instanceof Link.ObjectLink objectLink) {
+        String linkPath = path + "/" + entry.getKey();
+        validateAdditionalMembers(objectLink.additionalMembers(), linkPath, context);
+        if (objectLink.meta() != null) {
+          validateMeta(objectLink.meta(), linkPath + PATH_META, context);
+        }
+      }
+      validateLinkEntry(
+          entry.getKey(),
+          path,
+          context,
+          resourceType,
+          relationshipName,
+          primaryData,
+          relationshipData);
+    }
+  }
+
+  private void validateLinkEntry(
+      String name,
+      String path,
+      ValidationContext context,
+      String resourceType,
+      String relationshipName,
+      DocumentData primaryData,
+      RelationshipData relationshipData) {
+    if (MemberNames.isExtensionMember(name)) {
+      String namespace = name.substring(0, name.indexOf(':'));
+      if (!context.allowedExtensionNamespaces().contains(namespace)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
+            path + "/" + name,
+            "Extension namespace not allowed: " + namespace);
+      }
+    } else {
+      if (!SyntaxValidators.isValidLinkRelation(name)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.INVALID_LINK_RELATION,
+            path + "/" + name,
+            "Invalid link relation name: " + name);
+      }
+      if (!isAllowedLinkName(name, context)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.INVALID_LINKS_CONTEXT,
+            path + "/" + name,
+            "Non-standard link in context " + context.linksContext() + ": " + name);
+      }
+    }
+    if (!PAGINATION_LINKS.contains(name)) {
+      return;
+    }
+    validatePaginationLink(
+        name, path, context, resourceType, relationshipName, primaryData, relationshipData);
+  }
+
+  private void validatePaginationLink(
+      String name,
+      String path,
+      ValidationContext context,
+      String resourceType,
+      String relationshipName,
+      DocumentData primaryData,
+      RelationshipData relationshipData) {
+    if (context.linksContext() == LinksContext.TOP_LEVEL) {
+      if (!isCollectionPrimaryData(primaryData)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.PAGINATION_REQUIRES_COLLECTION,
+            path + "/" + name,
+            "Top-level pagination link requires collection primary data");
+      }
+      return;
+    }
+    if (context.linksContext() != LinksContext.RELATIONSHIP || relationshipName == null) {
+      return;
+    }
+    if (relationshipData != null) {
+      switch (relationshipData) {
+        case RelationshipData.IdentifierCollectionLinkage ignored -> {
+          // Proven to-many: pagination allowed.
+        }
+        case RelationshipData.NullLinkage ignored ->
+            throw paginationRequiresCollection(path, name, relationshipName);
+        case RelationshipData.SingleLinkage ignored ->
+            throw paginationRequiresCollection(path, name, relationshipName);
+      }
+      return;
+    }
+    Optional<RelationshipCardinality> hint =
+        resourceType == null
+            ? Optional.empty()
+            : context.relationshipPaginationHint(resourceType, relationshipName);
+    if (hint.isEmpty()) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.RELATIONSHIP_PAGINATION_REQUIRES_HINT,
+          path + "/" + name,
+          "Relationship pagination link requires cardinality hint: " + relationshipName);
+    }
+    if (hint.get() == RelationshipCardinality.TO_ONE) {
+      throw paginationRequiresCollection(path, name, relationshipName);
+    }
+  }
+
+  private static JsonApiValidationException paginationRequiresCollection(
+      String path, String name, String relationshipName) {
+    return new JsonApiValidationException(
+        ValidationRuleCode.PAGINATION_REQUIRES_COLLECTION,
+        path + "/" + name,
+        "Relationship pagination requires collection linkage: " + relationshipName);
+  }
+
+  private static boolean isCollectionPrimaryData(DocumentData data) {
+    return data instanceof DocumentData.ResourceCollection
+        || data instanceof DocumentData.IdentifierCollection;
+  }
+
+  private boolean isAllowedLinkName(String name, ValidationContext context) {
+    return Links.standardMembers(context.linksContext()).contains(name)
+        || context.allowedProfileMemberNames().contains(name);
+  }
+
+  private void validateAdditionalMembers(
+      Map<String, Object> members, String basePath, ValidationContext context) {
+    for (Map.Entry<String, Object> entry : members.entrySet()) {
+      validateAdditionalMember(entry.getKey(), basePath, context);
+    }
+  }
+
+  private void validateAdditionalMember(String name, String basePath, ValidationContext context) {
+    if (MemberNames.isAtMember(name)) {
+      return;
+    }
+    if (MemberNames.isExtensionMember(name)) {
+      String namespace = name.substring(0, name.indexOf(':'));
+      if (!context.allowedExtensionNamespaces().contains(namespace)) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
+            basePath + "/" + name,
+            "Extension namespace not allowed: " + namespace);
+      }
+      return;
+    }
+    if (!context.allowedProfileMemberNames().contains(name)) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.UNKNOWN_ADDITIONAL_MEMBER,
+          basePath + "/" + name,
+          "Unknown unnamespaced member: " + name);
+    }
+  }
+
+  /** Document-wide identity index with one-to-one id↔lid partners and shared canonical aliases. */
+  private static final class IdentityRegistry {
+    private final Map<ResourceIdentity, ResourceObject> byAlias = new HashMap<>();
+    private final Map<ResourceIdentity, ResourceIdentity> canonicalByAlias = new HashMap<>();
+    private final Map<ResourceIdentity, Set<ResourceIdentity>> aliasesByCanonical = new HashMap<>();
+    private final Map<ResourceIdentity, ResourceIdentity> idToLid = new HashMap<>();
+    private final Map<ResourceIdentity, ResourceIdentity> lidToId = new HashMap<>();
+    private final Set<ResourceIdentity> includedCanonical = new HashSet<>();
+
+    void registerPrimary(ResourceObject resource, String path) {
+      registerResource(resource, path, false);
+    }
+
+    void registerIncluded(ResourceObject resource, String path) {
+      registerResource(resource, path, true);
+    }
+
+    void registerIdentifier(ResourceIdentifier identifier, String path) {
+      if (identifier.hasId() && identifier.hasLid()) {
+        bindIdLidPair(
+            ResourceIdentity.ofId(identifier.type(), identifier.id()),
+            ResourceIdentity.ofLid(identifier.type(), identifier.lid()),
+            path);
+      } else if (identifier.hasLid()) {
+        ResourceIdentity lid = ResourceIdentity.ofLid(identifier.type(), identifier.lid());
+        if (!canonicalByAlias.containsKey(lid)) {
+          addAlias(lid, lid);
+        }
+      }
+    }
+
+    private void registerResource(ResourceObject resource, String path, boolean included) {
+      ResourceIdentity idAlias =
+          resource.hasId() ? ResourceIdentity.ofId(resource.type(), resource.id()) : null;
+      ResourceIdentity lidAlias =
+          resource.hasLid() ? ResourceIdentity.ofLid(resource.type(), resource.lid()) : null;
+      if (idAlias == null && lidAlias == null) {
+        return;
+      }
+
+      if (idAlias != null && lidAlias != null) {
+        bindIdLidPair(idAlias, lidAlias, path);
+      } else if (lidAlias != null && !canonicalByAlias.containsKey(lidAlias)) {
+        addAlias(lidAlias, lidAlias);
+      }
+
+      ResourceIdentity canonical =
+          idAlias != null ? idAlias : lidToId.getOrDefault(lidAlias, lidAlias);
+
+      ensureNoDuplicateOnCanonical(canonical, resource, path);
+
+      if (idAlias != null) {
+        putResource(idAlias, resource, path);
+        addAlias(idAlias, canonical);
+      }
+      if (lidAlias != null) {
+        putResource(lidAlias, resource, path);
+        addAlias(lidAlias, canonical);
+      }
+      // Lid-only resources whose lid was pre-bound to an id must also be
+      // reachable under the canonical id for full-linkage traversal.
+      ensureResourceUnderCanonical(canonical, resource, path);
+      if (included) {
+        includedCanonical.add(canonicalByAlias.getOrDefault(canonical, canonical));
+      }
+    }
+
+    private void ensureResourceUnderCanonical(
+        ResourceIdentity canonical, ResourceObject resource, String path) {
+      addAlias(canonical, canonical);
+      ResourceObject existing = byAlias.get(canonical);
+      if (existing == null) {
+        byAlias.put(canonical, resource);
+        return;
+      }
+      if (!existing.equals(resource)) {
+        throw duplicate(path, canonical);
+      }
+    }
+
+    private void ensureNoDuplicateOnCanonical(
+        ResourceIdentity canonical, ResourceObject resource, String path) {
+      ResourceObject existing = resourceFor(canonical);
+      if (existing != null && !existing.equals(resource)) {
+        throw duplicate(path, canonical);
+      }
+      for (ResourceIdentity alias : aliasesByCanonical.getOrDefault(canonical, Set.of())) {
+        ResourceObject underAlias = byAlias.get(alias);
+        if (underAlias != null && !underAlias.equals(resource)) {
+          throw duplicate(path, canonical);
+        }
+      }
+    }
+
+    private void putResource(ResourceIdentity alias, ResourceObject resource, String path) {
+      ResourceObject previous = byAlias.put(alias, resource);
+      if (previous == null) {
+        return;
+      }
+      if (alias.isLid() && !previous.equals(resource)) {
+        throw inconsistent(path, alias);
+      }
+      throw duplicate(path, alias);
+    }
+
+    private void bindIdLidPair(ResourceIdentity idAlias, ResourceIdentity lidAlias, String path) {
+      ResourceIdentity existingLidForId = idToLid.get(idAlias);
+      ResourceIdentity existingIdForLid = lidToId.get(lidAlias);
+      if (existingLidForId != null && !existingLidForId.equals(lidAlias)) {
+        throw inconsistent(path, lidAlias);
+      }
+      if (existingIdForLid != null && !existingIdForLid.equals(idAlias)) {
+        throw inconsistent(path, lidAlias);
+      }
+
+      ResourceIdentity lidCanonical = canonicalByAlias.get(lidAlias);
+      if (lidCanonical != null && lidCanonical.isId() && !lidCanonical.equals(idAlias)) {
+        throw inconsistent(path, lidAlias);
+      }
+      ResourceIdentity idCanonical = canonicalByAlias.get(idAlias);
+      if (idCanonical != null && idCanonical.isId() && !idCanonical.equals(idAlias)) {
+        throw inconsistent(path, idAlias);
+      }
+
+      ResourceObject underLid = byAlias.get(lidAlias);
+      ResourceObject underId = byAlias.get(idAlias);
+      if (underLid != null && underId != null && !underLid.equals(underId)) {
+        throw duplicate(path, idAlias);
+      }
+
+      idToLid.put(idAlias, lidAlias);
+      lidToId.put(lidAlias, idAlias);
+
+      if (lidCanonical != null && lidCanonical.equals(lidAlias)) {
+        remapProvisionalLid(lidAlias, idAlias, path);
+      }
+      addAlias(idAlias, idAlias);
+      addAlias(lidAlias, idAlias);
+    }
+
+    private void addAlias(ResourceIdentity alias, ResourceIdentity canonical) {
+      canonicalByAlias.put(alias, canonical);
+      aliasesByCanonical.computeIfAbsent(canonical, ignored -> new HashSet<>()).add(alias);
+    }
+
+    private void remapProvisionalLid(ResourceIdentity from, ResourceIdentity to, String path) {
+      if (from.equals(to)) {
+        return;
+      }
+      Set<ResourceIdentity> aliases = aliasesByCanonical.remove(from);
+      if (aliases == null) {
+        return;
+      }
+      Set<ResourceIdentity> target =
+          aliasesByCanonical.computeIfAbsent(to, ignored -> new HashSet<>());
+      for (ResourceIdentity alias : aliases) {
+        canonicalByAlias.put(alias, to);
+        target.add(alias);
+      }
+      ResourceObject fromResource = byAlias.get(from);
+      ResourceObject toResource = byAlias.get(to);
+      if (fromResource != null && toResource != null && !fromResource.equals(toResource)) {
+        throw duplicate(path, to);
+      }
+      if (fromResource != null) {
+        byAlias.putIfAbsent(to, fromResource);
+      }
+      if (includedCanonical.remove(from)) {
+        includedCanonical.add(to);
+      }
+    }
+
+    private static JsonApiValidationException inconsistent(String path, ResourceIdentity alias) {
+      return new JsonApiValidationException(
+          ValidationRuleCode.INCONSISTENT_LOCAL_IDENTIFIER,
+          path,
+          "Inconsistent local identifier: " + alias);
+    }
+
+    private static JsonApiValidationException duplicate(String path, ResourceIdentity alias) {
+      return new JsonApiValidationException(
+          ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY,
+          path,
+          "Duplicate resource identity: " + alias);
+    }
+
+    ResourceIdentity canonicalIdentity(ResourceIdentity alias) {
+      return canonicalByAlias.get(alias);
+    }
+
+    ResourceObject resourceFor(ResourceIdentity identity) {
+      ResourceIdentity canonical = canonicalByAlias.getOrDefault(identity, identity);
+      ResourceObject direct = byAlias.get(canonical);
+      if (direct != null) {
+        return direct;
+      }
+      direct = byAlias.get(identity);
+      if (direct != null) {
+        return direct;
+      }
+      for (ResourceIdentity alias : aliasesByCanonical.getOrDefault(canonical, Set.of())) {
+        ResourceObject underAlias = byAlias.get(alias);
+        if (underAlias != null) {
+          return underAlias;
+        }
+      }
+      return null;
+    }
+
+    Set<ResourceIdentity> aliasesOf(ResourceIdentity canonical) {
+      return aliasesByCanonical.getOrDefault(canonical, Set.of());
+    }
+
+    Set<ResourceIdentity> includedIdentities() {
+      return includedCanonical;
+    }
+  }
+}
