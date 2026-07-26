@@ -49,6 +49,12 @@ Before implementing any work, a coding agent MUST:
 4. **Verify alignment with the vision.** If the requested work diverges from the vision, flag it. If the divergence is reasonable, propose an update to `docs/vision.md` before or alongside implementation.
 5. **Create or update ADRs** in `docs/adr/` when a significant architectural decision is made that isn't already documented.
 
+## Agent-Driven Code Reviews
+
+Milestone reviews are performed on demand. When a user requests a milestone review, use the project `milestone-review` skill and review the implementation against exactly one corresponding file under `.agentWork/milestones/`.
+
+Write the result to `.agentWork/.session/milestone-review-<milestone-basename>.md`. Session reviews are ephemeral, non-canonical working artifacts: they do not replace milestones, the vision, or ADRs, and a later review of the same milestone overwrites the previous artifact.
+
 # Conventions
 
 * **Verified namespace:** Maven group `io.github.kazemek`; Java base package `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
