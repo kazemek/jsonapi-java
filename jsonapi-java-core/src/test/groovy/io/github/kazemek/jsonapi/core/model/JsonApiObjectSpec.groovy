@@ -1,0 +1,50 @@
+package io.github.kazemek.jsonapi.core.model
+
+import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
+import spock.lang.Specification
+
+class JsonApiObjectSpec extends Specification {
+
+  def "invalid extension uri fails with stable code"() {
+    when:
+    new JsonApiObject("1.1", ["not a uri"], null, null, [:])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.INVALID_EXTENSION_URI
+  }
+
+  def "invalid profile uri fails with stable code"() {
+    when:
+    new JsonApiObject("1.1", null, ["%%%"], null, [:])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.INVALID_PROFILE_URI
+  }
+
+  def "valid version and profile uris are accepted"() {
+    when:
+    def obj = new JsonApiObject("1.1", ["https://example.com/ext"],
+    [
+      "https://example.com/profiles/a"
+    ], null, [:])
+
+    then:
+    obj.version() == "1.1"
+    obj.ext() == ["https://example.com/ext"]
+    obj.profile() == [
+      "https://example.com/profiles/a"
+    ]
+  }
+
+  def "jsonapi object rejects reserved additional member names"() {
+    when:
+    new JsonApiObject("1.1", null, null, null, [version: "2.0"])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.RESERVED_FIELD_NAME
+  }
+}

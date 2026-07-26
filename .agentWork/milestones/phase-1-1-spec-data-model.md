@@ -3,7 +3,7 @@
 > **Module:** `jsonapi-java-core`  
 > **Packages:** `io.github.kazemek.jsonapi.core.model` and `io.github.kazemek.jsonapi.core.validation`  
 > **Dependencies:** None beyond `java.base`  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -135,11 +135,11 @@ Wire-format assertions belong to Phase 2.1; Phase 1 tests assert model semantics
 
 ## Acceptance criteria
 
-- [ ] Every JSON:API v1.1 base document shape needed by the codec is representable without conflating absence and explicit null.
-- [ ] Local invariants cannot be bypassed through a public raw constructor.
-- [ ] Aggregate validation covers included identity, full linkage, local identifiers, and configured additional members.
-- [ ] Collections and nested open JSON containers are defensively copied.
-- [ ] The module has zero third-party runtime dependencies.
-- [ ] Tests cover every enforced MUST/MUST NOT rule with stable diagnostic codes.
-- [ ] `./gradlew :jsonapi-java-core:test` passes.
+- [x] Every JSON:API v1.1 base document shape needed by the codec is representable without conflating absence and explicit null.
+- [x] Local invariants cannot be bypassed through a public raw constructor.
+- [x] Aggregate validation covers included identity, full linkage, local identifiers, and configured additional members.
+- [x] Collections and nested open JSON containers are defensively copied.
+- [x] The module has zero third-party runtime dependencies.
+- [x] Tests cover every enforced MUST/MUST NOT rule with stable diagnostic codes.
+- [x] `./gradlew :jsonapi-java-core:test` passes.
 - [x] The verified base package namespace is documented (ADR-008 / Phase 0.1).

@@ -1,0 +1,65 @@
+package io.github.kazemek.jsonapi.core.model;
+
+import io.github.kazemek.jsonapi.core.internal.AdditionalMembers;
+import io.github.kazemek.jsonapi.core.internal.MemberNames;
+import io.github.kazemek.jsonapi.core.validation.LocalValidation;
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
+import java.util.Map;
+import java.util.Set;
+
+/** Resource identifier with type, id, lid, meta, and additional members. */
+public record ResourceIdentifier(
+    String type, String id, String lid, Meta meta, Map<String, Object> additionalMembers) {
+
+  private static final Set<String> RESERVED_ADDITIONAL = Set.of("type", "id", "lid", "meta");
+
+  public ResourceIdentifier {
+    if (type == null || type.isBlank()) {
+      LocalValidation.fail(
+          ValidationRuleCode.MISSING_RESOURCE_TYPE,
+          "/data/type",
+          "Resource identifier requires type");
+    }
+    if (!MemberNames.isValid(type)) {
+      LocalValidation.fail(
+          ValidationRuleCode.INVALID_MEMBER_NAME, "/data/type", "Invalid resource type: " + type);
+    }
+    boolean hasId = id != null && !id.isBlank();
+    boolean hasLid = lid != null && !lid.isBlank();
+    if (!hasId && !hasLid) {
+      LocalValidation.fail(
+          ValidationRuleCode.MISSING_RESOURCE_ID,
+          "/data",
+          "Resource identifier requires id or lid");
+    }
+    additionalMembers =
+        AdditionalMembers.copy(
+            additionalMembers,
+            "/data",
+            "Invalid resource identifier member name: ",
+            RESERVED_ADDITIONAL);
+  }
+
+  public static ResourceIdentifier of(String type, String id) {
+    return new ResourceIdentifier(type, id, null, null, Map.of());
+  }
+
+  public static ResourceIdentifier withLid(String type, String lid) {
+    return new ResourceIdentifier(type, null, lid, null, Map.of());
+  }
+
+  public boolean hasId() {
+    return id != null && !id.isBlank();
+  }
+
+  public boolean hasLid() {
+    return lid != null && !lid.isBlank();
+  }
+
+  public String identityKey() {
+    if (hasId()) {
+      return "id:" + type + ":" + id;
+    }
+    return "lid:" + type + ":" + lid;
+  }
+}
