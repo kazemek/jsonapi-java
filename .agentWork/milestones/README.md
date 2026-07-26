@@ -6,20 +6,22 @@ Milestones are planned, testable increments. They may change until implementatio
 
 1. **Phase 0.1 — Public namespace:** gates every public source package.
 2. **Phase 0.2 — milestone review workflow:** defines the repository's on-demand review process.
-3. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
-4. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
-5. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
-6. **Phase 2.3 — compound serialization:** builds on domain mapping.
-7. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
-8. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
-9. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
-10. **Phase 4.1 — conformance and hardening.**
-11. **Phase 4.2 — stable release.**
+3. **Phase 0.3 — CI quality and supply chain:** coverage, Sonar Quality Gate, verification, Action digests, and CI report artifacts.
+4. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
+5. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
+6. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
+7. **Phase 2.3 — compound serialization:** builds on domain mapping.
+8. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
+9. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
+10. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
+11. **Phase 4.1 — conformance and hardening.**
+12. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
 - [Phase 0.1 — Public Namespace Decision](phase-0-1-public-namespace.md)
 - [Phase 0.2 — Milestone Review Workflow](phase-0-2-milestone-review-workflow.md)
+- [Phase 0.3 — CI Quality and Supply Chain](phase-0-3-ci-quality-and-supply-chain.md)
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md)
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md)
 - [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md)

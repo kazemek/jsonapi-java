@@ -4,6 +4,11 @@
 
 Requires JDK 21 (enforced via Gradle toolchain).
 
+Dependency verification is enabled via `gradle/verification-metadata.xml`. After adding or
+changing dependencies (or when CI fails verification), regenerate checksums with
+`./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`
+(Renovate PRs do this as well).
+
 # Project structure
 
 Multi-module Gradle build (Kotlin DSL, Gradle 9.6.1). Submodules are listed in `settings.gradle.kts`.
@@ -16,8 +21,8 @@ Source lives under `<module>/src/`. Tests use Groovy + Spock (`<module>/src/test
 Shared build configuration lives in `build-logic/` as a precompiled script plugin.
 The convention plugin is `jsonapi-java-library` (applied via `id("jsonapi-java-library")`).
 
-It provides: `java-library` + `groovy` plugins, JDK 21 toolchain, Spock/Groovy/ByteBuddy
-test dependencies, and JUnit Platform configuration.
+It provides: `java-library` + `groovy` + `jacoco` plugins, JDK 21 toolchain, Spock/Groovy/ByteBuddy
+test dependencies, JUnit Platform configuration, and JaCoCo XML/HTML reports after tests.
 
 New submodules only need:
 
@@ -29,7 +34,13 @@ plugins {
 
 # CI
 
-GitHub Actions runs `./gradlew clean build` on push to `main` and on PRs.
+GitHub Actions runs `./gradlew clean build jacocoTestReport sonar` on push to `main` and on PRs
+(requires repository secret `SONAR_TOKEN`). `sonar.qualitygate.wait` is enabled, so a red Quality Gate
+fails the job. Local `./gradlew clean build` does not need Sonar.
+
+CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
+and publishes a Unit tests check from JUnit XML when present. Download the artifact from the workflow
+run to inspect HTML reports after failures.
 
 # Planning
 
@@ -49,11 +60,20 @@ Before implementing any work, a coding agent MUST:
 4. **Verify alignment with the vision.** If the requested work diverges from the vision, flag it. If the divergence is reasonable, propose an update to `docs/vision.md` before or alongside implementation.
 5. **Create or update ADRs** in `docs/adr/` when a significant architectural decision is made that isn't already documented.
 
+After implementation, before declaring the work complete, a coding agent MUST:
+
+6. Ensure `./gradlew clean build` passes.
+7. Use the project `sonar-quality-gate` skill to run SonarCloud analysis with Quality Gate wait.
+   - Local `./gradlew clean build` remains token-free; Sonar is a separate completion gate.
+   - Without `SONAR_TOKEN`, do not claim completion: report that Sonar is blocked and CI must still pass the Quality Gate.
+
 ## Agent-Driven Code Reviews
 
 Milestone reviews are performed on demand. When a user requests a milestone review, use the project `milestone-review` skill and review the implementation against exactly one corresponding file under `.agentWork/milestones/`.
 
 Write the result to `.agentWork/.session/milestone-review-<milestone-basename>.md`. Session reviews are ephemeral, non-canonical working artifacts: they do not replace milestones, the vision, or ADRs, and a later review of the same milestone overwrites the previous artifact.
+
+Sonar Quality Gate checks for task completion use the project `sonar-quality-gate` skill (see Agent Workflow step 7).
 
 # Conventions
 

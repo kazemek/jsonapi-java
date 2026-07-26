@@ -1,6 +1,7 @@
 plugins {
     `java-library`
     groovy
+    jacoco
 }
 
 group = providers.gradleProperty("group").get()
@@ -22,4 +23,13 @@ dependencies {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }
