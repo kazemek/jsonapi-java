@@ -91,5 +91,6 @@ Sonar Quality Gate checks for task completion use the project `sonar-quality-gat
 
 * **Verified namespace:** Maven group `io.github.kazemek`; Java base package `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
 * **Package suffixes:** `core.model`, `core.validation`, `annotation`, `jackson`, `query`, and adapter-specific Spring packages under the verified base.
+* **Core orientation:** See `jsonapi-java-core/README.md` for package map, validate flow, and local vs aggregate validation.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
 * **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure

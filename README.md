@@ -2,11 +2,11 @@
 
 > Read and write JSON:API v1.1 documents in Java without surrendering control of persistence, endpoints, or application architecture.
 
-A lightweight [JSON:API v1.1](https://jsonapi.org/) document codec for **Java 21+**, with opt-in Jackson domain mapping, query parsing, and Spring adapters. Compliance is tracked by feature and layer; the library does not claim that an application's endpoint behavior is automatically JSON:API compliant.
+A lightweight [JSON:API v1.1](https://jsonapi.org/) document model and validation library for **Java 21+**. Opt-in Jackson domain mapping, query parsing, and Spring adapters are planned. Compliance is tracked by feature and layer; the library does not claim that an application's endpoint behavior is automatically JSON:API compliant.
 
 ## Status
 
-**Pre-alpha.** The Gradle build scaffold, CI pipeline, architecture decisions, and implementation milestones are in place. Library implementation has not started.
+**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, and Phase 1.1 document model/validation in `jsonapi-java-core` are in place. Jackson codec and later adapters are not started.
 
 Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
@@ -24,8 +24,8 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
 | Path | Purpose |
 |------|---------|
-| `jsonapi-java-core/` | Current scaffold; planned zero-dependency document model and validation |
-| `build-logic/` | Shared Gradle convention plugin (`jsonapi-java-library`) |
+| `jsonapi-java-core/` | Zero-dependency JSON:API document model and validation |
+| `build-logic/` | Shared Gradle convention plugins |
 | `docs/` | Vision statement and architecture decision records |
 | `.agentWork/milestones/` | Concrete, testable implementation increments |
 
@@ -33,7 +33,9 @@ Planned optional artifacts are `jsonapi-java-annotations`, `jsonapi-java-jackson
 
 ## Documentation
 
+- [Core module](jsonapi-java-core/README.md)
 - [Vision & roadmap](docs/vision.md)
+- [Conformance checklist](docs/conformance.md)
 - [Architecture decision records](docs/adr/)
 - [Implementation milestones](.agentWork/milestones/)
 - [Agent workflow](AGENTS.md)
