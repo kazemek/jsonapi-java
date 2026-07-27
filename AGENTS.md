@@ -9,6 +9,11 @@ changing dependencies (or when CI fails verification), regenerate checksums with
 `./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`
 (Renovate PRs do this as well).
 
+IDE sync may download extra artifacts (sources jars, Gradle src zips, and Groovy 4.x
+`.module`/`.pom` metadata from the Gradle distribution's "Gradle Libs" repo). Those are trusted
+by pattern in `verification-metadata.xml`; do **not** disable verification globally.
+Build dependencies (including Groovy 5.x used by Spock) remain checksum-verified.
+
 # Project structure
 
 Multi-module Gradle build (Kotlin DSL, Gradle 9.6.1). Submodules are listed in `settings.gradle.kts`.
@@ -18,11 +23,14 @@ Source lives under `<module>/src/`. Tests use Groovy + Spock (`<module>/src/test
 
 # Build logic
 
-Shared build configuration lives in `build-logic/` as a precompiled script plugin.
-The convention plugin is `jsonapi-java-library` (applied via `id("jsonapi-java-library")`).
+Shared build configuration lives in `build-logic/` as precompiled script plugins.
 
-It provides: `java-library` + `groovy` + `jacoco` plugins, JDK 21 toolchain, Spock/Groovy/ByteBuddy
-test dependencies, JUnit Platform configuration, and JaCoCo XML/HTML reports after tests.
+- `jsonapi-java-library` (applied via `id("jsonapi-java-library")`) provides: `java-library` +
+  `groovy` + `jacoco` plugins, JDK 21 toolchain, Spock/Groovy/ByteBuddy test dependencies,
+  JUnit Platform configuration, and JaCoCo XML/HTML reports after tests.
+- `jsonapi-java-spotless` (applied at the root via `id("jsonapi-java-spotless")`) configures
+  Spotless for Java, Groovy/Spock, Kotlin, and Gradle Kotlin DSL. Greclipse settings live in
+  `config/spotless/greclipse.properties`.
 
 New submodules only need:
 
@@ -34,9 +42,10 @@ plugins {
 
 # CI
 
-GitHub Actions runs `./gradlew clean build jacocoTestReport sonar` on push to `main` and on PRs
-(requires repository secret `SONAR_TOKEN`). `sonar.qualitygate.wait` is enabled, so a red Quality Gate
-fails the job. Local `./gradlew clean build` does not need Sonar.
+GitHub Actions runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on push to
+`main` and on PRs (requires repository secret `SONAR_TOKEN`). `sonar.qualitygate.wait` is
+enabled, so a red Quality Gate fails the job. Local `./gradlew clean build` does not need
+Sonar; formatting is enforced via Spotless (`spotlessCheck`).
 
 CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
 and publishes a Unit tests check from JUnit XML when present. Download the artifact from the workflow
@@ -63,7 +72,9 @@ Before implementing any work, a coding agent MUST:
 After implementation, before declaring the work complete, a coding agent MUST:
 
 6. Ensure `./gradlew clean build` passes.
-7. Use the project `sonar-quality-gate` skill to run SonarCloud analysis with Quality Gate wait.
+7. Use the project `spotless-format` skill to run `./gradlew spotlessApply` then
+   `./gradlew spotlessCheck`.
+8. Use the project `sonar-quality-gate` skill to run SonarCloud analysis with Quality Gate wait.
    - Local `./gradlew clean build` remains token-free; Sonar is a separate completion gate.
    - Without `SONAR_TOKEN`, do not claim completion: report that Sonar is blocked and CI must still pass the Quality Gate.
 
@@ -73,7 +84,8 @@ Milestone reviews are performed on demand. When a user requests a milestone revi
 
 Write the result to `.agentWork/.session/milestone-review-<milestone-basename>.md`. Session reviews are ephemeral, non-canonical working artifacts: they do not replace milestones, the vision, or ADRs, and a later review of the same milestone overwrites the previous artifact.
 
-Sonar Quality Gate checks for task completion use the project `sonar-quality-gate` skill (see Agent Workflow step 7).
+Formatting checks for task completion use the project `spotless-format` skill (see Agent Workflow step 7).
+Sonar Quality Gate checks for task completion use the project `sonar-quality-gate` skill (see Agent Workflow step 8).
 
 # Conventions
 
