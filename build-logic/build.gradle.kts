@@ -3,5 +3,10 @@ plugins {
 }
 
 repositories {
+    gradlePluginPortal()
     mavenCentral()
+}
+
+dependencies {
+    implementation(libs.spotless.plugin)
 }

@@ -3,6 +3,7 @@
 
 plugins {
     alias(libs.plugins.sonarqube)
+    id("jsonapi-java-spotless")
 }
 
 sonar {
