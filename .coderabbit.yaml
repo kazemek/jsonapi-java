@@ -1,0 +1,19 @@
+language: "en-US"
+
+reviews:
+  request_changes_workflow: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - ".*"
+
+  high_level_summary: true
+  sequence_diagrams: true
+
+  path_filters:
+    - "!**/build/**"
+
+chat:
+  auto_reply: true
