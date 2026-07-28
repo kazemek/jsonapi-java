@@ -85,12 +85,12 @@ Before implementing any work, a coding agent MUST:
 
 After implementation, before declaring the work complete, a coding agent MUST:
 
-6. Ensure `./gradlew clean build` passes.
-7. Use the project `spotless-format` skill to run `./gradlew spotlessApply` then
-   `./gradlew spotlessCheck`.
-8. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
+6. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
    agent-relevant invariants), use the project `module-docs` skill to update that module’s
    documentation. Skip when only internals or tests changed with no surface impact.
+7. Ensure `./gradlew clean build` passes.
+8. Use the project `spotless-format` skill to run `./gradlew spotlessApply` then
+   `./gradlew spotlessCheck`.
 9. Use the project `sonar-quality-gate` skill to run SonarCloud analysis with Quality Gate wait.
    - Local `./gradlew clean build` remains token-free; Sonar is a separate completion gate.
    - Without `SONAR_TOKEN`, do not claim completion: report that Sonar is blocked and CI must still pass the Quality Gate.
@@ -101,14 +101,14 @@ Milestone reviews are performed on demand. When a user requests a milestone revi
 
 Write the result to `.agentWork/.session/milestone-review-<milestone-basename>.md`. Session reviews are ephemeral, non-canonical working artifacts: they do not replace milestones, the vision, or ADRs, and a later review of the same milestone overwrites the previous artifact.
 
-Formatting checks for task completion use the project `spotless-format` skill (see Agent Workflow step 7).
-Module documentation updates use the project `module-docs` skill when public surface changed (see Agent Workflow step 8).
+Module documentation updates use the project `module-docs` skill when public surface changed (see Agent Workflow step 6).
+Formatting checks for task completion use the project `spotless-format` skill (see Agent Workflow step 8).
 Sonar Quality Gate checks for task completion use the project `sonar-quality-gate` skill (see Agent Workflow step 9).
 
 # Conventions
 
 * **Verified namespace:** Maven group `io.github.kazemek`; Java base package `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
 * **Package suffixes:** `core.model`, `core.validation`, `annotation`, `jackson`, `query`, and adapter-specific Spring packages under the verified base.
-* **Module orientation:** See `<module>/README.md` (e.g. `jsonapi-java-core/README.md`) for package map, usage, non-goals, and agent notes.
+* **Module orientation:** See [`jsonapi-java-core/README.md`](jsonapi-java-core/README.md) for package map, usage, non-goals, and agent notes. Additional modules follow the same `<module>/README.md` pattern once present.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
 * **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure
