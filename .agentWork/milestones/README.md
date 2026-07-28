@@ -9,15 +9,16 @@ Milestones are planned, testable increments. They may change until implementatio
 3. **Phase 0.3 — CI quality and supply chain:** coverage, Sonar Quality Gate, verification, Action digests, and CI report artifacts.
 4. **Phase 0.4 — Spotless formatting:** repo-wide Spotless via a root convention plugin, greclipse for Spock, and an agent format completion skill.
 5. **Phase 0.5 — Module docs workflow:** targeted module discovery in `AGENTS.md` and a `module-docs` skill for dual-audience module documentation.
-6. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
-7. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
-8. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
-9. **Phase 2.3 — compound serialization:** builds on domain mapping.
-10. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
-11. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
-12. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
-13. **Phase 4.1 — conformance and hardening.**
-14. **Phase 4.2 — stable release.**
+6. **Phase 0.6 — Line ending enforcement:** LF via `.gitattributes` / `.editorconfig`, CRLF only for Windows batch scripts.
+7. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
+8. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
+9. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
+10. **Phase 2.3 — compound serialization:** builds on domain mapping.
+11. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
+12. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
+13. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
+14. **Phase 4.1 — conformance and hardening.**
+15. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -26,6 +27,7 @@ Milestones are planned, testable increments. They may change until implementatio
 - [Phase 0.3 — CI Quality and Supply Chain](phase-0-3-ci-quality-and-supply-chain.md)
 - [Phase 0.4 — Spotless Formatting](phase-0-4-spotless-formatting.md)
 - [Phase 0.5 — Module Docs Discovery and Maintenance](phase-0-5-module-docs-workflow.md)
+- [Phase 0.6 — Line Ending Enforcement](phase-0-6-line-endings.md)
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md)
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md)
 - [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md)
