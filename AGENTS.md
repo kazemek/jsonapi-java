@@ -1,8 +1,10 @@
 # Build & Test
 
-./gradlew clean build
-
 Requires JDK 21 (enforced via Gradle toolchain).
+
+`./gradlew clean build` is the token-free primary local verification (compile, tests, ArchUnit).
+It is not a discovery step. Before declaring implementation complete, follow **Completion gates**
+(`clean build` → `spotless-format` → `sonar-quality-gate`).
 
 Dependency verification is enabled via `gradle/verification-metadata.xml`. After adding or
 changing dependencies (or when CI fails verification), regenerate checksums with
@@ -24,6 +26,9 @@ Source lives under `<module>/src/`. Tests use Groovy + Spock (`<module>/src/test
 ## Task-scoped discovery
 
 Choose the narrowest applicable route. Do **not** scan the whole repository first.
+
+Project skills live at `.cursor/skills/<name>/SKILL.md`. When this file names a skill, read that
+path and follow it (skills use explicit invocation only).
 
 ### Plan, refine, or decompose a milestone
 
@@ -49,11 +54,13 @@ already governed by a milestone and module documentation does not require reread
 
 ### Review an implementation
 
-Read exactly one governing milestone and establish the diff or path boundary. For module-scoped
-changes, follow the affected-module route above. When no affected module exists (repository-wide
-build, CI, or workflow work), follow the repository-wide route below instead of reading irrelevant
-module documentation. When the user requests a milestone review, use the project `milestone-review`
-skill; reviews verify the `module-docs` checklist when public module surface changed.
+When reviewing against a milestone (including when the user requests a milestone review), read
+exactly one governing milestone and establish the diff or path boundary; use the project
+`milestone-review` skill for on-demand milestone reviews. For module-scoped changes, follow the
+affected-module route above. When no affected module exists (repository-wide build, CI, or
+workflow work), or when no milestone governs the change, follow the repository-wide route below
+instead of reading irrelevant module documentation. Milestone reviews verify the `module-docs`
+checklist when public module surface changed.
 
 ### Repository-wide build, CI, or workflow work
 
@@ -74,8 +81,8 @@ to create or refresh dual-audience documentation.
 
 - The library represents and validates JSON:API documents; applications retain persistence,
   endpoint, authorization, and query-execution policy.
-- `jsonapi-java-core` has no functional third-party runtime dependencies; optional integrations
-  belong in separate modules.
+- `jsonapi-java-core` has no functional third-party runtime dependencies; a compile-only JSpecify
+  annotation jar is allowed (see ADR-009). Optional integrations belong in separate modules.
 - Preserve wire-visible states such as absent versus explicit JSON `null`.
 - Keep application policy explicit rather than hiding it in traversal, mapping, or adapter defaults.
 
@@ -85,7 +92,8 @@ Shared build configuration lives in `build-logic/` as precompiled script plugins
 `jsonapi-java-library` owns library, test, coverage, toolchain, and static-analysis defaults;
 `jsonapi-java-spotless` owns repository formatting.
 
-New submodules only need:
+New submodules need `include("...")` in `settings.gradle.kts`, the library plugin below, and the
+`module-docs` skill for dual-audience documentation and root registry updates:
 
 ```kotlin
 plugins {
@@ -96,12 +104,12 @@ plugins {
 # CI
 
 GitHub Actions runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on push to
-`main` and on PRs. A red Sonar Quality Gate or any new Sonar issue fails completion. Local
-`./gradlew clean build` remains token-free; use the `sonar-quality-gate` skill for detailed policy
-and local analysis.
+`main` and on PRs. The project SonarCloud Quality Gate (`jsonapi-java`) fails completion on a red
+gate or any new Sonar issue. Local `./gradlew clean build` remains token-free; use the
+`sonar-quality-gate` skill for detailed policy and local analysis.
 
 CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
-for failure diagnosis.
+for failure diagnosis, and publishes a Unit tests check from JUnit XML.
 
 # Planning
 
@@ -109,9 +117,11 @@ for failure diagnosis.
 * **Milestones:** `.agentWork/milestones/` — concrete implementation plans. Fixed once implementation starts; retained as project documentation.
 * **ADRs:** `docs/adr/` — architecture decision records (the "why" behind consequential, hard-to-reverse choices).
 
-All feature implementation proceeds through iterative milestones. Each feature change must be
-captured in a milestone before coding begins and produce a reviewable, tested increment. Create or
-update an ADR when the work makes a consequential, hard-to-reverse decision not already recorded.
+All feature implementation proceeds through iterative milestones. Each feature, public-surface, or
+new-module change must be captured in a milestone before coding begins and produce a reviewable,
+tested increment. Non-feature work (docs-only, CI/workflow, chores, or fixes already covered by an
+existing Complete milestone contract) may proceed without a new milestone. Create or update an ADR
+when the work makes a consequential, hard-to-reverse decision not already recorded.
 
 An implementable milestone must fit one focused coding-agent task and reviewable commit. It normally
 covers one principal capability in one primary module or layer, with at most five deliverables and
