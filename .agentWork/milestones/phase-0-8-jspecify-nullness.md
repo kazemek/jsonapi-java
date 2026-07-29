@@ -1,7 +1,7 @@
 # Phase 0.8 — JSpecify Nullness
 
 > **Scope:** Build tooling, `jsonapi-java-core`, and agent guidance  
-> **Dependencies:** Phase 0.5, Phase 0.7, Phase 1.1  
+> **Dependencies:** Phase 0.5, Phase 0.7  
 > **Status:** Complete
 
 ## Goal

@@ -33,15 +33,16 @@ public final class LocalValidation {
     }
     List<T> copy = new ArrayList<>(source.size());
     for (int i = 0; i < source.size(); i++) {
-      T element = source.get(i);
-      if (element == null) {
-        fail(
-            ValidationRuleCode.NULL_COLLECTION_ELEMENT,
-            path + "/" + i,
-            "Collection element must not be null");
-      }
-      copy.add(element);
+      copy.add(requireNonNullElement(source.get(i), path + "/" + i));
     }
     return List.copyOf(copy);
+  }
+
+  private static <T> T requireNonNullElement(@Nullable T element, String path) {
+    if (element == null) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.NULL_COLLECTION_ELEMENT, path, "Collection element must not be null");
+    }
+    return element;
   }
 }

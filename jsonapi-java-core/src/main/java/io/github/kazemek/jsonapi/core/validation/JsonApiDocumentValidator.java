@@ -623,9 +623,8 @@ public final class JsonApiDocumentValidator {
       return;
     }
     validateAdditionalMembers(links.additionalMembers(), path, context);
-    for (Map.Entry<String, Link> entry : links.links().entrySet()) {
-      Link link = entry.getValue();
-      if (link instanceof Link.ObjectLink objectLink) {
+    for (Map.Entry<String, @Nullable Link> entry : links.links().entrySet()) {
+      if (entry.getValue() instanceof Link.ObjectLink objectLink) {
         String linkPath = JsonPointers.child(path, entry.getKey());
         validateAdditionalMembers(objectLink.additionalMembers(), linkPath, context);
         if (objectLink.meta() != null) {

@@ -29,7 +29,7 @@ Skip when only internals or tests changed with no public-surface impact.
    - **Non-goals** (link ADR-007 / vision; do not restate the product boundary at length)
    - **Further reading** (conformance, relevant ADRs, root `AGENTS.md`)
    - **For contributors / agents** (module-specific bullets only: local vs aggregate rules, diagnostics, tests, extension policy, etc.)
-4. Ensure `package-info.java` exists for each public package and for any documented internal package.
+4. Ensure `package-info.java` exists for every production package.
    Every production `package-info.java` must be `@NullMarked` (`org.jspecify.annotations`) and briefly
    state absence (`@Nullable`) versus wire-null (sealed types) when the package holds document model
    types (see ADR-009).
@@ -42,7 +42,7 @@ Skip when only internals or tests changed with no public-surface impact.
 
 - [ ] `<module>/README.md` covers purpose, packages, usage, non-goals, further reading, agents subsection
 - [ ] Agents subsection includes nullness bullets when the module has Java production packages (ADR-009)
-- [ ] `package-info.java` for each public (and documented internal) package, each `@NullMarked`
+- [ ] `package-info.java` for every production package, each `@NullMarked`
 - [ ] Entry-point Javadoc on the module’s primary public types
 - [ ] Root `README.md` lists the module
 - [ ] `AGENTS.md` discovery/conventions point at `<module>/README.md`

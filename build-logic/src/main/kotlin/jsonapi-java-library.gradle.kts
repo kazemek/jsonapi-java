@@ -34,7 +34,7 @@ nullaway {
     jspecifyMode.set(true)
 }
 
-tasks.withType<JavaCompile>().configureEach {
+tasks.named<JavaCompile>("compileJava").configure {
     options.errorprone {
         disableAllChecks.set(true)
         error("NullAway")

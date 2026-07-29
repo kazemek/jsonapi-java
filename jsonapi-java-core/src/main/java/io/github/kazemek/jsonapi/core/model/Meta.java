@@ -31,8 +31,7 @@ public final class Meta {
     for (Map.Entry<String, ?> entry : members.entrySet()) {
       String name = entry.getKey();
       validateMemberName(name, "/meta/" + name);
-      Object value = OpenJsonValues.copy(entry.getValue(), "/meta/" + name);
-      copy.put(name, value);
+      copy.put(name, OpenJsonValues.copy(entry.getValue(), "/meta/" + name));
     }
     return new Meta(OrderedMaps.copyOfNullableValues(copy));
   }
