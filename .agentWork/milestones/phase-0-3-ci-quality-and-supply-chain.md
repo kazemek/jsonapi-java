@@ -32,9 +32,10 @@ Give every change a shared merge bar: coverage reports, SonarCloud Quality Gate,
 
 ## Follow-up (post-completion)
 
-The project later associated a custom Quality Gate that keeps Sonar way conditions and
-additionally fails when `new_violations` > 0, so code smells and other issues block CI
-even when maintainability rating remains A.
+Intended policy: use a custom SonarCloud Quality Gate named `jsonapi-java` (Sonar way
+conditions plus fail when `new_violations` > 0) so code smells and other issues block CI
+even when maintainability rating remains A. Select that gate under SonarCloud Project
+Settings → Quality Gate; it is not encoded in this repository.
 
 ## Acceptance criteria
 

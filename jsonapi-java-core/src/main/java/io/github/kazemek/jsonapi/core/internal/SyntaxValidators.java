@@ -177,7 +177,7 @@ public final class SyntaxValidators {
       if (!isPchar(ch) && !consumePctEncoded(value, i)) {
         return -1;
       }
-      i += ch == '%' ? 3 : 1;
+      i += advancePcharOrPct(ch);
     }
     return i == 0 ? -1 : i;
   }
@@ -506,36 +506,27 @@ public final class SyntaxValidators {
 
   /** Scans optional {@code ?query}. Returns new index, or -1 on invalid query chars. */
   private static int scanQuery(String value, int from) {
-    int i = from;
-    if (i >= value.length() || value.charAt(i) != '?') {
-      return i;
+    if (from >= value.length() || value.charAt(from) != '?') {
+      return from;
     }
-    i++;
-    while (i < value.length()) {
-      char ch = value.charAt(i);
-      if (ch == '#') {
-        return i;
-      }
-      if (!isQueryOrFragmentChar(ch) && !consumePctEncoded(value, i)) {
-        return -1;
-      }
-      i += advancePcharOrPct(ch);
-    }
-    return i;
+    return scanQueryOrFragmentBody(value, from + 1, '#');
   }
 
   /** Scans optional {@code #fragment}. Returns new index, or -1 on invalid fragment chars. */
   private static int scanFragment(String value, int from) {
+    if (from >= value.length() || value.charAt(from) != '#') {
+      return from;
+    }
+    return scanQueryOrFragmentBody(value, from + 1, '\0');
+  }
+
+  private static int scanQueryOrFragmentBody(String value, int from, char terminator) {
     int i = from;
-    if (i >= value.length()) {
-      return i;
-    }
-    if (value.charAt(i) != '#') {
-      return i;
-    }
-    i++;
     while (i < value.length()) {
       char ch = value.charAt(i);
+      if (terminator != '\0' && ch == terminator) {
+        return i;
+      }
       if (!isQueryOrFragmentChar(ch) && !consumePctEncoded(value, i)) {
         return -1;
       }

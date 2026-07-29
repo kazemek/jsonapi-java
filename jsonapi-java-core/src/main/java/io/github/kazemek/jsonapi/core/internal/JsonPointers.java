@@ -10,10 +10,16 @@ public final class JsonPointers {
     if (prefix == null || prefix.isEmpty()) {
       return root(segment);
     }
-    return prefix + "/" + segment; // NOSONAR java:S1075 - JSON Pointer delimiter, not a file path
+    return prefix + "/" + escapeSegment(segment); // NOSONAR java:S1075 - JSON Pointer delimiter
   }
 
   public static String root(String segment) {
-    return "/" + segment; // NOSONAR java:S1075 - JSON Pointer delimiter, not a file path
+    return "/"
+        + escapeSegment(segment); // NOSONAR java:S1075 - JSON Pointer delimiter, not a file path
+  }
+
+  /** Escapes {@code ~} and {@code /} per RFC 6901 ({@code ~0}, {@code ~1}). */
+  private static String escapeSegment(String segment) {
+    return segment.replace("~", "~0").replace("/", "~1");
   }
 }

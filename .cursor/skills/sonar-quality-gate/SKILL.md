@@ -36,9 +36,9 @@ Quality Gate conditions needs an explicit user request.
 with `SONAR_TOKEN` set. `sonar.qualitygate.wait=true` is configured in the root build, so the `sonar` task blocks until SonarCloud returns the gate result and fails on a red gate.
 
 2. Interpret the result:
-   - **Exit 0:** Quality Gate passed. Optionally confirm unresolved new-code issues are empty via SonarCloud issues search when the dashboard or scanner output looks inconsistent with a green gate; if unexpected open issues remain on new code, treat the task as incomplete.
+   - **Exit 0:** Quality Gate passed. Optionally confirm `new_violations` is `0` (via SonarCloud measures or by searching all new-code issues regardless of status) when the dashboard or scanner output looks inconsistent with a green gate; if `new_violations` > 0, treat the task as incomplete.
    - **Non-zero exit / Quality Gate failure:** Task is incomplete. Summarize failing conditions from the scanner output, then fix the issues or escalate to the user.
-3. Only after a green gate (and no unexpected new-code issues), or an explicit user waiver, may the agent declare the work complete.
+3. Only after a green gate with `new_violations` = 0 (or an explicit user waiver) may the agent declare the work complete.
 
 ## Notes
 
