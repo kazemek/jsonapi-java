@@ -6,7 +6,7 @@ sonarqube = "7.3.1.8318"
 # Spotless 8.6+ greclipse fails input fingerprinting on cold CI (diffplug/spotless#2950).
 spotless = "8.5.1"
 jspecify = "1.0.0"
-errorprone = "2.42.0"
+errorprone = "2.50.0"
 nullaway = "0.13.8"
 errorprone-plugin = "5.1.0"
 nullaway-plugin = "3.1.0"
