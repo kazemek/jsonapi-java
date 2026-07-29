@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.core.validation;
 
+import io.github.kazemek.jsonapi.core.internal.JsonPointers;
 import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.SyntaxValidators;
 import io.github.kazemek.jsonapi.core.model.DocumentData;
@@ -590,7 +591,7 @@ public final class JsonApiDocumentValidator {
     for (Map.Entry<String, Link> entry : links.links().entrySet()) {
       Link link = entry.getValue();
       if (link instanceof Link.ObjectLink objectLink) {
-        String linkPath = path + "/" + entry.getKey();
+        String linkPath = JsonPointers.child(path, entry.getKey());
         validateAdditionalMembers(objectLink.additionalMembers(), linkPath, context);
         if (objectLink.meta() != null) {
           validateMeta(objectLink.meta(), linkPath + PATH_META, context);
@@ -808,12 +809,8 @@ public final class JsonApiDocumentValidator {
     private void ensureResourceUnderCanonical(
         ResourceIdentity canonical, ResourceObject resource, String path) {
       addAlias(canonical, canonical);
-      ResourceObject existing = byAlias.get(canonical);
-      if (existing == null) {
-        byAlias.put(canonical, resource);
-        return;
-      }
-      if (!existing.equals(resource)) {
+      ResourceObject existing = byAlias.putIfAbsent(canonical, resource);
+      if (existing != null && !existing.equals(resource)) {
         throw duplicate(path, canonical);
       }
     }

@@ -48,8 +48,10 @@ public final class OrderedMaps {
     }
     for (String name : members.keySet()) {
       if (reserved.contains(name)) {
-        String path = pathPrefix.isEmpty() ? "/" + name : pathPrefix + "/" + name;
-        LocalValidation.fail(ValidationRuleCode.RESERVED_FIELD_NAME, path, messagePrefix + name);
+        LocalValidation.fail(
+            ValidationRuleCode.RESERVED_FIELD_NAME,
+            JsonPointers.child(pathPrefix, name),
+            messagePrefix + name);
       }
     }
   }

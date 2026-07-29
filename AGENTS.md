@@ -58,8 +58,11 @@ plugins {
 
 GitHub Actions runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on push to
 `main` and on PRs (requires repository secret `SONAR_TOKEN`). `sonar.qualitygate.wait` is
-enabled, so a red Quality Gate fails the job. Local `./gradlew clean build` does not need
-Sonar; formatting is enforced via Spotless (`spotlessCheck`).
+enabled, so a red Quality Gate fails the job. The project Quality Gate is named `jsonapi-java`
+(copy of Sonar way plus **any new issue fails**: `new_violations` > 0). Associate it in
+SonarCloud under Project Settings → Quality Gate if the project still shows Sonar way.
+Local `./gradlew clean build` does not need Sonar; formatting is enforced via Spotless
+(`spotlessCheck`).
 
 CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
 and publishes a Unit tests check from JUnit XML when present. Download the artifact from the workflow
@@ -94,6 +97,7 @@ After implementation, before declaring the work complete, a coding agent MUST:
 9. Use the project `sonar-quality-gate` skill to run SonarCloud analysis with Quality Gate wait.
    - Local `./gradlew clean build` remains token-free; Sonar is a separate completion gate.
    - Without `SONAR_TOKEN`, do not claim completion: report that Sonar is blocked and CI must still pass the Quality Gate.
+   - Completion requires a green gate under the project policy of **zero new issues**.
 
 ## Milestone Planning
 

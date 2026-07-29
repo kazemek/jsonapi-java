@@ -27,6 +27,8 @@ public record ValidationContext(
     LinksContext linksContext,
     Map<RelationshipPaginationKey, RelationshipCardinality> relationshipPaginationHints) {
 
+  private static final String PATH_RELATIONSHIP_PAGINATION_HINTS = "/relationshipPaginationHints";
+
   public ValidationContext {
     documentUsage =
         LocalValidation.requireNonNull(
@@ -48,7 +50,7 @@ public record ValidationContext(
         copyRequiredHints(
             LocalValidation.requireNonNull(
                 relationshipPaginationHints,
-                "/relationshipPaginationHints",
+                PATH_RELATIONSHIP_PAGINATION_HINTS,
                 "relationshipPaginationHints must not be null"));
   }
 
@@ -124,11 +126,11 @@ public record ValidationContext(
       hintCopy.put(
           LocalValidation.requireNonNull(
               entry.getKey(),
-              "/relationshipPaginationHints",
+              PATH_RELATIONSHIP_PAGINATION_HINTS,
               "Pagination hint key must not be null"),
           LocalValidation.requireNonNull(
               entry.getValue(),
-              "/relationshipPaginationHints",
+              PATH_RELATIONSHIP_PAGINATION_HINTS,
               "Pagination hint value must not be null"));
     }
     return Collections.unmodifiableMap(hintCopy);

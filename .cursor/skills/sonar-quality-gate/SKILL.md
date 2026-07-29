@@ -8,6 +8,16 @@ disable-model-invocation: true
 
 Verify that SonarCloud's Quality Gate passes before declaring implementation work complete. Ordinary `./gradlew clean build` stays token-free; this skill only covers the Sonar completion gate.
 
+## Project policy
+
+The SonarCloud Quality Gate named **`jsonapi-java`** (not built-in Sonar way) fails when
+**any new issue** is introduced (`new_violations` > 0), in addition to Sonar way ratings,
+coverage, duplication, and security-hotspot conditions. The project must use that gate
+(Project Settings → Quality Gate in SonarCloud).
+
+Zero new issues is required for task completion. Do **not** loosen that gate; changing
+Quality Gate conditions needs an explicit user request.
+
 ## Prerequisites
 
 1. Confirm `./gradlew clean build` already passes for the change under review.
@@ -26,12 +36,12 @@ Verify that SonarCloud's Quality Gate passes before declaring implementation wor
 with `SONAR_TOKEN` set. `sonar.qualitygate.wait=true` is configured in the root build, so the `sonar` task blocks until SonarCloud returns the gate result and fails on a red gate.
 
 2. Interpret the result:
-   - **Exit 0:** Quality Gate passed. The agent may declare the task complete (subject to any other project completion rules).
+   - **Exit 0:** Quality Gate passed. Optionally confirm `new_violations` is `0` (via SonarCloud measures or by searching all new-code issues regardless of status) when the dashboard or scanner output looks inconsistent with a green gate; if `new_violations` > 0, treat the task as incomplete.
    - **Non-zero exit / Quality Gate failure:** Task is incomplete. Summarize failing conditions from the scanner output, then fix the issues or escalate to the user.
-3. Only after a green gate, or an explicit user waiver, may the agent declare the work complete.
+3. Only after a green gate with `new_violations` = 0 (or an explicit user waiver) may the agent declare the work complete.
 
 ## Notes
 
 - Do not attach `sonar` to `build`/`check`. Developers who only build and test locally do not need `SONAR_TOKEN`.
-- Do not poll SonarCloud REST APIs for gate status; rely on the Gradle scanner wait.
-- Do not change SonarCloud Quality Gate conditions in the Sonar UI unless the user asks.
+- Prefer the Gradle scanner wait for gate status. Issues search is allowed as a defensive check for the zero-new-issues policy when something looks wrong after a green gate.
+- Do not loosen the project Quality Gate. Creating or tightening conditions is allowed only when the user explicitly requests it.

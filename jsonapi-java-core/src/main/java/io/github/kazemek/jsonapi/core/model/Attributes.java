@@ -73,31 +73,11 @@ public final class Attributes {
 
   private static void validateAttributeName(String name, boolean allowPassThrough) {
     if (MemberNames.isAtMember(name)) {
-      if (!allowPassThrough || !MemberNames.isValid(name)) {
-        LocalValidation.fail(
-            allowPassThrough
-                ? ValidationRuleCode.INVALID_MEMBER_NAME
-                : ValidationRuleCode.RESERVED_FIELD_NAME,
-            PATH + "/" + name,
-            allowPassThrough
-                ? "Invalid attribute member name: " + name
-                : "Attribute names cannot start with @: " + name);
-      }
+      validateAtAttribute(name, allowPassThrough);
       return;
     }
     if (MemberNames.isExtensionMember(name)) {
-      if (!allowPassThrough) {
-        LocalValidation.fail(
-            ValidationRuleCode.RESERVED_FIELD_NAME,
-            PATH + "/" + name,
-            "Extension members must use additionalMembers: " + name);
-      }
-      if (!MemberNames.isValid(name)) {
-        LocalValidation.fail(
-            ValidationRuleCode.INVALID_MEMBER_NAME,
-            PATH + "/" + name,
-            "Invalid attribute member name: " + name);
-      }
+      validateExtensionAttribute(name, allowPassThrough);
       return;
     }
     if (!MemberNames.isValid(name)) {
@@ -111,6 +91,34 @@ public final class Attributes {
           ValidationRuleCode.RESERVED_FIELD_NAME,
           PATH + "/" + name,
           "Reserved attribute name: " + name);
+    }
+  }
+
+  private static void validateAtAttribute(String name, boolean allowPassThrough) {
+    if (!allowPassThrough || !MemberNames.isValid(name)) {
+      LocalValidation.fail(
+          allowPassThrough
+              ? ValidationRuleCode.INVALID_MEMBER_NAME
+              : ValidationRuleCode.RESERVED_FIELD_NAME,
+          PATH + "/" + name,
+          allowPassThrough
+              ? "Invalid attribute member name: " + name
+              : "Attribute names cannot start with @: " + name);
+    }
+  }
+
+  private static void validateExtensionAttribute(String name, boolean allowPassThrough) {
+    if (!allowPassThrough) {
+      LocalValidation.fail(
+          ValidationRuleCode.RESERVED_FIELD_NAME,
+          PATH + "/" + name,
+          "Extension members must use additionalMembers: " + name);
+    }
+    if (!MemberNames.isValid(name)) {
+      LocalValidation.fail(
+          ValidationRuleCode.INVALID_MEMBER_NAME,
+          PATH + "/" + name,
+          "Invalid attribute member name: " + name);
     }
   }
 

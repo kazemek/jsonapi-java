@@ -20,7 +20,7 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
 
   record StringLink(String href) implements Link {
     public StringLink {
-      requireValidHref(href, "/links");
+      requireValidHref(href, path());
     }
   }
 
@@ -39,22 +39,22 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
         Set.of("href", "rel", "describedby", "title", "type", "hreflang", "meta");
 
     public ObjectLink {
-      requireValidHref(href, "/links");
+      requireValidHref(href, path());
       if (rel != null && !SyntaxValidators.isValidLinkRelation(rel)) {
         LocalValidation.fail(
             ValidationRuleCode.INVALID_LINK_RELATION,
-            "/links/rel",
+            path() + "/rel",
             "Invalid link relation: " + rel);
       }
       if (describedby != null && !SyntaxValidators.isValidUriReference(describedby)) {
         LocalValidation.fail(
             ValidationRuleCode.INVALID_URI_REFERENCE,
-            "/links/describedby",
+            path() + "/describedby",
             "Invalid describedby URI: " + describedby);
       }
       if (type != null && !SyntaxValidators.isValidMediaType(type)) {
         LocalValidation.fail(
-            ValidationRuleCode.INVALID_MEDIA_TYPE, "/links/type", "Invalid media type: " + type);
+            ValidationRuleCode.INVALID_MEDIA_TYPE, path() + "/type", "Invalid media type: " + type);
       }
       if (hreflang != null) {
         for (int i = 0; i < hreflang.size(); i++) {
@@ -62,7 +62,7 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
           if (!SyntaxValidators.isValidLanguageTag(tag)) {
             LocalValidation.fail(
                 ValidationRuleCode.INVALID_LANGUAGE_TAG,
-                "/links/hreflang/" + i,
+                path() + "/hreflang/" + i,
                 "Invalid language tag: " + tag);
           }
         }
@@ -70,7 +70,7 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
       }
       additionalMembers =
           AdditionalMembers.copy(
-              additionalMembers, "/links", "Invalid link member name: ", RESERVED_ADDITIONAL);
+              additionalMembers, path(), "Invalid link member name: ", RESERVED_ADDITIONAL);
     }
 
     public static ObjectLink ofHref(String href) {
@@ -91,5 +91,9 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
       LocalValidation.fail(
           ValidationRuleCode.INVALID_URI_REFERENCE, path + "/href", "Invalid link href: " + href);
     }
+  }
+
+  private static String path() {
+    return "/links";
   }
 }
