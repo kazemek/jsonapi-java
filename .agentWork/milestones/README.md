@@ -13,38 +13,43 @@ Milestones are planned, testable increments. They may change until implementatio
 7. **Phase 0.7 — milestone planning workflow:** creates, refines, and decomposes context-bounded implementation milestones.
 8. **Phase 0.8 — JSpecify nullness:** JSpecify `@NullMarked` packages, NullAway enforcement, and portable agent guidance for `jsonapi-java-core`.
 9. **Phase 0.9 — ArchUnit core dependency guard:** ArchUnit enforces JDK + JSpecify + self type deps for `jsonapi-java-core`.
-10. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
-11. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
-12. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
-13. **Phase 2.3 — compound serialization:** builds on domain mapping.
-14. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
-15. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
-16. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
-17. **Phase 4.1 — conformance and hardening.**
-18. **Phase 4.2 — stable release.**
+10. **Phase 0.10 — task-scoped discovery and documentation pattern:** unifies agent routing and documentation checklists after Phases 0.2, 0.5, and 0.7.
+11. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
+12. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
+13. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
+14. **Phase 2.3 — compound serialization:** builds on domain mapping.
+15. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
+16. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
+17. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
+18. **Phase 4.1 — conformance and hardening.**
+19. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
-- [Phase 0.1 — Public Namespace Decision](phase-0-1-public-namespace.md)
-- [Phase 0.2 — Milestone Review Workflow](phase-0-2-milestone-review-workflow.md)
-- [Phase 0.3 — CI Quality and Supply Chain](phase-0-3-ci-quality-and-supply-chain.md)
-- [Phase 0.4 — Spotless Formatting](phase-0-4-spotless-formatting.md)
-- [Phase 0.5 — Module Docs Discovery and Maintenance](phase-0-5-module-docs-workflow.md)
-- [Phase 0.6 — Line Ending Enforcement](phase-0-6-line-endings.md)
-- [Phase 0.7 — Milestone Planning Workflow](phase-0-7-milestone-planning-workflow.md)
-- [Phase 0.8 — JSpecify Nullness](phase-0-8-jspecify-nullness.md)
-- [Phase 0.9 — ArchUnit Core Dependency Guard](phase-0-9-archunit-core-deps.md)
-- [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md)
-- [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md)
-- [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md)
-- [Phase 2.2 — Domain-to-Resource Mapping](phase-2-2-domain-resource-mapping.md)
-- [Phase 2.3 — Compound Serialization Context](phase-2-3-compound-serialization.md)
-- [Phase 2.4 — Document-First Reads](phase-2-4-document-reads.md)
-- [Phase 3.1 — Optional Query-Parameter Parser](phase-3-1-query-parameters.md)
-- [Phase 3.2 — Spring WebMVC Adapter](phase-3-2-spring-webmvc.md)
-- [Phase 3.3 — WebFlux Adapter Evaluation](phase-3-3-webflux-evaluation.md)
-- [Phase 4.1 — Conformance and Hardening](phase-4-1-conformance-and-hardening.md)
-- [Phase 4.2 — Stable Release](phase-4-2-stable-release.md)
+Each entry is `milestone — module/scope — status`; use it to select a candidate before opening a
+milestone file.
+
+- [Phase 0.1 — Public Namespace Decision](phase-0-1-public-namespace.md) — all modules — Complete
+- [Phase 0.2 — Milestone Review Workflow](phase-0-2-milestone-review-workflow.md) — repository workflow — Complete
+- [Phase 0.3 — CI Quality and Supply Chain](phase-0-3-ci-quality-and-supply-chain.md) — build, CI, and agent completion — Complete
+- [Phase 0.4 — Spotless Formatting](phase-0-4-spotless-formatting.md) — build and agent completion — Complete
+- [Phase 0.5 — Module Docs Discovery and Maintenance](phase-0-5-module-docs-workflow.md) — repository workflow — Complete
+- [Phase 0.6 — Line Ending Enforcement](phase-0-6-line-endings.md) — repository hygiene — Complete
+- [Phase 0.7 — Milestone Planning Workflow](phase-0-7-milestone-planning-workflow.md) — repository workflow — Complete
+- [Phase 0.8 — JSpecify Nullness](phase-0-8-jspecify-nullness.md) — build, core, and agent guidance — Complete
+- [Phase 0.9 — ArchUnit Core Dependency Guard](phase-0-9-archunit-core-deps.md) — core architecture and agent guidance — Complete
+- [Phase 0.10 — Task-Scoped Discovery and Documentation Pattern](phase-0-10-task-scoped-discovery-and-doc-pattern.md) — repository workflow and agent guidance — Complete
+- [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md) — `jsonapi-java-core` — Complete
+- [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md) — `jsonapi-java-annotations` — Not started
+- [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md) — `jsonapi-java-jackson` — Not started
+- [Phase 2.2 — Domain-to-Resource Mapping](phase-2-2-domain-resource-mapping.md) — `jsonapi-java-jackson` — Not started
+- [Phase 2.3 — Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson` — Not started
+- [Phase 2.4 — Document-First Reads](phase-2-4-document-reads.md) — `jsonapi-java-jackson` — Not started
+- [Phase 3.1 — Optional Query-Parameter Parser](phase-3-1-query-parameters.md) — `jsonapi-java-query` — Not started
+- [Phase 3.2 — Spring WebMVC Adapter](phase-3-2-spring-webmvc.md) — `jsonapi-java-spring-webmvc` — Not started
+- [Phase 3.3 — WebFlux Adapter Evaluation](phase-3-3-webflux-evaluation.md) — candidate `jsonapi-java-spring-webflux` — Not started
+- [Phase 4.1 — Conformance and Hardening](phase-4-1-conformance-and-hardening.md) — all implemented modules — Not started
+- [Phase 4.2 — Stable Release](phase-4-2-stable-release.md) — publication and compatibility — Not started
 
 Every implementation milestone must finish with the relevant module tests and `./gradlew clean build` passing.
 
