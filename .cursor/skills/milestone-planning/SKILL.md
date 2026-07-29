@@ -23,7 +23,9 @@ Resolve the target phase and milestone unambiguously. Ask the user only when nam
 Read these repository sources in order:
 
 1. `AGENTS.md`, `docs/vision.md`, and `.agentWork/milestones/README.md`.
-2. The target milestone when refining or decomposing, plus adjacent and dependency milestones.
+2. The target milestone when refining or decomposing. Read dependency or adjacent milestones only
+   when their contracts can constrain ordering, compatibility, or scope; use index metadata to
+   avoid opening unrelated milestones.
 3. `settings.gradle.kts` and each affected module's `README.md`.
 4. `package-info.java` for packages likely to change.
 5. Only ADRs and conformance sources linked by the vision, module README, target milestone, or directly implicated code.
@@ -138,12 +140,21 @@ When planning Java public API work that introduces or changes null-bearing types
 null-preserving maps/lists, or factory methods that pass `null`), include acceptance criteria that
 require JSpecify `@NullMarked` packages and accurate `@Nullable` decoration per ADR-009.
 
+When a milestone adds a submodule or changes public packages, entry points, validate/read flows,
+non-goals, or agent-relevant invariants:
+
+- include module documentation per the `module-docs` skill as a deliverable;
+- include an acceptance criterion that the canonical `module-docs` checklist passes;
+- reference that skill instead of copying its README/package-info checklist into the milestone.
+
 ## Synchronize and verify
 
 After writing all milestone files:
 
-1. Update `.agentWork/milestones/README.md` dependency order and milestone index.
-2. Verify every link, phase identifier, dependency, status, and command.
+1. Update `.agentWork/milestones/README.md` dependency order and milestone index. Every index entry
+   must retain the canonical `milestone — module/scope — status` format.
+2. Verify every link, phase identifier, dependency, scope/module, status, and command against the
+   milestone files.
 3. Reapply the size gate to each emitted milestone.
 4. Confirm decomposed milestones do not overlap or omit requirements from the source request.
 5. Confirm milestone prose links to rather than duplicates vision, ADR, conformance, and module documentation.

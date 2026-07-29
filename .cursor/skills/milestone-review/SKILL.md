@@ -16,10 +16,13 @@ Review an implementation against one milestone contract. Do not fix findings or 
    - If multiple milestones are plausible, ask the user to choose.
 2. Read:
    - the target milestone;
-   - `docs/vision.md`;
+   - `AGENTS.md`;
    - `.agentWork/milestones/README.md`;
-   - relevant records under `docs/adr/`;
-   - `AGENTS.md`.
+   - affected module READMEs and package documentation;
+   - `docs/vision.md` when the milestone changes project direction, modules, or public product
+     boundaries, or when evidence suggests a vision conflict;
+   - ADRs and conformance sections linked by the milestone or affected module documentation, plus
+     additional records only when directly implicated by the change.
 3. Determine the implementation change set in this order:
    - a diff, pull request, commit range, or paths supplied by the user;
    - branch changes and uncommitted changes when Git metadata is available;
@@ -40,6 +43,10 @@ Review an implementation against one milestone contract. Do not fix findings or 
      `@Nullable` on absence-null or null-preserving APIs, foreign nullness annotations
      (JetBrains/JSR-305/Checker), or treating explicit JSON `null` as a bare `@Nullable`
      instead of a sealed wire-null variant.
+   - module-documentation drift when public module surface changed: verify the canonical
+     `module-docs` checklist and report missing or stale README sections, package documentation,
+     root module registration, or duplicated vision/ADR/conformance/root-workflow prose. Reference
+     the checklist; do not copy it into the review instructions.
 4. Run the narrowest relevant tests when practical, then run `./gradlew clean build` when the milestone or repository policy requires it.
    - Do not change implementation files to make tests pass.
    - Record commands, outcomes, and any inability to run them.
@@ -102,6 +109,8 @@ Use this template:
 
 - [Pass | Fail | Partial | Not verified] <goal, deliverable, non-goal, dependency, or acceptance criterion>
   - Evidence: <paths, lines, tests, or explanation>
+- [Pass | Fail | Partial | Not applicable] `module-docs` checklist
+  - Evidence: <public-surface trigger and relevant documentation paths, or why it did not apply>
 
 ## Verification
 
