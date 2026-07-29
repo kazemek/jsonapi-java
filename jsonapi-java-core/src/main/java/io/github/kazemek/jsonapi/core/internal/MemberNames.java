@@ -1,11 +1,13 @@
 package io.github.kazemek.jsonapi.core.internal;
 
+import org.jspecify.annotations.Nullable;
+
 /** JSON:API v1.1 member-name grammar validation. */
 public final class MemberNames {
 
   private MemberNames() {}
 
-  public static boolean isValid(String name) {
+  public static boolean isValid(@Nullable String name) {
     if (name == null || name.isEmpty()) {
       return false;
     }
@@ -22,7 +24,7 @@ public final class MemberNames {
     return isValidImplementationMember(name);
   }
 
-  public static boolean isExtensionMember(String name) {
+  public static boolean isExtensionMember(@Nullable String name) {
     if (name == null) {
       return false;
     }
@@ -30,7 +32,7 @@ public final class MemberNames {
     return colon > 0 && isValidExtensionMember(name, colon);
   }
 
-  public static boolean isAtMember(String name) {
+  public static boolean isAtMember(@Nullable String name) {
     return name != null && !name.isEmpty() && name.charAt(0) == '@';
   }
 

@@ -27,7 +27,9 @@ This boundary is deliberate. The project is not an API engine, ORM bridge, repos
 
 ## What “lightweight” means
 
-- `jsonapi-java-core` has no third-party runtime dependencies.
+- `jsonapi-java-core` has no third-party runtime dependencies. A compile-only JSpecify
+  annotation jar may be used for nullness metadata (see ADR-009); it is not a functional
+  runtime dependency and must not appear on the published runtime classpath.
 - Domain mapping is opt-in and requires no inheritance or framework interfaces.
 - Jackson, query parsing, Spring WebMVC, and future WebFlux support are separate artifacts.
 - A relationship creates linkage; it does not automatically traverse and include an object graph.

@@ -8,13 +8,14 @@ import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /** Flat, insertion-ordered JSON-compatible metadata members. */
 public final class Meta {
 
-  private final Map<String, Object> members;
+  private final Map<String, @Nullable Object> members;
 
-  private Meta(Map<String, Object> members) {
+  private Meta(Map<String, @Nullable Object> members) {
     this.members = members;
   }
 
@@ -22,21 +23,20 @@ public final class Meta {
     return new Meta(Map.of());
   }
 
-  public static Meta of(Map<String, ?> members) {
+  public static Meta of(@Nullable Map<String, ?> members) {
     if (members == null || members.isEmpty()) {
       return empty();
     }
-    Map<String, Object> copy = new LinkedHashMap<>();
+    Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : members.entrySet()) {
       String name = entry.getKey();
       validateMemberName(name, "/meta/" + name);
-      Object value = OpenJsonValues.copy(entry.getValue(), "/meta/" + name);
-      copy.put(name, value);
+      copy.put(name, OpenJsonValues.copy(entry.getValue(), "/meta/" + name));
     }
     return new Meta(OrderedMaps.copyOfNullableValues(copy));
   }
 
-  public Map<String, Object> members() {
+  public Map<String, @Nullable Object> members() {
     return members;
   }
 

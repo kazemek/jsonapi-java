@@ -35,7 +35,11 @@ Review an implementation against one milestone contract. Do not fix findings or 
    - unmet or contradicted milestone requirements;
    - vision or ADR conflicts;
    - missing validation, error handling, boundary cases, or tests;
-   - accidental work outside the milestone scope.
+   - accidental work outside the milestone scope;
+   - nullness drift against ADR-009: missing `@NullMarked` on production packages, missing
+     `@Nullable` on absence-null or null-preserving APIs, foreign nullness annotations
+     (JetBrains/JSR-305/Checker), or treating explicit JSON `null` as a bare `@Nullable`
+     instead of a sealed wire-null variant.
 4. Run the narrowest relevant tests when practical, then run `./gradlew clean build` when the milestone or repository policy requires it.
    - Do not change implementation files to make tests pass.
    - Record commands, outcomes, and any inability to run them.

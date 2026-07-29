@@ -5,24 +5,23 @@ import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.validation.LocalValidation;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** A JSON:API resource object. */
 public record ResourceObject(
     String type,
-    String id,
-    String lid,
-    Attributes attributes,
-    Relationships relationships,
-    Links links,
-    Meta meta,
-    Map<String, Object> additionalMembers) {
+    @Nullable String id,
+    @Nullable String lid,
+    @Nullable Attributes attributes,
+    @Nullable Relationships relationships,
+    @Nullable Links links,
+    @Nullable Meta meta,
+    Map<String, @Nullable Object> additionalMembers) {
 
   public ResourceObject {
-    if (type == null) {
-      LocalValidation.fail(
-          ValidationRuleCode.MISSING_RESOURCE_TYPE, "/data/type", "Resource object requires type");
-    }
+    requireType(type);
     if (!MemberNames.isValid(type)) {
       LocalValidation.fail(
           ValidationRuleCode.INVALID_MEMBER_NAME, "/data/type", "Invalid resource type: " + type);
@@ -52,12 +51,12 @@ public record ResourceObject(
     return lid != null;
   }
 
-  public ResourceIdentity identityKey() {
+  public @Nullable ResourceIdentity identityKey() {
     if (hasId()) {
-      return ResourceIdentity.ofId(type, id);
+      return ResourceIdentity.ofId(type, Objects.requireNonNull(id));
     }
     if (hasLid()) {
-      return ResourceIdentity.ofLid(type, lid);
+      return ResourceIdentity.ofLid(type, Objects.requireNonNull(lid));
     }
     return null;
   }
@@ -66,7 +65,15 @@ public record ResourceObject(
     return new ResourceIdentifier(type, id, lid, meta, additionalMembers);
   }
 
-  private static void validateFieldNamespace(Attributes attributes, Relationships relationships) {
+  private static void requireType(@Nullable String type) {
+    if (type == null) {
+      LocalValidation.fail(
+          ValidationRuleCode.MISSING_RESOURCE_TYPE, "/data/type", "Resource object requires type");
+    }
+  }
+
+  private static void validateFieldNamespace(
+      @Nullable Attributes attributes, @Nullable Relationships relationships) {
     if (attributes == null || relationships == null) {
       return;
     }

@@ -5,18 +5,19 @@ import io.github.kazemek.jsonapi.core.validation.LocalValidation;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** JSON:API error object. */
 public record ErrorObject(
-    String id,
-    Links links,
-    String status,
-    String code,
-    String title,
-    String detail,
-    ErrorSource source,
-    Meta meta,
-    Map<String, Object> additionalMembers) {
+    @Nullable String id,
+    @Nullable Links links,
+    @Nullable String status,
+    @Nullable String code,
+    @Nullable String title,
+    @Nullable String detail,
+    @Nullable ErrorSource source,
+    @Nullable Meta meta,
+    Map<String, @Nullable Object> additionalMembers) {
 
   private static final Set<String> RESERVED_ADDITIONAL =
       Set.of("id", "links", "status", "code", "title", "detail", "source", "meta");

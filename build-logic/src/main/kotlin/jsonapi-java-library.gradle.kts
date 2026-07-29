@@ -1,7 +1,12 @@
+import net.ltgt.gradle.errorprone.errorprone
+import net.ltgt.gradle.nullaway.nullaway
+
 plugins {
     `java-library`
     groovy
     jacoco
+    id("net.ltgt.errorprone")
+    id("net.ltgt.nullaway")
 }
 
 group = providers.gradleProperty("group").get()
@@ -16,9 +21,28 @@ java {
 }
 
 dependencies {
+    compileOnly(libs.findLibrary("jspecify").get())
+    errorprone(libs.findLibrary("errorprone-core").get())
+    errorprone(libs.findLibrary("nullaway").get())
     testImplementation(libs.findLibrary("spock-core").get())
     testImplementation(libs.findLibrary("groovy-all").get())
     testImplementation(libs.findLibrary("bytebuddy").get())
+}
+
+nullaway {
+    onlyNullMarked.set(true)
+    jspecifyMode.set(true)
+}
+
+tasks.named<JavaCompile>("compileJava").configure {
+    options.errorprone {
+        disableAllChecks.set(true)
+        error("NullAway")
+        error("RequireExplicitNullMarking")
+        nullaway {
+            error()
+        }
+    }
 }
 
 tasks.withType<Test>().configureEach {

@@ -5,10 +5,12 @@ import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
 import io.github.kazemek.jsonapi.core.validation.LocalValidation;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Flat relationships wrapper separating semantic members from pass-through members. */
 public final class Relationships {
@@ -17,9 +19,10 @@ public final class Relationships {
   private static final Set<String> RESERVED = Set.of("type", "id");
 
   private final Map<String, Relationship> members;
-  private final Map<String, Object> additionalMembers;
+  private final Map<String, @Nullable Object> additionalMembers;
 
-  private Relationships(Map<String, Relationship> members, Map<String, Object> additionalMembers) {
+  private Relationships(
+      Map<String, Relationship> members, Map<String, @Nullable Object> additionalMembers) {
     this.members = members;
     this.additionalMembers = additionalMembers;
   }
@@ -29,25 +32,31 @@ public final class Relationships {
   }
 
   public static Relationships of(
-      Map<String, Relationship> relationships, Map<String, ?> additionalMembers) {
-    Map<String, Relationship> relCopy = OrderedMaps.copyOfNullableValues(relationships);
-    for (Map.Entry<String, Relationship> entry : relCopy.entrySet()) {
-      String name = entry.getKey();
-      validateRelationshipName(name, PATH + "/" + name, false);
-      if (entry.getValue() == null) {
-        LocalValidation.fail(
-            ValidationRuleCode.NULL_RELATIONSHIP_VALUE,
-            PATH + "/" + name,
-            "Relationship value must not be null: " + name);
+      @Nullable Map<String, @Nullable Relationship> relationships,
+      @Nullable Map<String, ?> additionalMembers) {
+    Map<String, Relationship> relCopy = new LinkedHashMap<>();
+    if (relationships != null && !relationships.isEmpty()) {
+      for (Map.Entry<String, @Nullable Relationship> entry : relationships.entrySet()) {
+        String name = entry.getKey();
+        validateRelationshipName(name, PATH + "/" + name, false);
+        Relationship value = entry.getValue();
+        if (value == null) {
+          LocalValidation.fail(
+              ValidationRuleCode.NULL_RELATIONSHIP_VALUE,
+              PATH + "/" + name,
+              "Relationship value must not be null: " + name);
+        }
+        relCopy.put(name, value);
       }
     }
-    Map<String, Object> additionalCopy = copyAdditionalMembers(additionalMembers);
+    Map<String, @Nullable Object> additionalCopy = copyAdditionalMembers(additionalMembers);
     OrderedMaps.requireNoCollisions(
         relCopy, castRelationships(additionalCopy), "relationships", PATH);
-    return new Relationships(relCopy, additionalCopy);
+    return new Relationships(Collections.unmodifiableMap(relCopy), additionalCopy);
   }
 
-  public static Relationships ofRelationships(Map<String, Relationship> relationships) {
+  public static Relationships ofRelationships(
+      @Nullable Map<String, @Nullable Relationship> relationships) {
     return of(relationships, Map.of());
   }
 
@@ -55,7 +64,7 @@ public final class Relationships {
     return members;
   }
 
-  public Map<String, Object> additionalMembers() {
+  public Map<String, @Nullable Object> additionalMembers() {
     return additionalMembers;
   }
 
@@ -63,8 +72,8 @@ public final class Relationships {
     return members.isEmpty() && additionalMembers.isEmpty();
   }
 
-  public Map<String, Object> flatten() {
-    Map<String, Object> flat = new LinkedHashMap<>();
+  public Map<String, @Nullable Object> flatten() {
+    Map<String, @Nullable Object> flat = new LinkedHashMap<String, @Nullable Object>();
     flat.putAll(members);
     flat.putAll(additionalMembers);
     return OrderedMaps.copyOfNullableValues(flat);
@@ -118,11 +127,12 @@ public final class Relationships {
     }
   }
 
-  private static Map<String, Object> copyAdditionalMembers(Map<String, ?> source) {
+  private static Map<String, @Nullable Object> copyAdditionalMembers(
+      @Nullable Map<String, ?> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
-    Map<String, Object> copy = new LinkedHashMap<>();
+    Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : source.entrySet()) {
       String name = entry.getKey();
       validateRelationshipName(name, PATH + "/" + name, true);
@@ -132,7 +142,7 @@ public final class Relationships {
   }
 
   @SuppressWarnings("unchecked")
-  private static Map<String, Relationship> castRelationships(Map<String, Object> map) {
+  private static Map<String, Relationship> castRelationships(Map<String, @Nullable Object> map) {
     return (Map) map;
   }
 

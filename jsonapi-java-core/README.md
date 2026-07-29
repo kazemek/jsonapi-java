@@ -31,11 +31,13 @@ This module does not provide Jackson codecs, HTTP adapters, query-parameter pars
 - [Conformance checklist](../docs/conformance.md)
 - [ADR-002 — Wire states](../docs/adr/002-document-representation.md)
 - [ADR-003 — Validation and immutability](../docs/adr/003-validation-and-immutability.md)
+- [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
 
 - **Local vs aggregate:** Compact constructors enforce single-value invariants. Cross-document rules live only in `JsonApiDocumentValidator`.
 - **Diagnostics:** Failures use `JsonApiValidationException` with a stable `ValidationRuleCode` and a JSON Pointer-like path—not bare `IllegalArgumentException`.
+- **Nullness:** Production packages are `@NullMarked` (JSpecify only). Use `@Nullable` for member absence and intentionally null map/list values. Explicit JSON `null` stays a sealed variant (`DocumentData.NullData`, etc.), not a bare nullable reference. Keep `LocalValidation.requireNonNull` for construction; do not use JetBrains/JSR-305/Checker nullness annotations. Groovy tests are not annotated.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout.
 - **Extensions:** Preserve valid extension and `@` members; do not interpret extension semantics in core.

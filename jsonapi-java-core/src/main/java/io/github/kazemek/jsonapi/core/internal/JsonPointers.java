@@ -1,12 +1,14 @@
 package io.github.kazemek.jsonapi.core.internal;
 
+import org.jspecify.annotations.Nullable;
+
 /** RFC 6901 JSON Pointer path helpers. These are document pointers, not filesystem paths. */
 public final class JsonPointers {
 
   private JsonPointers() {}
 
   /** Returns {@code /segment} for an empty prefix, otherwise {@code prefix/segment}. */
-  public static String child(String prefix, String segment) {
+  public static String child(@Nullable String prefix, String segment) {
     if (prefix == null || prefix.isEmpty()) {
       return root(segment);
     }

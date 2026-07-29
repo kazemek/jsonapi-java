@@ -7,6 +7,7 @@ import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A JSON:API link as a URI reference string or link object.
@@ -26,13 +27,13 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
 
   record ObjectLink(
       String href,
-      String rel,
-      String describedby,
-      String title,
-      String type,
-      List<String> hreflang,
-      Meta meta,
-      Map<String, Object> additionalMembers)
+      @Nullable String rel,
+      @Nullable String describedby,
+      @Nullable String title,
+      @Nullable String type,
+      @Nullable List<String> hreflang,
+      @Nullable Meta meta,
+      Map<String, @Nullable Object> additionalMembers)
       implements Link {
 
     private static final Set<String> RESERVED_ADDITIONAL =
