@@ -32,6 +32,7 @@ This module does not provide Jackson codecs, HTTP adapters, query-parameter pars
 - [ADR-002 — Wire states](../docs/adr/002-document-representation.md)
 - [ADR-003 — Validation and immutability](../docs/adr/003-validation-and-immutability.md)
 - [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
+- [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
@@ -39,5 +40,6 @@ This module does not provide Jackson codecs, HTTP adapters, query-parameter pars
 - **Local vs aggregate:** Compact constructors enforce single-value invariants. Cross-document rules live only in `JsonApiDocumentValidator`.
 - **Diagnostics:** Failures use `JsonApiValidationException` with a stable `ValidationRuleCode` and a JSON Pointer-like path—not bare `IllegalArgumentException`.
 - **Nullness:** Production packages are `@NullMarked` (JSpecify only). Use `@Nullable` for member absence and intentionally null map/list values. Explicit JSON `null` stays a sealed variant (`DocumentData.NullData`, etc.), not a bare nullable reference. Keep `LocalValidation.requireNonNull` for construction; do not use JetBrains/JSR-305/Checker nullness annotations. Groovy tests are not annotated.
+- **Architectural tests:** `CoreDependencyRulesSpec` (ArchUnit) enforces JDK + JSpecify + self type dependencies for production sources (ADR-010). Do not weaken the allowlist without updating the ADR.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout.
 - **Extensions:** Preserve valid extension and `@` members; do not interpret extension semantics in core.

@@ -133,5 +133,6 @@ Sonar Quality Gate checks for task completion use the project `sonar-quality-gat
 * **Package suffixes:** `core.model`, `core.validation`, `annotation`, `jackson`, `query`, and adapter-specific Spring packages under the verified base.
 * **Module orientation:** See [`jsonapi-java-core/README.md`](jsonapi-java-core/README.md) for package map, usage, non-goals, and agent notes. Additional modules follow the same `<module>/README.md` pattern once present.
 * **Nullness:** JSpecify `@NullMarked` packages and `@Nullable` for absence/null-preserving values (see [`docs/adr/009-jspecify-nullness.md`](docs/adr/009-jspecify-nullness.md) and module agent notes). NullAway enforces this on Java `main` sources.
+* **Architectural tests:** ArchUnit enforces that `jsonapi-java-core` production types depend only on the JDK, JSpecify annotations, and other core types (see [`docs/adr/010-architectural-tests.md`](docs/adr/010-architectural-tests.md)). Do not weaken allowlists without updating the ADR; extend rules when adding modules.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
 * **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure

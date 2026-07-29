@@ -10,6 +10,7 @@ errorprone = "2.42.0"
 nullaway = "0.13.2"
 errorprone-plugin = "5.1.0"
 nullaway-plugin = "3.1.0"
+archunit = "1.4.2"
 
 [libraries]
 spock-core = { module = "org.spockframework:spock-core", version.ref = "spock" }
@@ -21,6 +22,7 @@ errorprone-core = { module = "com.google.errorprone:error_prone_core", version.r
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 errorprone-plugin = { module = "net.ltgt.errorprone:net.ltgt.errorprone.gradle.plugin", version.ref = "errorprone-plugin" }
 nullaway-plugin = { module = "net.ltgt.nullaway:net.ltgt.nullaway.gradle.plugin", version.ref = "nullaway-plugin" }
+archunit = { module = "com.tngtech.archunit:archunit", version.ref = "archunit" }
 
 [plugins]
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
