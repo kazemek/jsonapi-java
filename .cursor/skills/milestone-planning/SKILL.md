@@ -134,6 +134,10 @@ Replace `Module` with `Scope` for repository-wide work; do not use both unless t
 
 Acceptance criteria must be independently verifiable and collectively prove the goal. Do not use vague criteria such as "works correctly," implementation-step checklists, or unbounded completeness claims.
 
+When planning Java public API work that introduces or changes null-bearing types (absent members,
+null-preserving maps/lists, or factory methods that pass `null`), include acceptance criteria that
+require JSpecify `@NullMarked` packages and accurate `@Nullable` decoration per ADR-009.
+
 ## Synchronize and verify
 
 After writing all milestone files:

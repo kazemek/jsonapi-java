@@ -40,8 +40,9 @@ When adding a submodule or changing a module’s public surface, use the project
 Shared build configuration lives in `build-logic/` as precompiled script plugins.
 
 - `jsonapi-java-library` (applied via `id("jsonapi-java-library")`) provides: `java-library` +
-  `groovy` + `jacoco` plugins, JDK 21 toolchain, Spock/Groovy/ByteBuddy test dependencies,
-  JUnit Platform configuration, and JaCoCo XML/HTML reports after tests.
+  `groovy` + `jacoco` plugins, JDK 21 toolchain, JSpecify `compileOnly`, Error Prone + NullAway
+  on Java `main` sources, Spock/Groovy/ByteBuddy test dependencies, JUnit Platform configuration,
+  and JaCoCo XML/HTML reports after tests.
 - `jsonapi-java-spotless` (applied at the root via `id("jsonapi-java-spotless")`) configures
   Spotless for Java, Groovy/Spock, Kotlin, and Gradle Kotlin DSL. Greclipse settings live in
   `config/spotless/greclipse.properties`.
@@ -131,5 +132,6 @@ Sonar Quality Gate checks for task completion use the project `sonar-quality-gat
 * **Verified namespace:** Maven group `io.github.kazemek`; Java base package `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
 * **Package suffixes:** `core.model`, `core.validation`, `annotation`, `jackson`, `query`, and adapter-specific Spring packages under the verified base.
 * **Module orientation:** See [`jsonapi-java-core/README.md`](jsonapi-java-core/README.md) for package map, usage, non-goals, and agent notes. Additional modules follow the same `<module>/README.md` pattern once present.
+* **Nullness:** JSpecify `@NullMarked` packages and `@Nullable` for absence/null-preserving values (see [`docs/adr/009-jspecify-nullness.md`](docs/adr/009-jspecify-nullness.md) and module agent notes). NullAway enforces this on Java `main` sources.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
 * **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure

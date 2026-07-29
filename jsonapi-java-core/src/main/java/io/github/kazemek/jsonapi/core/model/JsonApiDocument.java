@@ -7,6 +7,7 @@ import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Top-level JSON:API document.
@@ -20,13 +21,13 @@ import java.util.Set;
  * similar) require {@link io.github.kazemek.jsonapi.core.validation.JsonApiDocumentValidator}.
  */
 public record JsonApiDocument(
-    DocumentData data,
-    List<ErrorObject> errors,
-    Meta meta,
-    JsonApiObject jsonapi,
-    Links links,
-    List<ResourceObject> included,
-    Map<String, Object> additionalMembers) {
+    @Nullable DocumentData data,
+    @Nullable List<ErrorObject> errors,
+    @Nullable Meta meta,
+    @Nullable JsonApiObject jsonapi,
+    @Nullable Links links,
+    @Nullable List<ResourceObject> included,
+    Map<String, @Nullable Object> additionalMembers) {
 
   private static final Set<String> RESERVED_ADDITIONAL =
       Set.of("data", "errors", "meta", "jsonapi", "links", "included");
@@ -85,7 +86,7 @@ public record JsonApiDocument(
     return included != null;
   }
 
-  private static boolean hasExtensionMembers(Map<String, ?> members) {
+  private static boolean hasExtensionMembers(@Nullable Map<String, ?> members) {
     if (members == null || members.isEmpty()) {
       return false;
     }

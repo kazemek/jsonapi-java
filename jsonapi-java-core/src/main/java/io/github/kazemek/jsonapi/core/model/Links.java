@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Flat links object with nullable link values and pass-through members. */
 public final class Links {
@@ -23,10 +24,11 @@ public final class Links {
       Set.of("self", "related", "first", "last", "prev", "next");
   private static final Set<String> ERROR_STANDARD = Set.of("about", "type");
 
-  private final Map<String, Link> entries;
-  private final Map<String, Object> additionalMembers;
+  private final Map<String, @Nullable Link> entries;
+  private final Map<String, @Nullable Object> additionalMembers;
 
-  private Links(Map<String, Link> entries, Map<String, Object> additionalMembers) {
+  private Links(
+      Map<String, @Nullable Link> entries, Map<String, @Nullable Object> additionalMembers) {
     this.entries = entries;
     this.additionalMembers = additionalMembers;
   }
@@ -35,22 +37,23 @@ public final class Links {
     return new Links(Map.of(), Map.of());
   }
 
-  public static Links of(Map<String, Link> links, Map<String, ?> additionalMembers) {
-    Map<String, Link> linkCopy = copyLinkEntries(links);
-    Map<String, Object> additionalCopy = copyAdditionalMembers(additionalMembers);
+  public static Links of(
+      @Nullable Map<String, @Nullable Link> links, @Nullable Map<String, ?> additionalMembers) {
+    Map<String, @Nullable Link> linkCopy = copyLinkEntries(links);
+    Map<String, @Nullable Object> additionalCopy = copyAdditionalMembers(additionalMembers);
     OrderedMaps.requireNoCollisions(linkCopy, additionalCopy, "links", PATH);
     return new Links(linkCopy, additionalCopy);
   }
 
-  public static Links ofLinks(Map<String, Link> links) {
+  public static Links ofLinks(@Nullable Map<String, @Nullable Link> links) {
     return of(links, Map.of());
   }
 
-  public Map<String, Link> links() {
+  public Map<String, @Nullable Link> links() {
     return entries;
   }
 
-  public Map<String, Object> additionalMembers() {
+  public Map<String, @Nullable Object> additionalMembers() {
     return additionalMembers;
   }
 
@@ -58,8 +61,8 @@ public final class Links {
     return entries.isEmpty() && additionalMembers.isEmpty();
   }
 
-  public Map<String, Object> flatten() {
-    Map<String, Object> flat = new LinkedHashMap<>();
+  public Map<String, @Nullable Object> flatten() {
+    Map<String, @Nullable Object> flat = new LinkedHashMap<String, @Nullable Object>();
     flat.putAll(entries);
     flat.putAll(additionalMembers);
     return OrderedMaps.copyOfNullableValues(flat);
@@ -78,12 +81,13 @@ public final class Links {
     };
   }
 
-  private static Map<String, Link> copyLinkEntries(Map<String, Link> source) {
+  private static Map<String, @Nullable Link> copyLinkEntries(
+      @Nullable Map<String, @Nullable Link> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
-    Map<String, Link> copy = new LinkedHashMap<>();
-    for (Map.Entry<String, Link> entry : source.entrySet()) {
+    Map<String, @Nullable Link> copy = new LinkedHashMap<String, @Nullable Link>();
+    for (Map.Entry<String, @Nullable Link> entry : source.entrySet()) {
       String name = entry.getKey();
       if (MemberNames.isAtMember(name)) {
         LocalValidation.fail(
@@ -109,11 +113,12 @@ public final class Links {
     return OrderedMaps.copyOfNullableValues(copy);
   }
 
-  private static Map<String, Object> copyAdditionalMembers(Map<String, ?> source) {
+  private static Map<String, @Nullable Object> copyAdditionalMembers(
+      @Nullable Map<String, ?> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
-    Map<String, Object> copy = new LinkedHashMap<>();
+    Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : source.entrySet()) {
       String name = entry.getKey();
       if (!MemberNames.isValid(name)) {

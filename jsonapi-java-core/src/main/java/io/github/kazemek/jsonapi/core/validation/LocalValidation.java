@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.core.validation;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /** Local validation helper used by model compact constructors. */
 public final class LocalValidation {
@@ -13,9 +14,9 @@ public final class LocalValidation {
   }
 
   /** Rejects a null required value with a stable rule code and JSON Pointer-like path. */
-  public static <T> T requireNonNull(T value, String path, String message) {
+  public static <T> T requireNonNull(@Nullable T value, String path, String message) {
     if (value == null) {
-      fail(ValidationRuleCode.NULL_REQUIRED_VALUE, path, message);
+      throw new JsonApiValidationException(ValidationRuleCode.NULL_REQUIRED_VALUE, path, message);
     }
     return value;
   }
@@ -24,9 +25,11 @@ public final class LocalValidation {
    * Defensively copies a required collection, rejecting a null payload and null elements with
    * stable rule codes and indexed paths.
    */
-  public static <T> List<T> copyRequiredList(List<T> source, String path) {
+  public static <T> List<T> copyRequiredList(
+      @Nullable List<? extends @Nullable T> source, String path) {
     if (source == null) {
-      fail(ValidationRuleCode.NULL_COLLECTION_PAYLOAD, path, "Collection payload must not be null");
+      throw new JsonApiValidationException(
+          ValidationRuleCode.NULL_COLLECTION_PAYLOAD, path, "Collection payload must not be null");
     }
     List<T> copy = new ArrayList<>(source.size());
     for (int i = 0; i < source.size(); i++) {

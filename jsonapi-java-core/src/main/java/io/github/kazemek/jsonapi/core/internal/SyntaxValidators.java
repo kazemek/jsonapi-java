@@ -3,6 +3,7 @@ package io.github.kazemek.jsonapi.core.internal;
 import java.util.IllformedLocaleException;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 
 /** Syntax validation for URI references, link relations, language tags, and media types. */
 public final class SyntaxValidators {
@@ -19,7 +20,7 @@ public final class SyntaxValidators {
    * RFC 3986 URI-reference (ASCII). Empty string is valid; {@code null} is not. Raw non-ASCII is
    * rejected (percent-encoding required).
    */
-  public static boolean isValidUriReference(String value) {
+  public static boolean isValidUriReference(@Nullable String value) {
     if (value == null) {
       return false;
     }
@@ -29,7 +30,7 @@ public final class SyntaxValidators {
     return parseUriReference(value, false);
   }
 
-  public static boolean isValidLinkRelation(String value) {
+  public static boolean isValidLinkRelation(@Nullable String value) {
     if (value == null || value.isEmpty()) {
       return false;
     }
@@ -39,7 +40,7 @@ public final class SyntaxValidators {
     return parseUriReference(value, true);
   }
 
-  public static boolean isValidLanguageTag(String value) {
+  public static boolean isValidLanguageTag(@Nullable String value) {
     if (value == null || value.isEmpty()) {
       return false;
     }
@@ -51,7 +52,7 @@ public final class SyntaxValidators {
     }
   }
 
-  public static boolean isValidMediaType(String value) {
+  public static boolean isValidMediaType(@Nullable String value) {
     if (value == null || value.isEmpty()) {
       return false;
     }
@@ -92,7 +93,7 @@ public final class SyntaxValidators {
     }
   }
 
-  public static boolean isValidExtensionOrProfileUri(String value) {
+  public static boolean isValidExtensionOrProfileUri(@Nullable String value) {
     if (value == null || value.isEmpty()) {
       return false;
     }
@@ -501,7 +502,7 @@ public final class SyntaxValidators {
       return false;
     }
     i = scanFragment(value, i);
-    return i >= 0 && i == value.length();
+    return i == value.length();
   }
 
   /** Scans optional {@code ?query}. Returns new index, or -1 on invalid query chars. */

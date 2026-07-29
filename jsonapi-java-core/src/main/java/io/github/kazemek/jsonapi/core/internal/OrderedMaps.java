@@ -9,20 +9,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Null-preserving ordered map and list copies. */
 public final class OrderedMaps {
 
   private OrderedMaps() {}
 
-  public static <K, V> Map<K, V> copyOfNullableValues(Map<K, V> source) {
+  public static <K, V> Map<K, @Nullable V> copyOfNullableValues(
+      @Nullable Map<K, @Nullable V> source) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
     return Collections.unmodifiableMap(new LinkedHashMap<>(source));
   }
 
-  public static <E> List<E> copyOfNullableElements(List<E> source) {
+  public static <E> List<@Nullable E> copyOfNullableElements(@Nullable List<@Nullable E> source) {
     if (source == null || source.isEmpty()) {
       return List.of();
     }
@@ -42,7 +44,10 @@ public final class OrderedMaps {
   }
 
   public static void rejectReservedNames(
-      Map<String, ?> members, Set<String> reserved, String pathPrefix, String messagePrefix) {
+      @Nullable Map<String, ?> members,
+      Set<String> reserved,
+      String pathPrefix,
+      String messagePrefix) {
     if (members == null || members.isEmpty()) {
       return;
     }

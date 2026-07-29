@@ -6,10 +6,14 @@ import io.github.kazemek.jsonapi.core.validation.LocalValidation;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** A JSON:API relationship with optional data, links, meta, and additional members. */
 public record Relationship(
-    RelationshipData data, Links links, Meta meta, Map<String, Object> additionalMembers) {
+    @Nullable RelationshipData data,
+    @Nullable Links links,
+    @Nullable Meta meta,
+    Map<String, @Nullable Object> additionalMembers) {
 
   private static final String PATH = "/relationships";
 
@@ -54,7 +58,7 @@ public record Relationship(
     return data != null;
   }
 
-  private static boolean hasExtensionMembers(Map<String, ?> members) {
+  private static boolean hasExtensionMembers(@Nullable Map<String, ?> members) {
     if (members == null || members.isEmpty()) {
       return false;
     }
@@ -66,7 +70,10 @@ public record Relationship(
     return false;
   }
 
-  private static boolean hasNonPaginationRelationshipLink(Links links) {
+  private static boolean hasNonPaginationRelationshipLink(@Nullable Links links) {
+    if (links == null) {
+      return false;
+    }
     for (String name : links.links().keySet()) {
       if (!PAGINATION_LINKS.contains(name)) {
         return true;

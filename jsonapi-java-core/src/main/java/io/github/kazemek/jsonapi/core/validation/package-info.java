@@ -8,6 +8,9 @@
  * io.github.kazemek.jsonapi.core.validation.ValidationContext}.
  *
  * <p>Failures carry a stable {@link io.github.kazemek.jsonapi.core.validation.ValidationRuleCode}
- * and a JSON Pointer-like path. See ADR-003 and {@code docs/conformance.md}.
+ * and a JSON Pointer-like path. See ADR-003, ADR-009, and {@code docs/conformance.md}.
  */
+@NullMarked
 package io.github.kazemek.jsonapi.core.validation;
+
+import org.jspecify.annotations.NullMarked;

@@ -5,24 +5,28 @@ import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Shared copy/validation for fixed-shape additional members. */
 public final class AdditionalMembers {
 
   private AdditionalMembers() {}
 
-  public static Map<String, Object> copy(
-      Map<String, ?> source, String basePath, String invalidMessage) {
+  public static Map<String, @Nullable Object> copy(
+      @Nullable Map<String, ?> source, String basePath, String invalidMessage) {
     return copy(source, basePath, invalidMessage, Set.of());
   }
 
-  public static Map<String, Object> copy(
-      Map<String, ?> source, String basePath, String invalidMessage, Set<String> reservedNames) {
+  public static Map<String, @Nullable Object> copy(
+      @Nullable Map<String, ?> source,
+      String basePath,
+      String invalidMessage,
+      Set<String> reservedNames) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
     OrderedMaps.rejectReservedNames(source, reservedNames, basePath, "Reserved member name: ");
-    Map<String, Object> copy = new LinkedHashMap<>();
+    Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : source.entrySet()) {
       String name = entry.getKey();
       if (!MemberNames.isValid(name)) {

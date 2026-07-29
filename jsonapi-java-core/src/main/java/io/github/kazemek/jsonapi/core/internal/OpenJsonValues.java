@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Validation and deep-copy of JSON-compatible open values. */
 public final class OpenJsonValues {
@@ -27,11 +28,12 @@ public final class OpenJsonValues {
 
   private OpenJsonValues() {}
 
-  public static boolean isValid(Object value) {
+  public static boolean isValid(@Nullable Object value) {
     return isValid(value, new IdentityHashMap<>());
   }
 
-  private static boolean isValid(Object value, IdentityHashMap<Object, Boolean> visiting) {
+  private static boolean isValid(
+      @Nullable Object value, IdentityHashMap<Object, Boolean> visiting) {
     return switch (value) {
       case null -> true;
       case String ignored -> true;
@@ -43,15 +45,16 @@ public final class OpenJsonValues {
     };
   }
 
-  public static Object copy(Object value) {
+  public static @Nullable Object copy(@Nullable Object value) {
     return copy(value, "");
   }
 
-  public static Object copy(Object value, String path) {
+  public static @Nullable Object copy(@Nullable Object value, String path) {
     return copy(value, path, new IdentityHashMap<>());
   }
 
-  private static Object copy(Object value, String path, IdentityHashMap<Object, Boolean> visiting) {
+  private static @Nullable Object copy(
+      @Nullable Object value, String path, IdentityHashMap<Object, Boolean> visiting) {
     return switch (value) {
       case null -> null;
       case String s -> s;
@@ -67,18 +70,19 @@ public final class OpenJsonValues {
     };
   }
 
-  public static Map<String, Object> copyMap(Map<String, ?> source) {
+  public static Map<String, @Nullable Object> copyMap(@Nullable Map<String, ?> source) {
     return copyMap(source, "");
   }
 
-  public static Map<String, Object> copyMap(Map<String, ?> source, String path) {
+  public static Map<String, @Nullable Object> copyMap(
+      @Nullable Map<String, ?> source, String path) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
     return copyMapValue(source, path, new IdentityHashMap<>());
   }
 
-  public static List<String> copyStringList(List<String> source) {
+  public static List<String> copyStringList(@Nullable List<String> source) {
     if (source == null || source.isEmpty()) {
       return List.of();
     }
@@ -129,7 +133,7 @@ public final class OpenJsonValues {
     return number;
   }
 
-  private static List<Object> copyList(
+  private static List<@Nullable Object> copyList(
       List<?> list, String path, IdentityHashMap<Object, Boolean> visiting) {
     if (visiting.containsKey(list)) {
       throw new JsonApiValidationException(
@@ -137,7 +141,7 @@ public final class OpenJsonValues {
     }
     visiting.put(list, Boolean.TRUE);
     try {
-      List<Object> copy = new ArrayList<>(list.size());
+      List<@Nullable Object> copy = new ArrayList<@Nullable Object>(list.size());
       for (int i = 0; i < list.size(); i++) {
         copy.add(copy(list.get(i), path + "/" + i, visiting));
       }
@@ -147,7 +151,7 @@ public final class OpenJsonValues {
     }
   }
 
-  private static Map<String, Object> copyMapValue(
+  private static Map<String, @Nullable Object> copyMapValue(
       Map<?, ?> map, String path, IdentityHashMap<Object, Boolean> visiting) {
     if (visiting.containsKey(map)) {
       throw new JsonApiValidationException(
@@ -155,7 +159,7 @@ public final class OpenJsonValues {
     }
     visiting.put(map, Boolean.TRUE);
     try {
-      Map<String, Object> copy = new LinkedHashMap<>();
+      Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
       for (Map.Entry<?, ?> entry : map.entrySet()) {
         if (!(entry.getKey() instanceof String key)) {
           throw new JsonApiValidationException(

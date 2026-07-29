@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Flat attributes wrapper separating semantic members from pass-through members. */
 public final class Attributes {
@@ -16,10 +17,11 @@ public final class Attributes {
   private static final String PATH = "/attributes";
   private static final Set<String> RESERVED = Set.of("type", "id");
 
-  private final Map<String, Object> members;
-  private final Map<String, Object> additionalMembers;
+  private final Map<String, @Nullable Object> members;
+  private final Map<String, @Nullable Object> additionalMembers;
 
-  private Attributes(Map<String, Object> members, Map<String, Object> additionalMembers) {
+  private Attributes(
+      Map<String, @Nullable Object> members, Map<String, @Nullable Object> additionalMembers) {
     this.members = members;
     this.additionalMembers = additionalMembers;
   }
@@ -28,22 +30,23 @@ public final class Attributes {
     return new Attributes(Map.of(), Map.of());
   }
 
-  public static Attributes of(Map<String, ?> attributes, Map<String, ?> additionalMembers) {
-    Map<String, Object> attrCopy = copyMembers(attributes, false);
-    Map<String, Object> additionalCopy = copyMembers(additionalMembers, true);
+  public static Attributes of(
+      @Nullable Map<String, ?> attributes, @Nullable Map<String, ?> additionalMembers) {
+    Map<String, @Nullable Object> attrCopy = copyMembers(attributes, false);
+    Map<String, @Nullable Object> additionalCopy = copyMembers(additionalMembers, true);
     OrderedMaps.requireNoCollisions(attrCopy, additionalCopy, "attributes", PATH);
     return new Attributes(attrCopy, additionalCopy);
   }
 
-  public static Attributes ofAttributes(Map<String, ?> attributes) {
+  public static Attributes ofAttributes(@Nullable Map<String, ?> attributes) {
     return of(attributes, Map.of());
   }
 
-  public Map<String, Object> attributes() {
+  public Map<String, @Nullable Object> attributes() {
     return members;
   }
 
-  public Map<String, Object> additionalMembers() {
+  public Map<String, @Nullable Object> additionalMembers() {
     return additionalMembers;
   }
 
@@ -51,18 +54,19 @@ public final class Attributes {
     return members.isEmpty() && additionalMembers.isEmpty();
   }
 
-  public Map<String, Object> flatten() {
-    Map<String, Object> flat = new LinkedHashMap<>();
+  public Map<String, @Nullable Object> flatten() {
+    Map<String, @Nullable Object> flat = new LinkedHashMap<String, @Nullable Object>();
     flat.putAll(members);
     flat.putAll(additionalMembers);
     return OrderedMaps.copyOfNullableValues(flat);
   }
 
-  private static Map<String, Object> copyMembers(Map<String, ?> source, boolean allowPassThrough) {
+  private static Map<String, @Nullable Object> copyMembers(
+      @Nullable Map<String, ?> source, boolean allowPassThrough) {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
-    Map<String, Object> copy = new LinkedHashMap<>();
+    Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : source.entrySet()) {
       String name = entry.getKey();
       validateAttributeName(name, allowPassThrough);

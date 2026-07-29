@@ -12,6 +12,7 @@ import io.github.kazemek.jsonapi.core.model.Links;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
+import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
@@ -20,9 +21,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Aggregate document validation requiring full document context.
@@ -68,13 +71,19 @@ public final class JsonApiDocumentValidator {
     }
   }
 
-  private void validateErrors(List<ErrorObject> errors, ValidationContext context) {
+  private void validateErrors(@Nullable List<ErrorObject> errors, ValidationContext context) {
+    if (errors == null) {
+      return;
+    }
     for (int index = 0; index < errors.size(); index++) {
       validateError(errors.get(index), "/errors/" + index, context);
     }
   }
 
-  private void validatePrimaryData(DocumentData data, ValidationContext context) {
+  private void validatePrimaryData(@Nullable DocumentData data, ValidationContext context) {
+    if (data == null) {
+      return;
+    }
     switch (data) {
       case DocumentData.NullData ignored -> {
         // Explicit null primary data has no nested members to validate.
@@ -124,10 +133,9 @@ public final class JsonApiDocumentValidator {
 
   private void validateResourceRelationships(
       ResourceObject resource, String path, ValidationContext context) {
-    validateAdditionalMembers(
-        resource.relationships().additionalMembers(), path + "/relationships", context);
-    for (Map.Entry<String, Relationship> entry :
-        resource.relationships().relationships().entrySet()) {
+    Relationships relationships = Objects.requireNonNull(resource.relationships());
+    validateAdditionalMembers(relationships.additionalMembers(), path + "/relationships", context);
+    for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
       validateRelationship(
           entry.getValue(),
           path + "/relationships/" + entry.getKey(),
@@ -193,7 +201,7 @@ public final class JsonApiDocumentValidator {
             + " or an allowed profile relation");
   }
 
-  private static boolean hasExtensionMemberName(Map<String, ?> members) {
+  private static boolean hasExtensionMemberName(@Nullable Map<String, ?> members) {
     if (members == null || members.isEmpty()) {
       return false;
     }
@@ -217,7 +225,10 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateRelationshipData(
-      RelationshipData data, String path, ValidationContext context) {
+      @Nullable RelationshipData data, String path, ValidationContext context) {
+    if (data == null) {
+      return;
+    }
     switch (data) {
       case RelationshipData.NullLinkage ignored -> {
         // Explicit null to-one linkage has no identifiers to validate.
@@ -238,13 +249,15 @@ public final class JsonApiDocumentValidator {
     for (int index = 0; index < identifiers.size(); index++) {
       ResourceIdentifier identifier = identifiers.get(index);
       if (identifier.hasId()) {
-        ResourceIdentity id = ResourceIdentity.ofId(identifier.type(), identifier.id());
+        ResourceIdentity id =
+            ResourceIdentity.ofId(identifier.type(), Objects.requireNonNull(identifier.id()));
         if (!seen.add(id)) {
           throw duplicateIdentity(path + "/" + index, id);
         }
       }
       if (identifier.hasLid()) {
-        ResourceIdentity lid = ResourceIdentity.ofLid(identifier.type(), identifier.lid());
+        ResourceIdentity lid =
+            ResourceIdentity.ofLid(identifier.type(), Objects.requireNonNull(identifier.lid()));
         if (!seen.add(lid)) {
           throw duplicateIdentity(path + "/" + index, lid);
         }
@@ -306,7 +319,10 @@ public final class JsonApiDocumentValidator {
     validateAdditionalMembers(error.additionalMembers(), path, context);
   }
 
-  private void validateMeta(Meta meta, String path, ValidationContext context) {
+  private void validateMeta(@Nullable Meta meta, String path, ValidationContext context) {
+    if (meta == null) {
+      return;
+    }
     for (String name : meta.members().keySet()) {
       if (!MemberNames.isExtensionMember(name)) {
         continue;
@@ -322,7 +338,10 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateJsonApiObject(
-      JsonApiObject jsonapi, String path, ValidationContext context) {
+      @Nullable JsonApiObject jsonapi, String path, ValidationContext context) {
+    if (jsonapi == null) {
+      return;
+    }
     if (jsonapi.profile() != null) {
       validateProfileUris(jsonapi.profile(), path, context);
     }
@@ -332,8 +351,9 @@ public final class JsonApiDocumentValidator {
     validateAdditionalMembers(jsonapi.additionalMembers(), path, context);
   }
 
-  private void validateProfileUris(List<String> profile, String path, ValidationContext context) {
-    if (context.allowedProfileUris().isEmpty()) {
+  private void validateProfileUris(
+      @Nullable List<String> profile, String path, ValidationContext context) {
+    if (profile == null || context.allowedProfileUris().isEmpty()) {
       return;
     }
     for (int i = 0; i < profile.size(); i++) {
@@ -348,7 +368,9 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateCompoundDocument(
-      List<ResourceObject> included, DocumentData primaryData, ValidationContext context) {
+      @Nullable List<ResourceObject> included,
+      @Nullable DocumentData primaryData,
+      ValidationContext context) {
     IdentityRegistry registry = new IdentityRegistry();
     registerPrimaryResources(primaryData, registry);
     registerLinkageIdentifiers(primaryData, PATH_DATA, registry);
@@ -376,7 +398,7 @@ public final class JsonApiDocumentValidator {
   }
 
   private void registerLinkageIdentifiers(
-      DocumentData data, String path, IdentityRegistry registry) {
+      @Nullable DocumentData data, String path, IdentityRegistry registry) {
     if (data == null) {
       return;
     }
@@ -418,7 +440,10 @@ public final class JsonApiDocumentValidator {
   }
 
   private void registerLinkageFromRelationshipData(
-      RelationshipData data, String path, IdentityRegistry registry) {
+      @Nullable RelationshipData data, String path, IdentityRegistry registry) {
+    if (data == null) {
+      return;
+    }
     switch (data) {
       case RelationshipData.NullLinkage ignored -> {
         // No identifiers.
@@ -433,7 +458,7 @@ public final class JsonApiDocumentValidator {
     }
   }
 
-  private void registerPrimaryResources(DocumentData data, IdentityRegistry registry) {
+  private void registerPrimaryResources(@Nullable DocumentData data, IdentityRegistry registry) {
     if (data == null) {
       return;
     }
@@ -470,7 +495,7 @@ public final class JsonApiDocumentValidator {
   }
 
   private Set<ResourceIdentity> collectLinkedIdentities(
-      DocumentData primaryData, IdentityRegistry registry) {
+      @Nullable DocumentData primaryData, IdentityRegistry registry) {
     Set<ResourceIdentity> linked = new HashSet<>();
     Queue<ResourceIdentity> queue = new ArrayDeque<>();
     collectFromPrimaryData(primaryData, linked, queue, registry);
@@ -497,7 +522,7 @@ public final class JsonApiDocumentValidator {
   }
 
   private void collectFromPrimaryData(
-      DocumentData data,
+      @Nullable DocumentData data,
       Set<ResourceIdentity> linked,
       Queue<ResourceIdentity> queue,
       IdentityRegistry registry) {
@@ -532,7 +557,11 @@ public final class JsonApiDocumentValidator {
       IdentityRegistry registry) {
     addLinked(resource.identityKey(), linked, queue, registry);
     if (resource.hasId() && resource.hasLid()) {
-      addLinked(ResourceIdentity.ofLid(resource.type(), resource.lid()), linked, queue, registry);
+      addLinked(
+          ResourceIdentity.ofLid(resource.type(), Objects.requireNonNull(resource.lid())),
+          linked,
+          queue,
+          registry);
     }
     if (resource.relationships() == null) {
       return;
@@ -545,10 +574,13 @@ public final class JsonApiDocumentValidator {
   }
 
   private void collectFromRelationshipData(
-      RelationshipData data,
+      @Nullable RelationshipData data,
       Set<ResourceIdentity> linked,
       Queue<ResourceIdentity> queue,
       IdentityRegistry registry) {
+    if (data == null) {
+      return;
+    }
     switch (data) {
       case RelationshipData.NullLinkage ignored -> {
         // Explicit null linkage contributes no identifiers.
@@ -564,7 +596,7 @@ public final class JsonApiDocumentValidator {
   }
 
   private void addLinked(
-      ResourceIdentity identity,
+      @Nullable ResourceIdentity identity,
       Set<ResourceIdentity> linked,
       Queue<ResourceIdentity> queue,
       IdentityRegistry registry) {
@@ -580,13 +612,16 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateLinks(
-      Links links,
+      @Nullable Links links,
       String path,
       ValidationContext context,
-      String resourceType,
-      String relationshipName,
-      DocumentData primaryData,
-      RelationshipData relationshipData) {
+      @Nullable String resourceType,
+      @Nullable String relationshipName,
+      @Nullable DocumentData primaryData,
+      @Nullable RelationshipData relationshipData) {
+    if (links == null) {
+      return;
+    }
     validateAdditionalMembers(links.additionalMembers(), path, context);
     for (Map.Entry<String, Link> entry : links.links().entrySet()) {
       Link link = entry.getValue();
@@ -612,10 +647,10 @@ public final class JsonApiDocumentValidator {
       String name,
       String path,
       ValidationContext context,
-      String resourceType,
-      String relationshipName,
-      DocumentData primaryData,
-      RelationshipData relationshipData) {
+      @Nullable String resourceType,
+      @Nullable String relationshipName,
+      @Nullable DocumentData primaryData,
+      @Nullable RelationshipData relationshipData) {
     if (MemberNames.isExtensionMember(name)) {
       String namespace = name.substring(0, name.indexOf(':'));
       if (!context.allowedExtensionNamespaces().contains(namespace)) {
@@ -649,10 +684,10 @@ public final class JsonApiDocumentValidator {
       String name,
       String path,
       ValidationContext context,
-      String resourceType,
-      String relationshipName,
-      DocumentData primaryData,
-      RelationshipData relationshipData) {
+      @Nullable String resourceType,
+      @Nullable String relationshipName,
+      @Nullable DocumentData primaryData,
+      @Nullable RelationshipData relationshipData) {
     if (context.linksContext() == LinksContext.TOP_LEVEL) {
       if (!isCollectionPrimaryData(primaryData)) {
         throw new JsonApiValidationException(
@@ -700,7 +735,7 @@ public final class JsonApiDocumentValidator {
         "Relationship pagination requires collection linkage: " + relationshipName);
   }
 
-  private static boolean isCollectionPrimaryData(DocumentData data) {
+  private static boolean isCollectionPrimaryData(@Nullable DocumentData data) {
     return data instanceof DocumentData.ResourceCollection
         || data instanceof DocumentData.IdentifierCollection;
   }
@@ -711,8 +746,8 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateAdditionalMembers(
-      Map<String, Object> members, String basePath, ValidationContext context) {
-    for (Map.Entry<String, Object> entry : members.entrySet()) {
+      Map<String, @Nullable Object> members, String basePath, ValidationContext context) {
+    for (Map.Entry<String, @Nullable Object> entry : members.entrySet()) {
       validateAdditionalMember(entry.getKey(), basePath, context);
     }
   }
@@ -759,11 +794,12 @@ public final class JsonApiDocumentValidator {
     void registerIdentifier(ResourceIdentifier identifier, String path) {
       if (identifier.hasId() && identifier.hasLid()) {
         bindIdLidPair(
-            ResourceIdentity.ofId(identifier.type(), identifier.id()),
-            ResourceIdentity.ofLid(identifier.type(), identifier.lid()),
+            ResourceIdentity.ofId(identifier.type(), Objects.requireNonNull(identifier.id())),
+            ResourceIdentity.ofLid(identifier.type(), Objects.requireNonNull(identifier.lid())),
             path);
       } else if (identifier.hasLid()) {
-        ResourceIdentity lid = ResourceIdentity.ofLid(identifier.type(), identifier.lid());
+        ResourceIdentity lid =
+            ResourceIdentity.ofLid(identifier.type(), Objects.requireNonNull(identifier.lid()));
         if (!canonicalByAlias.containsKey(lid)) {
           addAlias(lid, lid);
         }
@@ -772,9 +808,13 @@ public final class JsonApiDocumentValidator {
 
     private void registerResource(ResourceObject resource, String path, boolean included) {
       ResourceIdentity idAlias =
-          resource.hasId() ? ResourceIdentity.ofId(resource.type(), resource.id()) : null;
+          resource.hasId()
+              ? ResourceIdentity.ofId(resource.type(), Objects.requireNonNull(resource.id()))
+              : null;
       ResourceIdentity lidAlias =
-          resource.hasLid() ? ResourceIdentity.ofLid(resource.type(), resource.lid()) : null;
+          resource.hasLid()
+              ? ResourceIdentity.ofLid(resource.type(), Objects.requireNonNull(resource.lid()))
+              : null;
       if (idAlias == null && lidAlias == null) {
         return;
       }
@@ -786,7 +826,8 @@ public final class JsonApiDocumentValidator {
       }
 
       ResourceIdentity canonical =
-          idAlias != null ? idAlias : lidToId.getOrDefault(lidAlias, lidAlias);
+          Objects.requireNonNullElseGet(
+              idAlias, () -> lidToId.getOrDefault(Objects.requireNonNull(lidAlias), lidAlias));
 
       ensureNoDuplicateOnCanonical(canonical, resource, path);
 
@@ -921,11 +962,11 @@ public final class JsonApiDocumentValidator {
           "Duplicate resource identity: " + alias);
     }
 
-    ResourceIdentity canonicalIdentity(ResourceIdentity alias) {
+    @Nullable ResourceIdentity canonicalIdentity(ResourceIdentity alias) {
       return canonicalByAlias.get(alias);
     }
 
-    ResourceObject resourceFor(ResourceIdentity identity) {
+    @Nullable ResourceObject resourceFor(ResourceIdentity identity) {
       ResourceIdentity canonical = canonicalByAlias.getOrDefault(identity, identity);
       ResourceObject direct = byAlias.get(canonical);
       if (direct != null) {

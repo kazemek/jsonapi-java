@@ -7,14 +7,15 @@ import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Top-level {@code jsonapi} object. */
 public record JsonApiObject(
-    String version,
-    List<String> ext,
-    List<String> profile,
-    Meta meta,
-    Map<String, Object> additionalMembers) {
+    @Nullable String version,
+    @Nullable List<String> ext,
+    @Nullable List<String> profile,
+    @Nullable Meta meta,
+    Map<String, @Nullable Object> additionalMembers) {
 
   private static final Set<String> RESERVED_ADDITIONAL =
       Set.of("version", "ext", "profile", "meta");
