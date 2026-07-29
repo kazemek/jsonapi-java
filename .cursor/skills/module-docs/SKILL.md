@@ -25,8 +25,8 @@ Skip when only internals or tests changed with no public-surface impact.
 3. Create or update `<module>/README.md` with these sections in order:
    - Title + one-line purpose
    - **Packages** table (package → role)
-   - **Minimal usage** (short code sample when an entry point exists; omit only when no usable
-     entry point exists yet)
+   - **Minimal usage** (always present: short code sample when an entry point exists; otherwise a
+     concise note that no usable entry point exists yet)
    - **Non-goals** (link ADR-007 / vision; do not restate the product boundary at length)
    - **Further reading** (only relevant conformance, ADR, and root-agent links; titles or short
      labels must make their relevance clear)
@@ -49,7 +49,8 @@ Skip when only internals or tests changed with no public-surface impact.
 
 ## Checklist
 
-- [ ] `<module>/README.md` follows the golden section order and keeps each section compact
+- [ ] `<module>/README.md` follows the golden section order, keeps each section compact, and always
+      includes **Minimal usage** (code sample or explicit no-entry-point note)
 - [ ] Agents subsection includes nullness bullets when the module has Java production packages (ADR-009)
 - [ ] Agents subsection contains module-only invariants, not root build/CI/planning instructions
 - [ ] `package-info.java` for every production package, each `@NullMarked` and role-focused

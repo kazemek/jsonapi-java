@@ -49,8 +49,10 @@ already governed by a milestone and module documentation does not require reread
 
 ### Review an implementation
 
-Read exactly one governing milestone, establish the diff or path boundary, then follow the affected
-module route above. When the user requests a milestone review, use the project `milestone-review`
+Read exactly one governing milestone and establish the diff or path boundary. For module-scoped
+changes, follow the affected-module route above. When no affected module exists (repository-wide
+build, CI, or workflow work), follow the repository-wide route below instead of reading irrelevant
+module documentation. When the user requests a milestone review, use the project `milestone-review`
 skill; reviews verify the `module-docs` checklist when public module surface changed.
 
 ### Repository-wide build, CI, or workflow work
@@ -135,7 +137,9 @@ Before declaring implementation complete:
 # Conventions
 
 * **Verified namespace:** Maven group `io.github.kazemek`; Java base package `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
-* **Module orientation:** Every present module documents its package map, usage, non-goals, and agent notes in `<module>/README.md`; the root README is the module registry.
+* **Module orientation:** Every present module documents its package map, usage (code sample or
+  explicit no-entry-point note), non-goals, and agent notes in `<module>/README.md`; the root README
+  is the module registry.
 * **Nullness:** JSpecify `@NullMarked` packages and `@Nullable` for absence/null-preserving values (see [`docs/adr/009-jspecify-nullness.md`](docs/adr/009-jspecify-nullness.md) and module agent notes). NullAway enforces this on Java `main` sources.
 * **Architectural tests:** ArchUnit enforces that `jsonapi-java-core` production types depend only on the JDK, JSpecify annotations, and other core types (see [`docs/adr/010-architectural-tests.md`](docs/adr/010-architectural-tests.md)). Do not weaken allowlists without updating the ADR; extend rules when adding modules.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
