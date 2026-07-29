@@ -12,15 +12,16 @@ Milestones are planned, testable increments. They may change until implementatio
 6. **Phase 0.6 — Line ending enforcement:** LF via `.gitattributes` / `.editorconfig`, CRLF only for Windows batch scripts.
 7. **Phase 0.7 — milestone planning workflow:** creates, refines, and decomposes context-bounded implementation milestones.
 8. **Phase 0.8 — JSpecify nullness:** JSpecify `@NullMarked` packages, NullAway enforcement, and portable agent guidance for `jsonapi-java-core`.
-9. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
-10. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
-11. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
-12. **Phase 2.3 — compound serialization:** builds on domain mapping.
-13. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
-14. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
-15. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
-16. **Phase 4.1 — conformance and hardening.**
-17. **Phase 4.2 — stable release.**
+9. **Phase 0.9 — ArchUnit core dependency guard:** ArchUnit enforces JDK + JSpecify + self type deps for `jsonapi-java-core`.
+10. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
+11. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
+12. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
+13. **Phase 2.3 — compound serialization:** builds on domain mapping.
+14. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
+15. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
+16. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
+17. **Phase 4.1 — conformance and hardening.**
+18. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -32,6 +33,7 @@ Milestones are planned, testable increments. They may change until implementatio
 - [Phase 0.6 — Line Ending Enforcement](phase-0-6-line-endings.md)
 - [Phase 0.7 — Milestone Planning Workflow](phase-0-7-milestone-planning-workflow.md)
 - [Phase 0.8 — JSpecify Nullness](phase-0-8-jspecify-nullness.md)
+- [Phase 0.9 — ArchUnit Core Dependency Guard](phase-0-9-archunit-core-deps.md)
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md)
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md)
 - [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md)
