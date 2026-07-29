@@ -11,6 +11,8 @@ import java.util.Set;
 public record Relationship(
     RelationshipData data, Links links, Meta meta, Map<String, Object> additionalMembers) {
 
+  private static final String PATH = "/relationships";
+
   private static final Set<String> PAGINATION_LINKS = Set.of("first", "last", "prev", "next");
 
   private static final Set<String> RESERVED_ADDITIONAL = Set.of("data", "links", "meta");
@@ -18,26 +20,21 @@ public record Relationship(
   public Relationship {
     additionalMembers =
         AdditionalMembers.copy(
-            additionalMembers,
-            "/relationships",
-            "Invalid relationship member name: ",
-            RESERVED_ADDITIONAL);
+            additionalMembers, PATH, "Invalid relationship member name: ", RESERVED_ADDITIONAL);
     boolean hasExtension = hasExtensionMembers(additionalMembers);
     boolean hasMember = data != null || links != null || meta != null || hasExtension;
     if (!hasMember) {
       LocalValidation.fail(
           ValidationRuleCode.MISSING_RELATIONSHIP_MEMBER,
-          "/relationships",
+          PATH,
           "Relationship must contain at least one of data, links, meta, or extension members");
     }
-    if (data == null && meta == null && !hasExtension) {
-      if (!hasNonPaginationRelationshipLink(links)) {
-        LocalValidation.fail(
-            ValidationRuleCode.MISSING_RELATIONSHIP_MEMBER,
-            "/relationships",
-            "Links-only relationship must contain a non-pagination link"
-                + " (self, related, extension, or profile relation)");
-      }
+    if (data == null && meta == null && !hasExtension && !hasNonPaginationRelationshipLink(links)) {
+      LocalValidation.fail(
+          ValidationRuleCode.MISSING_RELATIONSHIP_MEMBER,
+          PATH,
+          "Links-only relationship must contain a non-pagination link"
+              + " (self, related, extension, or profile relation)");
     }
   }
 

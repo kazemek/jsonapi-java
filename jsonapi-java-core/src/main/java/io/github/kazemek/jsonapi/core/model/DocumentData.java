@@ -24,27 +24,30 @@ public sealed interface DocumentData
   record SingleResource(ResourceObject resource) implements DocumentData {
     public SingleResource {
       resource =
-          LocalValidation.requireNonNull(resource, "/data", "Resource payload must not be null");
+          LocalValidation.requireNonNull(resource, path(), "Resource payload must not be null");
     }
   }
 
   record ResourceCollection(List<ResourceObject> resources) implements DocumentData {
     public ResourceCollection {
-      resources = LocalValidation.copyRequiredList(resources, "/data");
+      resources = LocalValidation.copyRequiredList(resources, path());
     }
   }
 
   record SingleIdentifier(ResourceIdentifier identifier) implements DocumentData {
     public SingleIdentifier {
       identifier =
-          LocalValidation.requireNonNull(
-              identifier, "/data", "Identifier payload must not be null");
+          LocalValidation.requireNonNull(identifier, path(), "Identifier payload must not be null");
     }
   }
 
   record IdentifierCollection(List<ResourceIdentifier> identifiers) implements DocumentData {
     public IdentifierCollection {
-      identifiers = LocalValidation.copyRequiredList(identifiers, "/data");
+      identifiers = LocalValidation.copyRequiredList(identifiers, path());
     }
+  }
+
+  private static String path() {
+    return "/data";
   }
 }

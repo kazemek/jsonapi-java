@@ -59,34 +59,37 @@ public final class SyntaxValidators {
     // RFC 7231: type "/" subtype *( OWS ";" OWS parameter ) — OWS only immediately before ';'.
     // Leading OWS and terminal OWS with no parameter are illegal.
     String typeSubtype = semicolon < 0 ? value : rstripHttpOws(value.substring(0, semicolon));
+    if (!isValidMediaTypeTypeSubtype(typeSubtype)) {
+      return false;
+    }
+    return semicolon < 0 || areValidMediaTypeParameters(value, semicolon + 1);
+  }
+
+  private static boolean isValidMediaTypeTypeSubtype(String typeSubtype) {
     int slash = typeSubtype.indexOf('/');
     if (slash <= 0 || slash == typeSubtype.length() - 1) {
       return false;
     }
     String type = typeSubtype.substring(0, slash);
     String subtype = typeSubtype.substring(slash + 1);
-    if (!MEDIA_TYPE_TOKEN.matcher(type).matches() || !MEDIA_TYPE_TOKEN.matcher(subtype).matches()) {
-      return false;
-    }
-    int pos = semicolon < 0 ? value.length() : semicolon + 1;
-    if (semicolon >= 0) {
-      while (true) {
-        int next = indexOfUnquoted(value, ';', pos);
-        // Intermediate segments: OWS on both sides of ';'. Final parameter: leading OWS only.
-        String parameter =
-            next < 0
-                ? lstripHttpOws(value.substring(pos))
-                : stripHttpOws(value.substring(pos, next));
-        if (!isValidMediaTypeParameter(parameter)) {
-          return false;
-        }
-        if (next < 0) {
-          break;
-        }
-        pos = next + 1;
+    return MEDIA_TYPE_TOKEN.matcher(type).matches() && MEDIA_TYPE_TOKEN.matcher(subtype).matches();
+  }
+
+  private static boolean areValidMediaTypeParameters(String value, int start) {
+    int pos = start;
+    while (true) {
+      int next = indexOfUnquoted(value, ';', pos);
+      // Intermediate segments: OWS on both sides of ';'. Final parameter: leading OWS only.
+      String parameter =
+          next < 0 ? lstripHttpOws(value.substring(pos)) : stripHttpOws(value.substring(pos, next));
+      if (!isValidMediaTypeParameter(parameter)) {
+        return false;
       }
+      if (next < 0) {
+        return true;
+      }
+      pos = next + 1;
     }
-    return true;
   }
 
   public static boolean isValidExtensionOrProfileUri(String value) {
@@ -153,7 +156,15 @@ public final class SyntaxValidators {
     if (value.startsWith("?") || value.startsWith("#")) {
       return parseQueryFragment(value, 0);
     }
-    // path-noscheme: segment-nz-nc *( "/" segment )
+    int firstSegmentEnd = scanPathNoschemeSegment(value);
+    if (firstSegmentEnd <= 0) {
+      return false;
+    }
+    return parsePathRestQueryFragment(value, firstSegmentEnd);
+  }
+
+  /** Scans path-noscheme first segment (segment-nz-nc). Returns end index, or -1 if invalid. */
+  private static int scanPathNoschemeSegment(String value) {
     int i = 0;
     while (i < value.length()) {
       char ch = value.charAt(i);
@@ -161,21 +172,14 @@ public final class SyntaxValidators {
         break;
       }
       if (ch == ':') {
-        return false;
+        return -1;
       }
       if (!isPchar(ch) && !consumePctEncoded(value, i)) {
-        return false;
+        return -1;
       }
-      if (ch == '%') {
-        i += 3;
-      } else {
-        i++;
-      }
+      i += ch == '%' ? 3 : 1;
     }
-    if (i == 0) {
-      return false;
-    }
-    return parsePathRestQueryFragment(value, i);
+    return i == 0 ? -1 : i;
   }
 
   private static boolean parseHierQueryFragment(String value, int from, boolean allowAuthority) {
@@ -456,16 +460,11 @@ public final class SyntaxValidators {
           return false;
         }
         i++;
-        continue;
-      }
-      if (!isPchar(ch) && !consumePctEncoded(value, i)) {
+      } else if (!isPchar(ch) && !consumePctEncoded(value, i)) {
         return false;
-      }
-      sawSegment = true;
-      if (ch == '%') {
-        i += 3;
       } else {
-        i++;
+        sawSegment = true;
+        i += advancePcharOrPct(ch);
       }
     }
     if (!sawSegment) {
@@ -483,54 +482,70 @@ public final class SyntaxValidators {
       }
       if (ch == '/') {
         i++;
-        continue;
-      }
-      if (!isPchar(ch) && !consumePctEncoded(value, i)) {
+      } else if (!isPchar(ch) && !consumePctEncoded(value, i)) {
         return false;
-      }
-      if (ch == '%') {
-        i += 3;
       } else {
-        i++;
+        i += advancePcharOrPct(ch);
       }
     }
     return parseQueryFragment(value, i);
   }
 
+  private static int advancePcharOrPct(char ch) {
+    return ch == '%' ? 3 : 1;
+  }
+
   private static boolean parseQueryFragment(String value, int from) {
+    int i = scanQuery(value, from);
+    if (i < 0) {
+      return false;
+    }
+    i = scanFragment(value, i);
+    return i >= 0 && i == value.length();
+  }
+
+  /** Scans optional {@code ?query}. Returns new index, or -1 on invalid query chars. */
+  private static int scanQuery(String value, int from) {
     int i = from;
-    if (i < value.length() && value.charAt(i) == '?') {
-      i++;
-      while (i < value.length()) {
-        char ch = value.charAt(i);
-        if (ch == '#') {
-          break;
-        }
-        if (!(isPchar(ch) || ch == '/' || ch == '?') && !consumePctEncoded(value, i)) {
-          return false;
-        }
-        if (ch == '%') {
-          i += 3;
-        } else {
-          i++;
-        }
-      }
+    if (i >= value.length() || value.charAt(i) != '?') {
+      return i;
     }
-    if (i < value.length() && value.charAt(i) == '#') {
-      i++;
-      while (i < value.length()) {
-        char ch = value.charAt(i);
-        if (!(isPchar(ch) || ch == '/' || ch == '?') && !consumePctEncoded(value, i)) {
-          return false;
-        }
-        if (ch == '%') {
-          i += 3;
-        } else {
-          i++;
-        }
+    i++;
+    while (i < value.length()) {
+      char ch = value.charAt(i);
+      if (ch == '#') {
+        return i;
       }
+      if (!isQueryOrFragmentChar(ch) && !consumePctEncoded(value, i)) {
+        return -1;
+      }
+      i += advancePcharOrPct(ch);
     }
-    return i == value.length();
+    return i;
+  }
+
+  /** Scans optional {@code #fragment}. Returns new index, or -1 on invalid fragment chars. */
+  private static int scanFragment(String value, int from) {
+    int i = from;
+    if (i >= value.length()) {
+      return i;
+    }
+    if (value.charAt(i) != '#') {
+      return i;
+    }
+    i++;
+    while (i < value.length()) {
+      char ch = value.charAt(i);
+      if (!isQueryOrFragmentChar(ch) && !consumePctEncoded(value, i)) {
+        return -1;
+      }
+      i += advancePcharOrPct(ch);
+    }
+    return i;
+  }
+
+  private static boolean isQueryOrFragmentChar(char ch) {
+    return isPchar(ch) || ch == '/' || ch == '?';
   }
 
   private static boolean consumePctEncoded(String value, int index) {
@@ -581,21 +596,15 @@ public final class SyntaxValidators {
       char ch = value.charAt(i);
       if (escaped) {
         escaped = false;
-        continue;
-      }
-      if (inQuotes) {
+      } else if (inQuotes) {
         if (ch == '\\') {
           escaped = true;
         } else if (ch == '"') {
           inQuotes = false;
         }
-        continue;
-      }
-      if (ch == '"') {
+      } else if (ch == '"') {
         inQuotes = true;
-        continue;
-      }
-      if (ch == target) {
+      } else if (ch == target) {
         return i;
       }
     }
@@ -637,16 +646,11 @@ public final class SyntaxValidators {
           return false;
         }
         escaped = false;
-        continue;
-      }
-      if (ch == '\\') {
+      } else if (ch == '\\') {
         escaped = true;
-        continue;
-      }
-      if (ch == '"') {
+      } else if (ch == '"') {
         return i == value.length() - 1;
-      }
-      if (!isQdtext(ch)) {
+      } else if (!isQdtext(ch)) {
         return false;
       }
     }

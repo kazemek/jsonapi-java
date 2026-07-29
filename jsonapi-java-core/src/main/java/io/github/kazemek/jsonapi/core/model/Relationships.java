@@ -72,31 +72,11 @@ public final class Relationships {
 
   private static void validateRelationshipName(String name, String path, boolean allowPassThrough) {
     if (MemberNames.isAtMember(name)) {
-      if (!allowPassThrough || !MemberNames.isValid(name)) {
-        LocalValidation.fail(
-            allowPassThrough
-                ? ValidationRuleCode.INVALID_MEMBER_NAME
-                : ValidationRuleCode.RESERVED_FIELD_NAME,
-            path,
-            allowPassThrough
-                ? "Invalid relationship member name: " + name
-                : "Relationship names cannot start with @: " + name);
-      }
+      validateAtRelationship(name, path, allowPassThrough);
       return;
     }
     if (MemberNames.isExtensionMember(name)) {
-      if (!allowPassThrough) {
-        LocalValidation.fail(
-            ValidationRuleCode.RESERVED_FIELD_NAME,
-            path,
-            "Extension members must use additionalMembers: " + name);
-      }
-      if (!MemberNames.isValid(name)) {
-        LocalValidation.fail(
-            ValidationRuleCode.INVALID_MEMBER_NAME,
-            path,
-            "Invalid relationship member name: " + name);
-      }
+      validateExtensionRelationship(name, path, allowPassThrough);
       return;
     }
     if (!MemberNames.isValid(name)) {
@@ -106,6 +86,35 @@ public final class Relationships {
     if (RESERVED.contains(name)) {
       LocalValidation.fail(
           ValidationRuleCode.RESERVED_FIELD_NAME, path, "Reserved relationship name: " + name);
+    }
+  }
+
+  private static void validateAtRelationship(String name, String path, boolean allowPassThrough) {
+    if (!allowPassThrough || !MemberNames.isValid(name)) {
+      LocalValidation.fail(
+          allowPassThrough
+              ? ValidationRuleCode.INVALID_MEMBER_NAME
+              : ValidationRuleCode.RESERVED_FIELD_NAME,
+          path,
+          allowPassThrough
+              ? "Invalid relationship member name: " + name
+              : "Relationship names cannot start with @: " + name);
+    }
+  }
+
+  private static void validateExtensionRelationship(
+      String name, String path, boolean allowPassThrough) {
+    if (!allowPassThrough) {
+      LocalValidation.fail(
+          ValidationRuleCode.RESERVED_FIELD_NAME,
+          path,
+          "Extension members must use additionalMembers: " + name);
+    }
+    if (!MemberNames.isValid(name)) {
+      LocalValidation.fail(
+          ValidationRuleCode.INVALID_MEMBER_NAME,
+          path,
+          "Invalid relationship member name: " + name);
     }
   }
 
