@@ -10,15 +10,16 @@ Milestones are planned, testable increments. They may change until implementatio
 4. **Phase 0.4 — Spotless formatting:** repo-wide Spotless via a root convention plugin, greclipse for Spock, and an agent format completion skill.
 5. **Phase 0.5 — Module docs workflow:** targeted module discovery in `AGENTS.md` and a `module-docs` skill for dual-audience module documentation.
 6. **Phase 0.6 — Line ending enforcement:** LF via `.gitattributes` / `.editorconfig`, CRLF only for Windows batch scripts.
-7. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
-8. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
-9. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
-10. **Phase 2.3 — compound serialization:** builds on domain mapping.
-11. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
-12. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
-13. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
-14. **Phase 4.1 — conformance and hardening.**
-15. **Phase 4.2 — stable release.**
+7. **Phase 0.7 — milestone planning workflow:** creates, refines, and decomposes context-bounded implementation milestones.
+8. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
+9. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
+10. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
+11. **Phase 2.3 — compound serialization:** builds on domain mapping.
+12. **Phase 3.1 — query parser:** independent optional artifact after Phase 0.1.
+13. **Phase 3.2 — Spring WebMVC:** integrates the completed codec, mapping, and query contracts.
+14. **Phase 3.3 — WebFlux evaluation:** begins only after WebMVC behavior is stable.
+15. **Phase 4.1 — conformance and hardening.**
+16. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -28,6 +29,7 @@ Milestones are planned, testable increments. They may change until implementatio
 - [Phase 0.4 — Spotless Formatting](phase-0-4-spotless-formatting.md)
 - [Phase 0.5 — Module Docs Discovery and Maintenance](phase-0-5-module-docs-workflow.md)
 - [Phase 0.6 — Line Ending Enforcement](phase-0-6-line-endings.md)
+- [Phase 0.7 — Milestone Planning Workflow](phase-0-7-milestone-planning-workflow.md)
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md)
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md)
 - [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md)
@@ -41,6 +43,21 @@ Milestones are planned, testable increments. They may change until implementatio
 - [Phase 4.2 — Stable Release](phase-4-2-stable-release.md)
 
 Every implementation milestone must finish with the relevant module tests and `./gradlew clean build` passing.
+
+## Milestone planning
+
+Use the explicitly invoked project `milestone-planning` skill to create, refine, or decompose
+milestones. It performs targeted exploration and relevant authoritative research, writes the
+permanent milestone files in this directory, and updates both the dependency order and index.
+
+An implementable milestone must fit one focused coding-agent task and reviewable commit. It
+normally contains one principal capability in one primary module or layer, at most five
+deliverables, and at most eight acceptance criteria. Independent capabilities, modules,
+architectural decisions, or verification surfaces are separate milestones with explicit
+dependencies.
+
+A `Not started` milestone may be refined or decomposed. Once implementation starts, the milestone
+is a fixed delivery contract; changed or additional scope belongs in a follow-up milestone.
 
 ## Milestone reviews
 

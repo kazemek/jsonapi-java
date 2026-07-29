@@ -95,12 +95,29 @@ After implementation, before declaring the work complete, a coding agent MUST:
    - Local `./gradlew clean build` remains token-free; Sonar is a separate completion gate.
    - Without `SONAR_TOKEN`, do not claim completion: report that Sonar is blocked and CI must still pass the Quality Gate.
 
+## Milestone Planning
+
+When a user explicitly requests milestone creation, refinement, or breakdown, use the project
+`milestone-planning` skill. It performs targeted exploration and research, writes the actual files
+under `.agentWork/milestones/`, and updates the milestone dependency order and index.
+
+An implementable milestone must fit one focused coding-agent task and reviewable commit. It should
+normally cover one principal capability in one primary module or layer, with at most five
+deliverables and eight acceptance criteria. Split independent capabilities, modules, architectural
+decisions, or verification surfaces into ordered milestones rather than allowing implementation
+context to grow without bound.
+
+Milestones may be refined while their status is `Not started`. Once implementation has started,
+preserve the milestone as a historical delivery contract and capture changed or additional scope in
+a follow-up milestone.
+
 ## Agent-Driven Code Reviews
 
 Milestone reviews are performed on demand. When a user requests a milestone review, use the project `milestone-review` skill and review the implementation against exactly one corresponding file under `.agentWork/milestones/`.
 
 Write the result to `.agentWork/.session/milestone-review-<milestone-basename>.md`. Session reviews are ephemeral, non-canonical working artifacts: they do not replace milestones, the vision, or ADRs, and a later review of the same milestone overwrites the previous artifact.
 
+Milestone planning and refinement use the project `milestone-planning` skill (see Milestone Planning).
 Module documentation updates use the project `module-docs` skill when public surface changed (see Agent Workflow step 6).
 Formatting checks for task completion use the project `spotless-format` skill (see Agent Workflow step 8).
 Sonar Quality Gate checks for task completion use the project `sonar-quality-gate` skill (see Agent Workflow step 9).
