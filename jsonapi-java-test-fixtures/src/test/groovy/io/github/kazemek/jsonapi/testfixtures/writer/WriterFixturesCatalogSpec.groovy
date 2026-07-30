@@ -15,11 +15,17 @@ class WriterFixturesCatalogSpec extends Specification {
   def "catalog ids match manifest and every expected path exists"() {
     given:
     def manifest = new JsonSlurper().parse(fixturesDir.resolve("manifest.json").toFile()) as Map
-    def manifestIds = (manifest.fixtures as List).collect { it.id as String }
+    def manifestFixtures = manifest.fixtures as List
+    def manifestIds = manifestFixtures.collect { it.id as String }
     def catalogIds = WriterFixtures.all()*.id
 
     expect:
     catalogIds == manifestIds
+
+    and:
+    manifestFixtures.each { entry ->
+      assert WriterFixtures.byId(entry.id as String).expectedPath == (entry.path as String)
+    }
 
     and:
     WriterFixtures.all().each { fixture ->
