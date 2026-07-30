@@ -30,7 +30,13 @@ public record JsonApiDocument(
     Map<String, @Nullable Object> additionalMembers) {
 
   private static final Set<String> RESERVED_ADDITIONAL =
-      Set.of("data", "errors", "meta", "jsonapi", "links", "included");
+      Set.of(
+          JsonApiMembers.DATA,
+          JsonApiMembers.ERRORS,
+          JsonApiMembers.META,
+          JsonApiMembers.JSONAPI,
+          JsonApiMembers.LINKS,
+          JsonApiMembers.INCLUDED);
 
   public JsonApiDocument {
     if (data != null && errors != null) {

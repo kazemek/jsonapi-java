@@ -17,9 +17,8 @@ public record Relationship(
 
   private static final String PATH = "/relationships";
 
-  private static final Set<String> PAGINATION_LINKS = Set.of("first", "last", "prev", "next");
-
-  private static final Set<String> RESERVED_ADDITIONAL = Set.of("data", "links", "meta");
+  private static final Set<String> RESERVED_ADDITIONAL =
+      Set.of(JsonApiMembers.DATA, JsonApiMembers.LINKS, JsonApiMembers.META);
 
   public Relationship {
     additionalMembers =
@@ -75,7 +74,7 @@ public record Relationship(
       return false;
     }
     for (String name : links.links().keySet()) {
-      if (!PAGINATION_LINKS.contains(name)) {
+      if (!JsonApiMembers.PAGINATION_LINKS.contains(name)) {
         return true;
       }
     }

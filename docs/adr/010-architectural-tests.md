@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30
+**Amended:** 2026-07-30 (Phase 2.1 implements jackson3 allowlist and `core.internal` ban)
 
 ## Context
 
@@ -17,20 +17,22 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Current allowlists:
   - `io.github.kazemek.jsonapi.core..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.core..` types.
   - `io.github.kazemek.jsonapi.annotation..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.annotation..` types.
-- Major-specific Jackson modules add these allowlists when registered:
-  - `io.github.kazemek.jsonapi.jackson3..` → JDK, JSpecify, core public packages, annotations,
-    module-owned types, and `tools.jackson..`; never Jackson 2 or another module's internals.
+  - `io.github.kazemek.jsonapi.jackson3..` → `java..`, `org.jspecify.annotations..`,
+    `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`,
+    `io.github.kazemek.jsonapi.annotation..`, `io.github.kazemek.jsonapi.jackson3..`, and
+    `tools.jackson..`. Production sources must not depend on
+    `io.github.kazemek.jsonapi.core.internal..` or `com.fasterxml.jackson..`.
+- Major-specific Jackson 2 allowlist (when registered):
   - `io.github.kazemek.jsonapi.jackson2..` → JDK, JSpecify, core public packages, annotations,
     module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's
-    internals.
+    internals. Must not depend on `core.internal`.
 - Query and Spring milestones record their exact framework package allowlists when those modules
   are registered. Spring may use public core, annotation, Jackson 3, and query contracts; no lower
   layer may acquire Spring types.
 - Gradle continues to own artifact selection and publication; ArchUnit owns package/type coupling that Gradle cannot express.
 - Changing an allowlist requires updating this ADR.
-- Future sibling modules (Jackson, query, Spring adapters) must not depend on
-  `io.github.kazemek.jsonapi.core.internal..`. That rule is intentional policy here and will be
-  implemented when those modules exist.
+- Sibling modules must not depend on `io.github.kazemek.jsonapi.core.internal..`. That ban is
+  enforced for `jsonapi-java-jackson3` and must be added when further sibling modules register.
 
 ## Consequences
 

@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-26  
-**Amended:** 2026-07-30
+**Amended:** 2026-07-30 (Phase 2.1 registers `jsonapi-java-jackson3` write surface)
 
 ## Context
 
@@ -14,8 +14,9 @@ Use these module boundaries:
 
 - `jsonapi-java-core`: dependency-free document model and validation;
 - `jsonapi-java-annotations`: dependency-free domain-mapping annotations;
-- `jsonapi-java-jackson3`: Jackson 3 document codec, flat DTO mapping, typed envelopes, and
-  presence-aware PATCH commands;
+- `jsonapi-java-jackson3`: Jackson 3 document codec (writer delivered in Phase 2.1; reads and
+  mapping in later milestones), flat DTO mapping, typed envelopes, and presence-aware PATCH
+  commands;
 - `jsonapi-java-jackson2`: separately compiled Jackson 2 artifact with parity contracts;
 - `jsonapi-java-query`: optional query-parameter parser;
 - `jsonapi-java-spring-webmvc`: optional Spring Boot WebMVC integration;

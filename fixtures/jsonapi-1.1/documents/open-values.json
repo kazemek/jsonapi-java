@@ -1,0 +1,28 @@
+{
+  "data": {
+    "type": "articles",
+    "id": "1",
+    "attributes": {
+      "nullable": null,
+      "nested": {
+        "tags": [
+          "a",
+          "b"
+        ],
+        "counts": {
+          "views": 2
+        }
+      },
+      "intValue": 42,
+      "longValue": 9007199254740991,
+      "floatValue": 1.5,
+      "doubleValue": 2.25,
+      "bigIntValue": 123456789012345678901234567890,
+      "bigDecimalValue": 1234567890.123456789
+    }
+  },
+  "meta": {
+    "flag": true,
+    "nullMeta": null
+  }
+}

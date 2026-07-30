@@ -18,11 +18,25 @@ public final class Links {
 
   private static final String PATH = "/links";
   private static final Set<String> TOP_LEVEL_STANDARD =
-      Set.of("self", "related", "describedby", "first", "last", "prev", "next");
-  private static final Set<String> RESOURCE_STANDARD = Set.of("self");
+      Set.of(
+          JsonApiMembers.SELF,
+          JsonApiMembers.RELATED,
+          JsonApiMembers.DESCRIBEDBY,
+          JsonApiMembers.FIRST,
+          JsonApiMembers.LAST,
+          JsonApiMembers.PREV,
+          JsonApiMembers.NEXT);
+  private static final Set<String> RESOURCE_STANDARD = Set.of(JsonApiMembers.SELF);
   private static final Set<String> RELATIONSHIP_STANDARD =
-      Set.of("self", "related", "first", "last", "prev", "next");
-  private static final Set<String> ERROR_STANDARD = Set.of("about", "type");
+      Set.of(
+          JsonApiMembers.SELF,
+          JsonApiMembers.RELATED,
+          JsonApiMembers.FIRST,
+          JsonApiMembers.LAST,
+          JsonApiMembers.PREV,
+          JsonApiMembers.NEXT);
+  private static final Set<String> ERROR_STANDARD =
+      Set.of(JsonApiMembers.ABOUT, JsonApiMembers.TYPE);
 
   private final Map<String, @Nullable Link> entries;
   private final Map<String, @Nullable Object> additionalMembers;

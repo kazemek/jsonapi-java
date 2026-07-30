@@ -17,7 +17,8 @@ public record ResourceIdentifier(
     @Nullable Meta meta,
     Map<String, @Nullable Object> additionalMembers) {
 
-  private static final Set<String> RESERVED_ADDITIONAL = Set.of("type", "id", "lid", "meta");
+  private static final Set<String> RESERVED_ADDITIONAL =
+      Set.of(JsonApiMembers.TYPE, JsonApiMembers.ID, JsonApiMembers.LID, JsonApiMembers.META);
 
   public ResourceIdentifier {
     requireType(type);

@@ -1,0 +1,14 @@
+{
+  "data": {
+    "type": "articles",
+    "id": "1"
+  },
+  "jsonapi": {
+    "version": "1.1",
+    "ext": ["https://jsonapi.org/ext/atomic"],
+    "profile": ["https://example.com/profiles/flex"],
+    "meta": {
+      "impl": "jsonapi-java"
+    }
+  }
+}

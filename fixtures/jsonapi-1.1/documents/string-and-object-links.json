@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "type": "articles",
+      "id": "1",
+      "links": {
+        "self": "http://example.com/articles/1"
+      }
+    }
+  ],
+  "links": {
+    "self": "http://example.com/articles/1",
+    "related": {
+      "href": "http://example.com/articles/1/related",
+      "rel": "related",
+      "title": "Related",
+      "type": "application/vnd.api+json",
+      "hreflang": ["en"],
+      "meta": {
+        "count": 1
+      }
+    },
+    "next": null
+  }
+}

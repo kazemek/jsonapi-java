@@ -1,0 +1,17 @@
+{
+  "errors": [
+    {
+      "id": "1",
+      "links": {
+        "about": "http://example.com/docs/errors/invalid"
+      },
+      "status": "422",
+      "code": "invalid",
+      "title": "Invalid Attribute",
+      "detail": "Title is required",
+      "source": {
+        "pointer": "/data/attributes/title"
+      }
+    }
+  ]
+}

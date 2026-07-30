@@ -10,7 +10,7 @@ compliant.
 
 ## Status
 
-**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, Phase 1.1 document model/validation in `jsonapi-java-core`, and Phase 1.2 domain-mapping annotations in `jsonapi-java-annotations` are in place. Jackson codec and later adapters are not started.
+**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, Phase 1.1 document model/validation in `jsonapi-java-core`, Phase 1.2 domain-mapping annotations in `jsonapi-java-annotations`, and Phase 2.1 Jackson 3 document writer in `jsonapi-java-jackson3` are in place. Document reads and later adapters are not started.
 
 Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
@@ -30,6 +30,9 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 |------|---------|
 | `jsonapi-java-core/` | Zero-dependency JSON:API document model and validation |
 | `jsonapi-java-annotations/` | Dependency-free domain-mapping annotations |
+| `jsonapi-java-jackson3/` | Jackson 3 document writer (reads deferred) |
+| `jsonapi-java-test-fixtures/` | Internal shared writer fixture builders (not a published module) |
+| `fixtures/jsonapi-1.1/` | Version-neutral canonical JSON:API writer fixtures |
 | `build-logic/` | Shared Gradle convention plugins |
 | `docs/` | Vision statement and architecture decision records |
 | `.agentWork/milestones/` | Concrete, testable implementation increments |
@@ -40,7 +43,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 |--------|--------|---------|
 | [`jsonapi-java-core`](jsonapi-java-core/README.md) | Available — Phase 1.1 complete | Dependency-free document model and validation |
 | [`jsonapi-java-annotations`](jsonapi-java-annotations/README.md) | Available — Phase 1.2 complete | Dependency-free domain-mapping role annotations |
-| `jsonapi-java-jackson3` | Planned — Phase 2.1+ not started | Jackson 3 codec, DTO mapping, envelopes, and PATCH commands |
+| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md) | Available — Phase 2.1 writer complete; reads deferred | Jackson 3 document writer; later DTO mapping, envelopes, and PATCH |
 | `jsonapi-java-jackson2` | Planned — parity track not started | Separately compiled Jackson 2 parity artifact |
 | `jsonapi-java-query` | Planned — Phase 3.1 not started | Optional query-parameter parsing |
 | `jsonapi-java-spring-webmvc` | Planned — Phases 3.2–3.3 not started | Jackson 3-based Spring WebMVC transport and DTO binding |
@@ -54,6 +57,7 @@ not duplicate those module-specific contracts.
 
 - [Core module](jsonapi-java-core/README.md)
 - [Annotations module](jsonapi-java-annotations/README.md)
+- [Jackson 3 module](jsonapi-java-jackson3/README.md)
 - [Vision & roadmap](docs/vision.md)
 - [Conformance checklist](docs/conformance.md)
 - [Architecture decision records](docs/adr/)

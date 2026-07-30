@@ -1,0 +1,14 @@
+{
+  "data": {
+    "type": "articles",
+    "lid": "temp-1",
+    "relationships": {
+      "author": {
+        "data": {
+          "type": "people",
+          "lid": "temp-author"
+        }
+      }
+    }
+  }
+}

@@ -2,9 +2,10 @@
 
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
-This checklist is seeded by Phase 1.1 (`jsonapi-java-core`) and Phase 1.2
-(`jsonapi-java-annotations`). Wire-format round-trips are **deferred** to Phase 2.1; Jackson domain
-mapping and typed envelopes remain **deferred** to their Phase 2 milestones.
+This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
+(`jsonapi-java-annotations`), and Phase 2.1 (`jsonapi-java-jackson3` document writer). Document
+deserialization remains **deferred** to Phase 2.4; Jackson domain mapping and typed envelopes remain
+**deferred** to their Phase 2 milestones.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -25,7 +26,7 @@ mapping and typed envelopes remain **deferred** to their Phase 2 milestones.
 | Relationship linkage: absent, null, single, collection                      | supported    | `RelationshipData` sealed variants                          |
 | Link-only and meta-only relationships                                       | supported    | `Relationship`                                              |
 | Links: string and object forms                                              | supported    | Sealed `Link`; object form preserves additional members     |
-| `hreflang` canonical list representation                                    | supported    | `Link.ObjectLink`; codec emission deferred                  |
+| `hreflang` canonical list representation                                    | supported    | `Link.ObjectLink`; writer always emits JSON array form      |
 | Nullable pagination links                                                   | supported    | `Links` null-preserving map                                 |
 | Meta flat object (no synthetic `members` key)                               | supported    | `Meta`                                                      |
 | Error object requires ≥1 standard member                                    | supported    | `ErrorObject`                                               |
@@ -64,14 +65,15 @@ mapping and typed envelopes remain **deferred** to their Phase 2 milestones.
 | `@JsonApiAttribute(name)` optional attribute rename          | supported | Empty `name()` retains Jackson's logical property name                |
 | `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
 
-## Codec / wire format (Phase 2.1 — deferred)
+## Codec / wire format (Phase 2.1 — writer supported; reads deferred)
 
-| Rule                                             | Status   |
-|--------------------------------------------------|----------|
-| JSON serialization / deserialization             | deferred |
-| Canonical member ordering                        | deferred |
-| Golden fixture round-trips                       | deferred |
-| Malformed input diagnostics with source location | deferred |
+| Rule                                             | Status   | Notes |
+|--------------------------------------------------|----------|-------|
+| JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write |
+| Canonical member ordering                        | supported | Standard members in model accessor order; additional members insertion order; `hreflang` always array |
+| Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` |
+| JSON deserialization                             | deferred | Phase 2.4 |
+| Malformed input diagnostics with source location | deferred | Phase 2.4 |
 
 ## Domain mapping (Phases 2.2–2.17 — deferred)
 

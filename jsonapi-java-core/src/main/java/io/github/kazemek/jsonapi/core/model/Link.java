@@ -37,7 +37,14 @@ public sealed interface Link permits Link.StringLink, Link.ObjectLink {
       implements Link {
 
     private static final Set<String> RESERVED_ADDITIONAL =
-        Set.of("href", "rel", "describedby", "title", "type", "hreflang", "meta");
+        Set.of(
+            JsonApiMembers.HREF,
+            JsonApiMembers.REL,
+            JsonApiMembers.DESCRIBEDBY,
+            JsonApiMembers.TITLE,
+            JsonApiMembers.TYPE,
+            JsonApiMembers.HREFLANG,
+            JsonApiMembers.META);
 
     public ObjectLink {
       requireValidHref(href, path());

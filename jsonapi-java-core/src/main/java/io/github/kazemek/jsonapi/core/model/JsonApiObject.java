@@ -18,7 +18,8 @@ public record JsonApiObject(
     Map<String, @Nullable Object> additionalMembers) {
 
   private static final Set<String> RESERVED_ADDITIONAL =
-      Set.of("version", "ext", "profile", "meta");
+      Set.of(
+          JsonApiMembers.VERSION, JsonApiMembers.EXT, JsonApiMembers.PROFILE, JsonApiMembers.META);
 
   public JsonApiObject {
     if (ext != null) {

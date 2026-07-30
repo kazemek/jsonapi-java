@@ -32,7 +32,14 @@ public record ResourceObject(
             additionalMembers,
             "/data",
             "Invalid resource member name: ",
-            Set.of("type", "id", "lid", "attributes", "relationships", "links", "meta"));
+            Set.of(
+                JsonApiMembers.TYPE,
+                JsonApiMembers.ID,
+                JsonApiMembers.LID,
+                JsonApiMembers.ATTRIBUTES,
+                JsonApiMembers.RELATIONSHIPS,
+                JsonApiMembers.LINKS,
+                JsonApiMembers.META));
   }
 
   public static ResourceObject ofType(String type) {
