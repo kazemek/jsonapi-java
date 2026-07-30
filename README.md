@@ -6,7 +6,7 @@ A lightweight [JSON:API v1.1](https://jsonapi.org/) document model and validatio
 
 ## Status
 
-**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, and Phase 1.1 document model/validation in `jsonapi-java-core` are in place. Jackson codec and later adapters are not started.
+**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, Phase 1.1 document model/validation in `jsonapi-java-core`, and Phase 1.2 domain-mapping annotations in `jsonapi-java-annotations` are in place. Jackson codec and later adapters are not started.
 
 Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
@@ -25,15 +25,17 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 | Path | Purpose |
 |------|---------|
 | `jsonapi-java-core/` | Zero-dependency JSON:API document model and validation |
+| `jsonapi-java-annotations/` | Dependency-free domain-mapping annotations |
 | `build-logic/` | Shared Gradle convention plugins |
 | `docs/` | Vision statement and architecture decision records |
 | `.agentWork/milestones/` | Concrete, testable implementation increments |
 
-Planned optional artifacts are `jsonapi-java-annotations`, `jsonapi-java-jackson`, `jsonapi-java-query`, and `jsonapi-java-spring-webmvc`. WebFlux will be evaluated separately.
+Planned optional artifacts are `jsonapi-java-jackson`, `jsonapi-java-query`, and `jsonapi-java-spring-webmvc`. WebFlux will be evaluated separately.
 
 ## Documentation
 
 - [Core module](jsonapi-java-core/README.md)
+- [Annotations module](jsonapi-java-annotations/README.md)
 - [Vision & roadmap](docs/vision.md)
 - [Conformance checklist](docs/conformance.md)
 - [Architecture decision records](docs/adr/)

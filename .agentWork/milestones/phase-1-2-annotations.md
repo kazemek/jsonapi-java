@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-annotations`  
 > **Dependencies:** Phases 0.1, 0.5, and 0.8  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -17,7 +17,7 @@ Provide a runtime-visible annotation API with no functional third-party runtime 
 - [JSON:API v1.1 member names](https://jsonapi.org/format/1.1/#document-member-names) — resource `type` and non-empty JSON:API field-name overrides must satisfy the case-sensitive member-name grammar. Annotation instances only store metadata, so Phase 2.2 performs this validation when it builds a mapping definition.
 - [Java SE 21 `ElementType`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/annotation/ElementType.html) and [`RetentionPolicy`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/annotation/RetentionPolicy.html) — property annotations explicitly target fields, methods, parameters, and record components and use runtime retention for mapper introspection.
 - [ADR-009](../../docs/adr/009-jspecify-nullness.md) and the shared `jsonapi-java-library` plugin — the production package is `@NullMarked`; JSpecify remains compile-only and does not become a published runtime dependency.
-- [ADR-010](../../docs/adr/010-architectural-tests.md) — ArchUnit remains core-first; this module proves the zero-runtime-deps boundary with classpath and import tests, not an ArchUnit rule or ADR-010 allowlist extension.
+- [ADR-010](../../docs/adr/010-architectural-tests.md) — ArchUnit enforces package/type dependency allowlists for production sources; extend the ADR when adding module rules.
 
 ## Deliverables
 
@@ -33,7 +33,6 @@ Provide a runtime-visible annotation API with no functional third-party runtime 
 - Runtime member-name validation in the annotation artifact or a dependency on core solely to reuse its validator.
 - Inclusion paths, sparse fieldsets, traversal, persistence behavior, query behavior, or framework integration.
 - Annotation elements for custom converters, inclusion, fetch, cascade, repositories, or ORM-specific behavior; no converter or identifier-conversion SPI ships in this artifact.
-- ArchUnit rules or an ADR-010 allowlist extension for the annotations module.
 
 ## Implementation boundaries
 
@@ -47,16 +46,16 @@ Provide a runtime-visible annotation API with no functional third-party runtime 
 
 - Reflect over each annotation type to assert `RUNTIME`, `@Documented`, exact `@Target` sets, absence of `@Inherited`, required/defaulted elements, return types, and marker shape.
 - Compile and reflect over small record and POJO fixtures to prove resource and property annotations can be declared at all intended locations without Jackson.
-- Inspect the annotation module runtime classpath and imports so tests do not accidentally turn JSpecify or a mapper library into a runtime dependency.
+- ArchUnit Spock spec imports `main` classes under `io.github.kazemek.jsonapi.annotation` and fails the build on illegal type dependencies (JDK + JSpecify + self only).
 - Keep Jackson naming, mix-in, ignored-property, propagation-conflict, cardinality, conversion, and invalid-name cases in Phase 2.2, where behavior can be tested through Jackson's logical property model.
 
 ## Acceptance criteria
 
-- [ ] Reflection and usage-fixture tests prove all four exact annotation contracts, including `name()` defaults, creator-parameter and record-component targets, and non-inheritance.
-- [ ] Public Javadoc defines metadata-only default-attribute, identifier, rename, and linkage semantics without implementing or contradicting Phase 2.2 mapping policy.
-- [ ] The runtime classpath has no functional third-party artifacts, and annotation elements contain no converter, inclusion, persistence, query, or framework concerns.
-- [ ] The canonical `module-docs` checklist passes, including `@NullMarked` package documentation, root module registration, and the scoped conformance update (Phase 1.2 annotation vocabulary **supported**; Jackson mapping still **deferred**).
-- [ ] `./gradlew :jsonapi-java-annotations:test` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [x] Reflection and usage-fixture tests prove all four exact annotation contracts, including `name()` defaults, creator-parameter and record-component targets, and non-inheritance.
+- [x] Public Javadoc defines metadata-only default-attribute, identifier, rename, and linkage semantics without implementing or contradicting Phase 2.2 mapping policy.
+- [x] The runtime classpath has no functional third-party artifacts (Gradle `compileOnly` JSpecify / no implementation deps), annotation elements contain no converter, inclusion, persistence, query, or framework concerns, and ArchUnit enforces the production type-dependency allowlist.
+- [x] The canonical `module-docs` checklist passes, including `@NullMarked` package documentation, root module registration, and the scoped conformance update (Phase 1.2 annotation vocabulary **supported**; Jackson mapping still **deferred**).
+- [x] `./gradlew :jsonapi-java-annotations:test` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.

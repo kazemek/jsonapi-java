@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "jsonapi-java"
 include("jsonapi-java-core")
+include("jsonapi-java-annotations")

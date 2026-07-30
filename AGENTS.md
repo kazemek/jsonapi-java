@@ -151,6 +151,6 @@ Before declaring implementation complete:
   explicit no-entry-point note), non-goals, and agent notes in `<module>/README.md`; the root README
   is the module registry.
 * **Nullness:** JSpecify `@NullMarked` packages and `@Nullable` for absence/null-preserving values (see [`docs/adr/009-jspecify-nullness.md`](docs/adr/009-jspecify-nullness.md) and module agent notes). NullAway enforces this on Java `main` sources.
-* **Architectural tests:** ArchUnit enforces that `jsonapi-java-core` production types depend only on the JDK, JSpecify annotations, and other core types (see [`docs/adr/010-architectural-tests.md`](docs/adr/010-architectural-tests.md)). Do not weaken allowlists without updating the ADR; extend rules when adding modules.
+* **Architectural tests:** ArchUnit enforces production type-dependency allowlists per library module (see [`docs/adr/010-architectural-tests.md`](docs/adr/010-architectural-tests.md)). Do not weaken allowlists without updating the ADR; add rules when adding modules.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
 * **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure
