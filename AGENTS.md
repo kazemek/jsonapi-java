@@ -8,8 +8,10 @@ It is not a discovery step. Before declaring implementation complete, follow **C
 
 Dependency verification is enabled via `gradle/verification-metadata.xml`. After adding or
 changing dependencies (or when CI fails verification), regenerate checksums with
-`./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`
-(Renovate PRs do this as well).
+`./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`.
+Renovate’s built-in refresh (`dependencies` without `--refresh-dependencies`) can miss
+checksums; on `renovate/**` PRs, CI regenerates with the command above and amends the
+Renovate tip when needed so the PR stays a single commit.
 
 IDE sync may download extra artifacts (sources jars, Gradle src zips, and Groovy 4.x
 `.module`/`.pom` metadata from the Gradle distribution's "Gradle Libs" repo). Those are trusted

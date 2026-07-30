@@ -7,8 +7,63 @@ on:
     branches: [ main ]
 
 jobs:
+  refresh-verification:
+    name: Refresh verification metadata
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      head_sha: ${{ steps.sha.outputs.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Regenerate dependency verification metadata
+        run: ./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build
+      - name: Amend Renovate tip if metadata changed
+        id: sha
+        run: |
+          set -euo pipefail
+          RENOVATE_EMAIL='29139614+renovate[bot]@users.noreply.github.com'
+          META='gradle/verification-metadata.xml'
+
+          if ! git diff --quiet -- "$META"; then
+            if [[ "${{ github.head_ref }}" != renovate/* ]]; then
+              echo "::error::Refusing to amend: head ref is not a renovate/* branch"
+              exit 1
+            fi
+            parents="$(git rev-list --parents -n 1 HEAD | wc -w)"
+            # SHA + N parents → word count is N+1; require exactly one parent (count 2)
+            if [[ "$parents" -ne 2 ]]; then
+              echo "::error::Refusing to amend: HEAD is not a single-parent commit"
+              exit 1
+            fi
+            author_email="$(git log -1 --format='%ae')"
+            if [[ "$author_email" != "$RENOVATE_EMAIL" ]]; then
+              echo "::error::Refusing to amend: HEAD author is '$author_email', expected Renovate"
+              exit 1
+            fi
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -- "$META"
+            # Keeps Renovate author/message; committer is Actions (do not use --reset-author)
+            git commit --amend --no-edit
+            git push --force-with-lease origin "HEAD:${{ github.head_ref }}"
+          fi
+
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build & Sonar Analysis
+    needs: refresh-verification
+    if: always() && !cancelled() && (needs.refresh-verification.result == 'success' || needs.refresh-verification.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,6 +73,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ needs.refresh-verification.outputs.head_sha || github.head_ref || github.sha }}
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
         with:
           distribution: temurin
