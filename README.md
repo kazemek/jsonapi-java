@@ -2,7 +2,11 @@
 
 > Read and write JSON:API v1.1 documents in Java without surrendering control of persistence, endpoints, or application architecture.
 
-A lightweight [JSON:API v1.1](https://jsonapi.org/) document model and validation library for **Java 21+**. Opt-in Jackson domain mapping, query parsing, and Spring adapters are planned. Compliance is tracked by feature and layer; the library does not claim that an application's endpoint behavior is automatically JSON:API compliant.
+A lightweight [JSON:API v1.1](https://jsonapi.org/) document model and validation library for
+**Java 21+**. Opt-in bidirectional flat DTO mapping, typed envelopes, presence-aware PATCH commands,
+query parsing, and Spring adapters are planned. Compliance is tracked by feature and layer; the
+library does not claim that an application's endpoint behavior is automatically JSON:API
+compliant.
 
 ## Status
 
@@ -30,7 +34,9 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 | `docs/` | Vision statement and architecture decision records |
 | `.agentWork/milestones/` | Concrete, testable implementation increments |
 
-Planned optional artifacts are `jsonapi-java-jackson`, `jsonapi-java-query`, and `jsonapi-java-spring-webmvc`. WebFlux will be evaluated separately.
+Planned optional artifacts are `jsonapi-java-jackson3`, `jsonapi-java-jackson2`,
+`jsonapi-java-query`, and `jsonapi-java-spring-webmvc`. Jackson 3 and DTO-oriented WebMVC land
+first; Jackson 2 parity follows. WebFlux will be evaluated separately.
 
 ## Documentation
 

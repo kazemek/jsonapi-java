@@ -1,6 +1,6 @@
-# Phase 2.2 — Domain-to-Resource Mapping
+# Phase 2.2 — Jackson 3 Domain-to-Resource Mapping
 
-> **Module:** `jsonapi-java-jackson`  
+> **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phases 1.1, 1.2, and 2.1  
 > **Status:** Not started
 
@@ -10,7 +10,14 @@ Map annotated POJOs and records to resource objects while retaining ordinary Jac
 
 ## API boundary
 
-Provide an explicit JSON:API mapper/writer API built from a caller-supplied `ObjectMapper`. Registering the document codec must not globally change normal JSON serialization of every annotated domain type.
+Provide an explicit JSON:API mapper/writer API derived from a caller-supplied Jackson 3
+`JsonMapper`/builder. Jackson 3 mappers are immutable, so codec and mapping modules are added while
+building or rebuilding the JSON:API mapper; normal serialization through the caller's original
+mapper remains unchanged.
+
+This milestone owns write-side mapping definitions and identifier conversion. Phase 2.9 reuses
+those immutable definitions for flat DTO reads rather than changing this milestone into a
+bidirectional implementation.
 
 The API maps:
 
@@ -56,9 +63,11 @@ Prove behavior for:
 
 ## Acceptance criteria
 
-- [ ] No independent field-first/getter-first scanner exists.
-- [ ] Mapping is invoked explicitly and does not hijack the caller's normal `ObjectMapper`.
-- [ ] Jackson property behavior is covered by integration tests.
-- [ ] Relationship mapping creates linkage but never automatic inclusion.
-- [ ] Mapping failures carry stable codes and logical property paths.
-- [ ] `./gradlew :jsonapi-java-jackson:test` passes.
+- [ ] Mapping uses Jackson's logical property model without an independent field/getter scanner, and integration tests cover records/POJOs, naming, visibility, ignores, mix-ins, creators, inheritance, and custom value serializers.
+- [ ] Mapping is invoked explicitly through a mapper derived from caller configuration and does not change ordinary serialization through the caller's original Jackson 3 mapper.
+- [ ] Identifier/attribute/relationship role resolution, replaceable identifier conversion, null/collection linkage, collision rejection, and stable logical-property diagnostics match the documented mapping policy; relationships never populate `included`.
+- [ ] The canonical `module-docs` checklist passes and `docs/conformance.md` marks only the delivered Jackson 3 mapping shapes **supported**.
+- [ ] `./gradlew :jsonapi-java-jackson3:test` passes.
+- [ ] `./gradlew clean build` passes.
+- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.

@@ -17,9 +17,20 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Current allowlists:
   - `io.github.kazemek.jsonapi.core..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.core..` types.
   - `io.github.kazemek.jsonapi.annotation..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.annotation..` types.
+- Major-specific Jackson modules add these allowlists when registered:
+  - `io.github.kazemek.jsonapi.jackson3..` → JDK, JSpecify, core public packages, annotations,
+    module-owned types, and `tools.jackson..`; never Jackson 2 or another module's internals.
+  - `io.github.kazemek.jsonapi.jackson2..` → JDK, JSpecify, core public packages, annotations,
+    module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's
+    internals.
+- Query and Spring milestones record their exact framework package allowlists when those modules
+  are registered. Spring may use public core, annotation, Jackson 3, and query contracts; no lower
+  layer may acquire Spring types.
 - Gradle continues to own artifact selection and publication; ArchUnit owns package/type coupling that Gradle cannot express.
 - Changing an allowlist requires updating this ADR.
-- Future sibling modules (jackson, query, Spring adapters) must not depend on `io.github.kazemek.jsonapi.core.internal..`. That rule is intentional policy here and will be implemented when those modules exist.
+- Future sibling modules (Jackson, query, Spring adapters) must not depend on
+  `io.github.kazemek.jsonapi.core.internal..`. That rule is intentional policy here and will be
+  implemented when those modules exist.
 
 ## Consequences
 
