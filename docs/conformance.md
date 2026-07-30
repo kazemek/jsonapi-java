@@ -2,7 +2,9 @@
 
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
-This checklist is seeded by Phase 1.1 (`jsonapi-java-core`) and Phase 1.2 (`jsonapi-java-annotations`). Wire-format round-trips are **deferred** to Phase 2.1; Jackson domain mapping remains **deferred** to Phase 2.2.
+This checklist is seeded by Phase 1.1 (`jsonapi-java-core`) and Phase 1.2
+(`jsonapi-java-annotations`). Wire-format round-trips are **deferred** to Phase 2.1; Jackson domain
+mapping and typed envelopes remain **deferred** to their Phase 2 milestones.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -71,11 +73,17 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`) and Phase 1.2 (`json
 | Golden fixture round-trips                       | deferred |
 | Malformed input diagnostics with source location | deferred |
 
-## Domain mapping (Phase 2.2 — deferred)
+## Domain mapping (Phases 2.2–2.17 — deferred)
 
-| Rule                             | Status   |
-|----------------------------------|----------|
-| Jackson-visible property mapping | deferred |
+| Rule                                                       | Status       | Notes                                           |
+|------------------------------------------------------------|--------------|-------------------------------------------------|
+| Jackson-visible domain-to-resource mapping                 | deferred     | Phase 2.2                                       |
+| Flat resource-to-DTO binding                               | deferred     | Phases 2.9 and 2.15; validated document first   |
+| Typed domain document envelopes                            | deferred     | Phases 2.10 and 2.16                            |
+| Independent typed binding of `included` resources          | deferred     | Phases 2.10 and 2.16; no relationship injection |
+| Presence-aware resource-update commands                    | deferred     | Phases 1.3, 2.11, and 2.17                     |
+| Automatic domain graph hydration                           | out of scope | Linkage resolution remains application policy   |
+| Automatic mutation of domain or persistence objects        | out of scope | Applications apply authorized update commands  |
 
 ## Query parameters (Phase 3.1 — delegated)
 
@@ -85,8 +93,9 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`) and Phase 1.2 (`json
 
 ## HTTP / endpoints (out of scope)
 
-| Rule                                          | Status       |
-|-----------------------------------------------|--------------|
-| Endpoint availability and operation semantics | out of scope |
-| HTTP status selection                         | out of scope |
-| Content negotiation beyond adapter            | out of scope |
+| Rule                                             | Status       | Notes                   |
+|--------------------------------------------------|--------------|-------------------------|
+| Spring annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
+| Endpoint availability and operation semantics   | out of scope | Application-owned       |
+| HTTP status selection                            | out of scope | Except adapter behavior |
+| Content negotiation beyond adapter               | out of scope | Application-owned       |

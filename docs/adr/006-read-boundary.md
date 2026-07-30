@@ -1,7 +1,8 @@
 # ADR-006: Document-First Deserialization
 
 **Status:** Accepted  
-**Date:** 2026-07-26
+**Date:** 2026-07-26  
+**Amended:** 2026-07-30
 
 ## Context
 
@@ -13,7 +14,10 @@ Treating graph hydration as the inverse of serialization would hide these unreso
 
 Initial read support decodes JSON into the document model and validates it. It does not automatically hydrate annotated domain object graphs.
 
-Applications consume resource objects, identifiers, relationships, and errors directly or implement an explicit mapping layer. A future domain-binding feature requires its own ADR and must define unresolved linkage, identity, immutable construction, cycles, and PATCH semantics.
+Applications may consume resource objects, identifiers, relationships, and errors directly.
+[ADR-011](011-flat-dto-read-binding.md) adds document-first flat DTO binding and independently
+bound included resources without graph hydration. [ADR-012](012-resource-patch-binding.md) adds
+presence-aware update commands without applying them to domain state.
 
 The codec remains capable of reading request and response document shapes; this decision limits the target Java representation, not JSON:API wire coverage.
 
@@ -22,5 +26,5 @@ The codec remains capable of reading request and response document shapes; this 
 - Deserialization has a clear, achievable contract.
 - Linkage-only documents do not fabricate domain instances.
 - Request validation can ship before a domain hydration system.
-- Users wanting graph binding must write policy-aware mapping code initially.
-- Serialization and deserialization are intentionally asymmetric at the domain-object layer.
+- Users wanting graph binding still need policy-aware application mapping.
+- Flat DTO serialization/deserialization may be symmetric while graph hydration remains excluded.

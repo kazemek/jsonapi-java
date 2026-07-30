@@ -4,14 +4,18 @@
 
 ## Product boundary
 
-`jsonapi-java` is a lightweight, Java 21+ document codec with optional domain-mapping, query-parameter, and web-framework adapters.
+`jsonapi-java` is a lightweight, Java 21+ document codec with optional bidirectional
+domain-mapping, query-parameter, and web-framework adapters.
 
 The library owns:
 
 - an immutable, dependency-free representation of JSON:API documents;
 - strict validation of document structure and cross-document invariants;
 - Jackson encoding and decoding of that document model;
-- opt-in mapping from ordinary Jackson-visible POJOs and records to resource objects;
+- opt-in mapping between ordinary Jackson-visible POJOs/records and flat resource objects through
+  domain-facing document envelopes;
+- presence-aware resource-update commands that preserve omitted values versus explicit JSON
+  `null` without mutating application objects;
 - optional parsing of JSON:API query parameters;
 - optional Spring integration for the JSON:API media type.
 
@@ -21,6 +25,7 @@ Applications continue to own:
 - persistence, repositories, transactions, and authorization;
 - filtering, sorting, pagination, and query execution;
 - decisions about supported include paths, fields, profiles, and extensions;
+- authorization and application of resource-update commands to existing domain state;
 - HTTP operation semantics beyond behavior explicitly implemented by an adapter.
 
 This boundary is deliberate. The project is not an API engine, ORM bridge, repository abstraction, or endpoint generator.
@@ -30,7 +35,8 @@ This boundary is deliberate. The project is not an API engine, ORM bridge, repos
 - `jsonapi-java-core` has no third-party runtime dependencies. A compile-only JSpecify
   annotation jar may be used for nullness metadata (see ADR-009); it is not a functional
   runtime dependency and must not appear on the published runtime classpath.
-- Domain mapping is opt-in and requires no inheritance or framework interfaces.
+- Domain mapping is opt-in, bidirectional for documented flat DTO shapes, and requires no
+  inheritance or framework interfaces.
 - Jackson, query parsing, Spring WebMVC, and future WebFlux support are separate artifacts.
 - A relationship creates linkage; it does not automatically traverse and include an object graph.
 - The library does not execute filters, sorts, or pagination strategies.
@@ -52,9 +58,21 @@ Local invariants are enforced when values are constructed. Invariants involving 
 
 Domain mapping uses Jackson's logical property model. It preserves Jackson visibility, naming, mix-ins, ignored properties, custom serializers, and creator rules instead of independently reflecting over fields and getters.
 
-### Read documents before hydrating graphs
+### Document-first correctness, DTO-first adapters
 
-Initial deserialization produces a validated JSON:API document model. Automatic reconstruction of arbitrary domain object graphs is not an initial goal because unresolved linkage, cycles, identity, immutable constructors, and partial updates require application policy.
+Deserialization first produces and validates the JSON:API document model. Jackson and framework
+adapters may then bind primary resources to annotated flat DTOs and expose document-level members
+through a typed domain envelope, so routine application code need not manipulate the core model.
+
+Relationship properties bind resource linkage only. Included resources are bound independently
+through explicit resource-type registration and are never injected into relationship properties.
+Automatic reconstruction of arbitrary domain graphs remains outside the product boundary because
+unresolved linkage, cycles, identity, and persistence resolution require application policy.
+
+Resource PATCH binding produces a presence-aware update command. Omitted attributes and
+relationships remain distinguishable from explicit attribute `null` and explicit null, single, or
+collection linkage. Applications authorize and apply that command; the library does not mutate an
+existing DTO or persistence object.
 
 ### Extensible without interpreting extensions
 
@@ -64,7 +82,8 @@ The base model preserves valid extension members and `@` members. It does not im
 
 - `jsonapi-java-core` — dependency-free document model and validation.
 - `jsonapi-java-annotations` — dependency-free, opt-in domain-mapping annotations.
-- `jsonapi-java-jackson` — JSON document codec and Jackson-based domain-to-resource mapping.
+- `jsonapi-java-jackson3` — Jackson 3 document codec and bidirectional flat DTO mapping.
+- `jsonapi-java-jackson2` — later Jackson 2 artifact with the same stable conceptual contracts.
 - `jsonapi-java-query` — optional framework-neutral query-parameter parsing.
 - `jsonapi-java-spring-webmvc` — optional Spring Boot WebMVC integration.
 - `jsonapi-java-spring-webflux` — possible later adapter, independently scoped.
@@ -87,13 +106,15 @@ Compliance is tracked by feature and layer instead of claimed globally.
 
 - Query-family parsing is guaranteed by `jsonapi-java-query`; support and execution remain application choices.
 - JSON:API `Content-Type` and `Accept` handling is guaranteed only by the applicable web adapter.
-- Domain mapping is guaranteed only for documented Jackson property shapes and mapping policies.
+- Domain mapping, typed envelopes, and PATCH commands are guaranteed only for documented Jackson
+  property shapes and mapping policies.
 
 ### Application responsibilities
 
 - Endpoint availability and operation semantics.
 - HTTP status selection outside adapter-defined behavior.
 - Persistence and relationship mutation.
+- Authorization and application of presence-aware update commands.
 - Authorization and visibility of fields and relationships.
 - Query execution and limits.
 - Extension and profile semantics.
@@ -115,14 +136,18 @@ Each milestone updates a conformance checklist with one of: supported, pass-thro
 ### Phase 2 — Jackson codec and mapping
 
 1. Encode and decode the document model using official wire fixtures.
-2. Map Jackson-visible domain properties to resource objects.
+2. Map Jackson-visible domain properties to and from flat resource objects.
 3. Add explicitly requested compound inclusion and sparse fieldsets with bounded traversal.
-4. Read JSON into validated document models; defer automatic domain graph hydration.
+4. Read JSON into validated document models before optional DTO binding.
+5. Expose typed domain envelopes with independently bound included resources.
+6. Bind JSON:API resource updates to presence-aware commands without applying them.
+7. Stabilize these contracts on Jackson 3, then port them to an isolated Jackson 2 artifact.
 
 ### Phase 3 — Optional adapters
 
 1. Parse JSON:API query parameters without executing them.
-2. Integrate the media type, codec, query arguments, and error documents with Spring WebMVC.
+2. Integrate the media type, codec, query arguments, error documents, annotated DTOs, typed
+   envelopes, and presence-aware update commands with Spring WebMVC.
 3. Evaluate WebFlux as a separate artifact after WebMVC behavior is stable.
 
 ### Phase 4 — Production readiness
@@ -136,7 +161,8 @@ Each milestone updates a conformance checklist with one of: supported, pass-thro
 
 - Generated controllers or repositories.
 - ORM-specific behavior or automatic lazy association traversal.
-- Automatic domain graph hydration during deserialization.
+- Automatic domain graph hydration or injection of `included` resources into relationships.
+- Automatic application of PATCH commands to domain or persistence objects.
 - A filtering or pagination DSL.
 - Relationship endpoint implementation.
 - Extension-specific processing beyond explicitly supported extensions.

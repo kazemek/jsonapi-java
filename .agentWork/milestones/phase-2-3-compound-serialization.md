@@ -1,19 +1,25 @@
-# Phase 2.3 — Compound Serialization Context
+# Phase 2.3 — Jackson 3 Compound Serialization Context
 
-> **Module:** `jsonapi-java-jackson`  
+> **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phase 2.2  
 > **Status:** Not started
 
 ## Goal
 
-Add explicit, bounded compound-document inclusion and sparse fieldsets without turning relationship mapping into automatic graph traversal.
+Add explicit, bounded compound-document inclusion without turning relationship mapping into automatic graph traversal.
+
+## Research and constraints
+
+- [`docs/vision.md`](../../docs/vision.md) — a relationship creates linkage but never requests automatic inclusion; include paths and traversal limits remain explicit application policy.
+- [ADR-005](../../docs/adr/005-domain-mapping-and-inclusion.md) — domain mapping and inclusion are separate operations, and persistence/lazy-loading behavior is not owned by the library.
+- [JSON:API compound documents](https://jsonapi.org/format/1.1/#document-compound-documents) — included resources require full linkage and unique resource identity.
+- `JsonApiDocumentValidator` — generated documents must pass duplicate-identity, local-identifier, and full-linkage validation before writing.
 
 ## Serialization context
 
 The caller supplies an immutable context containing:
 
 - requested include paths;
-- sparse fieldsets by resource type;
 - an allow-list/policy for includable relationships;
 - maximum relationship depth;
 - maximum included-resource count;
@@ -32,24 +38,30 @@ Defaults request no included resources and apply finite safety limits.
 - Reject conflicting representations of the same identity.
 - Preserve deterministic first-encounter order.
 
-## Sparse fieldsets
-
-- Apply fieldsets to primary and included resources by resource type.
-- Never emit fields outside an explicitly restricted fieldset.
-- Preserve `type` and resource identity independently of field selection.
-- Coordinate omitted relationship linkage with JSON:API's full-linkage exception.
-- Apply fieldsets before traversal so excluded relationships are not accessed unnecessarily.
-
 ## Safety and ORM neutrality
 
-The mapper performs no JPA initialization and has no persistence dependency. Accessing a relationship is ordinary Jackson/property access controlled by the inclusion context. Depth, count, and cycle behavior produce structured mapping diagnostics.
+The mapper has no persistence dependency and never calls JPA/Hibernate initialization APIs. Relationship/property access is ordinary Jackson/property access controlled by the inclusion context; if the caller supplies a lazy proxy or getter, that access may still initialize it and trigger database I/O. Callers requiring no I/O must provide an access-safe, already-loaded graph. Depth, count, and cycle behavior produce structured mapping diagnostics.
+
+## Non-goals
+
+- Sparse fieldsets; Phase 2.8 adds field selection after inclusion behavior is stable.
+- Inclusion defaults hidden in annotations, serializers, persistence providers, or framework adapters.
+- JPA/Hibernate initialization APIs, repositories, fetch plans, authorization, or visibility policy;
+  callers own access-safe graph preparation and persistence behavior.
+
+## Test strategy
+
+- Use cyclic, shared, conflicting, empty, and nested domain graphs with explicit include paths.
+- Assert full linkage, intermediate-resource inclusion, identity deduplication, first-encounter order, and no access to relationships outside requested paths.
+- Cover invalid paths, denied relationships, cycles, conflicting identities, and depth/count limits with stable mapping codes and logical paths.
 
 ## Acceptance criteria
 
-- [ ] No related resource enters `included` without an explicit include request or documented application default.
-- [ ] Nested paths include required intermediate resources.
-- [ ] Deduplication, conflicting identity, cycles, depth, and count limits are tested.
-- [ ] Sparse fieldsets apply consistently to primary and included resources.
-- [ ] Excluded relationships are not traversed.
-- [ ] Output order is deterministic.
-- [ ] `./gradlew :jsonapi-java-jackson:test` passes.
+- [ ] No related resource enters `included` without an explicit include request; nested paths include required intermediates, excluded relationships are not accessed, and first-encounter output order is deterministic.
+- [ ] Deduplication, conflicting identity, cycles, maximum depth, and maximum included-resource count have stable mapping diagnostics and focused tests.
+- [ ] Generated compound documents pass core identity/full-linkage validation and preserve explicit extension/profile policy without persistence or framework dependencies.
+- [ ] The canonical `module-docs` checklist passes and conformance documentation states the exact opt-in inclusion policy rather than implying automatic traversal.
+- [ ] `./gradlew :jsonapi-java-jackson3:test` passes.
+- [ ] `./gradlew clean build` passes.
+- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
