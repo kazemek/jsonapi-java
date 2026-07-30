@@ -20,7 +20,15 @@ public record ErrorObject(
     Map<String, @Nullable Object> additionalMembers) {
 
   private static final Set<String> RESERVED_ADDITIONAL =
-      Set.of("id", "links", "status", "code", "title", "detail", "source", "meta");
+      Set.of(
+          JsonApiMembers.ID,
+          JsonApiMembers.LINKS,
+          JsonApiMembers.STATUS,
+          JsonApiMembers.CODE,
+          JsonApiMembers.TITLE,
+          JsonApiMembers.DETAIL,
+          JsonApiMembers.SOURCE,
+          JsonApiMembers.META);
 
   public ErrorObject {
     boolean hasStandardMember =

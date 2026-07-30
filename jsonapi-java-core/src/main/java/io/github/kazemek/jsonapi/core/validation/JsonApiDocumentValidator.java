@@ -6,6 +6,7 @@ import io.github.kazemek.jsonapi.core.internal.SyntaxValidators;
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.ErrorObject;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
+import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.JsonApiObject;
 import io.github.kazemek.jsonapi.core.model.Link;
 import io.github.kazemek.jsonapi.core.model.Links;
@@ -40,7 +41,6 @@ public final class JsonApiDocumentValidator {
   private static final String PATH_DATA = "/data";
   private static final String PATH_META = "/meta";
   private static final String PATH_LINKS = "/links";
-  private static final Set<String> PAGINATION_LINKS = Set.of("first", "last", "prev", "next");
 
   public void validate(JsonApiDocument document, ValidationContext context) {
     validateAdditionalMembers(document.additionalMembers(), "", context);
@@ -214,7 +214,7 @@ public final class JsonApiDocumentValidator {
   }
 
   private boolean isQualifyingRelationshipLink(String name, ValidationContext context) {
-    if ("self".equals(name) || "related".equals(name)) {
+    if (JsonApiMembers.SELF.equals(name) || JsonApiMembers.RELATED.equals(name)) {
       return true;
     }
     if (MemberNames.isExtensionMember(name)) {
@@ -672,7 +672,7 @@ public final class JsonApiDocumentValidator {
             "Non-standard link in context " + context.linksContext() + ": " + name);
       }
     }
-    if (!PAGINATION_LINKS.contains(name)) {
+    if (!JsonApiMembers.PAGINATION_LINKS.contains(name)) {
       return;
     }
     validatePaginationLink(

@@ -82,7 +82,8 @@ The base model preserves valid extension members and `@` members. It does not im
 
 - `jsonapi-java-core` — dependency-free document model and validation.
 - `jsonapi-java-annotations` — dependency-free, opt-in domain-mapping annotations.
-- `jsonapi-java-jackson3` — Jackson 3 document codec and bidirectional flat DTO mapping.
+- `jsonapi-java-jackson3` — Jackson 3 document writer is available; bidirectional flat DTO mapping
+  and document reads remain later Phase 2 work.
 - `jsonapi-java-jackson2` — later Jackson 2 artifact with the same stable conceptual contracts.
 - `jsonapi-java-query` — optional framework-neutral query-parameter parsing.
 - `jsonapi-java-spring-webmvc` — optional Spring Boot WebMVC integration.
@@ -135,7 +136,8 @@ Each milestone updates a conformance checklist with one of: supported, pass-thro
 
 ### Phase 2 — Jackson codec and mapping
 
-1. Encode and decode the document model using official wire fixtures.
+1. Encode the document model with official wire fixtures (Phase 2.1 writer complete); decode in
+   Phase 2.4.
 2. Map Jackson-visible domain properties to and from flat resource objects.
 3. Add explicitly requested compound inclusion and sparse fieldsets with bounded traversal.
 4. Read JSON into validated document models before optional DTO binding.

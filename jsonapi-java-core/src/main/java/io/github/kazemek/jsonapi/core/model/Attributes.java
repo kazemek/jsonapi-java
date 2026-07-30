@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
 public final class Attributes {
 
   private static final String PATH = "/attributes";
-  private static final Set<String> RESERVED = Set.of("type", "id");
+  private static final Set<String> RESERVED = Set.of(JsonApiMembers.TYPE, JsonApiMembers.ID);
 
   private final Map<String, @Nullable Object> members;
   private final Map<String, @Nullable Object> additionalMembers;

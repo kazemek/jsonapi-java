@@ -1,0 +1,12 @@
+{
+  "data": {
+    "type": "articles",
+    "id": "1",
+    "attributes": {
+      "title": "Hello"
+    },
+    "@copyright": "Copyright 2026",
+    "ext:version": 1
+  },
+  "ext:request-id": "abc-123"
+}

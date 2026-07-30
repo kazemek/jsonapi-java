@@ -12,7 +12,8 @@ public record ErrorSource(
     @Nullable String header,
     Map<String, @Nullable Object> additionalMembers) {
 
-  private static final Set<String> RESERVED_ADDITIONAL = Set.of("pointer", "parameter", "header");
+  private static final Set<String> RESERVED_ADDITIONAL =
+      Set.of(JsonApiMembers.POINTER, JsonApiMembers.PARAMETER, JsonApiMembers.HEADER);
 
   public ErrorSource {
     additionalMembers =

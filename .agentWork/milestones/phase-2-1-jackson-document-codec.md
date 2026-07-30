@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phase 1.1  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -53,11 +53,11 @@ Add a Jackson 3 artifact that validates and writes every completed core document
 
 ## Acceptance criteria
 
-- [ ] The published runtime artifact uses Jackson 3 (`tools.jackson.*`), core remains Jackson-free, dependency verification is updated, and ArchUnit rejects core-internal or Jackson 2 production dependencies.
-- [ ] Every Phase 1.1 state emits the required absent/null/single/collection and flat-object wire shape; canonical member order, collection order, nullable links, and array-form `hreflang` are fixture-tested.
-- [ ] Invalid aggregate documents fail before output, and using the JSON:API writer does not alter the caller mapper's ordinary serialization behavior.
-- [ ] The canonical `module-docs` checklist passes and `docs/conformance.md` marks only the delivered serialization contract **supported**.
-- [ ] `./gradlew :jsonapi-java-jackson3:test` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [x] The published runtime artifact uses Jackson 3 (`tools.jackson.*`), core remains Jackson-free, dependency verification is updated, and ArchUnit rejects core-internal or Jackson 2 production dependencies.
+- [x] Every Phase 1.1 state emits the required absent/null/single/collection and flat-object wire shape; canonical member order, collection order, nullable links, and array-form `hreflang` are fixture-tested.
+- [x] Invalid aggregate documents fail before output, and using the JSON:API writer does not alter the caller mapper's ordinary serialization behavior.
+- [x] The canonical `module-docs` checklist passes and `docs/conformance.md` marks only the delivered serialization contract **supported**.
+- [x] `./gradlew :jsonapi-java-jackson3:test` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
