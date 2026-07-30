@@ -1,101 +1,59 @@
 # Phase 1.2 — Domain-Mapping Annotations
 
 > **Module:** `jsonapi-java-annotations`  
-> **Package:** `io.github.kazemek.jsonapi.annotation`  
-> **Dependencies:** None beyond `java.base`  
+> **Dependencies:** Phases 0.1, 0.5, and 0.8  
 > **Status:** Not started
 
 ## Goal
 
-Define a minimal annotation vocabulary for opt-in domain-to-resource mapping. Annotations describe JSON:API roles; Jackson remains authoritative for property discovery, names, visibility, values, and custom serialization.
+Provide a runtime-visible annotation API with no functional third-party runtime dependencies that lets domain classes and records declare JSON:API resource, identifier, attribute-name, and relationship-name roles for later Jackson mapping.
 
-This milestone is independent of Phase 1.1 and may be implemented in parallel after Phase 0.1.
+## Research and constraints
 
-## Default mapping policy
+- [`docs/vision.md`](../../docs/vision.md) — annotations are opt-in metadata in their own artifact; Jackson remains authoritative for logical property discovery, visibility, names, values, and serialization.
+- [ADR-007](../../docs/adr/007-module-boundaries.md) and [ADR-008](../../docs/adr/008-public-namespace.md) — add the `jsonapi-java-annotations` submodule and place its public API in `io.github.kazemek.jsonapi.annotation` without core, Jackson, persistence, or framework dependencies.
+- [ADR-005](../../docs/adr/005-domain-mapping-and-inclusion.md) — `@JsonApiRelationship` identifies linkage and its name only; it must not request inclusion or carry fetch, cascade, repository, or ORM policy.
+- [JSON:API v1.1 member names](https://jsonapi.org/format/1.1/#document-member-names) — resource `type` and non-empty JSON:API field-name overrides must satisfy the case-sensitive member-name grammar. Annotation instances only store metadata, so Phase 2.2 performs this validation when it builds a mapping definition.
+- [Java SE 21 `ElementType`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/annotation/ElementType.html) and [`RetentionPolicy`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/annotation/RetentionPolicy.html) — property annotations explicitly target fields, methods, parameters, and record components and use runtime retention for mapper introspection.
+- [ADR-009](../../docs/adr/009-jspecify-nullness.md) and the shared `jsonapi-java-library` plugin — the production package is `@NullMarked`; JSpecify remains compile-only and does not become a published runtime dependency.
 
-For a type marked `@JsonApiResource`:
+## Deliverables
 
-- Jackson-visible logical properties are attributes by default.
-- The identifier property and relationship properties are removed from attributes.
-- Jackson-ignored properties remain ignored.
-- Jackson names, naming strategies, and mix-ins apply unless a JSON:API annotation explicitly overrides the JSON:API field name.
-- Domain mapping is serialization-only in the initial roadmap.
+- Register `jsonapi-java-annotations` in `settings.gradle.kts` with a minimal build applying `jsonapi-java-library`; add the `io.github.kazemek.jsonapi.annotation` production package.
+- Add four `@Documented`, runtime-retained annotation types with these exact elements and targets: `@JsonApiResource(type = "...")` on types with required `String type()` and no `@Inherited`; marker `@JsonApiId` on fields, methods, parameters, and record components; and `@JsonApiAttribute` / `@JsonApiRelationship` on those property locations with `String name() default ""`.
+- Document the metadata contract in focused public Javadoc: an explicit `@JsonApiId` or Phase 2.2's conventional logical property named `id` supplies the identifier; the empty `name` sentinel retains the Jackson logical property name; identifiers and relationships cease to be default attributes; annotations never make Jackson-ignored properties visible; relationship metadata requests linkage, not inclusion; and Phase 2.2 owns logical-property conflict, value-shape, identifier-conversion, and member-name validation.
+- Add reflection and usage-fixture Spock tests for annotation elements, defaults, meta-annotations, exact targets, non-inheritance, and legal placement on POJOs and records without adding Jackson to this module.
+- Use the `module-docs` skill to create the module README and package documentation, register the module in the root README, and update `docs/conformance.md` to record the annotation metadata vocabulary as supported while Jackson interpretation remains deferred to Phase 2.2.
 
-This default is intentionally close to ordinary Jackson serialization. Applications that require explicit allow-listing use Jackson visibility and ignore annotations rather than a second competing visibility system.
+## Non-goals
 
-## Annotation contracts
+- Jackson introspection, logical-property resolution, mapping-definition errors, identifier conversion, relationship cardinality, or resource-object construction; these remain Phase 2.2 work.
+- Runtime member-name validation in the annotation artifact or a dependency on core solely to reuse its validator.
+- Inclusion paths, sparse fieldsets, traversal, persistence behavior, query behavior, or framework integration.
+- Annotation elements for custom converters, inclusion, fetch, cascade, repositories, or ORM-specific behavior.
 
-### `@JsonApiResource`
+## Implementation boundaries
 
-- Runtime annotation targeting types.
-- Requires a non-blank resource `type`.
-- The type value follows the complete JSON:API member-name grammar: case-sensitive ASCII letters and digits or permitted non-ASCII characters, with hyphen, underscore, and space allowed only internally.
-- Mapping rejects annotated interfaces, enums, and annotation types; supported shapes are classes and records.
-- The annotation is not inherited implicitly. A subtype must declare its resource type or be handled by an explicit mapping policy.
-
-### `@JsonApiId`
-
-- Runtime annotation targeting fields, record components, methods, and parameters participating in a Jackson logical property.
-- Zero or one logical property may be explicitly annotated.
-- If no logical property is annotated, the Jackson logical property named `id` is used by convention.
-- More than one logical id property, or absence of both an annotation and conventional `id`, is a mapping-definition error.
-- Conversion to JSON:API string form is delegated to a documented identifier converter. The default supports strings, integral values, UUIDs, and enums; custom converters are explicit.
-
-### `@JsonApiAttribute`
-
-- Optional runtime annotation targeting fields, record components, methods, and parameters.
-- Overrides the JSON:API attribute name; an empty override retains the Jackson logical property name.
-- It does not make a Jackson-ignored property visible.
-- Applying it to the logical id property or together with `@JsonApiRelationship` is a mapping-definition error.
-
-### `@JsonApiRelationship`
-
-- Runtime annotation with the same property targets as `@JsonApiAttribute`.
-- Overrides the JSON:API relationship name; an empty override retains the Jackson logical property name.
-- It marks linkage only. It never requests inclusion and carries no fetch, cascade, repository, or ORM options.
-- Names share a namespace with attributes and cannot be `type` or `id`.
-
-## Logical-property resolution
-
-Phase 2.2 resolves annotations through Jackson introspection. A record annotation that is propagated to its component, field, accessor, or constructor parameter still describes one logical property.
-
-Conflicting annotations found on members contributing to the same logical property are rejected with a stable mapping error. There is no “fields first, getters second” precedence.
-
-## Relationship cardinality
-
-Cardinality comes from Jackson `JavaType`:
-
-- arrays and collection-like types are to-many;
-- `Optional<T>` and ordinary object values are to-one;
-- null to-one values create explicit-null linkage;
-- empty collection-like values create empty to-many linkage;
-- raw, unresolved, map-like, or otherwise ambiguous relationship types are rejected unless a custom relationship mapper is registered.
-
-JPA proxies and persistent collections receive no special behavior. They are handled only to the extent that their exposed Jackson type and serializer behave like supported values.
-
-## Member-name validation
-
-Use one shared implementation of the JSON:API v1.1 grammar. Tests must cover:
-
-- uppercase and lowercase names;
-- Unicode names;
-- internal hyphen, underscore, and space;
-- empty names and illegal leading/trailing separators;
-- reserved punctuation;
-- extension namespace syntax separately from ordinary member names.
+- This milestone is independent of Phase 1.1; it introduces metadata only and does not consume the core document model.
+- `type()` has no default. `name()` defaults to the empty string only as the explicit “use Jackson's logical property name” sentinel; a non-empty override is interpreted and validated only by Phase 2.2.
+- `@JsonApiResource` is usable on classes, records, interfaces, enums, and annotation interfaces at Java compile time because `ElementType.TYPE` covers those declarations. The annotation module does not claim that every legal placement is mappable; Phase 2.2 defines and diagnoses supported domain shapes.
+- Property annotations include `ElementType.RECORD_COMPONENT` as well as the declaration targets through which Java and Jackson may expose a logical property. Phase 2.2 must collapse propagated occurrences into one logical property rather than inventing field/getter precedence.
+- Production code may import only `java.lang.annotation` and JSpecify package metadata. The artifact has no functional third-party runtime dependency.
 
 ## Test strategy
 
-Annotation-module tests verify retention, targets, defaults, and valid annotation placement on records and POJOs without adding Jackson.
-
-Jackson logical-property behavior, mix-ins, naming strategies, conflict detection, cardinality, and identifier conversion are acceptance tests for Phase 2.2, where Jackson is available.
+- Reflect over each annotation type to assert `RUNTIME`, `@Documented`, exact `@Target` sets, absence of `@Inherited`, required/defaulted elements, return types, and marker shape.
+- Compile and reflect over small record and POJO fixtures to prove resource and property annotations can be declared at all intended locations without Jackson.
+- Inspect the annotation module runtime classpath and imports so tests do not accidentally turn JSpecify or a mapper library into a runtime dependency.
+- Keep Jackson naming, mix-in, ignored-property, propagation-conflict, cardinality, conversion, and invalid-name cases in Phase 2.2, where behavior can be tested through Jackson's logical property model.
 
 ## Acceptance criteria
 
-- [ ] Four annotations are provided with runtime retention and property targets that include creator parameters.
-- [ ] The default-attribute and id-convention policies are documented without contradiction.
-- [ ] Annotation types contain no inclusion, persistence, query, or Spring concerns.
-- [ ] The exact member-name grammar has shared test vectors ready for core and mapping use.
-- [ ] The module has zero third-party runtime dependencies.
+- [ ] Reflection and usage-fixture tests prove all four exact annotation contracts, including `name()` defaults, creator-parameter and record-component targets, and non-inheritance.
+- [ ] Public Javadoc defines metadata-only default-attribute, identifier, rename, and linkage semantics without implementing or contradicting Phase 2.2 mapping policy.
+- [ ] The runtime classpath has no functional third-party artifacts, and annotation elements contain no converter, inclusion, persistence, query, or framework concerns.
+- [ ] The canonical `module-docs` checklist passes, including `@NullMarked` package documentation, root module registration, and the scoped conformance update.
 - [ ] `./gradlew :jsonapi-java-annotations:test` passes.
-- [x] The verified base package namespace is documented (ADR-008 / Phase 0.1).
+- [ ] `./gradlew clean build` passes.
+- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
