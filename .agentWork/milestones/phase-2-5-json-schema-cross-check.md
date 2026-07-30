@@ -14,12 +14,15 @@ Cross-check Jackson 3 writer fixtures against a pinned JSON:API 1.1 draft schema
 - [JSON:API 1.1 schema PR #1603](https://github.com/json-api/json-api/pull/1603) is open and therefore mutable. Pin its contributor-fork head commit `4ee1c644fcc273044ecec39a6b8c0f0485abdc0e`, record the PR and source provenance, and call the files “JSON:API project's draft-PR schemas,” not “official schemas.”
 - The pinned draft contains separate Draft 2020-12 schemas for responses, create-resource requests, update-resource requests, and update-relationship requests; fixtures must select the matching document usage rather than applying the response schema globally.
 - The textual [JSON:API v1.1 specification](https://jsonapi.org/format/1.1/), core validation, and repository positive/negative fixtures remain authoritative because a permissive or incomplete schema can produce false positives.
-- `com.networknt:json-schema-validator` 3.x supports JSON Schema Draft 2020-12 on Jackson 3 — keep it test-only and regenerate dependency-verification metadata.
+- At implementation, use `com.networknt:json-schema-validator:3.0.6`, which supports JSON Schema
+  Draft 2020-12 on Jackson 3; keep it test-only and regenerate dependency-verification metadata for
+  the pinned version.
 
 ## Deliverables
 
 - Vendor the four pinned draft schema files under `fixtures/jsonapi-schema/1.1-pr1603/` with commit URL, retrieval date, SHA-256 values, draft status, and upstream CC0 provenance in an adjacent README; configure only test resources to consume them.
-- Add a Jackson 3-compatible Draft 2020-12 validator as `testImplementation` only and a focused schema harness that never performs network access during tests.
+- Add `com.networknt:json-schema-validator:3.0.6` as `testImplementation` only and a focused schema
+  harness that never performs network access during tests.
 - Classify Phase 2.1 generated fixtures as response, create-resource, update-resource, or update-relationship documents and validate each against the corresponding pinned schema.
 - Add invalid control fixtures for every schema kind so a broken/no-op harness fails, and document schema disagreements as explicit allow-listed cases with links to the governing textual rule or upstream issue.
 - Update `docs/conformance.md` with the supplemental cross-check and its limitations; do not change a feature status solely because the draft schema accepts it.

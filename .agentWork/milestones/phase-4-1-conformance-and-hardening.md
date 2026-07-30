@@ -27,10 +27,13 @@ Turn implemented behavior into a verifiable compliance and security contract bef
 - [ ] Every guaranteed conformance item has an executable test reference.
 - [ ] Limits fail with stable diagnostics rather than uncontrolled memory or stack failure.
 - [ ] Security-sensitive defaults, including included registration and PATCH field authorization,
-      are documented and tested across both Jackson majors and WebMVC.
+      are documented and tested independently for both Jackson major artifacts; the supported
+      Jackson 3 WebMVC integration has adapter-specific tests for those defaults, and no Jackson 2
+      WebMVC support is implied.
 - [ ] Benchmarks publish environment and methodology and are regression baselines, not marketing
       claims.
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
-      must still pass the gate.
+- [ ] When `SONAR_TOKEN` is available, the Sonar Quality Gate passes; without it, local Sonar
+      validation is explicitly blocked rather than counted as passed, and CI must still run and
+      pass the gate.

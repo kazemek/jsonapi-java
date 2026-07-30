@@ -34,9 +34,21 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 | `docs/` | Vision statement and architecture decision records |
 | `.agentWork/milestones/` | Concrete, testable implementation increments |
 
-Planned optional artifacts are `jsonapi-java-jackson3`, `jsonapi-java-jackson2`,
-`jsonapi-java-query`, and `jsonapi-java-spring-webmvc`. Jackson 3 and DTO-oriented WebMVC land
-first; Jackson 2 parity follows. WebFlux will be evaluated separately.
+## Module registry
+
+| Module | Status | Purpose |
+|--------|--------|---------|
+| [`jsonapi-java-core`](jsonapi-java-core/README.md) | Available — Phase 1.1 complete | Dependency-free document model and validation |
+| [`jsonapi-java-annotations`](jsonapi-java-annotations/README.md) | Available — Phase 1.2 complete | Dependency-free domain-mapping role annotations |
+| `jsonapi-java-jackson3` | Planned — Phase 2.1+ not started | Jackson 3 codec, DTO mapping, envelopes, and PATCH commands |
+| `jsonapi-java-jackson2` | Planned — parity track not started | Separately compiled Jackson 2 parity artifact |
+| `jsonapi-java-query` | Planned — Phase 3.1 not started | Optional query-parameter parsing |
+| `jsonapi-java-spring-webmvc` | Planned — Phases 3.2–3.3 not started | Jackson 3-based Spring WebMVC transport and DTO binding |
+| `jsonapi-java-spring-webflux` | Future evaluation — Phase 3.4 not started | Separately scoped reactive adapter candidate |
+
+Planned and future-evaluation modules have no usable entry point yet. Use each available module
+README for its package map, minimal usage, non-goals, and contributor/agent notes; the registry does
+not duplicate those module-specific contracts.
 
 ## Documentation
 

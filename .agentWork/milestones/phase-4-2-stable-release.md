@@ -30,5 +30,6 @@ Publish a reviewable stable release with explicit compatibility and support poli
 - [ ] A clean consumer project can run each supported example.
 - [ ] The full build and publication validation pass from a clean checkout.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
-      must still pass the gate.
+- [ ] When `SONAR_TOKEN` is available, the Sonar Quality Gate passes; without it, local Sonar
+      validation is explicitly blocked rather than counted as passed, and CI must still run and
+      pass the gate.

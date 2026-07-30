@@ -40,13 +40,14 @@ Defaults request no included resources and apply finite safety limits.
 
 ## Safety and ORM neutrality
 
-The mapper performs no JPA initialization and has no persistence dependency. Accessing a relationship is ordinary Jackson/property access controlled by the inclusion context. Depth, count, and cycle behavior produce structured mapping diagnostics.
+The mapper has no persistence dependency and never calls JPA/Hibernate initialization APIs. Relationship/property access is ordinary Jackson/property access controlled by the inclusion context; if the caller supplies a lazy proxy or getter, that access may still initialize it and trigger database I/O. Callers requiring no I/O must provide an access-safe, already-loaded graph. Depth, count, and cycle behavior produce structured mapping diagnostics.
 
 ## Non-goals
 
 - Sparse fieldsets; Phase 2.8 adds field selection after inclusion behavior is stable.
 - Inclusion defaults hidden in annotations, serializers, persistence providers, or framework adapters.
-- JPA initialization, repositories, fetch plans, authorization, or visibility policy.
+- JPA/Hibernate initialization APIs, repositories, fetch plans, authorization, or visibility policy;
+  callers own access-safe graph preparation and persistence behavior.
 
 ## Test strategy
 

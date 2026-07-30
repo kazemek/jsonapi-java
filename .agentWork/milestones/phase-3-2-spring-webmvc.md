@@ -70,5 +70,6 @@ Use Spring context and MockMvc integration tests for:
 - [ ] `./gradlew :jsonapi-java-spring-webmvc:test` passes.
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
-      must still pass the gate.
+- [ ] When `SONAR_TOKEN` is available, the Sonar Quality Gate passes; without it, local Sonar
+      validation is explicitly blocked rather than counted as passed, and CI must still run and
+      pass the gate.

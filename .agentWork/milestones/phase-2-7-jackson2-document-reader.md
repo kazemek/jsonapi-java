@@ -11,7 +11,9 @@ Port the explicit, validated document-read contract to Jackson 2 with semantic a
 ## Research and constraints
 
 - Phase 2.4 defines the stable read contract: explicit resource versus resource-identifier primary-data interpretation, public core construction, aggregate validation, and safe path/location diagnostics.
-- Phase 2.6 establishes the independent Jackson 2 artifact and supported maintained baseline; reads must stay within its `com.fasterxml.jackson.*` API and dependency boundary.
+- Phase 2.6 establishes the independent Jackson 2 artifact, supported `2.22.x` compatibility line,
+  BOM `2.22.1` baseline, and `:jsonapi-java-jackson2:jackson2CompatibilityTest` task; reads must
+  stay within its `com.fasterxml.jackson.*` API and dependency boundary.
 - [ADR-002](../../docs/adr/002-document-representation.md) and [ADR-003](../../docs/adr/003-validation-and-immutability.md) — Jackson major differences may not change wire-state preservation or bypass core validation.
 - [Jackson 3 migration guide](https://github.com/FasterXML/jackson/blob/main/jackson3/MIGRATING_TO_JACKSON_3.md) catalogs renamed parser/databind APIs — adapt implementation calls explicitly instead of introducing reflection or a lowest-common-denominator public abstraction.
 - Shared fixtures must establish model and diagnostic parity; source offsets may differ only where the two Jackson parsers document different locations for the same malformed token.
@@ -37,13 +39,15 @@ Port the explicit, validated document-read contract to Jackson 2 with semantic a
 - Resource versus resource-identifier interpretation remains caller-selected for both object and array primary data; Jackson 2 must not add shape heuristics absent from Jackson 3.
 - Unknown/additional member classification, open-value conversion, constructor use, and aggregate validation follow Phase 2.4 exactly.
 - Caller-owned parser and stream lifecycles remain unchanged. Convenience overloads close only resources they create.
-- Production code imports no `tools.jackson..`, `jsonapi-java-jackson3`, or `core.internal` types; shared behavior is proven by fixtures rather than cross-major runtime delegation.
+- Production code imports no `tools.jackson.*`, `jsonapi-java-jackson3`, or `core.internal` types;
+  shared behavior is proven by fixtures rather than cross-major runtime delegation.
 
 ## Test strategy
 
 - Parameterize the same semantic fixture manifest used by Phase 2.4 and assert equal `JsonApiDocument` values from Jackson 2 and Jackson 3 readers.
 - Compare failure category, core rule code, and JSON Pointer exactly; compare source locations exactly where parser contracts align and by documented token boundary otherwise.
-- Run dependency/ArchUnit checks and the Jackson 2 maintained-baseline compatibility task established in Phase 2.6.
+- Run dependency/ArchUnit checks and `:jsonapi-java-jackson2:jackson2CompatibilityTest` against the
+  Jackson `2.22.x` line using BOM `2.22.1`, as established in Phase 2.6.
 
 ## Acceptance criteria
 

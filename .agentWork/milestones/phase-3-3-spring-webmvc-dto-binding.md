@@ -1,7 +1,7 @@
 # Phase 3.3 — Spring WebMVC Flat DTO Binding
 
 > **Module:** `jsonapi-java-spring-webmvc`  
-> **Dependencies:** Phases 2.8, 2.10, 2.11, and 3.2  
+> **Dependencies:** Phases 2.8, 2.9, 2.10, 2.11, and 3.2<br>
 > **Status:** Not started
 
 ## Goal
@@ -81,5 +81,6 @@ presence-aware PATCH commands without directly handling core documents.
 - [ ] `./gradlew :jsonapi-java-spring-webmvc:test --tests '*DomainBindingMvcSpec'` passes.
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
-      must still pass the gate.
+- [ ] When `SONAR_TOKEN` is available, the Sonar Quality Gate passes; without it, local Sonar
+      validation is explicitly blocked rather than counted as passed, and CI must still run and
+      pass the gate.
