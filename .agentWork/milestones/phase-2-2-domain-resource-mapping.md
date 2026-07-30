@@ -35,7 +35,7 @@ The API maps:
 - Relationship values produce explicit-null, single, or collection linkage.
 - Relationship mapping does not populate `included`.
 - Raw or unresolved collection relationships require a registered custom mapper.
-- Identifier conversion follows the annotation milestone and is replaceable.
+- Phase 1.2 supplies identifier and role metadata only; this milestone owns default and replaceable identifier conversion.
 
 ## Test strategy
 
@@ -46,7 +46,8 @@ Prove behavior for:
 - naming strategies and `@JsonProperty`;
 - `@JsonIgnore` and mix-ins;
 - custom value serializers;
-- conventional and explicit ids;
+- conventional and explicit ids, including default identifier conversion, replaceable conversion, and conversion failures;
+- invalid `@JsonApiResource` `type` and non-empty attribute/relationship `name()` overrides that violate the JSON:API member-name grammar;
 - duplicate/conflicting propagated annotations;
 - null to-one and empty to-many linkage;
 - raw collection rejection;
