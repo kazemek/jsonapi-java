@@ -2,7 +2,7 @@
 
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
-This checklist is seeded by Phase 1.1 (`jsonapi-java-core`). Wire-format round-trips are **deferred** to Phase 2.1.
+This checklist is seeded by Phase 1.1 (`jsonapi-java-core`) and Phase 1.2 (`jsonapi-java-annotations`). Wire-format round-trips are **deferred** to Phase 2.1; Jackson domain mapping remains **deferred** to Phase 2.2.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -52,6 +52,15 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`). Wire-format round-t
 | Resource type member-name grammar                                           | supported    | Only `null` is missing; Unicode-legal types accepted via `MemberNames` |
 | Defensive collection copies                                                 | supported    | Model types and `ValidationContext`                         |
 | URI-reference syntax                                                        | supported    | ASCII RFC 3986; structured authority; empty string allowed; raw non-ASCII rejected |
+
+## Annotation metadata (Phase 1.2 — supported)
+
+| Rule                                                         | Status    | Notes                                                                 |
+|--------------------------------------------------------------|-----------|-----------------------------------------------------------------------|
+| `@JsonApiResource(type)` on domain types                     | supported | Runtime-retained, `@Documented`; not `@Inherited`                     |
+| `@JsonApiId` marker on logical properties                    | supported | Fields, methods, parameters, and record components                    |
+| `@JsonApiAttribute(name)` optional attribute rename          | supported | Empty `name()` retains Jackson's logical property name                |
+| `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
 
 ## Codec / wire format (Phase 2.1 — deferred)
 

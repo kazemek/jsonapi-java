@@ -40,7 +40,7 @@ milestone file.
 - [Phase 0.9 — ArchUnit Core Dependency Guard](phase-0-9-archunit-core-deps.md) — core architecture and agent guidance — Complete
 - [Phase 0.10 — Task-Scoped Discovery and Documentation Pattern](phase-0-10-task-scoped-discovery-and-doc-pattern.md) — repository workflow and agent guidance — Complete
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md) — `jsonapi-java-core` — Complete
-- [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md) — `jsonapi-java-annotations` — Not started
+- [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md) — `jsonapi-java-annotations` — Complete
 - [Phase 2.1 — Jackson Document Codec](phase-2-1-jackson-document-codec.md) — `jsonapi-java-jackson` — Not started
 - [Phase 2.2 — Domain-to-Resource Mapping](phase-2-2-domain-resource-mapping.md) — `jsonapi-java-jackson` — Not started
 - [Phase 2.3 — Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson` — Not started
