@@ -14,7 +14,7 @@ Milestones are planned, testable increments. They may change until implementatio
 8. **Phase 0.8 — JSpecify nullness:** JSpecify `@NullMarked` packages, NullAway enforcement, and portable agent guidance for `jsonapi-java-core`.
 9. **Phase 0.9 — ArchUnit core dependency guard:** ArchUnit enforces JDK + JSpecify + self type deps for `jsonapi-java-core`.
 10. **Phase 0.10 — task-scoped discovery and documentation pattern:** unifies agent routing and documentation checklists after Phases 0.2, 0.5, and 0.7.
-11. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent zero-dependency foundations that may proceed in parallel after Phase 0.1.
+11. **Phase 1.1 — Document model and validation** and **Phase 1.2 — annotations:** independent foundations with no functional third-party runtime dependencies; Phase 1.2 uses the completed namespace, module-docs, and nullness foundations from Phases 0.1, 0.5, and 0.8.
 12. **Phase 2.1 — Jackson document codec:** proves the core model against real wire fixtures.
 13. **Phase 2.2 — domain mapping** and **Phase 2.4 — document-first reads:** may proceed in parallel after their listed dependencies.
 14. **Phase 2.3 — compound serialization:** builds on domain mapping.
