@@ -38,7 +38,7 @@ class DocumentReaderIsolationSpec extends Specification {
     then:
     before == after
     before == '{"name":"alpha"}'
-    !reader.mapper().is(caller)
+    reader.mapper().is(caller)
   }
 
   def "deriving a reader from a builder does not register the module on the builder"() {
@@ -53,7 +53,7 @@ class DocumentReaderIsolationSpec extends Specification {
     then:
     before == after
     before == '{"name":"beta"}'
-    !reader.mapper().is(builder.build())
+    reader.mapper().writeValueAsString(new SampleBean('gamma')) == '{"name":"gamma"}'
   }
 
   def "JsonApiDocumentReader.mapper is package-private"() {

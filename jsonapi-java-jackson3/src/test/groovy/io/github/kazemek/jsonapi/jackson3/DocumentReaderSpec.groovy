@@ -200,6 +200,22 @@ class DocumentReaderSpec extends Specification {
     parser?.close()
   }
 
+  def "caller-owned parser advances past a prior scalar root before a document"() {
+    given:
+    def reader = JsonApiJackson3.reader(mapper, resourceContext)
+    def parser = reader.mapper().createParser('"skip"{"meta":{"a":1}}')
+    parser.nextToken() // VALUE_STRING
+
+    when:
+    def document = reader.readValue(parser)
+
+    then:
+    document.meta().members().get('a') == 1
+
+    cleanup:
+    parser?.close()
+  }
+
   def "unexpected token reports path and location"() {
     when:
     JsonApiJackson3.reader(mapper, resourceContext).readValue('[]')

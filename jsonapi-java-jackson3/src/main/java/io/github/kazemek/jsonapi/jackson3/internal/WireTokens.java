@@ -43,14 +43,18 @@ final class WireTokens {
       case VALUE_NULL -> null;
       case VALUE_STRING -> parser.getString();
       case VALUE_TRUE, VALUE_FALSE -> parser.getBooleanValue();
-      case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT -> readNumber(parser);
+      case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT -> readNumber(parser, pointer);
       case START_ARRAY -> readOpenArray(parser, pointer);
       case START_OBJECT -> readOpenObject(parser, pointer);
       default -> throw unexpectedToken(token, "a JSON value", pointer, parser);
     };
   }
 
-  static Number readNumber(JsonParser parser) {
+  static Number readNumber(JsonParser parser, JsonPointerAccumulator pointer) {
+    JsonToken token = parser.currentToken();
+    if (token != JsonToken.VALUE_NUMBER_INT && token != JsonToken.VALUE_NUMBER_FLOAT) {
+      throw unexpectedToken(token, "number", pointer, parser);
+    }
     return switch (parser.getNumberType()) {
       case INT -> parser.getIntValue();
       case LONG -> parser.getLongValue();
@@ -58,6 +62,7 @@ final class WireTokens {
       case FLOAT -> parser.getFloatValue();
       case DOUBLE -> parser.getDoubleValue();
       case BIG_DECIMAL -> parser.getDecimalValue();
+      case null, default -> throw unexpectedToken(token, "number", pointer, parser);
     };
   }
 
@@ -72,6 +77,7 @@ final class WireTokens {
       pointer.pop();
       index++;
     }
+    // Open arrays may contain JSON null; List.copyOf would reject null elements.
     return Collections.unmodifiableList(values);
   }
 

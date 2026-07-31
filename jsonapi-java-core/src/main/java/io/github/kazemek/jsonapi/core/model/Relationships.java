@@ -51,8 +51,7 @@ public final class Relationships {
       }
     }
     Map<String, @Nullable Object> additionalCopy = copyAdditionalMembers(additionalMembers);
-    OrderedMaps.requireNoCollisions(
-        relCopy, castRelationships(additionalCopy), "relationships", PATH);
+    OrderedMaps.requireNoCollisions(relCopy, additionalCopy, "relationships", PATH);
     return new Relationships(Collections.unmodifiableMap(relCopy), additionalCopy);
   }
 
@@ -140,11 +139,6 @@ public final class Relationships {
       copy.put(name, OpenJsonValues.copy(entry.getValue(), JsonPointers.child(PATH, name)));
     }
     return OrderedMaps.copyOfNullableValues(copy);
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Map<String, Relationship> castRelationships(Map<String, @Nullable Object> map) {
-    return (Map<String, Relationship>) (Map<?, ?>) map;
   }
 
   @Override

@@ -21,13 +21,15 @@ public final class ReadLocations {
   }
 
   public static SourceLocation from(@Nullable TokenStreamLocation location) {
-    if (location == null || location == TokenStreamLocation.NA) {
+    if (location == null || TokenStreamLocation.NA.equals(location)) {
       return SourceLocation.UNKNOWN;
     }
-    return new SourceLocation(
-        location.getLineNr(),
-        location.getColumnNr(),
-        location.getCharOffset(),
-        location.getByteOffset());
+    SourceLocation source =
+        new SourceLocation(
+            location.getLineNr(),
+            location.getColumnNr(),
+            location.getCharOffset(),
+            location.getByteOffset());
+    return source.isKnown() ? source : SourceLocation.UNKNOWN;
   }
 }

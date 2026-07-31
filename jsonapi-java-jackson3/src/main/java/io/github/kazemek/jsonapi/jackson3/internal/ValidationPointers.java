@@ -33,7 +33,7 @@ final class ValidationPointers {
    */
   @SuppressWarnings({"NullAway"})
   static Map<String, Object> forCore(Map<String, @Nullable Object> map) {
-    return (Map<String, Object>) map;
+    return map;
   }
 
   static JsonApiValidationException relocate(
@@ -61,7 +61,7 @@ final class ValidationPointers {
     }
     StringBuilder joined = new StringBuilder(base);
     for (String segment : decodeSegments(relativePointer)) {
-      joined.append('/').append(escape(segment));
+      joined.append('/').append(PointerEscapes.escape(segment));
     }
     return joined.toString();
   }
@@ -69,26 +69,18 @@ final class ValidationPointers {
   private static List<String> decodeSegments(String relativePointer) {
     List<String> segments = new ArrayList<>();
     if (!relativePointer.startsWith("/")) {
-      segments.add(unescape(relativePointer));
+      segments.add(PointerEscapes.unescape(relativePointer));
       return segments;
     }
     int start = 1;
     for (int i = 1; i < relativePointer.length(); i++) {
       if (relativePointer.charAt(i) == '/') {
-        segments.add(unescape(relativePointer.substring(start, i)));
+        segments.add(PointerEscapes.unescape(relativePointer.substring(start, i)));
         start = i + 1;
       }
     }
-    segments.add(unescape(relativePointer.substring(start)));
+    segments.add(PointerEscapes.unescape(relativePointer.substring(start)));
     return segments;
-  }
-
-  private static String unescape(String segment) {
-    return segment.replace("~1", "/").replace("~0", "~");
-  }
-
-  private static String escape(String segment) {
-    return segment.replace("~", "~0").replace("/", "~1");
   }
 
   private static String message(JsonApiValidationException ex) {

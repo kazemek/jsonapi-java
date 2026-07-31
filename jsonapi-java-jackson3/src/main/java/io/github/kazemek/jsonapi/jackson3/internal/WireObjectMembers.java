@@ -18,6 +18,9 @@ final class WireObjectMembers {
   /**
    * Expects {@link JsonToken#START_OBJECT}, captures the current pointer location, then invokes
    * {@code handler} once per member with the parser positioned on that member's value token.
+   *
+   * <p>Each handler must consume the complete member value, including nested arrays and objects, so
+   * the parser rests on the last token of that value when the handler returns.
    */
   static void forEachMember(
       JsonParser parser, JsonPointerAccumulator pointer, MemberHandler handler) {

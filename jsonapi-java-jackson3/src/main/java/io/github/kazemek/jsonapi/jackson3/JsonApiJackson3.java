@@ -53,11 +53,14 @@ public final class JsonApiJackson3 {
     return writer(base.build(), context);
   }
 
-  /** Returns a reader bound to the given read context using a derived codec-configured mapper. */
+  /**
+   * Returns a reader bound to the given read context. Decoding is token-driven and does not use
+   * document serializers, so the caller mapper is used as-is.
+   */
   public static JsonApiDocumentReader reader(JsonMapper base, DocumentReadContext context) {
     Objects.requireNonNull(base, "base");
     Objects.requireNonNull(context, "context");
-    return new JsonApiDocumentReader(documentMapper(base), context);
+    return new JsonApiDocumentReader(base, context);
   }
 
   /**

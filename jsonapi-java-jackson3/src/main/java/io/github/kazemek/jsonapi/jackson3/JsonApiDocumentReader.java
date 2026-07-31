@@ -112,8 +112,8 @@ public final class JsonApiDocumentReader {
 
   private static void ensureCurrentToken(JsonParser parser) {
     JsonToken token = parser.currentToken();
-    // After a prior root value, Jackson leaves the parser on END_OBJECT/END_ARRAY.
-    if (token == null || token == JsonToken.END_OBJECT || token == JsonToken.END_ARRAY) {
+    // After a prior root value, the parser rests on that value's last token.
+    if (token != JsonToken.START_OBJECT && token != JsonToken.START_ARRAY) {
       token = parser.nextToken();
       if (token == null) {
         throw new JsonApiDocumentReadException(

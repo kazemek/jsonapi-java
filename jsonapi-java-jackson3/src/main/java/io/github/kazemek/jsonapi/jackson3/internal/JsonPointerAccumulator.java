@@ -19,7 +19,7 @@ final class JsonPointerAccumulator {
   }
 
   void push(String segment) {
-    segments.addLast(escape(segment));
+    segments.addLast(PointerEscapes.escape(segment));
   }
 
   void pushIndex(int index) {
@@ -46,9 +46,5 @@ final class JsonPointerAccumulator {
       builder.append('/').append(segment);
     }
     return builder.toString();
-  }
-
-  private static String escape(String segment) {
-    return segment.replace("~", "~0").replace("/", "~1");
   }
 }
