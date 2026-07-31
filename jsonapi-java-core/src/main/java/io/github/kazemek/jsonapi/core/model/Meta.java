@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.core.model;
 
+import io.github.kazemek.jsonapi.core.internal.JsonPointers;
 import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
@@ -30,8 +31,8 @@ public final class Meta {
     Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : members.entrySet()) {
       String name = entry.getKey();
-      validateMemberName(name, "/meta/" + name);
-      copy.put(name, OpenJsonValues.copy(entry.getValue(), "/meta/" + name));
+      validateMemberName(name, JsonPointers.child("/meta", name));
+      copy.put(name, OpenJsonValues.copy(entry.getValue(), JsonPointers.child("/meta", name)));
     }
     return new Meta(OrderedMaps.copyOfNullableValues(copy));
   }

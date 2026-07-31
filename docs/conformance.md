@@ -3,8 +3,8 @@
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
 This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
-(`jsonapi-java-annotations`), and Phase 2.1 (`jsonapi-java-jackson3` document writer). Document
-deserialization remains **deferred** to Phase 2.4; Jackson domain mapping and typed envelopes remain
+(`jsonapi-java-annotations`), Phase 2.1 (`jsonapi-java-jackson3` document writer), and Phase 2.4
+(`jsonapi-java-jackson3` document reader). Jackson domain mapping and typed envelopes remain
 **deferred** to their Phase 2 milestones.
 
 ## Document structure (Phase 1.1 — supported)
@@ -65,15 +65,15 @@ deserialization remains **deferred** to Phase 2.4; Jackson domain mapping and ty
 | `@JsonApiAttribute(name)` optional attribute rename          | supported | Empty `name()` retains Jackson's logical property name                |
 | `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
 
-## Codec / wire format (Phase 2.1 — writer supported; reads deferred)
+## Codec / wire format (Phases 2.1 and 2.4 — supported)
 
 | Rule                                             | Status   | Notes |
 |--------------------------------------------------|----------|-------|
 | JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write |
 | Canonical member ordering                        | supported | Standard members in model accessor order; additional members insertion order; `hreflang` always array |
 | Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` |
-| JSON deserialization                             | deferred | Phase 2.4 |
-| Malformed input diagnostics with source location | deferred | Phase 2.4 |
+| JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind` |
+| Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location |
 
 ## Domain mapping (Phases 2.2–2.17 — deferred)
 

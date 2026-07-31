@@ -1,5 +1,5 @@
 /**
- * Internal Jackson 3 serializers and module registration for JSON:API document writing. Not a
+ * Internal Jackson 3 serializers, token-driven document decoding, and module registration. Not a
  * public API surface.
  */
 @NullMarked

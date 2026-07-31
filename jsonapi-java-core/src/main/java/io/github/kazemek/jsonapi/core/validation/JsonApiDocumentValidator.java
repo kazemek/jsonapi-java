@@ -48,7 +48,7 @@ public final class JsonApiDocumentValidator {
       validateMeta(document.meta(), PATH_META, context);
     }
     if (document.jsonapi() != null) {
-      validateJsonApiObject(document.jsonapi(), "/jsonapi", context);
+      validateJsonApiObject(document.jsonapi(), context);
     }
     if (document.links() != null) {
       validateLinks(
@@ -138,7 +138,7 @@ public final class JsonApiDocumentValidator {
     for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
       validateRelationship(
           entry.getValue(),
-          path + "/relationships/" + entry.getKey(),
+          JsonPointers.child(path + "/relationships", entry.getKey()),
           context,
           resource.type(),
           entry.getKey());
@@ -331,28 +331,26 @@ public final class JsonApiDocumentValidator {
       if (!context.allowedExtensionNamespaces().contains(namespace)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
-            path + "/" + name,
+            JsonPointers.child(path, name),
             "Extension namespace not allowed: " + namespace);
       }
     }
   }
 
-  private void validateJsonApiObject(
-      @Nullable JsonApiObject jsonapi, String path, ValidationContext context) {
+  private void validateJsonApiObject(@Nullable JsonApiObject jsonapi, ValidationContext context) {
     if (jsonapi == null) {
       return;
     }
     if (jsonapi.profile() != null) {
-      validateProfileUris(jsonapi.profile(), path, context);
+      validateProfileUris(jsonapi.profile(), context);
     }
     if (jsonapi.meta() != null) {
-      validateMeta(jsonapi.meta(), path + PATH_META, context);
+      validateMeta(jsonapi.meta(), "/jsonapi" + PATH_META, context);
     }
-    validateAdditionalMembers(jsonapi.additionalMembers(), path, context);
+    validateAdditionalMembers(jsonapi.additionalMembers(), "/jsonapi", context);
   }
 
-  private void validateProfileUris(
-      @Nullable List<String> profile, String path, ValidationContext context) {
+  private void validateProfileUris(@Nullable List<String> profile, ValidationContext context) {
     if (profile == null || context.allowedProfileUris().isEmpty()) {
       return;
     }
@@ -361,7 +359,7 @@ public final class JsonApiDocumentValidator {
       if (!context.allowedProfileUris().contains(uri)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
-            path + "/profile/" + i,
+            "/jsonapi/profile/" + i,
             "Profile URI not allowed: " + uri);
       }
     }
@@ -373,7 +371,7 @@ public final class JsonApiDocumentValidator {
       ValidationContext context) {
     IdentityRegistry registry = new IdentityRegistry();
     registerPrimaryResources(primaryData, registry);
-    registerLinkageIdentifiers(primaryData, PATH_DATA, registry);
+    registerLinkageIdentifiers(primaryData, registry);
     if (included != null) {
       for (int index = 0; index < included.size(); index++) {
         ResourceObject resource = included.get(index);
@@ -397,8 +395,7 @@ public final class JsonApiDocumentValidator {
     }
   }
 
-  private void registerLinkageIdentifiers(
-      @Nullable DocumentData data, String path, IdentityRegistry registry) {
+  private void registerLinkageIdentifiers(@Nullable DocumentData data, IdentityRegistry registry) {
     if (data == null) {
       return;
     }
@@ -407,17 +404,17 @@ public final class JsonApiDocumentValidator {
         // No linkage.
       }
       case DocumentData.SingleResource(ResourceObject resource) ->
-          registerLinkageFromResource(resource, path, registry);
+          registerLinkageFromResource(resource, PATH_DATA, registry);
       case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
         for (int index = 0; index < resources.size(); index++) {
-          registerLinkageFromResource(resources.get(index), path + "/" + index, registry);
+          registerLinkageFromResource(resources.get(index), PATH_DATA + "/" + index, registry);
         }
       }
       case DocumentData.SingleIdentifier(ResourceIdentifier identifier) ->
-          registry.registerIdentifier(identifier, path);
+          registry.registerIdentifier(identifier, PATH_DATA);
       case DocumentData.IdentifierCollection(List<ResourceIdentifier> identifiers) -> {
         for (int index = 0; index < identifiers.size(); index++) {
-          registry.registerIdentifier(identifiers.get(index), path + "/" + index);
+          registry.registerIdentifier(identifiers.get(index), PATH_DATA + "/" + index);
         }
       }
     }
@@ -434,7 +431,7 @@ public final class JsonApiDocumentValidator {
       if (relationship.data() == null) {
         continue;
       }
-      String relPath = path + "/relationships/" + entry.getKey() + PATH_DATA;
+      String relPath = JsonPointers.child(path + "/relationships", entry.getKey()) + PATH_DATA;
       registerLinkageFromRelationshipData(relationship.data(), relPath, registry);
     }
   }
@@ -655,20 +652,20 @@ public final class JsonApiDocumentValidator {
       if (!context.allowedExtensionNamespaces().contains(namespace)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
-            path + "/" + name,
+            JsonPointers.child(path, name),
             "Extension namespace not allowed: " + namespace);
       }
     } else {
       if (!SyntaxValidators.isValidLinkRelation(name)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.INVALID_LINK_RELATION,
-            path + "/" + name,
+            JsonPointers.child(path, name),
             "Invalid link relation name: " + name);
       }
       if (!isAllowedLinkName(name, context)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.INVALID_LINKS_CONTEXT,
-            path + "/" + name,
+            JsonPointers.child(path, name),
             "Non-standard link in context " + context.linksContext() + ": " + name);
       }
     }
@@ -691,7 +688,7 @@ public final class JsonApiDocumentValidator {
       if (!isCollectionPrimaryData(primaryData)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.PAGINATION_REQUIRES_COLLECTION,
-            path + "/" + name,
+            JsonPointers.child(path, name),
             "Top-level pagination link requires collection primary data");
       }
       return;
@@ -718,7 +715,7 @@ public final class JsonApiDocumentValidator {
     if (hint.isEmpty()) {
       throw new JsonApiValidationException(
           ValidationRuleCode.RELATIONSHIP_PAGINATION_REQUIRES_HINT,
-          path + "/" + name,
+          JsonPointers.child(path, name),
           "Relationship pagination link requires cardinality hint: " + relationshipName);
     }
     if (hint.get() == RelationshipCardinality.TO_ONE) {
@@ -730,7 +727,7 @@ public final class JsonApiDocumentValidator {
       String path, String name, String relationshipName) {
     return new JsonApiValidationException(
         ValidationRuleCode.PAGINATION_REQUIRES_COLLECTION,
-        path + "/" + name,
+        JsonPointers.child(path, name),
         "Relationship pagination requires collection linkage: " + relationshipName);
   }
 
@@ -760,7 +757,7 @@ public final class JsonApiDocumentValidator {
       if (!context.allowedExtensionNamespaces().contains(namespace)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER,
-            basePath + "/" + name,
+            JsonPointers.child(basePath, name),
             "Extension namespace not allowed: " + namespace);
       }
       return;
@@ -768,7 +765,7 @@ public final class JsonApiDocumentValidator {
     if (!context.allowedProfileMemberNames().contains(name)) {
       throw new JsonApiValidationException(
           ValidationRuleCode.UNKNOWN_ADDITIONAL_MEMBER,
-          basePath + "/" + name,
+          JsonPointers.child(basePath, name),
           "Unknown unnamespaced member: " + name);
     }
   }

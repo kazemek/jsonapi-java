@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.core.model;
 
+import io.github.kazemek.jsonapi.core.internal.JsonPointers;
 import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
@@ -38,12 +39,12 @@ public final class Relationships {
     if (relationships != null && !relationships.isEmpty()) {
       for (Map.Entry<String, @Nullable Relationship> entry : relationships.entrySet()) {
         String name = entry.getKey();
-        validateRelationshipName(name, PATH + "/" + name, false);
+        validateRelationshipName(name, JsonPointers.child(PATH, name), false);
         Relationship value = entry.getValue();
         if (value == null) {
           LocalValidation.fail(
               ValidationRuleCode.NULL_RELATIONSHIP_VALUE,
-              PATH + "/" + name,
+              JsonPointers.child(PATH, name),
               "Relationship value must not be null: " + name);
         }
         relCopy.put(name, value);
@@ -135,15 +136,15 @@ public final class Relationships {
     Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
     for (Map.Entry<String, ?> entry : source.entrySet()) {
       String name = entry.getKey();
-      validateRelationshipName(name, PATH + "/" + name, true);
-      copy.put(name, OpenJsonValues.copy(entry.getValue(), PATH + "/" + name));
+      validateRelationshipName(name, JsonPointers.child(PATH, name), true);
+      copy.put(name, OpenJsonValues.copy(entry.getValue(), JsonPointers.child(PATH, name)));
     }
     return OrderedMaps.copyOfNullableValues(copy);
   }
 
   @SuppressWarnings("unchecked")
   private static Map<String, Relationship> castRelationships(Map<String, @Nullable Object> map) {
-    return (Map) map;
+    return (Map<String, Relationship>) (Map<?, ?>) map;
   }
 
   @Override

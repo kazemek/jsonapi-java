@@ -6,12 +6,12 @@ import java.util.Objects;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Factory for Jackson 3 JSON:API document writers.
+ * Factory for Jackson 3 JSON:API document writers and readers.
  *
  * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
- * replaces the caller's configuration in place. Public write access is only through {@link
- * JsonApiDocumentWriter}.
+ * replaces the caller's configuration in place. Public codec access is only through {@link
+ * JsonApiDocumentWriter} and {@link JsonApiDocumentReader}.
  */
 public final class JsonApiJackson3 {
 
@@ -51,6 +51,22 @@ public final class JsonApiJackson3 {
   public static JsonApiDocumentWriter writer(JsonMapper.Builder base, ValidationContext context) {
     Objects.requireNonNull(base, "base");
     return writer(base.build(), context);
+  }
+
+  /** Returns a reader bound to the given read context using a derived codec-configured mapper. */
+  public static JsonApiDocumentReader reader(JsonMapper base, DocumentReadContext context) {
+    Objects.requireNonNull(base, "base");
+    Objects.requireNonNull(context, "context");
+    return new JsonApiDocumentReader(documentMapper(base), context);
+  }
+
+  /**
+   * Returns a reader derived from a caller-supplied builder and read context. The builder is not
+   * given the JSON:API module.
+   */
+  public static JsonApiDocumentReader reader(JsonMapper.Builder base, DocumentReadContext context) {
+    Objects.requireNonNull(base, "base");
+    return reader(base.build(), context);
   }
 
   /**
