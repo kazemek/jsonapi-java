@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.core.model;
 
+import io.github.kazemek.jsonapi.core.internal.JsonPointers;
 import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
@@ -70,7 +71,7 @@ public final class Attributes {
     for (Map.Entry<String, ?> entry : source.entrySet()) {
       String name = entry.getKey();
       validateAttributeName(name, allowPassThrough);
-      copy.put(name, OpenJsonValues.copy(entry.getValue(), PATH + "/" + name));
+      copy.put(name, OpenJsonValues.copy(entry.getValue(), JsonPointers.child(PATH, name)));
     }
     return OrderedMaps.copyOfNullableValues(copy);
   }
@@ -87,13 +88,13 @@ public final class Attributes {
     if (!MemberNames.isValid(name)) {
       LocalValidation.fail(
           ValidationRuleCode.INVALID_MEMBER_NAME,
-          PATH + "/" + name,
+          JsonPointers.child(PATH, name),
           "Invalid attribute name: " + name);
     }
     if (RESERVED.contains(name)) {
       LocalValidation.fail(
           ValidationRuleCode.RESERVED_FIELD_NAME,
-          PATH + "/" + name,
+          JsonPointers.child(PATH, name),
           "Reserved attribute name: " + name);
     }
   }
@@ -104,7 +105,7 @@ public final class Attributes {
           allowPassThrough
               ? ValidationRuleCode.INVALID_MEMBER_NAME
               : ValidationRuleCode.RESERVED_FIELD_NAME,
-          PATH + "/" + name,
+          JsonPointers.child(PATH, name),
           allowPassThrough
               ? "Invalid attribute member name: " + name
               : "Attribute names cannot start with @: " + name);
@@ -115,13 +116,13 @@ public final class Attributes {
     if (!allowPassThrough) {
       LocalValidation.fail(
           ValidationRuleCode.RESERVED_FIELD_NAME,
-          PATH + "/" + name,
+          JsonPointers.child(PATH, name),
           "Extension members must use additionalMembers: " + name);
     }
     if (!MemberNames.isValid(name)) {
       LocalValidation.fail(
           ValidationRuleCode.INVALID_MEMBER_NAME,
-          PATH + "/" + name,
+          JsonPointers.child(PATH, name),
           "Invalid attribute member name: " + name);
     }
   }

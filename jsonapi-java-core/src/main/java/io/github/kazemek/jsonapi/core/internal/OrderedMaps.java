@@ -37,7 +37,7 @@ public final class OrderedMaps {
       if (primary.containsKey(key)) {
         throw new JsonApiValidationException(
             ValidationRuleCode.MEMBER_NAME_COLLISION,
-            path + "/" + key,
+            JsonPointers.child(path, String.valueOf(key)),
             "Member name collision in " + containerName + ": " + key);
       }
     }

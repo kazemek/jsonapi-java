@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phases 1.1 and 2.1  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -51,11 +51,11 @@ Read JSON:API JSON into validated core documents with explicit primary-data inte
 
 ## Acceptance criteria
 
-- [ ] Every Phase 1.1 wire state decodes through public core construction and aggregate validation without conflating absence, explicit null, empty, single, or collection forms.
-- [ ] Ambiguous object and empty-array primary data require and obey the explicit resource versus resource-identifier read context; no shape-guessing heuristic exists.
-- [ ] Malformed, local-validation, and aggregate-validation failures expose stable categories and paths plus safe source locations, and no invalid document is returned.
-- [ ] The canonical `module-docs` checklist passes and conformance documentation marks the delivered read/diagnostic behavior **supported** without claiming flat DTO binding or domain hydration.
-- [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*DocumentReaderSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [x] Every Phase 1.1 wire state decodes through public core construction and aggregate validation without conflating absence, explicit null, empty, single, or collection forms.
+- [x] Ambiguous object and empty-array primary data require and obey the explicit resource versus resource-identifier read context; no shape-guessing heuristic exists.
+- [x] Malformed, local-validation, and aggregate-validation failures expose stable categories and paths plus safe source locations, and no invalid document is returned.
+- [x] The canonical `module-docs` checklist passes and conformance documentation marks the delivered read/diagnostic behavior **supported** without claiming flat DTO binding or domain hydration.
+- [x] `./gradlew :jsonapi-java-jackson3:test --tests '*DocumentReaderSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.

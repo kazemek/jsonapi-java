@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.core.model;
 
+import io.github.kazemek.jsonapi.core.internal.JsonPointers;
 import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
@@ -106,20 +107,20 @@ public final class Links {
       if (MemberNames.isAtMember(name)) {
         LocalValidation.fail(
             ValidationRuleCode.RESERVED_FIELD_NAME,
-            PATH + "/" + name,
+            JsonPointers.child(PATH, name),
             "Link relation names cannot start with @: " + name);
       }
       if (MemberNames.isExtensionMember(name)) {
         if (!MemberNames.isValid(name)) {
           LocalValidation.fail(
               ValidationRuleCode.INVALID_MEMBER_NAME,
-              PATH + "/" + name,
+              JsonPointers.child(PATH, name),
               "Invalid link relation name: " + name);
         }
       } else if (!SyntaxValidators.isValidLinkRelation(name)) {
         LocalValidation.fail(
             ValidationRuleCode.INVALID_LINK_RELATION,
-            PATH + "/" + name,
+            JsonPointers.child(PATH, name),
             "Invalid link relation name: " + name);
       }
       copy.put(name, entry.getValue());
@@ -138,10 +139,10 @@ public final class Links {
       if (!MemberNames.isValid(name)) {
         LocalValidation.fail(
             ValidationRuleCode.INVALID_MEMBER_NAME,
-            PATH + "/" + name,
+            JsonPointers.child(PATH, name),
             "Invalid links member name: " + name);
       }
-      copy.put(name, OpenJsonValues.copy(entry.getValue(), PATH + "/" + name));
+      copy.put(name, OpenJsonValues.copy(entry.getValue(), JsonPointers.child(PATH, name)));
     }
     return OrderedMaps.copyOfNullableValues(copy);
   }

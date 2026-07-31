@@ -39,6 +39,6 @@ public final class AdditionalMembers {
   }
 
   private static String pathFor(String basePath, String name) {
-    return basePath.isEmpty() ? "/" + name : basePath + "/" + name;
+    return JsonPointers.child(basePath, name);
   }
 }
