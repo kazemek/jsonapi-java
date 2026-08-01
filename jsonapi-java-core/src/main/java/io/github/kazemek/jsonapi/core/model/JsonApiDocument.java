@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.core.model;
 
 import io.github.kazemek.jsonapi.core.internal.AdditionalMembers;
-import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.validation.LocalValidation;
+import io.github.kazemek.jsonapi.core.validation.MemberNames;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.List;
 import java.util.Map;
