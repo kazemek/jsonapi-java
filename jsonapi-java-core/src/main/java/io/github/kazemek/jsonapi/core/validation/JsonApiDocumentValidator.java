@@ -103,10 +103,10 @@ public final class JsonApiDocumentValidator {
         // Explicit null primary data has no nested members to validate.
       }
       case DocumentData.SingleResource(ResourceObject resource) ->
-          validateResource(resource, PATH_DATA, context);
+          validateResource(resource, PATH_DATA, true, context);
       case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
         for (int index = 0; index < resources.size(); index++) {
-          validateResource(resources.get(index), PATH_DATA + "/" + index, context);
+          validateResource(resources.get(index), PATH_DATA + "/" + index, false, context);
         }
       }
       case DocumentData.SingleIdentifier(ResourceIdentifier identifier) ->
@@ -120,15 +120,16 @@ public final class JsonApiDocumentValidator {
     }
   }
 
-  private void validateResource(ResourceObject resource, String path, ValidationContext context) {
+  private void validateResource(
+      ResourceObject resource, String path, boolean primary, ValidationContext context) {
     validateResourceIdentity(resource, path, context);
-    validateUpdateEndpointIdentity(resource, path, context);
+    validateUpdateEndpointIdentity(resource, path, primary, context);
     if (resource.attributes() != null) {
       validateAdditionalMembers(
           resource.attributes().additionalMembers(), path + "/attributes", context);
     }
     if (resource.relationships() != null) {
-      validateResourceRelationships(resource, path, context);
+      validateResourceRelationships(resource, path, primary, context);
     }
     if (resource.links() != null) {
       validateLinks(
@@ -147,14 +148,14 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateResourceRelationships(
-      ResourceObject resource, String path, ValidationContext context) {
+      ResourceObject resource, String path, boolean primary, ValidationContext context) {
     Relationships relationships = Objects.requireNonNull(resource.relationships());
     validateAdditionalMembers(
         relationships.additionalMembers(), path + PATH_RELATIONSHIPS, context);
     for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
       Relationship relationship = entry.getValue();
       if (context.documentUsage() == DocumentUsage.UPDATE_REQUEST
-          && PATH_DATA.equals(path)
+          && primary
           && !relationship.hasDataMember()) {
         throw new JsonApiValidationException(
             ValidationRuleCode.RELATIONSHIP_DATA_REQUIRED,
@@ -325,8 +326,8 @@ public final class JsonApiDocumentValidator {
   }
 
   private void validateUpdateEndpointIdentity(
-      ResourceObject resource, String path, ValidationContext context) {
-    if (context.documentUsage() != DocumentUsage.UPDATE_REQUEST || !PATH_DATA.equals(path)) {
+      ResourceObject resource, String path, boolean primary, ValidationContext context) {
+    if (context.documentUsage() != DocumentUsage.UPDATE_REQUEST || !primary) {
       return;
     }
     EndpointIdentity expected = context.expectedEndpointIdentity();
@@ -424,7 +425,7 @@ public final class JsonApiDocumentValidator {
       for (int index = 0; index < included.size(); index++) {
         ResourceObject resource = included.get(index);
         String path = "/included/" + index;
-        validateResource(resource, path, context);
+        validateResource(resource, path, false, context);
         registerIncludedResource(resource, path, registry);
         registerLinkageFromResource(resource, path, registry);
       }
