@@ -42,7 +42,8 @@ String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 Custom identifier conversion:
 
 ```java
-IdentifierConverter prefixer = idValue -> "urn:" + idValue.toString();
+IdentifierConverter prefixer =
+    idValue -> idValue == null ? null : "urn:" + idValue.toString();
 JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(callerMapper, prefixer);
 ```
 

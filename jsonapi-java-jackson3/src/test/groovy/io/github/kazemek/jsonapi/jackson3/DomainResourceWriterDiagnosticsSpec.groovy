@@ -255,4 +255,67 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NAME_COLLISION
   }
+
+  @JsonApiResource(type = "reserved-attr")
+  static class ReservedAttrNameEntity {
+    @JsonApiId String id
+    @JsonApiAttribute(name = "type") String value
+  }
+
+  def "reserved attribute name type throws INVALID_ATTRIBUTE_NAME"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new ReservedAttrNameEntity(id: "1", value: "v")
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_ATTRIBUTE_NAME
+  }
+
+  @JsonApiResource(type = "reserved-rel")
+  static class ReservedRelNameEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "id") String other
+  }
+
+  def "reserved relationship name id throws INVALID_RELATIONSHIP_NAME"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new ReservedRelNameEntity(id: "1", other: "o")
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_RELATIONSHIP_NAME
+  }
+
+  @JsonApiResource(type = "write-only")
+  static class MissingAccessorEntity {
+    @JsonApiId String id
+    private String secret
+
+    @JsonApiAttribute
+    void setSecret(String secret) {
+      this.secret = secret
+    }
+  }
+
+  def "annotated property without readable accessor throws MISSING_ACCESSOR"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new MissingAccessorEntity(id: "1")
+    entity.setSecret("hidden")
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_ACCESSOR
+  }
 }

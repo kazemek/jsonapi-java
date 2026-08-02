@@ -91,7 +91,11 @@ public final class DomainResourceWriter {
     }
     Map<String, Object> attributes = new LinkedHashMap<>();
     for (MappingProperty property : mapping.attributes()) {
-      Object value = readValue(resource, property, PropertyRole.ATTRIBUTE);
+      Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
+      if (rawValue instanceof Optional<?> optional && optional.isEmpty()) {
+        continue;
+      }
+      Object value = unwrapOptional(rawValue);
       attributes.put(property.jsonapiName(), convertAttributeValue(value));
     }
     return Attributes.ofAttributes(attributes);
@@ -144,26 +148,33 @@ public final class DomainResourceWriter {
     if (items.isEmpty()) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
     }
-    Object sample = null;
+    boolean hasResourceIdentifier = false;
+    Object firstNonResourceIdentifier = null;
     for (Object item : items) {
-      if (item != null) {
-        sample = item;
-        break;
+      if (item == null) {
+        continue;
+      }
+      if (item instanceof ResourceIdentifier) {
+        hasResourceIdentifier = true;
+      } else if (firstNonResourceIdentifier == null) {
+        firstNonResourceIdentifier = item;
       }
     }
-    if (sample instanceof ResourceIdentifier) {
+    if (hasResourceIdentifier && firstNonResourceIdentifier != null) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+          firstNonResourceIdentifier.getClass(),
+          null,
+          "Mixed element types in to-many relationship collection: expected ResourceIdentifier, got "
+              + firstNonResourceIdentifier.getClass().getName());
+    }
+    if (hasResourceIdentifier) {
       List<ResourceIdentifier> identifiers = new ArrayList<>();
       for (Object item : items) {
-        if (item == null) continue;
-        if (!(item instanceof ResourceIdentifier resourceIdentifier)) {
-          throw new JsonApiMappingException(
-              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
-              item.getClass(),
-              null,
-              "Mixed element types in to-many relationship collection: expected ResourceIdentifier, got "
-                  + item.getClass().getName());
+        if (item == null) {
+          continue;
         }
-        identifiers.add(resourceIdentifier);
+        identifiers.add((ResourceIdentifier) item);
       }
       return new RelationshipData.IdentifierCollectionLinkage(identifiers);
     }
@@ -179,7 +190,9 @@ public final class DomainResourceWriter {
     checkResourceAnnotation(elementClass);
     List<ResourceIdentifier> identifiers = new ArrayList<>();
     for (Object item : items) {
-      if (item == null) continue;
+      if (item == null) {
+        continue;
+      }
       identifiers.add(extractIdentifier(item));
     }
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
@@ -252,7 +265,7 @@ public final class DomainResourceWriter {
     if (type.isCollectionLikeType()) {
       return true;
     }
-    return type.hasRawClass(Iterable.class);
+    return type.isTypeOrSubTypeOf(Iterable.class);
   }
 
   private static @Nullable JavaType resolveContentType(JavaType type) {

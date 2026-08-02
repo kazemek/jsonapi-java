@@ -4,6 +4,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.validation.MemberNames;
 import io.github.kazemek.jsonapi.jackson3.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson3.MappingDiagnostic;
@@ -89,6 +90,13 @@ final class MappingDefinitionResolver {
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
       AnnotatedMember accessor = propertyDefinition.getAccessor();
       if (accessor == null) {
+        if (hasExplicitRoleAnnotation(propertyDefinition)) {
+          throw new JsonApiMappingException(
+              MappingDiagnostic.MISSING_ACCESSOR,
+              rawType,
+              propertyDefinition.getName(),
+              "Annotated property '" + propertyDefinition.getName() + "' has no readable accessor");
+        }
         continue;
       }
       String logicalName = propertyDefinition.getName();
@@ -105,6 +113,12 @@ final class MappingDefinitionResolver {
         case RELATIONSHIP -> relationshipProperties.add(mappingProperty);
       }
     }
+  }
+
+  private static boolean hasExplicitRoleAnnotation(BeanPropertyDefinition propertyDefinition) {
+    return hasAnnotationAnywhere(propertyDefinition, JsonApiId.class)
+        || hasAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class)
+        || hasAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class);
   }
 
   private static PropertyRole resolveRole(
@@ -159,20 +173,23 @@ final class MappingDefinitionResolver {
       PropertyRole role,
       BeanPropertyDefinition propertyDefinition,
       Class<?> rawType) {
-    if (!MemberNames.isValid(jsonapiName)) {
-      MappingDiagnostic diagnostic =
-          switch (role) {
-            case ATTRIBUTE -> MappingDiagnostic.INVALID_ATTRIBUTE_NAME;
-            case RELATIONSHIP -> MappingDiagnostic.INVALID_RELATIONSHIP_NAME;
-            default -> null;
-          };
-      if (diagnostic != null) {
-        throw new JsonApiMappingException(
-            diagnostic,
-            rawType,
-            propertyDefinition.getName(),
-            "Invalid JSON:API member name: " + jsonapiName);
-      }
+    MappingDiagnostic diagnostic =
+        switch (role) {
+          case ATTRIBUTE -> MappingDiagnostic.INVALID_ATTRIBUTE_NAME;
+          case RELATIONSHIP -> MappingDiagnostic.INVALID_RELATIONSHIP_NAME;
+          default -> null;
+        };
+    if (diagnostic == null) {
+      return;
+    }
+    if (!MemberNames.isValid(jsonapiName)
+        || JsonApiMembers.ID.equals(jsonapiName)
+        || JsonApiMembers.TYPE.equals(jsonapiName)) {
+      throw new JsonApiMappingException(
+          diagnostic,
+          rawType,
+          propertyDefinition.getName(),
+          "Invalid JSON:API member name: " + jsonapiName);
     }
   }
 

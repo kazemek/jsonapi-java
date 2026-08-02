@@ -154,6 +154,7 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
 
     then:
     resource.attributes().attributes().title == "Title"
+    !resource.attributes().attributes().containsKey("subtitle")
   }
 
   def "array to-many relationship produces collection linkage"() {
@@ -261,6 +262,20 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
     def ri = new io.github.kazemek.jsonapi.core.model.ResourceIdentifier("comments", "1", null, null, Map.of())
     def entity = new MixedRelEntity(id: "1", items: [ri, new Object()])
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE
+  }
+
+  def "mixed element types with unsupported element first throw UNSUPPORTED_RELATIONSHIP_VALUE"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def ri = new io.github.kazemek.jsonapi.core.model.ResourceIdentifier("comments", "1", null, null, Map.of())
+    def entity = new MixedRelEntity(id: "1", items: [new Object(), ri])
 
     when:
     mapper.toResource(entity)
