@@ -88,13 +88,15 @@ final class MappingDefinitionResolver {
       List<MappingProperty> attributeProperties,
       List<MappingProperty> relationshipProperties) {
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
-      AnnotatedMember accessor = requireAccessorIfAnnotated(propertyDefinition, rawType);
+      RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
+      AnnotatedMember accessor =
+          requireAccessorIfAnnotated(propertyDefinition, rawType, annotations);
       if (accessor == null) {
         continue;
       }
       String logicalName = propertyDefinition.getName();
-      PropertyRole role = resolveRole(propertyDefinition, logicalName, rawType);
-      String jsonapiName = resolveJsonapiName(propertyDefinition, logicalName, role);
+      PropertyRole role = resolveRole(annotations, logicalName, rawType);
+      String jsonapiName = resolveJsonapiName(annotations, logicalName, role);
       validateJsonApiName(jsonapiName, role, propertyDefinition, rawType);
 
       MappingProperty mappingProperty =
@@ -108,12 +110,12 @@ final class MappingDefinitionResolver {
   }
 
   private static @Nullable AnnotatedMember requireAccessorIfAnnotated(
-      BeanPropertyDefinition propertyDefinition, Class<?> rawType) {
+      BeanPropertyDefinition propertyDefinition, Class<?> rawType, RoleAnnotations annotations) {
     AnnotatedMember accessor = propertyDefinition.getAccessor();
     if (accessor != null) {
       return accessor;
     }
-    if (RoleAnnotations.from(propertyDefinition).hasAny()) {
+    if (annotations.hasAny()) {
       throw new JsonApiMappingException(
           MappingDiagnostic.MISSING_ACCESSOR,
           rawType,
@@ -124,8 +126,7 @@ final class MappingDefinitionResolver {
   }
 
   private static PropertyRole resolveRole(
-      BeanPropertyDefinition propertyDefinition, String logicalName, Class<?> rawType) {
-    RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
+      RoleAnnotations annotations, String logicalName, Class<?> rawType) {
     if (annotations.count() > 1) {
       throw new JsonApiMappingException(
           MappingDiagnostic.DUPLICATE_ROLE,
@@ -144,17 +145,15 @@ final class MappingDefinitionResolver {
   }
 
   private static String resolveJsonapiName(
-      BeanPropertyDefinition propertyDefinition, String logicalName, PropertyRole role) {
+      RoleAnnotations annotations, String logicalName, PropertyRole role) {
     return switch (role) {
       case ID -> logicalName;
       case ATTRIBUTE -> {
-        JsonApiAttribute annotation =
-            findAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class);
+        JsonApiAttribute annotation = annotations.attribute();
         yield annotation != null && !annotation.name().isEmpty() ? annotation.name() : logicalName;
       }
       case RELATIONSHIP -> {
-        JsonApiRelationship annotation =
-            findAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class);
+        JsonApiRelationship annotation = annotations.relationship();
         yield annotation != null && !annotation.name().isEmpty() ? annotation.name() : logicalName;
       }
     };
@@ -251,11 +250,6 @@ final class MappingDefinitionResolver {
     }
   }
 
-  private static boolean hasAnnotationAnywhere(
-      BeanPropertyDefinition propertyDefinition, Class<? extends Annotation> annotationClass) {
-    return findAnnotationAnywhere(propertyDefinition, annotationClass) != null;
-  }
-
   private static <A extends Annotation> @Nullable A findAnnotationAnywhere(
       BeanPropertyDefinition propertyDefinition, Class<A> annotationClass) {
     for (AnnotatedMember member :
@@ -274,17 +268,20 @@ final class MappingDefinitionResolver {
     return null;
   }
 
-  private record RoleAnnotations(boolean id, boolean attribute, boolean relationship) {
+  private record RoleAnnotations(
+      @Nullable JsonApiId id,
+      @Nullable JsonApiAttribute attribute,
+      @Nullable JsonApiRelationship relationship) {
 
     static RoleAnnotations from(BeanPropertyDefinition propertyDefinition) {
       return new RoleAnnotations(
-          hasAnnotationAnywhere(propertyDefinition, JsonApiId.class),
-          hasAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class),
-          hasAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class));
+          findAnnotationAnywhere(propertyDefinition, JsonApiId.class),
+          findAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class),
+          findAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class));
     }
 
     int count() {
-      return (id ? 1 : 0) + (attribute ? 1 : 0) + (relationship ? 1 : 0);
+      return (id != null ? 1 : 0) + (attribute != null ? 1 : 0) + (relationship != null ? 1 : 0);
     }
 
     boolean hasAny() {
@@ -292,13 +289,13 @@ final class MappingDefinitionResolver {
     }
 
     @Nullable PropertyRole explicitRole() {
-      if (id) {
+      if (id != null) {
         return PropertyRole.ID;
       }
-      if (relationship) {
+      if (relationship != null) {
         return PropertyRole.RELATIONSHIP;
       }
-      if (attribute) {
+      if (attribute != null) {
         return PropertyRole.ATTRIBUTE;
       }
       return null;
