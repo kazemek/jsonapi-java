@@ -11,6 +11,7 @@ import io.github.kazemek.jsonapi.jackson3.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson3.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson3.MappingDiagnostic;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -252,7 +253,7 @@ public final class DomainResourceWriter {
   private static List<?> convertToCollection(Object value) {
     return switch (value) {
       case List<?> list -> list;
-      case Object[] array -> List.of(array);
+      case Object[] array -> Arrays.asList(array);
       case Iterable<?> iterable -> {
         List<Object> result = new ArrayList<>();
         for (Object item : iterable) {
