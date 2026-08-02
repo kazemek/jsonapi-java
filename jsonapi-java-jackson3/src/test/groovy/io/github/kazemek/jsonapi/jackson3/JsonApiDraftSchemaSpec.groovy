@@ -62,10 +62,26 @@ class JsonApiDraftSchemaSpec extends Specification {
     "string-and-object-links": "response",
   ]
 
-  private static final Map<String, String> ALLOWED_DISAGREEMENTS = [
-    "member-order": "response resource carries both id and lid and top-level ext: members; the draft schema requires id and forbids lid in response resources and only models @ members",
-    "extension-and-at-members": "top-level ext: member; PR json-api/json-api#1603 does not yet model extension members (see its description)",
-    "string-and-object-links": "hreflang canonical list form; draft linkObject.hreflang only accepts a string",
+  private static final Map<String, Map<String, Object>> ALLOWED_DISAGREEMENTS = [
+    "member-order": [
+      reason: "response resource carries both id and lid and top-level ext: members; the draft schema requires id and forbids lid in response resources and only models @ members",
+      expected: [
+        [keyword: "not", path: "/data"],
+        [keyword: "unevaluatedProperties", path: ""],
+      ],
+    ],
+    "extension-and-at-members": [
+      reason: "top-level ext: member; PR json-api/json-api#1603 does not yet model extension members (see its description)",
+      expected: [
+        [keyword: "unevaluatedProperties", path: ""],
+      ],
+    ],
+    "string-and-object-links": [
+      reason: "hreflang canonical list form; draft linkObject.hreflang only accepts a string",
+      expected: [
+        [keyword: "type", path: "/links/related/hreflang"],
+      ],
+    ],
   ]
 
   private static final List<Map<String, String>> INVALID_CONTROLS = [
@@ -93,9 +109,13 @@ class JsonApiDraftSchemaSpec extends Specification {
   ]
 
   def "vendored draft schemas match the recorded sha256 pin"() {
+    given:
+    def checksums = sha256sums()
+
     expect:
-    sha256sums().every { file, expected ->
-      digest(readBytes(file)) == expected
+    checksums.keySet() == SCHEMA_FILES.toSet()
+    SCHEMA_FILES.every { file ->
+      digest(readBytes(file)) == checksums[file]
     }
   }
 
@@ -126,13 +146,16 @@ class JsonApiDraftSchemaSpec extends Specification {
     kind = SCHEMA_KIND_BY_FIXTURE[fixture.id]
   }
 
-  def "allow-listed fixture #fixture.id fails only for a documented draft-schema gap"() {
+  def "allow-listed fixture #fixture.id fails for the documented draft-schema gap"() {
     given:
+    def disagreement = ALLOWED_DISAGREEMENTS[fixture.id]
     def errors = errorsFor(fixture, SCHEMA_KIND_BY_FIXTURE[fixture.id])
+    def observed = errors.collect { [keyword: it.keyword, path: it.instanceLocation.toString()] }
 
     expect:
-    !errors.isEmpty()
-    ALLOWED_DISAGREEMENTS[fixture.id] != null
+    disagreement.expected.every { expected ->
+      observed.any { it.keyword == expected.keyword && it.path == expected.path }
+    }
 
     where:
     fixture << WriterFixtures.all().findAll { it.id in ALLOWED_DISAGREEMENTS }
