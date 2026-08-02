@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3` test suite  
 > **Dependencies:** Phase 2.1  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -49,11 +49,11 @@ Cross-check Jackson 3 writer fixtures against a pinned JSON:API 1.1 draft schema
 
 ## Acceptance criteria
 
-- [ ] All four schemas are pinned to commit `4ee1c644fcc273044ecec39a6b8c0f0485abdc0e` with verified hashes, provenance, draft labeling, and no test-time network access.
-- [ ] Every applicable Phase 2.1 generated fixture passes its usage-specific draft schema, while one invalid control per schema kind proves the harness rejects malformed documents.
-- [ ] Any draft/spec disagreement is explicit and linked; schema acceptance alone never establishes a conformance status.
-- [ ] The schema validator and its transitives are absent from published API/runtime configurations, and dependency-verification metadata is updated.
-- [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*JsonApiDraftSchemaSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [x] All four schemas are pinned to commit `4ee1c644fcc273044ecec39a6b8c0f0485abdc0e` with verified hashes, provenance, draft labeling, and no test-time network access.
+- [x] Every applicable Phase 2.1 generated fixture passes its usage-specific draft schema, while one invalid control per schema kind proves the harness rejects malformed documents.
+- [x] Any draft/spec disagreement is explicit and linked; schema acceptance alone never establishes a conformance status.
+- [x] The schema validator and its transitives are absent from published API/runtime configurations, and dependency-verification metadata is updated.
+- [x] `./gradlew :jsonapi-java-jackson3:test --tests '*JsonApiDraftSchemaSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes (`kazemek_jsonapi-java` gate: OK, new violations 0).

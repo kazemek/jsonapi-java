@@ -5,8 +5,9 @@ Conformance is reported per feature as: **supported**, **pass-through**, **deleg
 This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
 (`jsonapi-java-annotations`), Phase 1.3 (`jsonapi-java-core` update validation), Phase 2.1
 (`jsonapi-java-jackson3` document writer), Phase 2.2 (`jsonapi-java-jackson3` domain-to-resource
-write mapping), and Phase 2.4 (`jsonapi-java-jackson3` document reader). Read-side mapping and
-typed envelopes remain **deferred** to their Phase 2 milestones.
+write mapping), and Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-checked by
+Phase 2.5 against pinned JSON:API 1.1 draft schemas. Read-side mapping and typed envelopes remain
+**deferred** to their Phase 2 milestones.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -89,6 +90,30 @@ typed envelopes remain **deferred** to their Phase 2 milestones.
 | Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` |
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind` |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location |
+
+## Draft-schema cross-check (Phase 2.5 — supplemental)
+
+Writer-generated fixture bytes are cross-checked against the JSON:API 1.1 **draft-PR schemas**
+pinned under `fixtures/jsonapi-schema/1.1-pr1603/` (PR
+[json-api/json-api#1603](https://github.com/json-api/json-api/pull/1603), fork `VGirol/json-api`
+commit `4ee1c644fcc273044ecec39a6b8c0f0485abdc0e`). These are unreleased draft schemas, not an
+official conformance oracle; the cross-check is **supplemental evidence only**. A schema result
+never changes a feature status on this page: disagreements are resolved in favor of the textual
+specification, and `JsonApiDraftSchemaSpec` keeps allow-listed fixtures failing so a schema fix
+forces an intentional re-review.
+
+| Fixture                          | Draft-schema gap                                                                      | Governing rule                                                                                                          |
+|----------------------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `member-order`                   | Draft forbids `lid` in response resources and models only `@` members, so `ext:` members are unevaluated | [v1.1 local identifiers](https://jsonapi.org/format/1.1/#document-resource-object-local-identifiers) and [extension members](https://jsonapi.org/format/1.1/#extension-members) |
+| `extension-and-at-members`       | Draft models only `@` members; `ext:` members at top level and in the resource are unevaluated | [v1.1 extension members](https://jsonapi.org/format/1.1/#extension-members); PR #1603 description states @/extension rules are incomplete |
+| `string-and-object-links`        | Draft `linkObject.hreflang` accepts only a string                                     | [v1.1 links](https://jsonapi.org/format/1.1/#document-links): `hreflang` is a canonical list representation; the writer always emits the array form |
+
+`JsonApiDraftSchemaSpec` runs fully offline: the draft URI referenced by the request schemas is
+mapped to the vendored response schema, all four schema files are SHA-256-pinned, every applicable
+writer fixture is classified as response or create-resource document and validated against the
+matching usage-specific schema, and one malformed control per schema kind (response,
+create-resource, update-resource, update-relationship) proves the harness rejects invalid
+documents.
 
 ## Domain mapping (Phase 2.2 — supported; Phases 2.3–2.17 — deferred)
 
