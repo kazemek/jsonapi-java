@@ -3,7 +3,7 @@
 > **Module:** `jsonapi-java-core`
 > **Packages:** `io.github.kazemek.jsonapi.core.validation`
 > **Dependencies:** Phase 1.1
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 

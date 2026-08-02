@@ -73,7 +73,8 @@ class ValidatorCoverageSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -109,7 +110,8 @@ class ValidatorCoverageSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -151,7 +153,8 @@ class ValidatorCoverageSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)

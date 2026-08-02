@@ -130,7 +130,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -181,7 +182,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("articles", "comments"),
-        RelationshipCardinality.TO_MANY))
+        RelationshipCardinality.TO_MANY),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -211,7 +213,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("articles", "comments"),
-        RelationshipCardinality.TO_ONE))
+        RelationshipCardinality.TO_ONE),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -242,7 +245,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("articles", "comments"),
-        RelationshipCardinality.TO_MANY))
+        RelationshipCardinality.TO_MANY),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -272,7 +276,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("people", "comments"),
-        RelationshipCardinality.TO_ONE))
+        RelationshipCardinality.TO_ONE),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -332,7 +337,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("custom"),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -445,7 +451,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -549,7 +556,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -576,7 +584,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("canonical"),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -852,7 +861,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -896,7 +906,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("canonical"),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -1005,7 +1016,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     when:
     validator.validate(doc, context)
@@ -1029,7 +1041,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        hints)
+        hints,
+        null)
     def article = new ResourceObject(
         "articles", "1", null, null,
         Relationships.ofRelationships([
@@ -1066,7 +1079,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        hints)
+        hints,
+        null)
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1085,7 +1099,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        hints)
+        hints,
+        null)
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1102,7 +1117,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1119,7 +1135,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1138,7 +1155,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1155,6 +1173,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
+        null,
         null)
 
     then:

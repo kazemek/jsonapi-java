@@ -18,9 +18,9 @@ Milestones are planned, testable increments. They may change until implementatio
     independent foundations with no functional third-party runtime dependencies.
 12. **Phase 2.1 — Jackson 3 document writer:** creates the first major-specific codec artifact and
     proves deterministic model-to-wire behavior.
-13. **Phase 1.3 — update validation**, **Phase 2.2 — Jackson 3 write mapping**, **Phase 2.4 —
-    document reader**, and **Phase 2.5 — draft-schema cross-check:** may proceed in parallel after
-    their listed dependencies.
+13. **Phase 1.3 — update validation:** completed; **Phase 2.2 — Jackson 3 write mapping**, **Phase
+    2.4 — document reader**, and **Phase 2.5 — draft-schema cross-check:** may proceed in parallel
+    after their listed dependencies.
 14. **Phase 2.3 — Jackson 3 compound serialization** and **Phase 2.9 — flat DTO reader:** add
     explicit inclusion and validated resource-to-DTO binding independently.
 15. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
@@ -63,7 +63,7 @@ milestone file.
 - [Phase 0.10 — Task-Scoped Discovery and Documentation Pattern](phase-0-10-task-scoped-discovery-and-doc-pattern.md) — repository workflow and agent guidance — Complete
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md) — `jsonapi-java-core` — Complete
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md) — `jsonapi-java-annotations` — Complete
-- [Phase 1.3 — Resource Update Request Validation](phase-1-3-update-request-validation.md) — `jsonapi-java-core` — Not started
+- [Phase 1.3 — Resource Update Request Validation](phase-1-3-update-request-validation.md) — `jsonapi-java-core` — Complete
 - [Phase 2.1 — Jackson 3 Document Writer](phase-2-1-jackson-document-codec.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.2 — Jackson 3 Domain-to-Resource Mapping](phase-2-2-domain-resource-mapping.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.3 — Jackson 3 Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson3` — Not started

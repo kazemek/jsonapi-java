@@ -6,17 +6,20 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Context for aggregate document validation.
  *
- * <p>Carries document usage (for example create vs response), allowed extension namespaces and
- * profile URIs/member names, the sparse-fieldset full-linkage exception, the current links context,
- * and occurrence-keyed relationship pagination hints for link-only relationships.
+ * <p>Carries document usage (for example create, update, or response), allowed extension namespaces
+ * and profile URIs/member names, the sparse-fieldset full-linkage exception, the current links
+ * context, occurrence-keyed relationship pagination hints for link-only relationships, and an
+ * optional expected endpoint identity compared against {@link DocumentUsage#UPDATE_REQUEST}
+ * documents.
  *
  * <p>{@link #defaults()} uses {@link DocumentUsage#RESPONSE_OR_OTHER}, empty policy sets, no sparse
- * fieldset exception, {@link LinksContext#TOP_LEVEL}, and no pagination hints—suitable for
- * base-spec response documents without extensions or profiles.
+ * fieldset exception, {@link LinksContext#TOP_LEVEL}, no pagination hints, and no expected endpoint
+ * identity—suitable for base-spec response documents without extensions or profiles.
  */
 public record ValidationContext(
     DocumentUsage documentUsage,
@@ -25,7 +28,8 @@ public record ValidationContext(
     Set<String> allowedProfileMemberNames,
     boolean sparseFieldsetException,
     LinksContext linksContext,
-    Map<RelationshipPaginationKey, RelationshipCardinality> relationshipPaginationHints) {
+    Map<RelationshipPaginationKey, RelationshipCardinality> relationshipPaginationHints,
+    @Nullable EndpointIdentity expectedEndpointIdentity) {
 
   private static final String PATH_RELATIONSHIP_PAGINATION_HINTS = "/relationshipPaginationHints";
 
@@ -62,7 +66,8 @@ public record ValidationContext(
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of());
+        Map.of(),
+        null);
   }
 
   public ValidationContext withDocumentUsage(DocumentUsage usage) {
@@ -73,7 +78,8 @@ public record ValidationContext(
         allowedProfileMemberNames,
         sparseFieldsetException,
         linksContext,
-        relationshipPaginationHints);
+        relationshipPaginationHints,
+        expectedEndpointIdentity);
   }
 
   public ValidationContext withLinksContext(LinksContext context) {
@@ -84,7 +90,8 @@ public record ValidationContext(
         allowedProfileMemberNames,
         sparseFieldsetException,
         context,
-        relationshipPaginationHints);
+        relationshipPaginationHints,
+        expectedEndpointIdentity);
   }
 
   public ValidationContext withSparseFieldsetException(boolean enabled) {
@@ -95,7 +102,21 @@ public record ValidationContext(
         allowedProfileMemberNames,
         enabled,
         linksContext,
-        relationshipPaginationHints);
+        relationshipPaginationHints,
+        expectedEndpointIdentity);
+  }
+
+  /** Returns a context whose expected endpoint identity is compared for update documents. */
+  public ValidationContext withExpectedEndpointIdentity(@Nullable EndpointIdentity identity) {
+    return new ValidationContext(
+        documentUsage,
+        allowedExtensionNamespaces,
+        allowedProfileUris,
+        allowedProfileMemberNames,
+        sparseFieldsetException,
+        linksContext,
+        relationshipPaginationHints,
+        identity);
   }
 
   /** Returns the explicit cardinality hint for a relationship occurrence, if present. */

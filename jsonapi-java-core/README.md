@@ -20,7 +20,7 @@ JsonApiDocument document = JsonApiDocument.withData(
 new JsonApiDocumentValidator().validate(document, ValidationContext.defaults());
 ```
 
-Construct model types first (local invariants run in constructors). Call `JsonApiDocumentValidator` with a `ValidationContext` for rules that need the whole document (identity uniqueness, full linkage, extension/profile policy, and similar).
+Construct model types first (local invariants run in constructors). Call `JsonApiDocumentValidator` with a `ValidationContext` for rules that need the whole document (identity uniqueness, full linkage, extension/profile policy, and similar). For update requests use `DocumentUsage.UPDATE_REQUEST`; a `withExpectedEndpointIdentity(EndpointIdentity)` context makes the validator compare the primary resource `type`+`id` against a caller-derived expected endpoint identity. HTTP/route derivation and mutation remain application-owned.
 
 ## Non-goals
 
