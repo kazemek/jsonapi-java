@@ -16,6 +16,8 @@ import tools.jackson.core.JsonToken;
 /** Links object and individual link decoding. */
 final class LinkWireReader {
 
+  private static final String PATH_LINKS = "/links";
+
   private static final Set<String> LINK_OBJECT_MEMBERS =
       Set.of(
           JsonApiMembers.HREF,
@@ -42,7 +44,7 @@ final class LinkWireReader {
           }
         });
     return ValidationPointers.construct(
-        pointer, "/links", () -> Links.of(links, ValidationPointers.forCore(additional)));
+        pointer, PATH_LINKS, () -> Links.of(links, ValidationPointers.forCore(additional)));
   }
 
   static @Nullable Link readLink(JsonParser parser, JsonPointerAccumulator pointer) {
@@ -52,7 +54,7 @@ final class LinkWireReader {
     }
     if (token == JsonToken.VALUE_STRING) {
       String href = parser.getString();
-      return ValidationPointers.construct(pointer, "/links", () -> new Link.StringLink(href));
+      return ValidationPointers.construct(pointer, PATH_LINKS, () -> new Link.StringLink(href));
     }
     if (token == JsonToken.START_OBJECT) {
       return readObjectLink(parser, pointer);
@@ -124,7 +126,7 @@ final class LinkWireReader {
       Meta linkMeta = meta;
       return ValidationPointers.construct(
           pointer,
-          "/links",
+          PATH_LINKS,
           () ->
               new Link.ObjectLink(
                   linkHref,

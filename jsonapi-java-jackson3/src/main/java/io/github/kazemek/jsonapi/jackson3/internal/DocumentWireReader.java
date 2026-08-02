@@ -23,6 +23,8 @@ import tools.jackson.core.JsonToken;
 /** Document-root, primary-data, jsonapi, and meta decoding. */
 final class DocumentWireReader {
 
+  private static final String PATH_DATA = "/data";
+
   private static final Set<String> DOCUMENT_MEMBERS =
       Set.of(
           JsonApiMembers.DATA,
@@ -67,13 +69,13 @@ final class DocumentWireReader {
         case RESOURCE -> {
           ResourceObject resource = ResourceWireReader.readResourceObject(parser, pointer);
           yield ValidationPointers.construct(
-              pointer, "/data", () -> new DocumentData.SingleResource(resource));
+              pointer, PATH_DATA, () -> new DocumentData.SingleResource(resource));
         }
         case RESOURCE_IDENTIFIER -> {
           ResourceIdentifier identifier =
               ResourceWireReader.readResourceIdentifier(parser, pointer);
           yield ValidationPointers.construct(
-              pointer, "/data", () -> new DocumentData.SingleIdentifier(identifier));
+              pointer, PATH_DATA, () -> new DocumentData.SingleIdentifier(identifier));
         }
       };
     }
@@ -82,13 +84,13 @@ final class DocumentWireReader {
         case RESOURCE -> {
           List<ResourceObject> resources = ResourceWireReader.readResourceObjects(parser, pointer);
           yield ValidationPointers.construct(
-              pointer, "/data", () -> new DocumentData.ResourceCollection(resources));
+              pointer, PATH_DATA, () -> new DocumentData.ResourceCollection(resources));
         }
         case RESOURCE_IDENTIFIER -> {
           List<ResourceIdentifier> identifiers =
               ResourceWireReader.readResourceIdentifiers(parser, pointer);
           yield ValidationPointers.construct(
-              pointer, "/data", () -> new DocumentData.IdentifierCollection(identifiers));
+              pointer, PATH_DATA, () -> new DocumentData.IdentifierCollection(identifiers));
         }
       };
     }

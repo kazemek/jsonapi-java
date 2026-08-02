@@ -1,6 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.jackson3.JsonApiMappingException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import tools.jackson.databind.BeanDescription;
@@ -33,15 +32,11 @@ public final class MappingDefinitionCache {
 
   private ResourceMapping computeMapping(
       Class<?> rawType, JavaType javaType, SerializationConfig config) {
-    try {
-      ClassIntrospector introspector = config.classIntrospectorInstance();
-      AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
-      BeanDescription beanDescription =
-          introspector.introspectForSerialization(javaType, annotatedClass);
-      return MappingDefinitionResolver.resolve(beanDescription, rawType);
-    } catch (JsonApiMappingException e) {
-      throw e;
-    }
+    ClassIntrospector introspector = config.classIntrospectorInstance();
+    AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
+    BeanDescription beanDescription =
+        introspector.introspectForSerialization(javaType, annotatedClass);
+    return MappingDefinitionResolver.resolve(beanDescription, rawType);
   }
 
   private static int configHash(SerializationConfig config) {

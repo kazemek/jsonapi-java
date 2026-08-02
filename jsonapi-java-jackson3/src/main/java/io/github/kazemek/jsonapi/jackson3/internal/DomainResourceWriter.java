@@ -128,7 +128,8 @@ public final class DomainResourceWriter {
       case ResourceIdentifier resourceIdentifier ->
           new RelationshipData.SingleLinkage(resourceIdentifier);
       case RelationshipData relationshipData -> relationshipData;
-      default -> new RelationshipData.SingleLinkage(extractIdentifier(value));
+      default ->
+          new RelationshipData.SingleLinkage(extractIdentifier(Objects.requireNonNull(value)));
     };
   }
 
@@ -249,28 +250,24 @@ public final class DomainResourceWriter {
   }
 
   private static List<?> convertToCollection(Object value) {
-    switch (value) {
-      case List<?> list -> {
-        return list;
-      }
-      case Object[] array -> {
-        return List.of(array);
-      }
+    return switch (value) {
+      case List<?> list -> list;
+      case Object[] array -> List.of(array);
       case Iterable<?> iterable -> {
         List<Object> result = new ArrayList<>();
         for (Object item : iterable) {
           result.add(item);
         }
-        return result;
+        yield result;
       }
-      default -> {}
-    }
-    throw new JsonApiMappingException(
-        MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
-        value.getClass(),
-        null,
-        "To-many relationship value is not a supported collection type: "
-            + value.getClass().getName());
+      default ->
+          throw new JsonApiMappingException(
+              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+              value.getClass(),
+              null,
+              "To-many relationship value is not a supported collection type: "
+                  + value.getClass().getName());
+    };
   }
 
   private static boolean isToManyType(JavaType type) {
