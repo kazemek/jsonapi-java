@@ -451,7 +451,8 @@ class DocumentReaderSpec extends Specification {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        Map.of())
+        Map.of(),
+        null)
     def context = DocumentReadContext.of(validation, PrimaryDataKind.RESOURCE)
     def reader = JsonApiJackson3.reader(mapper, context)
 

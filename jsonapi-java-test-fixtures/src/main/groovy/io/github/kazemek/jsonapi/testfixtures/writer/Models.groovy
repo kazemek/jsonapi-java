@@ -95,7 +95,8 @@ final class Models {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        [:])
+        [:],
+        null)
   }
 
   static ValidationContext createContext() {
@@ -106,6 +107,7 @@ final class Models {
         Set.of(),
         false,
         LinksContext.TOP_LEVEL,
-        [:])
+        [:],
+        null)
   }
 }

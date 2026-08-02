@@ -63,7 +63,14 @@ public final class JsonApiDocumentValidator {
     if (document.errors() != null) {
       validateErrors(document.errors(), context);
     }
-    if (document.data() != null) {
+    if (document.data() == null) {
+      if (context.documentUsage() == DocumentUsage.UPDATE_REQUEST) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.UPDATE_REQUIRES_SINGLE_RESOURCE,
+            PATH_DATA,
+            "Update request requires primary data as a single resource object");
+      }
+    } else {
       validatePrimaryData(document.data(), context);
     }
     if (document.included() != null || document.data() != null) {
@@ -83,6 +90,13 @@ public final class JsonApiDocumentValidator {
   private void validatePrimaryData(@Nullable DocumentData data, ValidationContext context) {
     if (data == null) {
       return;
+    }
+    if (context.documentUsage() == DocumentUsage.UPDATE_REQUEST
+        && !(data instanceof DocumentData.SingleResource)) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.UPDATE_REQUIRES_SINGLE_RESOURCE,
+          PATH_DATA,
+          "Update request requires primary data as a single resource object");
     }
     switch (data) {
       case DocumentData.NullData ignored -> {
@@ -108,6 +122,7 @@ public final class JsonApiDocumentValidator {
 
   private void validateResource(ResourceObject resource, String path, ValidationContext context) {
     validateResourceIdentity(resource, path, context);
+    validateUpdateEndpointIdentity(resource, path, context);
     if (resource.attributes() != null) {
       validateAdditionalMembers(
           resource.attributes().additionalMembers(), path + "/attributes", context);
@@ -137,8 +152,17 @@ public final class JsonApiDocumentValidator {
     validateAdditionalMembers(
         relationships.additionalMembers(), path + PATH_RELATIONSHIPS, context);
     for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
+      Relationship relationship = entry.getValue();
+      if (context.documentUsage() == DocumentUsage.UPDATE_REQUEST
+          && PATH_DATA.equals(path)
+          && !relationship.hasDataMember()) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.RELATIONSHIP_DATA_REQUIRED,
+            JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()) + PATH_DATA,
+            "Update request relationship must contain data");
+      }
       validateRelationship(
-          entry.getValue(),
+          relationship,
           JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()),
           context,
           resource.type(),
@@ -297,6 +321,29 @@ public final class JsonApiDocumentValidator {
           ValidationRuleCode.RESOURCE_ID_REQUIRED,
           path + "/id",
           "Resource requires id outside create-request context");
+    }
+  }
+
+  private void validateUpdateEndpointIdentity(
+      ResourceObject resource, String path, ValidationContext context) {
+    if (context.documentUsage() != DocumentUsage.UPDATE_REQUEST || !PATH_DATA.equals(path)) {
+      return;
+    }
+    EndpointIdentity expected = context.expectedEndpointIdentity();
+    if (expected == null) {
+      return;
+    }
+    if (!expected.type().equals(resource.type())) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.ENDPOINT_IDENTITY_MISMATCH,
+          path + "/type",
+          "Update resource type does not match the expected endpoint identity: " + expected.type());
+    }
+    if (!expected.id().equals(Objects.requireNonNull(resource.id()))) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.ENDPOINT_IDENTITY_MISMATCH,
+          path + "/id",
+          "Update resource id does not match the expected endpoint identity: " + expected.id());
     }
   }
 

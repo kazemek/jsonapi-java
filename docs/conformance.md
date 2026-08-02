@@ -3,10 +3,10 @@
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
 This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
-(`jsonapi-java-annotations`), Phase 2.1 (`jsonapi-java-jackson3` document writer), Phase 2.2
-(`jsonapi-java-jackson3` domain-to-resource write mapping), and Phase 2.4
-(`jsonapi-java-jackson3` document reader). Read-side mapping and typed envelopes remain
-**deferred** to their Phase 2 milestones.
+(`jsonapi-java-annotations`), Phase 1.3 (`jsonapi-java-core` update validation), Phase 2.1
+(`jsonapi-java-jackson3` document writer), Phase 2.2 (`jsonapi-java-jackson3` domain-to-resource
+write mapping), and Phase 2.4 (`jsonapi-java-jackson3` document reader). Read-side mapping and
+typed envelopes remain **deferred** to their Phase 2 milestones.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -57,6 +57,20 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
 | Defensive collection copies                                                 | supported    | Model types and `ValidationContext`                                                                                                                                                                  |
 | URI-reference syntax                                                        | supported    | ASCII RFC 3986; structured authority; empty string allowed; raw non-ASCII rejected                                                                                                                   |
 
+## Resource update request validation (Phase 1.3 — supported)
+
+| Rule                                                                                | Status       | Notes                                                                                                         |
+|-------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
+| Update primary data must be one resource object (absent, null, collection, or identifier primary data rejected) | supported    | `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`                                                                   |
+| Update resource `id` required; lid-only rejected                                    | supported    | Reuses `RESOURCE_ID_REQUIRED` at `/data/id`; inherited non-create identity rule                                |
+| Every supplied relationship must contain replacement `data`                         | supported    | `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`; primary resource only                       |
+| Relationship linkage preserved: null, single, empty and non-empty collection        | supported    | All `RelationshipData` variants valid replacements                                                             |
+| Omitted/present/present-null attributes and wrappers preserved                      | supported    | Absent vs `Attributes.empty()` vs explicit null values; no normalization                                      |
+| Optional expected endpoint identity comparison                                      | supported    | `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`; supplied via `ValidationContext`                   |
+| Update rules scoped to the primary resource                                         | supported    | `included` resources keep response semantics; full linkage still enforced                                     |
+| Command application (PATCH binding)                                                 | deferred     | Phases 2.11 and 2.17; adapters bind, applications apply                                                       |
+| HTTP/route identity derivation and mutation                                         | out of scope | Application-owned; core compares only a supplied expected identity                                            |
+
 ## Annotation metadata (Phase 1.2 — supported)
 
 | Rule                                                         | Status    | Notes                                                                 |
@@ -84,7 +98,7 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
 | Flat resource-to-DTO binding                            | deferred     | Phases 2.9 and 2.15; validated document first          |
 | Typed domain document envelopes                         | deferred     | Phases 2.10 and 2.16                                   |
 | Independent typed binding of `included` resources       | deferred     | Phases 2.10 and 2.16; no relationship injection        |
-| Presence-aware resource-update commands                 | deferred     | Phases 1.3, 2.11, and 2.17                             |
+| Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17 |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy          |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands          |
 
