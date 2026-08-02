@@ -76,7 +76,7 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind` |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location |
 
-## Domain mapping (Phases 2.2–2.17 — deferred)
+## Domain mapping (Phase 2.2 — supported; Phases 2.3–2.17 — deferred)
 
 | Rule                                                    | Status       | Notes                                                  |
 |---------------------------------------------------------|--------------|--------------------------------------------------------|
