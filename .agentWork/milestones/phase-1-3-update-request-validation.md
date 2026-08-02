@@ -83,17 +83,18 @@ resource identity against a caller-supplied expected endpoint identity.
    - **Relationship `data` (primary scoped)** — add a new check in
      `validateResourceRelationships` (which holds the resource `path`, `JsonApiDocumentValidator.java:134`),
      inside the existing single loop, guarded by
-     `context.documentUsage() == UPDATE_REQUEST && PATH_DATA.equals(path) && !entry.getValue().hasDataMember()`
+     `context.documentUsage() == UPDATE_REQUEST && primary && !entry.getValue().hasDataMember()`
      → throw `ValidationRuleCode.RELATIONSHIP_DATA_REQUIRED` at
      `JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()) + PATH_DATA`
-     (`/data/relationships/<name>/data`). `PATH_DATA.equals(path)` is true only for the primary
-     resource (`included` is `/included/<i>`), so included link-only relationships are never
-     rejected and the check short-circuits before `validateRelationship` for primary link-only
-     relationships (so they surface `RELATIONSHIP_DATA_REQUIRED`, not `MISSING_RELATIONSHIP_MEMBER`).
-   - **Endpoint identity (primary scoped)** — add `validateUpdateEndpointIdentity(resource, path, context)`
+     (`/data/relationships/<name>/data`). `validatePrimaryData` passes `primary=true` only for the
+     single primary resource (collection elements and `included` resources pass `false`), so
+     included link-only relationships are never rejected and the check short-circuits before
+     `validateRelationship` for primary link-only relationships (so they surface
+     `RELATIONSHIP_DATA_REQUIRED`, not `MISSING_RELATIONSHIP_MEMBER`).
+   - **Endpoint identity (primary scoped)** — add `validateUpdateEndpointIdentity(resource, path, primary, context)`
      and call it from `validateResource` (`JsonApiDocumentValidator.java:109`) immediately after
-     `validateResourceIdentity`, guarded by `usage == UPDATE_REQUEST && PATH_DATA.equals(path)` so
-     included identities are never compared to the endpoint. Only compare when
+     `validateResourceIdentity`, guarded by `usage == UPDATE_REQUEST && primary` so included
+     identities are never compared to the endpoint. Only compare when
      `context.expectedEndpointIdentity() != null`: type mismatch → `ENDPOINT_IDENTITY_MISMATCH` at
      `path + "/type"`; id mismatch → `ENDPOINT_IDENTITY_MISMATCH` at `path + "/id"`.
    - **No change** for id/lid: the existing non-create branch in `validateResourceIdentity`
@@ -155,9 +156,11 @@ resource identity against a caller-supplied expected endpoint identity.
 - The `validate()` sequence (additional members → meta → jsonapi → links → errors → primary →
   compound) is preserved. The only structural change is one `UPDATE_REQUEST` absent-data guard at
   the primary-data dispatch site (`JsonApiDocumentValidator.java:66`); all other update rules are
-  scoped to the primary resource (path exactly `/data`), so `included` resources and their
-  relationships run only the existing non-update paths. `CREATE_REQUEST` and `RESPONSE_OR_OTHER`
-  behavior must not regress; the compound-non-regression checks below prove this.
+  scoped to the primary resource via a `primary` flag threaded from `validatePrimaryData` (true for
+  the single primary resource, false for collection elements and `included` resources), so
+  `included` resources and their relationships run only the existing non-update paths.
+  `CREATE_REQUEST` and `RESPONSE_OR_OTHER` behavior must not regress; the compound-non-regression
+  checks below prove this.
 - `DocumentData.NullData` remains meaningful for general documents but is invalid here because an
   update request requires `SingleResource`.
 - `UPDATE_REQUEST` is non-create, so the inherited `validateResourceIdentity` `id` requirement
@@ -229,26 +232,26 @@ JSON pointer path unless it is an accepted case.
 
 ## Acceptance criteria
 
-- [ ] `UPDATE_REQUEST` accepts exactly valid single-resource update documents and rejects every
+- [x] `UPDATE_REQUEST` accepts exactly valid single-resource update documents and rejects every
       other primary-data state (`NullData`, resource collections, both identifier forms, absent
       data) with `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`; id-absent and lid-only resources are
       rejected with `RESOURCE_ID_REQUIRED` at `/data/id`.
-- [ ] Omitted, present, and present-null attribute keys and omitted, present-empty, and present
+- [x] Omitted, present, and present-null attribute keys and omitted, present-empty, and present
       relationship wrappers survive validation unchanged, and every supplied relationship requires
       replacement `data` (`RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`); all
       four `RelationshipData` linkage variants are accepted. The relationship `data` requirement is
       scoped to the primary resource — `included` link-only relationships remain accepted.
-- [ ] Optional endpoint identity matching accepts matching `type`+`id`, rejects `type` mismatch at
+- [x] Optional endpoint identity matching accepts matching `type`+`id`, rejects `type` mismatch at
       `/data/type` and `id` mismatch at `/data/id` with `ENDPOINT_IDENTITY_MISMATCH`, and stays off
       when no expected identity is supplied, without adding HTTP concerns to core. Endpoint-identity
       comparison is scoped to the primary resource — `included` identities are not compared to the
       endpoint.
-- [ ] New `ValidationContext` and `EndpointIdentity` components satisfy ADR-009 nullness
+- [x] New `ValidationContext` and `EndpointIdentity` components satisfy ADR-009 nullness
       (`@NullMarked` package; accurate `@Nullable` on `expectedEndpointIdentity`), and the
       canonical `module-docs` checklist passes; conformance documentation marks only core update
       validation **supported** (command binding stays deferred).
-- [ ] `./gradlew :jsonapi-java-core:test --tests '*UpdateRequestValidationSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes via the `sonar-quality-gate` skill; if `SONAR_TOKEN` is
+- [x] `./gradlew :jsonapi-java-core:test --tests '*UpdateRequestValidationSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes via the `sonar-quality-gate` skill; if `SONAR_TOKEN` is
       unavailable, report Sonar blocked and that CI must still pass the gate.

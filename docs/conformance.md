@@ -59,17 +59,17 @@ typed envelopes remain **deferred** to their Phase 2 milestones.
 
 ## Resource update request validation (Phase 1.3 — supported)
 
-| Rule                                                                                | Status       | Notes                                                                                                         |
-|-------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------------------------------------------|
-| Update primary data must be one resource object (absent, null, collection, or identifier primary data rejected) | supported    | `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`                                                                   |
-| Update resource `id` required; lid-only rejected                                    | supported    | Reuses `RESOURCE_ID_REQUIRED` at `/data/id`; inherited non-create identity rule                                |
-| Every supplied relationship must contain replacement `data`                         | supported    | `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`; primary resource only                       |
-| Relationship linkage preserved: null, single, empty and non-empty collection        | supported    | All `RelationshipData` variants valid replacements                                                             |
-| Omitted/present/present-null attributes and wrappers preserved                      | supported    | Absent vs `Attributes.empty()` vs explicit null values; no normalization                                      |
-| Optional expected endpoint identity comparison                                      | supported    | `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`; supplied via `ValidationContext`                   |
-| Update rules scoped to the primary resource                                         | supported    | `included` resources keep response semantics; full linkage still enforced                                     |
-| Command application (PATCH binding)                                                 | deferred     | Phases 2.11 and 2.17; adapters bind, applications apply                                                       |
-| HTTP/route identity derivation and mutation                                         | out of scope | Application-owned; core compares only a supplied expected identity                                            |
+| Rule                                                                                                            | Status       | Notes                                                                                        |
+|-----------------------------------------------------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------|
+| Update primary data must be one resource object (absent, null, collection, or identifier primary data rejected) | supported    | `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`                                                 |
+| Update resource `id` required; lid-only rejected                                                                | supported    | Reuses `RESOURCE_ID_REQUIRED` at `/data/id`; inherited non-create identity rule              |
+| Every supplied relationship must contain replacement `data`                                                     | supported    | `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`; primary resource only     |
+| Relationship linkage preserved: null, single, empty and non-empty collection                                    | supported    | All `RelationshipData` variants valid replacements                                           |
+| Omitted/present-empty attribute and relationship wrappers; explicit-null attribute values preserved             | supported    | Absent vs `Attributes.empty()` vs explicit null values; no normalization                     |
+| Optional expected endpoint identity comparison                                                                  | supported    | `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`; supplied via `ValidationContext` |
+| Update rules scoped to the primary resource                                                                     | supported    | `included` resources keep response semantics; full linkage still enforced                    |
+| Command application (PATCH binding)                                                                             | deferred     | Phases 2.11 and 2.17; adapters bind, applications apply                                      |
+| HTTP/route identity derivation and mutation                                                                     | out of scope | Application-owned; core compares only a supplied expected identity                           |
 
 ## Annotation metadata (Phase 1.2 — supported)
 
