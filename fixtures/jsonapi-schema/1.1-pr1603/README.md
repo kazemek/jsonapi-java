@@ -8,7 +8,7 @@ v1.1 compliant", fork `VGirol/json-api`, branch `schema-1.1`).
 open and the schema publication issue
 [json-api/json-api#1672](https://github.com/json-api/json-api/issues/1672) is unresolved; a schema
 result is supplemental evidence only and never changes a conformance status in
-[`docs/conformance.md`](../../docs/conformance.md).
+[`docs/conformance.md`](../../../docs/conformance.md).
 
 ## Provenance
 

@@ -114,8 +114,7 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   def "fixture #fixture.id passes the #kind draft schema"() {
     given:
-    def json = JsonApiJackson3.writer(mapper, fixture.context).writeValueAsString(fixture.document)
-    def errors = schemas[kind].validate(mapper.readTree(json))
+    def errors = errorsFor(fixture, kind)
 
     expect:
     errors.isEmpty()
@@ -129,8 +128,7 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   def "allow-listed fixture #fixture.id fails only for a documented draft-schema gap"() {
     given:
-    def json = JsonApiJackson3.writer(mapper, fixture.context).writeValueAsString(fixture.document)
-    def errors = schemas[SCHEMA_KIND_BY_FIXTURE[fixture.id]].validate(mapper.readTree(json))
+    def errors = errorsFor(fixture, SCHEMA_KIND_BY_FIXTURE[fixture.id])
 
     expect:
     !errors.isEmpty()
@@ -150,6 +148,11 @@ class JsonApiDraftSchemaSpec extends Specification {
 
     where:
     control << INVALID_CONTROLS
+  }
+
+  private List<?> errorsFor(fixture, String kind) {
+    def json = JsonApiJackson3.writer(mapper, fixture.context).writeValueAsString(fixture.document)
+    return schemas[kind].validate(mapper.readTree(json))
   }
 
   private void configureRegistry(SchemaRegistry.Builder builder) {
