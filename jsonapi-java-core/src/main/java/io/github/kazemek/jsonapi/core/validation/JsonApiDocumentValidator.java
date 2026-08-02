@@ -40,6 +40,7 @@ public final class JsonApiDocumentValidator {
   private static final String PATH_DATA = "/data";
   private static final String PATH_META = "/meta";
   private static final String PATH_LINKS = "/links";
+  private static final String PATH_RELATIONSHIPS = "/relationships";
 
   public void validate(JsonApiDocument document, ValidationContext context) {
     validateAdditionalMembers(document.additionalMembers(), "", context);
@@ -133,11 +134,12 @@ public final class JsonApiDocumentValidator {
   private void validateResourceRelationships(
       ResourceObject resource, String path, ValidationContext context) {
     Relationships relationships = Objects.requireNonNull(resource.relationships());
-    validateAdditionalMembers(relationships.additionalMembers(), path + "/relationships", context);
+    validateAdditionalMembers(
+        relationships.additionalMembers(), path + PATH_RELATIONSHIPS, context);
     for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
       validateRelationship(
           entry.getValue(),
-          JsonPointers.child(path + "/relationships", entry.getKey()),
+          JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()),
           context,
           resource.type(),
           entry.getKey());
@@ -430,7 +432,7 @@ public final class JsonApiDocumentValidator {
       if (relationship.data() == null) {
         continue;
       }
-      String relPath = JsonPointers.child(path + "/relationships", entry.getKey()) + PATH_DATA;
+      String relPath = JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()) + PATH_DATA;
       registerLinkageFromRelationshipData(relationship.data(), relPath, registry);
     }
   }

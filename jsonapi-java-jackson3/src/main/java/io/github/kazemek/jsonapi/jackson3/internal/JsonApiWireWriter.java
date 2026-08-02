@@ -40,17 +40,20 @@ final class JsonApiWireWriter {
       gen.writeName(JsonApiMembers.ERRORS);
       writeErrorObjects(document.errors(), gen);
     }
-    if (document.meta() != null) {
+    Meta documentMeta = document.meta();
+    if (documentMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(document.meta(), gen);
+      writeMeta(documentMeta, gen);
     }
-    if (document.jsonapi() != null) {
+    JsonApiObject jsonapi = document.jsonapi();
+    if (jsonapi != null) {
       gen.writeName(JsonApiMembers.JSONAPI);
-      writeJsonApiObject(document.jsonapi(), gen);
+      writeJsonApiObject(jsonapi, gen);
     }
-    if (document.links() != null) {
+    Links documentLinks = document.links();
+    if (documentLinks != null) {
       gen.writeName(JsonApiMembers.LINKS);
-      writeLinks(document.links(), gen);
+      writeLinks(documentLinks, gen);
     }
     if (document.hasIncludedMember()) {
       gen.writeName(JsonApiMembers.INCLUDED);
@@ -64,13 +67,12 @@ final class JsonApiWireWriter {
     switch (data) {
       case null -> gen.writeNull();
       case DocumentData.NullData ignored -> gen.writeNull();
-      case DocumentData.SingleResource single -> writeResourceObject(single.resource(), gen);
-      case DocumentData.ResourceCollection collection ->
-          writeResourceObjects(collection.resources(), gen);
-      case DocumentData.SingleIdentifier single ->
-          writeResourceIdentifier(single.identifier(), gen);
-      case DocumentData.IdentifierCollection collection ->
-          writeResourceIdentifiers(collection.identifiers(), gen);
+      case DocumentData.SingleResource(var resource) -> writeResourceObject(resource, gen);
+      case DocumentData.ResourceCollection(var resources) -> writeResourceObjects(resources, gen);
+      case DocumentData.SingleIdentifier(var identifier) ->
+          writeResourceIdentifier(identifier, gen);
+      case DocumentData.IdentifierCollection(var identifiers) ->
+          writeResourceIdentifiers(identifiers, gen);
     }
   }
 
@@ -93,21 +95,25 @@ final class JsonApiWireWriter {
     if (resource.lid() != null) {
       gen.writeStringProperty(JsonApiMembers.LID, resource.lid());
     }
-    if (resource.attributes() != null) {
+    Attributes attributes = resource.attributes();
+    if (attributes != null) {
       gen.writeName(JsonApiMembers.ATTRIBUTES);
-      writeAttributes(resource.attributes(), gen);
+      writeAttributes(attributes, gen);
     }
-    if (resource.relationships() != null) {
+    Relationships relationships = resource.relationships();
+    if (relationships != null) {
       gen.writeName(JsonApiMembers.RELATIONSHIPS);
-      writeRelationships(resource.relationships(), gen);
+      writeRelationships(relationships, gen);
     }
-    if (resource.links() != null) {
+    Links resourceLinks = resource.links();
+    if (resourceLinks != null) {
       gen.writeName(JsonApiMembers.LINKS);
-      writeLinks(resource.links(), gen);
+      writeLinks(resourceLinks, gen);
     }
-    if (resource.meta() != null) {
+    Meta resourceMeta = resource.meta();
+    if (resourceMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(resource.meta(), gen);
+      writeMeta(resourceMeta, gen);
     }
     writeAdditionalMembers(resource.additionalMembers(), gen);
     gen.writeEndObject();
@@ -130,9 +136,10 @@ final class JsonApiWireWriter {
     if (identifier.lid() != null) {
       gen.writeStringProperty(JsonApiMembers.LID, identifier.lid());
     }
-    if (identifier.meta() != null) {
+    Meta identifierMeta = identifier.meta();
+    if (identifierMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(identifier.meta(), gen);
+      writeMeta(identifierMeta, gen);
     }
     writeAdditionalMembers(identifier.additionalMembers(), gen);
     gen.writeEndObject();
@@ -162,13 +169,15 @@ final class JsonApiWireWriter {
       gen.writeName(JsonApiMembers.DATA);
       writeRelationshipData(relationship.data(), gen);
     }
-    if (relationship.links() != null) {
+    Links relationshipLinks = relationship.links();
+    if (relationshipLinks != null) {
       gen.writeName(JsonApiMembers.LINKS);
-      writeLinks(relationship.links(), gen);
+      writeLinks(relationshipLinks, gen);
     }
-    if (relationship.meta() != null) {
+    Meta relationshipMeta = relationship.meta();
+    if (relationshipMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(relationship.meta(), gen);
+      writeMeta(relationshipMeta, gen);
     }
     writeAdditionalMembers(relationship.additionalMembers(), gen);
     gen.writeEndObject();
@@ -178,10 +187,10 @@ final class JsonApiWireWriter {
     switch (data) {
       case null -> gen.writeNull();
       case RelationshipData.NullLinkage ignored -> gen.writeNull();
-      case RelationshipData.SingleLinkage single ->
-          writeResourceIdentifier(single.identifier(), gen);
-      case RelationshipData.IdentifierCollectionLinkage collection ->
-          writeResourceIdentifiers(collection.identifiers(), gen);
+      case RelationshipData.SingleLinkage(var identifier) ->
+          writeResourceIdentifier(identifier, gen);
+      case RelationshipData.IdentifierCollectionLinkage(var identifiers) ->
+          writeResourceIdentifiers(identifiers, gen);
     }
   }
 
@@ -201,7 +210,7 @@ final class JsonApiWireWriter {
   static void writeLink(@Nullable Link link, JsonGenerator gen) {
     switch (link) {
       case null -> gen.writeNull();
-      case Link.StringLink stringLink -> gen.writeString(stringLink.href());
+      case Link.StringLink(var href) -> gen.writeString(href);
       case Link.ObjectLink objectLink -> writeObjectLink(objectLink, gen);
     }
   }
@@ -229,9 +238,10 @@ final class JsonApiWireWriter {
       }
       gen.writeEndArray();
     }
-    if (link.meta() != null) {
+    Meta linkMeta = link.meta();
+    if (linkMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(link.meta(), gen);
+      writeMeta(linkMeta, gen);
     }
     writeAdditionalMembers(link.additionalMembers(), gen);
     gen.writeEndObject();
@@ -246,17 +256,20 @@ final class JsonApiWireWriter {
     if (jsonapi.version() != null) {
       gen.writeStringProperty(JsonApiMembers.VERSION, jsonapi.version());
     }
-    if (jsonapi.ext() != null) {
+    List<String> ext = jsonapi.ext();
+    if (ext != null) {
       gen.writeName(JsonApiMembers.EXT);
-      writeStringArray(jsonapi.ext(), gen);
+      writeStringArray(ext, gen);
     }
-    if (jsonapi.profile() != null) {
+    List<String> profile = jsonapi.profile();
+    if (profile != null) {
       gen.writeName(JsonApiMembers.PROFILE);
-      writeStringArray(jsonapi.profile(), gen);
+      writeStringArray(profile, gen);
     }
-    if (jsonapi.meta() != null) {
+    Meta jsonapiMeta = jsonapi.meta();
+    if (jsonapiMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(jsonapi.meta(), gen);
+      writeMeta(jsonapiMeta, gen);
     }
     writeAdditionalMembers(jsonapi.additionalMembers(), gen);
     gen.writeEndObject();
@@ -277,9 +290,10 @@ final class JsonApiWireWriter {
     if (error.id() != null) {
       gen.writeStringProperty(JsonApiMembers.ID, error.id());
     }
-    if (error.links() != null) {
+    Links errorLinks = error.links();
+    if (errorLinks != null) {
       gen.writeName(JsonApiMembers.LINKS);
-      writeLinks(error.links(), gen);
+      writeLinks(errorLinks, gen);
     }
     if (error.status() != null) {
       gen.writeStringProperty(JsonApiMembers.STATUS, error.status());
@@ -293,13 +307,15 @@ final class JsonApiWireWriter {
     if (error.detail() != null) {
       gen.writeStringProperty(JsonApiMembers.DETAIL, error.detail());
     }
-    if (error.source() != null) {
+    ErrorSource source = error.source();
+    if (source != null) {
       gen.writeName(JsonApiMembers.SOURCE);
-      writeErrorSource(error.source(), gen);
+      writeErrorSource(source, gen);
     }
-    if (error.meta() != null) {
+    Meta errorMeta = error.meta();
+    if (errorMeta != null) {
       gen.writeName(JsonApiMembers.META);
-      writeMeta(error.meta(), gen);
+      writeMeta(errorMeta, gen);
     }
     writeAdditionalMembers(error.additionalMembers(), gen);
     gen.writeEndObject();

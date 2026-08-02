@@ -18,6 +18,8 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class JsonApiDocumentWriter {
 
+  private static final String DOCUMENT_PARAM = "document";
+
   private final JsonMapper mapper;
   private final ValidationContext context;
   private final JsonApiDocumentValidator validator = new JsonApiDocumentValidator();
@@ -38,34 +40,34 @@ public final class JsonApiDocumentWriter {
   }
 
   public String writeValueAsString(JsonApiDocument document) {
-    Objects.requireNonNull(document, "document");
+    Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
     return mapper.writeValueAsString(document);
   }
 
   public byte[] writeValueAsBytes(JsonApiDocument document) {
-    Objects.requireNonNull(document, "document");
+    Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
     return mapper.writeValueAsBytes(document);
   }
 
   public void writeValue(OutputStream out, JsonApiDocument document) {
     Objects.requireNonNull(out, "out");
-    Objects.requireNonNull(document, "document");
+    Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
     mapper.writeValue(out, document);
   }
 
   public void writeValue(Writer out, JsonApiDocument document) {
     Objects.requireNonNull(out, "out");
-    Objects.requireNonNull(document, "document");
+    Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
     mapper.writeValue(out, document);
   }
 
   public void writeValue(JsonGenerator generator, JsonApiDocument document) {
     Objects.requireNonNull(generator, "generator");
-    Objects.requireNonNull(document, "document");
+    Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
     mapper.writeValue(generator, document);
   }

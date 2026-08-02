@@ -13,7 +13,9 @@ public final class ReadLocationIndex {
 
   private final Map<String, SourceLocation> locations = new LinkedHashMap<>();
 
-  public ReadLocationIndex() {}
+  public ReadLocationIndex() {
+    // LinkedHashMap field initializer is sufficient; no further setup.
+  }
 
   public void remember(String path, SourceLocation location) {
     Objects.requireNonNull(path, "path");

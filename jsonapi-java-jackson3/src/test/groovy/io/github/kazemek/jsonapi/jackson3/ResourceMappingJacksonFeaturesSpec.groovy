@@ -6,6 +6,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithArray
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithFormattedTitle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptional
@@ -260,7 +261,7 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
   def "mixed element types in to-many linkage throw UNSUPPORTED_RELATIONSHIP_VALUE"() {
     given:
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def ri = new io.github.kazemek.jsonapi.core.model.ResourceIdentifier("comments", "1", null, null, Map.of())
+    def ri = new ResourceIdentifier("comments", "1", null, null, Map.of())
     def entity = new MixedRelEntity(id: "1", items: [ri, new Object()])
 
     when:
@@ -274,7 +275,7 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
   def "mixed element types with unsupported element first throw UNSUPPORTED_RELATIONSHIP_VALUE"() {
     given:
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def ri = new io.github.kazemek.jsonapi.core.model.ResourceIdentifier("comments", "1", null, null, Map.of())
+    def ri = new ResourceIdentifier("comments", "1", null, null, Map.of())
     def entity = new MixedRelEntity(id: "1", items: [new Object(), ri])
 
     when:
@@ -288,8 +289,32 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
   def "leading null in to-many ResourceIdentifier collection produces correct linkage"() {
     given:
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def ri = new io.github.kazemek.jsonapi.core.model.ResourceIdentifier("comments", "1", null, null, Map.of())
+    def ri = new ResourceIdentifier("comments", "1", null, null, Map.of())
     def entity = new MixedRelEntity(id: "1", items: [null, ri])
+
+    when:
+    def resource = mapper.toResource(entity)
+
+    then:
+    def rel = resource.relationships().relationships().get("items")
+    rel.data() instanceof RelationshipData.IdentifierCollectionLinkage
+    def linkage = (RelationshipData.IdentifierCollectionLinkage) rel.data()
+    linkage.identifiers().size() == 1
+    linkage.identifiers().get(0).type() == "comments"
+    linkage.identifiers().get(0).id() == "1"
+  }
+
+  @JsonApiResource(type = "mixedarray")
+  static class MixedRelArrayEntity {
+    @JsonApiId String id
+    @JsonApiRelationship ResourceIdentifier[] items
+  }
+
+  def "leading null in to-many ResourceIdentifier array produces correct linkage"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def ri = new ResourceIdentifier("comments", "1", null, null, Map.of())
+    def entity = new MixedRelArrayEntity(id: "1", items: [null, ri] as ResourceIdentifier[])
 
     when:
     def resource = mapper.toResource(entity)
