@@ -57,22 +57,21 @@ public final class DomainResourceWriter {
     }
     Object identifierValue =
         unwrapOptional(readValue(resource, identifierProperty, PropertyRole.ID));
+    return requireIdentifierString(resource.getClass(), identifierProperty, identifierValue);
+  }
+
+  private String requireIdentifierString(
+      Class<?> type, MappingProperty property, @Nullable Object identifierValue) {
     if (identifierValue == null) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.MISSING_IDENTIFIER,
-          resource.getClass(),
-          identifierProperty.logicalName(),
-          "Identifier property '" + identifierProperty.logicalName() + "' is null");
+      throw missingIdentifier(
+          type, property, "Identifier property '" + property.logicalName() + "' is null");
     }
     String identifierString = identifierConverter.convert(identifierValue);
     if (identifierString == null) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.MISSING_IDENTIFIER,
-          resource.getClass(),
-          identifierProperty.logicalName(),
-          "Identifier converter returned null for property '"
-              + identifierProperty.logicalName()
-              + "'");
+      throw missingIdentifier(
+          type,
+          property,
+          "Identifier converter returned null for property '" + property.logicalName() + "'");
     }
     return identifierString;
   }
@@ -115,29 +114,22 @@ public final class DomainResourceWriter {
   private Relationship buildRelationship(Object resource, MappingProperty property) {
     Object value = readValue(resource, property, PropertyRole.RELATIONSHIP);
     JavaType propertyType = property.accessor().getType();
-    boolean isToMany = isToManyType(propertyType);
-
-    if (isToMany) {
-      RelationshipData linkage = extractToManyLinkage(value, propertyType);
-      return new Relationship(linkage, null, null, Map.of());
-    }
-    RelationshipData linkage = extractToOneLinkage(value);
+    RelationshipData linkage =
+        isToManyType(propertyType)
+            ? extractToManyLinkage(value, propertyType)
+            : extractToOneLinkage(value);
     return new Relationship(linkage, null, null, Map.of());
   }
 
   private RelationshipData extractToOneLinkage(@Nullable Object value) {
     value = unwrapOptional(value);
-    if (value == null) {
-      return RelationshipData.NullLinkage.INSTANCE;
-    }
-    if (value instanceof ResourceIdentifier resourceIdentifier) {
-      return new RelationshipData.SingleLinkage(resourceIdentifier);
-    }
-    if (value instanceof RelationshipData relationshipData) {
-      return relationshipData;
-    }
-    ResourceIdentifier identifier = extractIdentifier(value);
-    return new RelationshipData.SingleLinkage(identifier);
+    return switch (value) {
+      case null -> RelationshipData.NullLinkage.INSTANCE;
+      case ResourceIdentifier resourceIdentifier ->
+          new RelationshipData.SingleLinkage(resourceIdentifier);
+      case RelationshipData relationshipData -> relationshipData;
+      default -> new RelationshipData.SingleLinkage(extractIdentifier(value));
+    };
   }
 
   private RelationshipData extractToManyLinkage(@Nullable Object value, JavaType propType) {
@@ -148,36 +140,45 @@ public final class DomainResourceWriter {
     if (items.isEmpty()) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
     }
+    return switch (classifyToManyItems(items)) {
+      case ResourceIdentifiers(List<ResourceIdentifier> identifiers) ->
+          new RelationshipData.IdentifierCollectionLinkage(identifiers);
+      case DomainObjects(List<?> domainItems) ->
+          toManyLinkageFromDomainObjects(domainItems, propType);
+      case Mixed(Object firstNonResourceIdentifier) ->
+          throw mixedToManyElements(firstNonResourceIdentifier);
+    };
+  }
+
+  private static ToManyClassification classifyToManyItems(List<?> items) {
     boolean hasResourceIdentifier = false;
     Object firstNonResourceIdentifier = null;
+    List<ResourceIdentifier> identifiers = new ArrayList<>();
+    List<Object> domainItems = new ArrayList<>();
     for (Object item : items) {
       if (item == null) {
         continue;
       }
-      if (item instanceof ResourceIdentifier) {
+      if (item instanceof ResourceIdentifier resourceIdentifier) {
         hasResourceIdentifier = true;
-      } else if (firstNonResourceIdentifier == null) {
-        firstNonResourceIdentifier = item;
+        identifiers.add(resourceIdentifier);
+      } else {
+        if (firstNonResourceIdentifier == null) {
+          firstNonResourceIdentifier = item;
+        }
+        domainItems.add(item);
       }
     }
     if (hasResourceIdentifier && firstNonResourceIdentifier != null) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
-          firstNonResourceIdentifier.getClass(),
-          null,
-          "Mixed element types in to-many relationship collection: expected ResourceIdentifier, got "
-              + firstNonResourceIdentifier.getClass().getName());
+      return new Mixed(firstNonResourceIdentifier);
     }
     if (hasResourceIdentifier) {
-      List<ResourceIdentifier> identifiers = new ArrayList<>();
-      for (Object item : items) {
-        if (item == null) {
-          continue;
-        }
-        identifiers.add((ResourceIdentifier) item);
-      }
-      return new RelationshipData.IdentifierCollectionLinkage(identifiers);
+      return new ResourceIdentifiers(identifiers);
     }
+    return new DomainObjects(domainItems);
+  }
+
+  private RelationshipData toManyLinkageFromDomainObjects(List<?> items, JavaType propType) {
     JavaType contentType = resolveContentType(propType);
     if (contentType == null) {
       throw new JsonApiMappingException(
@@ -186,16 +187,27 @@ public final class DomainResourceWriter {
           null,
           "Cannot resolve collection content type");
     }
-    Class<?> elementClass = contentType.getRawClass();
-    checkResourceAnnotation(elementClass);
-    List<ResourceIdentifier> identifiers = new ArrayList<>();
+    checkResourceAnnotation(contentType.getRawClass());
+    List<ResourceIdentifier> identifiers = new ArrayList<>(items.size());
     for (Object item : items) {
-      if (item == null) {
-        continue;
-      }
       identifiers.add(extractIdentifier(item));
     }
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
+  }
+
+  private static JsonApiMappingException missingIdentifier(
+      Class<?> type, MappingProperty property, String message) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.MISSING_IDENTIFIER, type, property.logicalName(), message);
+  }
+
+  private static JsonApiMappingException mixedToManyElements(Object firstNonResourceIdentifier) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+        firstNonResourceIdentifier.getClass(),
+        null,
+        "Mixed element types in to-many relationship collection: expected ResourceIdentifier, got "
+            + firstNonResourceIdentifier.getClass().getName());
   }
 
   private static @Nullable Object readValue(
@@ -237,18 +249,21 @@ public final class DomainResourceWriter {
   }
 
   private static List<?> convertToCollection(Object value) {
-    if (value instanceof List<?> list) {
-      return list;
-    }
-    if (value instanceof Object[] array) {
-      return List.of(array);
-    }
-    if (value instanceof Iterable<?> iterable) {
-      List<Object> result = new ArrayList<>();
-      for (Object item : iterable) {
-        result.add(item);
+    switch (value) {
+      case List<?> list -> {
+        return list;
       }
-      return result;
+      case Object[] array -> {
+        return List.of(array);
+      }
+      case Iterable<?> iterable -> {
+        List<Object> result = new ArrayList<>();
+        for (Object item : iterable) {
+          result.add(item);
+        }
+        return result;
+      }
+      default -> {}
     }
     throw new JsonApiMappingException(
         MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
@@ -294,4 +309,13 @@ public final class DomainResourceWriter {
           "Collection element type " + rawType.getName() + " lacks @JsonApiResource");
     }
   }
+
+  private sealed interface ToManyClassification permits ResourceIdentifiers, DomainObjects, Mixed {}
+
+  private record ResourceIdentifiers(List<ResourceIdentifier> identifiers)
+      implements ToManyClassification {}
+
+  private record DomainObjects(List<?> items) implements ToManyClassification {}
+
+  private record Mixed(Object firstNonResourceIdentifier) implements ToManyClassification {}
 }

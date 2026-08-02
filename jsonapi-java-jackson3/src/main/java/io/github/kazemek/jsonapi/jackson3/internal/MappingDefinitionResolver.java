@@ -88,21 +88,13 @@ final class MappingDefinitionResolver {
       List<MappingProperty> attributeProperties,
       List<MappingProperty> relationshipProperties) {
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
-      AnnotatedMember accessor = propertyDefinition.getAccessor();
+      AnnotatedMember accessor = requireAccessorIfAnnotated(propertyDefinition, rawType);
       if (accessor == null) {
-        if (hasExplicitRoleAnnotation(propertyDefinition)) {
-          throw new JsonApiMappingException(
-              MappingDiagnostic.MISSING_ACCESSOR,
-              rawType,
-              propertyDefinition.getName(),
-              "Annotated property '" + propertyDefinition.getName() + "' has no readable accessor");
-        }
         continue;
       }
       String logicalName = propertyDefinition.getName();
       PropertyRole role = resolveRole(propertyDefinition, logicalName, rawType);
       String jsonapiName = resolveJsonapiName(propertyDefinition, logicalName, role);
-
       validateJsonApiName(jsonapiName, role, propertyDefinition, rawType);
 
       MappingProperty mappingProperty =
@@ -115,35 +107,35 @@ final class MappingDefinitionResolver {
     }
   }
 
-  private static boolean hasExplicitRoleAnnotation(BeanPropertyDefinition propertyDefinition) {
-    return hasAnnotationAnywhere(propertyDefinition, JsonApiId.class)
-        || hasAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class)
-        || hasAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class);
+  private static @Nullable AnnotatedMember requireAccessorIfAnnotated(
+      BeanPropertyDefinition propertyDefinition, Class<?> rawType) {
+    AnnotatedMember accessor = propertyDefinition.getAccessor();
+    if (accessor != null) {
+      return accessor;
+    }
+    if (RoleAnnotations.from(propertyDefinition).hasAny()) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.MISSING_ACCESSOR,
+          rawType,
+          propertyDefinition.getName(),
+          "Annotated property '" + propertyDefinition.getName() + "' has no readable accessor");
+    }
+    return null;
   }
 
   private static PropertyRole resolveRole(
       BeanPropertyDefinition propertyDefinition, String logicalName, Class<?> rawType) {
-    boolean hasIdentifier = hasAnnotationAnywhere(propertyDefinition, JsonApiId.class);
-    boolean hasRelationship = hasAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class);
-    boolean hasAttribute = hasAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class);
-
-    int count = (hasIdentifier ? 1 : 0) + (hasRelationship ? 1 : 0) + (hasAttribute ? 1 : 0);
-    if (count > 1) {
+    RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
+    if (annotations.count() > 1) {
       throw new JsonApiMappingException(
           MappingDiagnostic.DUPLICATE_ROLE,
           rawType,
           logicalName,
           "Property '" + logicalName + "' has conflicting role annotations");
     }
-
-    if (hasIdentifier) {
-      return PropertyRole.ID;
-    }
-    if (hasRelationship) {
-      return PropertyRole.RELATIONSHIP;
-    }
-    if (hasAttribute) {
-      return PropertyRole.ATTRIBUTE;
+    PropertyRole explicitRole = annotations.explicitRole();
+    if (explicitRole != null) {
+      return explicitRole;
     }
     if ("id".equals(logicalName)) {
       return PropertyRole.ID;
@@ -182,9 +174,7 @@ final class MappingDefinitionResolver {
     if (diagnostic == null) {
       return;
     }
-    if (!MemberNames.isValid(jsonapiName)
-        || JsonApiMembers.ID.equals(jsonapiName)
-        || JsonApiMembers.TYPE.equals(jsonapiName)) {
+    if (isForbiddenMemberName(jsonapiName)) {
       throw new JsonApiMappingException(
           diagnostic,
           rawType,
@@ -193,11 +183,25 @@ final class MappingDefinitionResolver {
     }
   }
 
+  private static boolean isForbiddenMemberName(String jsonapiName) {
+    return !MemberNames.isValid(jsonapiName)
+        || JsonApiMembers.ID.equals(jsonapiName)
+        || JsonApiMembers.TYPE.equals(jsonapiName);
+  }
+
   private static void validatePropertyRoles(
       List<MappingProperty> identifierProperties,
       List<MappingProperty> attributeProperties,
       List<MappingProperty> relationshipProperties,
       Class<?> rawType) {
+    requireSingleIdentifier(identifierProperties, rawType);
+    rejectDuplicateNames(attributeProperties, rawType, "attribute");
+    rejectDuplicateNames(relationshipProperties, rawType, "relationship");
+    rejectAttributeRelationshipCollisions(attributeProperties, relationshipProperties, rawType);
+  }
+
+  private static void requireSingleIdentifier(
+      List<MappingProperty> identifierProperties, Class<?> rawType) {
     if (identifierProperties.isEmpty()) {
       throw new JsonApiMappingException(
           MappingDiagnostic.MISSING_IDENTIFIER,
@@ -212,37 +216,37 @@ final class MappingDefinitionResolver {
           null,
           "Multiple identifier properties found for " + rawType.getName());
     }
+  }
 
+  private static void rejectDuplicateNames(
+      List<MappingProperty> properties, Class<?> rawType, String roleLabel) {
     Set<String> seen = new HashSet<>();
+    for (MappingProperty property : properties) {
+      if (!seen.add(property.jsonapiName())) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.NAME_COLLISION,
+            rawType,
+            property.jsonapiName(),
+            "Duplicate " + roleLabel + " name: " + property.jsonapiName());
+      }
+    }
+  }
+
+  private static void rejectAttributeRelationshipCollisions(
+      List<MappingProperty> attributeProperties,
+      List<MappingProperty> relationshipProperties,
+      Class<?> rawType) {
+    Set<String> relationshipNames = new HashSet<>();
+    for (MappingProperty relationship : relationshipProperties) {
+      relationshipNames.add(relationship.jsonapiName());
+    }
     for (MappingProperty attribute : attributeProperties) {
-      if (!seen.add(attribute.jsonapiName())) {
+      if (relationshipNames.contains(attribute.jsonapiName())) {
         throw new JsonApiMappingException(
             MappingDiagnostic.NAME_COLLISION,
             rawType,
             attribute.jsonapiName(),
-            "Duplicate attribute name: " + attribute.jsonapiName());
-      }
-    }
-    seen.clear();
-    for (MappingProperty relationship : relationshipProperties) {
-      if (!seen.add(relationship.jsonapiName())) {
-        throw new JsonApiMappingException(
-            MappingDiagnostic.NAME_COLLISION,
-            rawType,
-            relationship.jsonapiName(),
-            "Duplicate relationship name: " + relationship.jsonapiName());
-      }
-    }
-
-    for (MappingProperty attribute : attributeProperties) {
-      for (MappingProperty relationship : relationshipProperties) {
-        if (attribute.jsonapiName().equals(relationship.jsonapiName())) {
-          throw new JsonApiMappingException(
-              MappingDiagnostic.NAME_COLLISION,
-              rawType,
-              attribute.jsonapiName(),
-              "Attribute and relationship name collision: " + attribute.jsonapiName());
-        }
+            "Attribute and relationship name collision: " + attribute.jsonapiName());
       }
     }
   }
@@ -261,13 +265,43 @@ final class MappingDefinitionResolver {
           propertyDefinition.getSetter(),
           propertyDefinition.getConstructorParameter()
         }) {
-      if (member != null) {
-        A annotation = member.getAnnotation(annotationClass);
-        if (annotation != null) {
-          return annotation;
-        }
+      // Jackson's getAnnotation is not @Nullable-annotated; use hasAnnotation as the presence
+      // check.
+      if (member != null && member.hasAnnotation(annotationClass)) {
+        return member.getAnnotation(annotationClass);
       }
     }
     return null;
+  }
+
+  private record RoleAnnotations(boolean id, boolean attribute, boolean relationship) {
+
+    static RoleAnnotations from(BeanPropertyDefinition propertyDefinition) {
+      return new RoleAnnotations(
+          hasAnnotationAnywhere(propertyDefinition, JsonApiId.class),
+          hasAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class),
+          hasAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class));
+    }
+
+    int count() {
+      return (id ? 1 : 0) + (attribute ? 1 : 0) + (relationship ? 1 : 0);
+    }
+
+    boolean hasAny() {
+      return count() > 0;
+    }
+
+    @Nullable PropertyRole explicitRole() {
+      if (id) {
+        return PropertyRole.ID;
+      }
+      if (relationship) {
+        return PropertyRole.RELATIONSHIP;
+      }
+      if (attribute) {
+        return PropertyRole.ATTRIBUTE;
+      }
+      return null;
+    }
   }
 }
