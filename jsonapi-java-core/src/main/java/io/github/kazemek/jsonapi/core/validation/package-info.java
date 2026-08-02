@@ -8,9 +8,10 @@
  * document context (resource identity uniqueness, full linkage, local-identifier consistency,
  * link-member context, and extension/profile policy). {@link
  * io.github.kazemek.jsonapi.core.validation.DocumentUsage#UPDATE_REQUEST} additionally requires
- * single-resource primary data, replacement {@code data} on every supplied relationship, and — when
- * an {@link io.github.kazemek.jsonapi.core.validation.EndpointIdentity} is configured — a primary
- * resource identity matching the expected endpoint.
+ * single-resource primary data, replacement {@code data} on every relationship supplied by the
+ * primary resource, and — when an {@link
+ * io.github.kazemek.jsonapi.core.validation.EndpointIdentity} is configured — a primary resource
+ * identity matching the expected endpoint. Included resources keep response semantics.
  *
  * <p>Failures carry a stable {@link io.github.kazemek.jsonapi.core.validation.ValidationRuleCode}
  * and a JSON Pointer-like path. See ADR-003, ADR-009, ADR-012, and {@code docs/conformance.md}.
