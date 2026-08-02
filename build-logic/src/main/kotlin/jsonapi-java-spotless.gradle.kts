@@ -5,7 +5,7 @@ plugins {
 spotless {
     java {
         target("**/*.java")
-        targetExclude("**/build/**")
+        targetExclude("**/build/**", "**/bin/**")
         googleJavaFormat()
         removeUnusedImports()
         trimTrailingWhitespace()
@@ -13,21 +13,21 @@ spotless {
     }
     groovy {
         target("**/*.groovy")
-        targetExclude("**/build/**")
+        targetExclude("**/build/**", "**/bin/**")
         greclipse().configFile("config/spotless/greclipse.properties")
         trimTrailingWhitespace()
         endWithNewline()
     }
     kotlin {
         target("**/*.kt")
-        targetExclude("**/build/**")
+        targetExclude("**/build/**", "**/bin/**")
         ktlint()
         trimTrailingWhitespace()
         endWithNewline()
     }
     kotlinGradle {
         target("**/*.gradle.kts")
-        targetExclude("**/build/**")
+        targetExclude("**/build/**", "**/bin/**")
         ktlint()
         trimTrailingWhitespace()
         endWithNewline()

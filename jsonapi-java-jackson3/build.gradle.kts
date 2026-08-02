@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    api(project(":jsonapi-java-annotations"))
     api(project(":jsonapi-java-core"))
     api(libs.jackson3.databind)
     testImplementation(project(":jsonapi-java-test-fixtures"))

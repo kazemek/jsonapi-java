@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.core.validation;
 
 import io.github.kazemek.jsonapi.core.internal.JsonPointers;
-import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.SyntaxValidators;
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.ErrorObject;

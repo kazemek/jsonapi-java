@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.core.internal;
 
 import io.github.kazemek.jsonapi.core.validation.LocalValidation;
+import io.github.kazemek.jsonapi.core.validation.MemberNames;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -1,17 +1,19 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
+import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
 import io.github.kazemek.jsonapi.jackson3.internal.JsonApiDocumentModule;
+import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import java.util.Objects;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Factory for Jackson 3 JSON:API document writers and readers.
+ * Factory for Jackson 3 JSON:API document writers, readers, and resource mappers.
  *
  * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
- * replaces the caller's configuration in place. Public codec access is only through {@link
- * JsonApiDocumentWriter} and {@link JsonApiDocumentReader}.
+ * replaces the caller's configuration in place. Public surface consists of {@link
+ * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, and {@link JsonApiResourceMapper}.
  */
 public final class JsonApiJackson3 {
 
@@ -70,6 +72,55 @@ public final class JsonApiJackson3 {
   public static JsonApiDocumentReader reader(JsonMapper.Builder base, DocumentReadContext context) {
     Objects.requireNonNull(base, "base");
     return reader(base.build(), context);
+  }
+
+  /**
+   * Returns a resource mapper with default identifier conversion. Derives a new mapper via {@link
+   * JsonMapper#rebuild()} and never mutates the caller's mapper.
+   */
+  public static JsonApiResourceMapper resourceMapper(JsonMapper base) {
+    return resourceMapper(base, IdentifierConverter.defaults());
+  }
+
+  /**
+   * Returns a resource mapper with the given identifier converter. Derives a new mapper via {@link
+   * JsonMapper#rebuild()} and never mutates the caller's mapper.
+   */
+  public static JsonApiResourceMapper resourceMapper(
+      JsonMapper base, IdentifierConverter identifierConverter) {
+    Objects.requireNonNull(base, "base");
+    Objects.requireNonNull(identifierConverter, "identifierConverter");
+    JsonMapper derived = resourceMappingMapper(base);
+    DomainResourceWriter writer =
+        new DomainResourceWriter(derived, identifierConverter, new MappingDefinitionCache(derived));
+    return new JsonApiResourceMapper(writer);
+  }
+
+  /**
+   * Returns a resource mapper derived from a caller-supplied builder. The builder is not given the
+   * JSON:API module.
+   */
+  public static JsonApiResourceMapper resourceMapper(JsonMapper.Builder base) {
+    return resourceMapper(base, IdentifierConverter.defaults());
+  }
+
+  /**
+   * Returns a resource mapper derived from a caller-supplied builder and identifier converter. The
+   * builder is not given the JSON:API module.
+   */
+  public static JsonApiResourceMapper resourceMapper(
+      JsonMapper.Builder base, IdentifierConverter identifierConverter) {
+    Objects.requireNonNull(base, "base");
+    return resourceMapper(base.build(), identifierConverter);
+  }
+
+  /**
+   * Derives a clean mapper for resource mapping introspection and attribute conversion. Does not
+   * register the JSON:API document module because the resource mapper produces core model objects,
+   * not serialized output.
+   */
+  private static JsonMapper resourceMappingMapper(JsonMapper base) {
+    return base.rebuild().build();
   }
 
   /**

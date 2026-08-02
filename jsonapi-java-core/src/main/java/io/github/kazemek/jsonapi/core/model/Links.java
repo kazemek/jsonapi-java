@@ -1,12 +1,12 @@
 package io.github.kazemek.jsonapi.core.model;
 
 import io.github.kazemek.jsonapi.core.internal.JsonPointers;
-import io.github.kazemek.jsonapi.core.internal.MemberNames;
 import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
 import io.github.kazemek.jsonapi.core.internal.SyntaxValidators;
 import io.github.kazemek.jsonapi.core.validation.LinksContext;
 import io.github.kazemek.jsonapi.core.validation.LocalValidation;
+import io.github.kazemek.jsonapi.core.validation.MemberNames;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.util.LinkedHashMap;
 import java.util.Map;

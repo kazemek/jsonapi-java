@@ -28,6 +28,14 @@ replay_pid*
 /.idea/
 .gradle/
 build/
+.kotlin/
 
 # Agent session artifacts
 /.agentWork/.session/
+
+# Eclipse / Java LSP
+.project
+.settings/
+.classpath
+.factorypath
+bin/

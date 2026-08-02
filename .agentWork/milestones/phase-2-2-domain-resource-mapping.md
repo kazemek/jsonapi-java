@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phases 1.1, 1.2, and 2.1  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -63,11 +63,11 @@ Prove behavior for:
 
 ## Acceptance criteria
 
-- [ ] Mapping uses Jackson's logical property model without an independent field/getter scanner, and integration tests cover records/POJOs, naming, visibility, ignores, mix-ins, creators, inheritance, and custom value serializers.
-- [ ] Mapping is invoked explicitly through a mapper derived from caller configuration and does not change ordinary serialization through the caller's original Jackson 3 mapper.
-- [ ] Identifier/attribute/relationship role resolution, replaceable identifier conversion, null/collection linkage, collision rejection, and stable logical-property diagnostics match the documented mapping policy; relationships never populate `included`.
-- [ ] The canonical `module-docs` checklist passes and `docs/conformance.md` marks only the delivered Jackson 3 mapping shapes **supported**.
-- [ ] `./gradlew :jsonapi-java-jackson3:test` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [x] Mapping uses Jackson's logical property model without an independent field/getter scanner, and integration tests cover records/POJOs, naming, visibility, ignores, mix-ins, creators, inheritance, and custom value serializers.
+- [x] Mapping is invoked explicitly through a mapper derived from caller configuration and does not change ordinary serialization through the caller's original Jackson 3 mapper.
+- [x] Identifier/attribute/relationship role resolution, replaceable identifier conversion, null/collection linkage, collision rejection, and stable logical-property diagnostics match the documented mapping policy; relationships never populate `included`.
+- [x] The canonical `module-docs` checklist passes and `docs/conformance.md` marks only the delivered Jackson 3 mapping shapes **supported**.
+- [x] `./gradlew :jsonapi-java-jackson3:test` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
