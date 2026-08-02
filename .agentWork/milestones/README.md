@@ -18,9 +18,9 @@ Milestones are planned, testable increments. They may change until implementatio
     independent foundations with no functional third-party runtime dependencies.
 12. **Phase 2.1 — Jackson 3 document writer:** creates the first major-specific codec artifact and
     proves deterministic model-to-wire behavior.
-13. **Phase 1.3 — update validation:** completed; **Phase 2.2 — Jackson 3 write mapping**, **Phase
-    2.4 — document reader**, and **Phase 2.5 — draft-schema cross-check:** may proceed in parallel
-    after their listed dependencies.
+13. **Phase 2.2 — Jackson 3 write mapping**, **Phase 2.4 — document reader**, and **Phase 2.5 —
+    draft-schema cross-check:** completed; **Phase 2.3 — compound serialization** and **Phase 2.9 —
+    flat DTO reader:** may proceed in parallel after their listed dependencies.
 14. **Phase 2.3 — Jackson 3 compound serialization** and **Phase 2.9 — flat DTO reader:** add
     explicit inclusion and validated resource-to-DTO binding independently.
 15. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
@@ -68,7 +68,7 @@ milestone file.
 - [Phase 2.2 — Jackson 3 Domain-to-Resource Mapping](phase-2-2-domain-resource-mapping.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.3 — Jackson 3 Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson3` — Not started
 - [Phase 2.4 — Jackson 3 Document Reader](phase-2-4-document-reads.md) — `jsonapi-java-jackson3` — Complete
-- [Phase 2.5 — JSON:API 1.1 Draft-Schema Cross-Check](phase-2-5-json-schema-cross-check.md) — `jsonapi-java-jackson3` test suite — Not started
+- [Phase 2.5 — JSON:API 1.1 Draft-Schema Cross-Check](phase-2-5-json-schema-cross-check.md) — `jsonapi-java-jackson3` test suite — Complete
 - [Phase 2.6 — Jackson 2 Document Writer](phase-2-6-jackson2-document-writer.md) — `jsonapi-java-jackson2` — Not started
 - [Phase 2.7 — Jackson 2 Document Reader](phase-2-7-jackson2-document-reader.md) — `jsonapi-java-jackson2` — Not started
 - [Phase 2.8 — Jackson 3 Sparse Fieldsets](phase-2-8-sparse-fieldsets.md) — `jsonapi-java-jackson3` — Not started
