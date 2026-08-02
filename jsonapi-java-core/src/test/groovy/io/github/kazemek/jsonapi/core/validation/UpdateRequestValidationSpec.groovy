@@ -292,6 +292,17 @@ class UpdateRequestValidationSpec extends Specification {
     noExceptionThrown()
   }
 
+  def "expected endpoint identity survives context derivation"() {
+    given:
+    def identity = new EndpointIdentity("articles", "1")
+    def base = ValidationContext.defaults().withExpectedEndpointIdentity(identity)
+
+    expect:
+    base.withDocumentUsage(DocumentUsage.UPDATE_REQUEST).expectedEndpointIdentity() == identity
+    base.withLinksContext(LinksContext.RESOURCE).expectedEndpointIdentity() == identity
+    base.withSparseFieldsetException(true).expectedEndpointIdentity() == identity
+  }
+
   def "update request rejects type mismatch with expected endpoint identity"() {
     given:
     def doc = JsonApiDocument.withData(
