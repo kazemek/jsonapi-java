@@ -25,27 +25,30 @@ JsonApiDocumentReader reader =
 JsonApiDocument roundTrip = reader.readValue(json);
 ```
 
-Domain-to-resource mapping:
+Domain-to-resource mapping (map → write):
 
 ```java
 JsonMapper callerMapper = JsonMapper.builder().build();
 JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(callerMapper);
 
-ResourceObject resource = mapper.toResource(someAnnotatedPojo);
 JsonApiDocument doc = mapper.toDocument(someAnnotatedPojo);
-JsonApiDocument collDoc = mapper.toResourceCollection(allPojos);
-
-// Feed the document to a writer for serialization:
 String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 ```
 
-Custom identifier conversion:
+Bare resource (inspect or compose a document yourself; not a top-level wire payload):
 
 ```java
-IdentifierConverter prefixer =
-    idValue -> idValue == null ? null : "urn:" + idValue.toString();
-JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(callerMapper, prefixer);
+ResourceObject resource = mapper.toResource(someAnnotatedPojo);
 ```
+
+Collection primary data (also a `JsonApiDocument`; feed it to the same writer):
+
+```java
+JsonApiDocument collDoc = mapper.toResourceCollection(allPojos);
+```
+
+By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
+`IdentifierConverter` to `resourceMapper` only when you need a different wire form.
 
 `JsonApiJackson3.writer` / `reader` / `resourceMapper` always derive a **new** mapper via
 `rebuild()`; the caller's mapper or builder is never mutated. Writers validate before emission.
