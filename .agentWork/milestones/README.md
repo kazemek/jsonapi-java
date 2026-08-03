@@ -62,7 +62,7 @@ milestone file.
 - [Phase 0.8 — JSpecify Nullness](phase-0-8-jspecify-nullness.md) — build, core, and agent guidance — Complete
 - [Phase 0.9 — ArchUnit Core Dependency Guard](phase-0-9-archunit-core-deps.md) — core architecture and agent guidance — Complete
 - [Phase 0.10 — Task-Scoped Discovery and Documentation Pattern](phase-0-10-task-scoped-discovery-and-doc-pattern.md) — repository workflow and agent guidance — Complete
-- [Phase 0.11 — Implement-Milestone Workflow](phase-0-11-implement-milestone-workflow.md) — repository workflow — In progress
+- [Phase 0.11 — Implement-Milestone Workflow](phase-0-11-implement-milestone-workflow.md) — repository workflow — Complete
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md) — `jsonapi-java-core` — Complete
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md) — `jsonapi-java-annotations` — Complete
 - [Phase 1.3 — Resource Update Request Validation](phase-1-3-update-request-validation.md) — `jsonapi-java-core` — Complete
@@ -90,7 +90,9 @@ milestone file.
 - [Phase 4.1 — Conformance and Hardening](phase-4-1-conformance-and-hardening.md) — all implemented modules — Not started
 - [Phase 4.2 — Stable Release](phase-4-2-stable-release.md) — publication and compatibility — Not started
 
-Every implementation milestone must finish with the relevant module tests and `./gradlew clean build` passing.
+Every implementation milestone must finish with the completion gates applicable to its change
+scope (see the change-scope gate tiers in `AGENTS.md`); code milestones end with the relevant
+module tests and `./gradlew clean build` passing.
 
 ## Milestone planning
 

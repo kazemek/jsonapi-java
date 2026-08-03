@@ -47,12 +47,21 @@ Do not scan the whole repository.
 4. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
    agent-relevant invariants), follow the `module-docs` skill; reference it rather than duplicating
    its checklist.
-5. Run the completion gates:
-   - `./gradlew clean build` passes;
-   - `spotless-format` skill: `./gradlew spotlessApply` then `./gradlew spotlessCheck`;
-   - `sonar-quality-gate` skill: without `SONAR_TOKEN`, Sonar is blocked and must not count as a
-     completed gate; keep `Status` `In progress` until CI confirms the Quality Gate and zero
-     new-code issues via the Issues API.
+5. Classify the change scope from the diff and run only the applicable completion gates per the
+   change-scope gate tiers in `AGENTS.md`. Collect the path set mechanically: tracked changes via
+   `git diff --name-only` against the base plus untracked files via `git ls-files --others
+   --exclude-standard` (untracked files would otherwise be absent from classification until staged
+   or committed):
+   - docs-only and workflow-only changes need no build, Spotless, or Sonar;
+   - build-configuration changes need `./gradlew clean build` (plus Spotless when Spotless-covered
+     files or the formatter configuration changed);
+   - production/test source changes need the full gates:
+     - `./gradlew clean build` passes;
+     - `spotless-format` skill: `./gradlew spotlessApply` then `./gradlew spotlessCheck`;
+     - `sonar-quality-gate` skill: without `SONAR_TOKEN`, Sonar is blocked and must not count as a
+       completed gate for source-scope work; keep `Status` `In progress` until CI confirms the
+       Quality Gate and zero new-code issues via the Issues API.
+   Never require a gate the milestone's acceptance criteria or the change scope does not demand.
 
 ## Review with fresh context
 
@@ -96,12 +105,14 @@ Procedure:
 
 ## Handle the verdict
 
-- **Pass:** when all completion gates pass, set the milestone `Status` to `Complete` in the
-  milestone file and the index entry. If any gate is blocked or unverified — for example Sonar
-  without `SONAR_TOKEN` — keep `Status` `In progress` and report the remaining gate as the
-  completion blocker.
-- **Changes required:** fix the findings, re-run all completion gates on the post-fix state
-  (`clean build`, Spotless, Sonar), then re-run the review with a NEW fresh subagent. Cap the loop
+- **Pass:** when all applicable completion gates pass, set the milestone `Status` to `Complete` in
+  the milestone file and the index entry. A gate that is inapplicable to the change scope (for
+  example Sonar for docs-only or workflow-only work) does not block completion. If an applicable
+  gate is blocked or unverified — for example Sonar without `SONAR_TOKEN` — keep `Status`
+  `In progress` and report the remaining gate as the completion blocker.
+- **Changes required:** fix the findings, re-run all applicable completion gates on the post-fix
+  state (per the change-scope tiers: `clean build`, Spotless, Sonar), then re-run the review with a
+  NEW fresh subagent. Cap the loop
   at two re-reviews; when the verdict is still `Changes required`, stop and report the remaining
   findings. Keep `Status` `In progress` in the milestone file and index entry until a review
   passes on the post-fix state.

@@ -3,8 +3,9 @@
 Requires JDK 21 (enforced via Gradle toolchain).
 
 `./gradlew clean build` is the token-free primary local verification (compile, tests, ArchUnit).
-It is not a discovery step. Before declaring implementation complete, follow **Completion gates**
-(`clean build` → `spotless-format` → `sonar-quality-gate`).
+It is not a discovery step. Before declaring implementation complete, classify the change scope
+from the diff and apply only the matching **Completion gates** (see below); docs-only and
+workflow-only changes do not require a build.
 
 Run a single Spock spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
 `./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
@@ -12,87 +13,42 @@ Run a single Spock spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, f
 Dependency verification is enabled via `gradle/verification-metadata.xml`. After adding or
 changing dependencies (or when CI fails verification), regenerate checksums with
 `./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`
-(Renovate PRs do this as well).
-
-Do **not** disable dependency verification globally: IDE-synced sources jars, Gradle src zips, and
-Gradle-distribution metadata are already trusted by pattern in `verification-metadata.xml`, while
-build dependencies (including Groovy 5.x used by Spock) stay checksum-verified.
+(Renovate PRs do this as well). Never disable verification globally; trusted-by-pattern entries
+already cover IDE/Gradle metadata while build dependencies stay checksum-verified.
 
 # Project structure
 
-This is a multi-module Gradle build (Kotlin DSL). `settings.gradle.kts` is the source of truth for
-current submodules.
+Multi-module Gradle build (Kotlin DSL); `settings.gradle.kts` is the source of truth for current
+submodules. Production sources live under `<module>/src/main/`; tests are Groovy + Spock under
+`<module>/src/test/groovy/` mirroring the main package structure. `fixtures/jsonapi-1.1/` holds
+canonical version-neutral writer fixtures that the Jackson 3 tests cross-check against.
 
-Source lives under `<module>/src/`. Tests use Groovy + Spock (`<module>/src/test/groovy/`).
-
-## Task-scoped discovery
+# Task-scoped discovery
 
 Choose the narrowest applicable route. Do **not** scan the whole repository first.
 
 Project skills live at `.agents/skills/<name>/SKILL.md`. When this file names a skill, read that
 path and follow it (skills use explicit invocation only).
 
-### Plan, refine, or decompose a milestone
+- **Plan/refine/decompose a milestone:** use the `milestone-planning` skill.
+- **Implement a milestone:** use the `implement-milestone` skill; it runs the applicable
+  completion gates and verifies with the `milestone-review` procedure in a fresh-context subagent.
+- **Implement in an existing module:** select the governing milestone from the index (stop and
+  propose a focused milestone if none covers the work), read `settings.gradle.kts` and the
+  affected `<module>/README.md`, read `package-info.java` for changed packages, open the exact
+  production files and mirrored tests, and follow linked ADRs/conformance only when the change
+  touches their contract.
+- **Review an implementation:** use the `milestone-review` skill for on-demand reviews; the
+  `implement-milestone` skill runs the same procedure in a fresh subagent.
+- **Repository-wide build, CI, or workflow work:** read only the root configuration, workflow,
+  or guidance files directly implicated; completion follows the gate tiers below.
+- **Scope expansion:** search inside the affected module or root subsystem first; broaden only
+  for direct callers, dependencies, public API impact, or repository-wide configuration.
+- **New submodule or changed public surface:** use the `module-docs` skill.
+- Read the full vision only when adding a module, crossing module or public product boundaries,
+  or changing project direction; otherwise module documentation suffices.
 
-When the user explicitly requests milestone planning, use the project `milestone-planning` skill.
-Start with `docs/vision.md` and `.agentWork/milestones/README.md`; then read only the target
-milestone, directly relevant dependencies or adjacent work, affected module documentation, and
-narrow feasibility evidence.
-
-### Implement a milestone
-
-When the user asks to implement a milestone, use the project `implement-milestone` skill. It
-resolves one milestone, reads its contract and affected module documentation, implements within the
-milestone boundaries, runs the completion gates (re-running them after every review-fix batch), and
-then runs the `milestone-review` procedure in
-a fresh-context subagent so the review is not influenced by the implementing session's reasoning.
-The milestone `Status` moves `Not started` → `In progress` when implementation starts and
-`Complete` only after a review `Pass`; the status is kept in sync between the milestone file and
-the index in `.agentWork/milestones/README.md`.
-
-### Implement in an existing module
-
-1. Use the milestone index to select and read the governing milestone. If none covers the work,
-   stop before coding and propose a focused milestone; create its permanent file only when the user
-   explicitly requests milestone planning.
-2. Read `settings.gradle.kts` and the affected `<module>/README.md`.
-3. Read `package-info.java` for packages that will change.
-4. Open the exact production files and mirrored tests needed for the requested behavior.
-5. Open linked ADRs or conformance sections only when the change touches their contract. Follow
-   additional documentation only when the task or directly implicated code requires it.
-
-Read the full vision before implementation when adding a module, crossing module or public product
-boundaries, changing project direction, or resolving a suspected vision conflict. A narrow change
-already governed by a milestone and module documentation does not require rereading the full vision.
-
-### Review an implementation
-
-When reviewing against a milestone (including when the user requests a milestone review), read
-exactly one governing milestone and establish the diff or path boundary; use the project
-`milestone-review` skill for on-demand milestone reviews. The `implement-milestone` skill runs the
-same procedure in a fresh-context subagent after implementation; manual on-demand reviews remain
-available. For module-scoped changes, follow the affected-module route above. When no affected
-module exists (repository-wide build, CI, or workflow work), or when no milestone governs the
-change, follow the repository-wide route below
-instead of reading irrelevant module documentation. Milestone reviews verify the `module-docs`
-checklist when public module surface changed.
-
-### Repository-wide build, CI, or workflow work
-
-Read the root configuration, workflow, or guidance files directly implicated by the request. Read
-the vision when the change can affect product direction or module boundaries; read module
-documentation only for modules whose behavior or public surface can change.
-
-### Scope expansion rule
-
-Search inside the affected module or root subsystem first. Broaden only when direct callers,
-dependencies, public API impact, or repository-wide configuration require it. Enumerate all source
-files, ADRs, or milestones only when the task is inherently repository-wide.
-
-When adding a submodule or changing a module’s public surface, use the project `module-docs` skill
-to create or refresh dual-audience documentation.
-
-## Stable project boundaries
+# Stable project boundaries
 
 - The library represents and validates JSON:API documents; applications retain persistence,
   endpoint, authorization, and query-execution policy.
@@ -103,65 +59,70 @@ to create or refresh dual-audience documentation.
 
 # Build logic
 
-Shared build configuration lives in `build-logic/` as precompiled script plugins.
+Shared build configuration lives in `build-logic/` as precompiled script plugins:
 `jsonapi-java-library` owns library, test, coverage, toolchain, and static-analysis defaults;
 `jsonapi-java-spotless` owns repository formatting. Dependencies and versions are declared in the
 Version Catalog `gradle/libs.versions.toml`.
 
-New submodules need `include("...")` in `settings.gradle.kts`, the library plugin below, and the
-`module-docs` skill for dual-audience documentation and root registry updates:
-
-```kotlin
-plugins {
-    id("jsonapi-java-library")
-}
-```
+New submodules need `include("...")` in `settings.gradle.kts`, the `jsonapi-java-library` plugin,
+and the `module-docs` skill for dual-audience documentation and root registry updates.
 
 # CI
 
 GitHub Actions runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on push to
 `main` and on PRs. SonarCloud Quality Gate wait is enabled, but free-tier gates do not enforce
-zero new issues; completion still requires the `sonar-quality-gate` skill's Issues API check
-(`resolved=false` + `inNewCodePeriod=true` → `total == 0`). Local `./gradlew clean build` remains
-token-free.
+zero new issues; completion of source-scope changes still requires the `sonar-quality-gate`
+skill's Issues API check (`resolved=false` + `inNewCodePeriod=true` → `total == 0`). Local
+`./gradlew clean build` remains token-free.
 
 CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
 for failure diagnosis, and publishes a Unit tests check from JUnit XML.
 
 # Planning
 
-* **Vision:** `docs/vision.md` — architectural strategy and long-term roadmap. Evolves as the project matures.
-* **Milestones:** `.agentWork/milestones/` — concrete implementation plans. Fixed once implementation starts; retained as project documentation.
-* **ADRs:** `docs/adr/` — architecture decision records (the "why" behind consequential, hard-to-reverse choices).
+- **Vision:** `docs/vision.md` — architectural strategy and long-term roadmap.
+- **Milestones:** `.agentWork/milestones/` — implementation plans; the README there is the index
+  and dependency order.
+- **ADRs:** `docs/adr/` — the "why" behind consequential, hard-to-reverse choices.
+- **Conformance:** `docs/conformance.md` — feature-by-feature JSON:API 1.1 compliance status.
 
-All feature implementation proceeds through iterative milestones. Each feature, public-surface, or
-new-module change must be captured in a milestone before coding begins and produce a reviewable,
-tested increment. Non-feature work (docs-only, CI/workflow, chores, or fixes already covered by an
-existing Complete milestone contract) may proceed without a new milestone. Create or update an ADR
-when the work makes a consequential, hard-to-reverse decision not already recorded.
-
-An implementable milestone must fit one focused coding-agent task and reviewable commit. It normally
-covers one principal capability in one primary module or layer, with at most five deliverables and
-eight acceptance criteria. The `milestone-planning` skill owns detailed creation, research,
-decomposition, and index synchronization.
-
-Milestones may be refined while their status is `Not started`. Once implementation has started,
-preserve the milestone as a historical delivery contract and capture changed or additional scope in
-a follow-up milestone. `implement-milestone` marks the status `In progress` on implementation start
-and `Complete` only after a fresh-context review passes; the status is kept in sync between the
-milestone file and the index in `.agentWork/milestones/README.md`.
+Feature and public-surface work proceeds through milestones; non-feature work (docs-only, CI,
+chores, or fixes already covered by a Complete milestone) may proceed without a new milestone.
+A `Not started` milestone may be refined; once implementation starts it is a fixed delivery
+contract and new scope goes into a follow-up milestone. `implement-milestone` moves `Status` to
+`In progress` on implementation start and `Complete` only after a fresh-context review passes;
+the status stays in sync between the milestone file and the index. An implementable milestone
+fits one focused coding-agent task and reviewable commit (at most five deliverables and eight
+acceptance criteria); the `milestone-planning` skill owns the detailed rules.
 
 ## Completion gates
 
-Before declaring implementation complete:
+Before declaring implementation complete, classify the change scope from the diff and apply the
+highest applicable tier. Tiers combine: a change touching files from several tiers requires the
+union of their gates.
+
+| Change scope (touched files)                                                        | Required gates                                                                                        |
+|-------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`, READMEs)                 | None — review the docs themselves (links, consistency, section order)                                 |
+| Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`)       | None locally — CI validates the workflow itself                                                       |
+| Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; Spotless when a Spotless-covered file or the formatter configuration changed |
+| Production/test sources (`**/src/**`)                                               | Full: `clean build` → `spotless-format` → `sonar-quality-gate`                                        |
+| Other/unclassified paths (e.g. `fixtures/**`, `LICENSE`, `opencode.jsonc`)          | Classify explicitly; otherwise apply the full source tier                                             |
+
+Gate details:
 
 1. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
    agent-relevant invariants), use the `module-docs` skill. Skip it for internal-only or test-only
    changes.
-2. Ensure `./gradlew clean build` passes.
-3. Use `spotless-format` to run `./gradlew spotlessApply` and `./gradlew spotlessCheck`.
-4. Use `sonar-quality-gate`; without `SONAR_TOKEN`, report completion blocked until CI Sonar
-   analysis succeeds and new-code issues are confirmed empty via the Issues API.
+2. Ensure `./gradlew clean build` passes when the change touches production/test sources or build
+   configuration. Skip it for docs-only or workflow-only changes.
+3. Use `spotless-format` (`./gradlew spotlessApply` then `./gradlew spotlessCheck`) only when the
+   change touches Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`) or the
+   formatter configuration.
+4. Use `sonar-quality-gate` only when the change touches production/test sources; Sonar analyzes
+   new code, so it adds nothing for docs, workflow, or build-config-only changes. Without
+   `SONAR_TOKEN`, report Sonar blocked for source-scope changes and keep them uncompleted until CI
+   Sonar analysis succeeds and new-code issues are confirmed empty via the Issues API.
 
 # Conventions
 

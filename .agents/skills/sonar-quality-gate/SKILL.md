@@ -22,11 +22,14 @@ search (below). Changing SonarCloud Quality Gate conditions needs an explicit us
 ## Prerequisites
 
 1. Confirm `./gradlew clean build` already passes for the change under review.
-2. Confirm `SONAR_TOKEN` is available in the environment (or can be provided by the user).
+2. Confirm the change touches production or test sources (`**/src/**`). Sonar analyzes new code,
+   so docs-only, workflow-only, and build-config-only changes are not analyzed: skip this skill and
+   do not report Sonar as a completion blocker for them.
+3. Confirm `SONAR_TOKEN` is available in the environment (or can be provided by the user).
    - If the token is missing: do **not** claim the task is complete. Report that Sonar is blocked,
      that CI must still pass Sonar analysis, and ask for a token if a local check is required.
-3. When running in CI-like contexts, also provide `GITHUB_TOKEN` when PR decoration is relevant.
-4. The Issues API check below needs `jq`, and `curl` 7.76+ (for `--fail-with-body`). If either is
+4. When running in CI-like contexts, also provide `GITHUB_TOKEN` when PR decoration is relevant.
+5. The Issues API check below needs `jq`, and `curl` 7.76+ (for `--fail-with-body`). If either is
    missing, stop and ask the user rather than skipping the validation.
 
 ## Run the gate

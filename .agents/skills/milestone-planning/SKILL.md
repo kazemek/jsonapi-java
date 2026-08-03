@@ -127,10 +127,17 @@ Create or update files under `.agentWork/milestones/` using this shape:
 
 - [ ] <Binary, observable criterion>
 - [ ] `<focused verification command>` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [ ] When the milestone changes production/test sources or build configuration: `./gradlew clean
+      build` passes.
+- [ ] When the milestone changes Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`)
+      or the formatter configuration: Spotless passes (`./gradlew spotlessApply` then
+      `./gradlew spotlessCheck`).
+- [ ] When the milestone changes production/test sources: Sonar Quality Gate passes; if
+      `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
 ```
+
+Include only the completion gates applicable to the milestone's scope per the change-scope gate
+tiers in `AGENTS.md`; docs-only and workflow-only milestones omit the inapplicable gates.
 
 Replace `Module` with `Scope` for repository-wide work; do not use both unless the established local format requires both. Omit a section only when it adds no implementation value. For feature milestones, include the relevant conformance-checklist update required by `docs/vision.md`.
 
