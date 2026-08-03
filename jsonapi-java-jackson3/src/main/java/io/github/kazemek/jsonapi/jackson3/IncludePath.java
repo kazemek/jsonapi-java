@@ -22,14 +22,7 @@ public record IncludePath(List<String> segments) {
           "Include path must contain at least one relationship name");
     }
     for (String segment : segments) {
-      Objects.requireNonNull(segment, "segment");
-      if (segment.isEmpty()) {
-        throw new JsonApiMappingException(
-            MappingDiagnostic.INVALID_INCLUDE_PATH,
-            null,
-            String.join(".", segments),
-            "Include path segment must not be empty");
-      }
+      validateSegment(segment, String.join(".", segments));
     }
     segments = List.copyOf(segments);
   }
@@ -40,17 +33,6 @@ public record IncludePath(List<String> segments) {
    */
   public static IncludePath of(String path) {
     Objects.requireNonNull(path, "path");
-    if (path.isEmpty()
-        || path.startsWith(".")
-        || path.endsWith(".")
-        || path.contains("..")
-        || hasWhitespaceOnlySegment(path)) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.INVALID_INCLUDE_PATH,
-          null,
-          path,
-          "Malformed include path: '" + path + "'");
-    }
     String[] parts = path.split("\\.", -1);
     for (String part : parts) {
       if (part.isEmpty() || isWhitespaceOnly(part)) {
@@ -64,14 +46,15 @@ public record IncludePath(List<String> segments) {
     return new IncludePath(List.of(parts));
   }
 
-  private static boolean hasWhitespaceOnlySegment(String path) {
-    String[] parts = path.split("\\.", -1);
-    for (String part : parts) {
-      if (isWhitespaceOnly(part)) {
-        return true;
-      }
+  private static void validateSegment(String segment, String propertyPath) {
+    Objects.requireNonNull(segment, "segment");
+    if (segment.isEmpty() || isWhitespaceOnly(segment) || segment.indexOf('.') >= 0) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_INCLUDE_PATH,
+          null,
+          propertyPath,
+          "Invalid include path segment: '" + segment + "'");
     }
-    return false;
   }
 
   private static boolean isWhitespaceOnly(String segment) {

@@ -17,6 +17,9 @@ public final class IncludePolicy {
     ALLOWING
   }
 
+  private static final IncludePolicy DENY_ALL = new IncludePolicy(Mode.DENY_ALL, Set.of());
+  private static final IncludePolicy ALLOW_ALL = new IncludePolicy(Mode.ALLOW_ALL, Set.of());
+
   private final Mode mode;
   private final Set<RelationshipAllowance> allowances;
 
@@ -27,12 +30,12 @@ public final class IncludePolicy {
 
   /** Rejects every relationship for inclusion traversal. */
   public static IncludePolicy denyAll() {
-    return new IncludePolicy(Mode.DENY_ALL, Set.of());
+    return DENY_ALL;
   }
 
   /** Permits every mapped relationship for inclusion traversal. */
   public static IncludePolicy allowAll() {
-    return new IncludePolicy(Mode.ALLOW_ALL, Set.of());
+    return ALLOW_ALL;
   }
 
   /**
@@ -57,5 +60,17 @@ public final class IncludePolicy {
       case ALLOWING ->
           allowances.contains(RelationshipAllowance.of(ownerResourceType, relationshipName));
     };
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof IncludePolicy other
+        && mode == other.mode
+        && allowances.equals(other.allowances);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(mode, allowances);
   }
 }

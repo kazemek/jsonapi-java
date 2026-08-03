@@ -76,9 +76,9 @@ public final class JsonApiResourceMapper {
   public JsonApiDocument toResourceCollection(
       Iterable<?> resources, @Nullable DocumentEnvelope envelope) {
     Objects.requireNonNull(resources, "resources");
-    List<ResourceObject> resourceObjects = new ArrayList<>();
-    for (Object resource : resources) {
-      Objects.requireNonNull(resource, "resource element");
+    List<Object> snapshot = materialize(resources);
+    List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
+    for (Object resource : snapshot) {
       resourceObjects.add(writer.toResource(resource));
     }
     return buildDocument(

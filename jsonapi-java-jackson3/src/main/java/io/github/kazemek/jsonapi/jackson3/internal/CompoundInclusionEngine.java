@@ -236,6 +236,13 @@ public final class CompoundInclusionEngine {
       int nextSegment = current.segmentIndex() + 1;
       boolean lastSegment = nextSegment >= path.segments().size();
       for (Object relatedDomain : related) {
+        ResourceIdentity relatedIdentity = identityOf(relatedDomain);
+        if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
+          if (!lastSegment) {
+            queue.add(new DomainAtSegment(relatedDomain, nextSegment));
+          }
+          continue;
+        }
         ResourceObject relatedResource = writer.toResource(relatedDomain);
         offerIncluded(relatedResource, path.dottedThrough(current.segmentIndex()));
         if (!lastSegment) {

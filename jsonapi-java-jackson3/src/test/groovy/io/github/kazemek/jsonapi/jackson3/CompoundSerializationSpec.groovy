@@ -312,6 +312,28 @@ class CompoundSerializationSpec extends Specification {
     ]
   }
 
+  def "canonical constructor rejects whitespace and dotted segments"() {
+    when:
+    new IncludePath(List.of(segment))
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic() == MappingDiagnostic.INVALID_INCLUDE_PATH
+    e.resourceClass() == null
+
+    where:
+    segment << [" ", "comments.author"]
+  }
+
+  def "equivalent contexts compare equal"() {
+    expect:
+    CompoundSerializationContext.defaults() == CompoundSerializationContext.defaults()
+    IncludePolicy.denyAll() == IncludePolicy.denyAll()
+    IncludePolicy.allowAll() == IncludePolicy.allowAll()
+    IncludePolicy.allowing(Set.of(RelationshipAllowance.of("articles", "author"))) ==
+        IncludePolicy.allowing(Set.of(RelationshipAllowance.of("articles", "author")))
+  }
+
   def "mapper-time unknown relationship fails"() {
     when:
     mapper.toDocument(article, null, allow("unknown"))
@@ -503,11 +525,13 @@ class CompoundSerializationSpec extends Specification {
     def task1 = {
       try {
         start.await()
-        def localDan = new Person("9", "Dan")
-        def a = new Article("1", "T", "B", [], localDan)
-        def doc = shared.toDocument(a, null, allow("author"))
-        assert doc.included().size() == 1
-        assert doc.included()[0].id() == "9"
+        200.times {
+          def localDan = new Person("9", "Dan")
+          def a = new Article("1", "T", "B", [], localDan)
+          def doc = shared.toDocument(a, null, allow("author"))
+          assert doc.included().size() == 1
+          assert doc.included()[0].id() == "9"
+        }
       } catch (Throwable t) {
         err.compareAndSet(null, t)
       } finally {
@@ -517,11 +541,13 @@ class CompoundSerializationSpec extends Specification {
     def task2 = {
       try {
         start.await()
-        def localEzra = new Person("2", "Ezra")
-        def c = new Comment("5", "Hi", localEzra)
-        def a = new Article("2", "T", "B", [c], null)
-        def doc = shared.toDocument(a, null, allow("comments.author"))
-        assert doc.included()*.id() == ["5", "2"]
+        200.times {
+          def localEzra = new Person("2", "Ezra")
+          def c = new Comment("5", "Hi", localEzra)
+          def a = new Article("2", "T", "B", [c], null)
+          def doc = shared.toDocument(a, null, allow("comments.author"))
+          assert doc.included()*.id() == ["5", "2"]
+        }
       } catch (Throwable t) {
         err.compareAndSet(null, t)
       } finally {
@@ -534,11 +560,13 @@ class CompoundSerializationSpec extends Specification {
     pool.submit(task2 as Runnable)
     start.countDown()
     def finished = latch.await(10, TimeUnit.SECONDS)
-    pool.shutdownNow()
 
     then:
     finished
     err.get() == null
+
+    cleanup:
+    pool?.shutdownNow()
   }
 
   private static Iterable<?> onceIterable(List<?> elements) {
