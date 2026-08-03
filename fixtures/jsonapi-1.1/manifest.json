@@ -97,6 +97,16 @@
       "notes": "Compound document with included resources"
     },
     {
+      "id": "compound-nested-intermediate",
+      "path": "documents/compound-nested-intermediate.json",
+      "notes": "Compound document with nested comments.author intermediates"
+    },
+    {
+      "id": "compound-shared-identity",
+      "path": "documents/compound-shared-identity.json",
+      "notes": "Compound collection sharing one included author identity"
+    },
+    {
       "id": "local-identifier",
       "path": "documents/local-identifier.json",
       "notes": "Resource and linkage with lid"

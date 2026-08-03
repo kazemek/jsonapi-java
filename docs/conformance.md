@@ -115,17 +115,19 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phase 2.2 — supported; Phases 2.3–2.17 — deferred)
+## Domain mapping (Phase 2.2–2.3 — supported; Phases 2.8–2.17 — deferred)
 
-| Rule                                                    | Status       | Notes                                                  |
-|---------------------------------------------------------|--------------|--------------------------------------------------------|
-| Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types |
-| Flat resource-to-DTO binding                            | deferred     | Phases 2.9 and 2.15; validated document first          |
-| Typed domain document envelopes                         | deferred     | Phases 2.10 and 2.16                                   |
-| Independent typed binding of `included` resources       | deferred     | Phases 2.10 and 2.16; no relationship injection        |
+| Rule                                                    | Status       | Notes                                                                                          |
+|---------------------------------------------------------|--------------|------------------------------------------------------------------------------------------------|
+| Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types                                         |
+| Compound inclusion (explicit context / IncludePolicy)   | supported    | Phase 2.3; opt-in paths and policy only — no automatic graph traversal                         |
+| Sparse fieldsets on write                               | deferred     | Phase 2.8                                                                                      |
+| Flat resource-to-DTO binding                            | deferred     | Phases 2.9 and 2.15; validated document first                                                  |
+| Typed domain document envelopes                         | deferred     | Phases 2.10 and 2.16                                                                           |
+| Independent typed binding of `included` resources       | deferred     | Phases 2.10 and 2.16; no relationship injection                                                |
 | Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17 |
-| Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy          |
-| Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands          |
+| Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                  |
+| Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                  |
 
 ## Query parameters (Phase 3.1 — delegated)
 

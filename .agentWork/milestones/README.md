@@ -66,7 +66,7 @@ milestone file.
 - [Phase 1.3 — Resource Update Request Validation](phase-1-3-update-request-validation.md) — `jsonapi-java-core` — Complete
 - [Phase 2.1 — Jackson 3 Document Writer](phase-2-1-jackson-document-codec.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.2 — Jackson 3 Domain-to-Resource Mapping](phase-2-2-domain-resource-mapping.md) — `jsonapi-java-jackson3` — Complete
-- [Phase 2.3 — Jackson 3 Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson3` — Not started
+- [Phase 2.3 — Jackson 3 Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.4 — Jackson 3 Document Reader](phase-2-4-document-reads.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.5 — JSON:API 1.1 Draft-Schema Cross-Check](phase-2-5-json-schema-cross-check.md) — `jsonapi-java-jackson3` test suite — Complete
 - [Phase 2.6 — Jackson 2 Document Writer](phase-2-6-jackson2-document-writer.md) — `jsonapi-java-jackson2` — Not started

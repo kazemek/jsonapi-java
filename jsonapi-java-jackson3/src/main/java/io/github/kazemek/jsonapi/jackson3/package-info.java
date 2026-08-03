@@ -12,6 +12,10 @@
  * Mapping is explicit, respects Jackson's logical property model, and never mutates the caller's
  * mapper. Mapping diagnostics use {@link MappingDiagnostic} stable codes; identifier conversion is
  * pluggable through {@link IdentifierConverter}.
+ *
+ * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
+ * three-argument overloads. Relationship mapping produces linkage only; included resources require
+ * an explicit include request and {@link IncludePolicy}.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson3;
