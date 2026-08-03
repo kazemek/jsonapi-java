@@ -3,8 +3,9 @@
 Requires JDK 21 (enforced via Gradle toolchain).
 
 `./gradlew clean build` is the token-free primary local verification (compile, tests, ArchUnit).
-It is not a discovery step. Before declaring implementation complete, follow **Completion gates**
-(`clean build` → `spotless-format` → `sonar-quality-gate`).
+It is not a discovery step. Before declaring implementation complete, classify the change scope
+from the diff and apply only the matching **Completion gates** (see below); docs-only and
+workflow-only changes do not require a build.
 
 Run a single Spock spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
 `./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
@@ -81,7 +82,8 @@ checklist when public module surface changed.
 
 Read the root configuration, workflow, or guidance files directly implicated by the request. Read
 the vision when the change can affect product direction or module boundaries; read module
-documentation only for modules whose behavior or public surface can change.
+documentation only for modules whose behavior or public surface can change. Completion follows the
+change-scope gate tiers under **Completion gates**.
 
 ### Scope expansion rule
 
@@ -121,9 +123,9 @@ plugins {
 
 GitHub Actions runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on push to
 `main` and on PRs. SonarCloud Quality Gate wait is enabled, but free-tier gates do not enforce
-zero new issues; completion still requires the `sonar-quality-gate` skill's Issues API check
-(`resolved=false` + `inNewCodePeriod=true` → `total == 0`). Local `./gradlew clean build` remains
-token-free.
+zero new issues; completion of source-scope changes still requires the `sonar-quality-gate`
+skill's Issues API check (`resolved=false` + `inNewCodePeriod=true` → `total == 0`). Local
+`./gradlew clean build` remains token-free.
 
 CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
 for failure diagnosis, and publishes a Unit tests check from JUnit XML.
@@ -153,15 +155,31 @@ milestone file and the index in `.agentWork/milestones/README.md`.
 
 ## Completion gates
 
-Before declaring implementation complete:
+Before declaring implementation complete, classify the change scope from the diff and apply the
+highest applicable tier. Tiers combine: a change touching files from several tiers requires the
+union of their gates.
+
+| Change scope (touched files) | Required gates |
+|---|---|
+| Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`, READMEs) | None — review the docs themselves (links, consistency, section order) |
+| Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`) | None locally — CI validates the workflow itself |
+| Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; Spotless when a Spotless-covered file or the formatter configuration changed |
+| Production/test sources (`**/src/**`) | Full: `clean build` → `spotless-format` → `sonar-quality-gate` |
+
+Gate details:
 
 1. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
    agent-relevant invariants), use the `module-docs` skill. Skip it for internal-only or test-only
    changes.
-2. Ensure `./gradlew clean build` passes.
-3. Use `spotless-format` to run `./gradlew spotlessApply` and `./gradlew spotlessCheck`.
-4. Use `sonar-quality-gate`; without `SONAR_TOKEN`, report completion blocked until CI Sonar
-   analysis succeeds and new-code issues are confirmed empty via the Issues API.
+2. Ensure `./gradlew clean build` passes when the change touches production/test sources or build
+   configuration. Skip it for docs-only or workflow-only changes.
+3. Use `spotless-format` (`./gradlew spotlessApply` then `./gradlew spotlessCheck`) only when the
+   change touches Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`) or the
+   formatter configuration.
+4. Use `sonar-quality-gate` only when the change touches production/test sources; Sonar analyzes
+   new code, so it adds nothing for docs, workflow, or build-config-only changes. Without
+   `SONAR_TOKEN`, report Sonar blocked for source-scope changes and keep them uncompleted until CI
+   Sonar analysis succeeds and new-code issues are confirmed empty via the Issues API.
 
 # Conventions
 

@@ -8,6 +8,12 @@ disable-model-invocation: true
 
 Format the repository and verify compliance before declaring implementation work complete. Run this after `./gradlew clean build` passes and before the `sonar-quality-gate` skill.
 
+## Applicability
+
+Run this skill only when the change touches Spotless-covered files (`.java`, `.groovy`, `.kt`,
+`.gradle.kts`) or the formatter configuration. Docs-only and pure workflow changes have no
+formatting surface; skip this gate for them.
+
 ## Run formatting
 
 1. Apply formatting:

@@ -47,7 +47,8 @@ Review an implementation against one milestone contract. Do not fix findings or 
      `module-docs` checklist and report missing or stale README sections, package documentation,
      root module registration, or duplicated vision/ADR/conformance/root-workflow prose. Reference
      the checklist; do not copy it into the review instructions.
-4. Run the narrowest relevant tests when practical, then run `./gradlew clean build` when the milestone or repository policy requires it.
+4. Run the narrowest relevant tests when practical, then run `./gradlew clean build` when the
+   milestone acceptance criteria or the change-scope gate tiers in `AGENTS.md` require it.
    - Do not change implementation files to make tests pass.
    - Record commands, outcomes, and any inability to run them.
 5. Treat milestone checkboxes as claims to verify, not as proof. Do not edit their checked state.
