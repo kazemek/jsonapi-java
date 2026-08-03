@@ -26,16 +26,17 @@ Give every change a shared merge bar: coverage reports, SonarCloud Quality Gate,
 - PGP signature verification / keyring maintenance.
 - Separate `gradle.lockfile` dependency locking.
 - Personal (`~/.cursor/skills/`) copy of the Sonar skill.
-- Polling SonarCloud REST APIs outside the Gradle scanner wait (except defensive
-  zero-new-issues checks documented in the Sonar skill).
-- Loosening SonarCloud Quality Gate conditions without an explicit request.
+- Polling SonarCloud REST APIs for purposes other than the required new-code Issues check
+  documented in the Sonar skill.
+- Loosening SonarCloud Quality Gate conditions without an explicit user request.
 
 ## Follow-up (post-completion)
 
-Intended policy: use a custom SonarCloud Quality Gate named `jsonapi-java` (Sonar way
-conditions plus fail when `new_violations` > 0) so code smells and other issues block CI
-even when maintainability rating remains A. Select that gate under SonarCloud Project
-Settings → Quality Gate; it is not encoded in this repository.
+SonarCloud free tier does not allow a custom Quality Gate that fails on `new_violations`.
+Agent completion therefore requires the `sonar-quality-gate` skill's Issues API check
+(`resolved=false` + `inNewCodePeriod=true` → `total == 0`) in addition to a green gate wait.
+If a paid plan later supports a custom gate with `new_violations > 0`, that remains optional
+hardening; the Issues API check stays the source of truth for zero new issues.
 
 ## Acceptance criteria
 
