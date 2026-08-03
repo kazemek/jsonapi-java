@@ -37,7 +37,8 @@ Do not scan the whole repository.
 
 ## Implement
 
-1. Set the milestone `Status` to `In progress` unless it already is.
+1. Set the milestone `Status` to `In progress` in the milestone file and in the matching index
+   entry in `.agentWork/milestones/README.md` unless it already is.
 2. Deliver the milestone's deliverables within its non-goals and implementation boundaries. Do not
    add work outside the contract.
 3. Mark acceptance criteria `[x]` only when implementation evidence exists at that point. These are
@@ -49,8 +50,9 @@ Do not scan the whole repository.
 5. Run the completion gates:
    - `./gradlew clean build` passes;
    - `spotless-format` skill: `./gradlew spotlessApply` then `./gradlew spotlessCheck`;
-   - `sonar-quality-gate` skill: report Sonar blocked when `SONAR_TOKEN` is unavailable; CI must
-     still pass the gate.
+   - `sonar-quality-gate` skill: without `SONAR_TOKEN`, Sonar is blocked and must not count as a
+     completed gate; keep `Status` `In progress` until CI confirms the Quality Gate and zero
+     new-code issues via the Issues API.
 
 ## Review with fresh context
 
@@ -63,7 +65,7 @@ influence from this session's context or reasoning.
    equivalent general subagent in the harness in use):
    - fresh context: never resume or reuse a previous subagent session;
    - write capability: it must create the review artifact under `.agentWork/.session/`.
-3. Send the reviewer prompt below verbatim, filling only the two placeholders. Do not add anything
+3. Send the reviewer prompt below verbatim, filling only the placeholder. Do not add anything
    to it: no summaries, self-assessment, reasoning, implementation narrative, commit messages, or
    diff content.
 4. Never answer the reviewer's questions with implementation narrative. When it asks for facts,
@@ -81,7 +83,8 @@ so you review independently of the implementing session.
 
 Task inputs (the only facts you may assume):
 - Milestone: <milestone path>
-- Review artifact: <artifact path> (create or completely replace)
+- Review artifact: .agentWork/.session/milestone-review-<milestone basename>.md (create or
+  completely replace)
 
 Procedure:
 1. Read .agents/skills/milestone-review/SKILL.md and follow it exactly.
@@ -93,11 +96,16 @@ Procedure:
 
 ## Handle the verdict
 
-- **Pass:** set the milestone `Status` to `Complete`. Report the artifact path and verdict.
-- **Changes required:** fix the findings, then re-run the review with a NEW fresh subagent. Cap the
-  loop at two re-reviews; when the verdict is still `Changes required`, stop and report the
-  remaining findings. Keep `Status` `In progress` until a review passes.
-- **Blocked:** stop and report; keep `Status` `In progress`.
+- **Pass:** when all completion gates pass, set the milestone `Status` to `Complete` in the
+  milestone file and the index entry. If any gate is blocked or unverified — for example Sonar
+  without `SONAR_TOKEN` — keep `Status` `In progress` and report the remaining gate as the
+  completion blocker.
+- **Changes required:** fix the findings, re-run all completion gates on the post-fix state
+  (`clean build`, Spotless, Sonar), then re-run the review with a NEW fresh subagent. Cap the loop
+  at two re-reviews; when the verdict is still `Changes required`, stop and report the remaining
+  findings. Keep `Status` `In progress` in the milestone file and index entry until a review
+  passes on the post-fix state.
+- **Blocked:** stop and report; keep `Status` `In progress` in the milestone file and index entry.
 
 ## Report
 

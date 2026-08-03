@@ -113,10 +113,12 @@ Implement a milestone with the explicitly invoked project `implement-milestone` 
 one milestone, reads its contract and affected module documentation, implements within the
 milestone boundaries, runs the completion gates, and then runs the `milestone-review` procedure in
 a fresh-context subagent so the review is not influenced by the implementing session. Findings are
-fixed and re-reviewed with a new subagent, capped at two re-reviews.
+fixed and re-reviewed with a new subagent, capped at two re-reviews. Completion gates are re-run
+after every fix batch and before the next review, so `Complete` is based on the post-fix results.
 
 The milestone `Status` moves `Not started` → `In progress` when implementation starts and
-`Complete` only after a review `Pass`. Acceptance criteria are marked `[x]` by the implementer as
+`Complete` only after a review `Pass`. The status stays in sync between the milestone file and the
+index entry. Acceptance criteria are marked `[x]` by the implementer as
 evidence; the review verifies them but never edits them.
 
 ## Milestone reviews

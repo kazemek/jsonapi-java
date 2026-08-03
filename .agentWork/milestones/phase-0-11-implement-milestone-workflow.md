@@ -27,11 +27,13 @@ review is independent of the implementing session's context and reasoning.
 - Add a project `implement-milestone` skill that implements one milestone and runs the
   `milestone-review` procedure in a fresh-context subagent with a bounded fix loop.
 - Define the isolation contract: the reviewer subagent receives only the milestone path, the
-  artifact path, and the instruction to follow the `milestone-review` skill; it derives the change
-  set itself from git; it is never resumed or given implementation narrative.
+  canonical artifact path derived from the milestone basename, and the instruction to follow the
+  `milestone-review` skill; it derives the change set itself from git; it is never resumed or given
+  implementation narrative.
 - Define the milestone status lifecycle: `Not started` → `In progress` on implementation start,
-  `Complete` only after a review `Pass`; acceptance criteria are marked `[x]` by the implementer as
-  evidence and never edited by the reviewer.
+  `Complete` only after a review `Pass`; the status is kept in sync between the milestone file and
+  the index entry in `.agentWork/milestones/README.md`; acceptance criteria are marked `[x]` by the
+  implementer as evidence and never edited by the reviewer.
 - Document the workflow and isolation rationale in `AGENTS.md` and `.agentWork/milestones/README.md`,
   and correct the stale skills path.
 - Keep the skill harness-independent: no harness-specific agent configuration; when the harness
@@ -58,6 +60,8 @@ review is independent of the implementing session's context and reasoning.
 
 - Check the skill's resolve gates (status and dependency), reviewer prompt template, fix-loop cap,
   and handoff fallback for consistency with `milestone-review` and the milestone lifecycle.
+- Verify the fix loop re-runs all completion gates after each fix batch and before the next fresh
+  review.
 - Verify `AGENTS.md` routing, the corrected skills path, and the milestone index entry.
 - Run the repository build, formatting, and Sonar Quality Gate completion workflows.
 
@@ -77,4 +81,5 @@ review is independent of the implementing session's context and reasoning.
 - [x] `.agentWork/milestones/README.md` documents the workflow in its dependency order and index.
 - [x] `./gradlew clean build` passes.
 - [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`), and Sonar Quality
-  Gate passes (or Sonar is reported blocked when `SONAR_TOKEN` is unavailable).
+  Gate passes (or Sonar is reported blocked when `SONAR_TOKEN` is unavailable, which keeps the
+  milestone `In progress` until CI confirms).

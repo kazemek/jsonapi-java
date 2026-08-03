@@ -43,10 +43,12 @@ narrow feasibility evidence.
 
 When the user asks to implement a milestone, use the project `implement-milestone` skill. It
 resolves one milestone, reads its contract and affected module documentation, implements within the
-milestone boundaries, runs the completion gates, and then runs the `milestone-review` procedure in
+milestone boundaries, runs the completion gates (re-running them after every review-fix batch), and
+then runs the `milestone-review` procedure in
 a fresh-context subagent so the review is not influenced by the implementing session's reasoning.
 The milestone `Status` moves `Not started` → `In progress` when implementation starts and
-`Complete` only after a review `Pass`.
+`Complete` only after a review `Pass`; the status is kept in sync between the milestone file and
+the index in `.agentWork/milestones/README.md`.
 
 ### Implement in an existing module
 
@@ -146,7 +148,8 @@ decomposition, and index synchronization.
 Milestones may be refined while their status is `Not started`. Once implementation has started,
 preserve the milestone as a historical delivery contract and capture changed or additional scope in
 a follow-up milestone. `implement-milestone` marks the status `In progress` on implementation start
-and `Complete` only after a fresh-context review passes.
+and `Complete` only after a fresh-context review passes; the status is kept in sync between the
+milestone file and the index in `.agentWork/milestones/README.md`.
 
 ## Completion gates
 
