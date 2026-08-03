@@ -21,12 +21,17 @@ Port explicit, bounded compound-document inclusion to Jackson 2 with Jackson 3 s
 
 ## Deliverables
 
-- Add the Jackson 2 immutable mapping-only serialization context with include paths, relationship
-  policy, and maximum depth/count, matching Phase 2.3 (`CompoundSerializationContext` has no
-  `ValidationContext`; document validation remains on the Jackson 2 document writer).
+- Add the Jackson 2 immutable mapping-only serialization context with API parity to Phase 2.3:
+  `IncludePath.of(String)` (same dot-separated syntax and rejection rules),
+  `IncludePolicy.allowAll()` / `denyAll()` / `allowing(Set<RelationshipAllowance>)`,
+  `RelationshipAllowance(resourceType, relationshipName)`, `withX()` copy methods with the same
+  defensive-copy contract, and the same finite defaults (depth 10, count 100). The context has no
+  `ValidationContext`; document validation remains on the Jackson 2 document writer.
 - Port requested-path validation and relationship traversal using Phase 2.12 definitions, including
   Phase 2.3's access-vs-linkage contract (full linkage via `toResource` on selected resources;
-  never-read applies to inclusion traversal only).
+  never-read applies to inclusion traversal only), and the five `MappingDiagnostic` codes
+  (`INVALID_INCLUDE_PATH`, `DENIED_RELATIONSHIP_INCLUDE`, `CONFLICTING_INCLUDED_REPRESENTATION`,
+  `INCLUDE_DEPTH_EXCEEDED`, `INCLUDE_COUNT_EXCEEDED`) with dotted JSON:API `propertyPath` semantics.
 - Port identity deduplication, required intermediate inclusion, cycle handling, conflicting
   representation failure, and deterministic first-encounter order.
 - Run the shared compound fixture/diagnostic matrix through both major-specific artifacts.
@@ -55,7 +60,10 @@ Port explicit, bounded compound-document inclusion to Jackson 2 with Jackson 3 s
 
 ## Acceptance criteria
 
-- [ ] Explicit include requests produce the same included resources, intermediates, linkage, and
+- [ ] The Jackson 2 context surface (`IncludePath.of` syntax, `IncludePolicy` factories,
+      `RelationshipAllowance`, `withX()` defensive copies, defaults 10/100) and the five
+      `MappingDiagnostic` codes with dotted `propertyPath` semantics match Phase 2.3; explicit
+      include requests produce the same included resources, intermediates, linkage, and
       first-encounter order as Phase 2.3.
 - [ ] Policy rejection, conflicts, cycles, depth/count limits, and invalid paths have parity
       diagnostics, and off-path relationships are not accessed for inclusion traversal.
