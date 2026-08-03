@@ -101,12 +101,13 @@ Before declaring implementation complete, classify the change scope from the dif
 highest applicable tier. Tiers combine: a change touching files from several tiers requires the
 union of their gates.
 
-| Change scope (touched files) | Required gates |
-|---|---|
-| Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`, READMEs) | None — review the docs themselves (links, consistency, section order) |
-| Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`) | None locally — CI validates the workflow itself |
+| Change scope (touched files)                                                        | Required gates                                                                                        |
+|-------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`, READMEs)                 | None — review the docs themselves (links, consistency, section order)                                 |
+| Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`)       | None locally — CI validates the workflow itself                                                       |
 | Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; Spotless when a Spotless-covered file or the formatter configuration changed |
-| Production/test sources (`**/src/**`) | Full: `clean build` → `spotless-format` → `sonar-quality-gate` |
+| Production/test sources (`**/src/**`)                                               | Full: `clean build` → `spotless-format` → `sonar-quality-gate`                                        |
+| Other/unclassified paths (e.g. `fixtures/**`, `LICENSE`, `opencode.jsonc`)          | Classify explicitly; otherwise apply the full source tier                                             |
 
 Gate details:
 

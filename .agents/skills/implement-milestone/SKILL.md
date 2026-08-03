@@ -47,8 +47,11 @@ Do not scan the whole repository.
 4. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
    agent-relevant invariants), follow the `module-docs` skill; reference it rather than duplicating
    its checklist.
-5. Classify the change scope from the diff (`git diff --name-only` against the base) and run only
-   the applicable completion gates per the change-scope gate tiers in `AGENTS.md`:
+5. Classify the change scope from the diff and run only the applicable completion gates per the
+   change-scope gate tiers in `AGENTS.md`. Collect the path set mechanically: tracked changes via
+   `git diff --name-only` against the base plus untracked files via `git ls-files --others
+   --exclude-standard` (untracked files would otherwise be absent from classification until staged
+   or committed):
    - docs-only and workflow-only changes need no build, Spotless, or Sonar;
    - build-configuration changes need `./gradlew clean build` (plus Spotless when Spotless-covered
      files or the formatter configuration changed);
