@@ -14,37 +14,38 @@ Milestones are planned, testable increments. They may change until implementatio
 8. **Phase 0.8 — JSpecify nullness:** JSpecify `@NullMarked` packages, NullAway enforcement, and portable agent guidance for `jsonapi-java-core`.
 9. **Phase 0.9 — ArchUnit core dependency guard:** ArchUnit enforces JDK + JSpecify + self type deps for `jsonapi-java-core`.
 10. **Phase 0.10 — task-scoped discovery and documentation pattern:** unifies agent routing and documentation checklists after Phases 0.2, 0.5, and 0.7.
-11. **Phase 1.1 — document model/validation** and **Phase 1.2 — annotations:** completed,
+11. **Phase 0.11 — implement-milestone workflow:** implements one milestone end-to-end and verifies it with a fresh-context milestone review and a bounded fix loop.
+12. **Phase 1.1 — document model/validation** and **Phase 1.2 — annotations:** completed,
     independent foundations with no functional third-party runtime dependencies.
-12. **Phase 2.1 — Jackson 3 document writer:** creates the first major-specific codec artifact and
+13. **Phase 2.1 — Jackson 3 document writer:** creates the first major-specific codec artifact and
     proves deterministic model-to-wire behavior.
-13. **Phase 2.2 — Jackson 3 write mapping**, **Phase 2.4 — document reader**, and **Phase 2.5 —
+14. **Phase 2.2 — Jackson 3 write mapping**, **Phase 2.4 — document reader**, and **Phase 2.5 —
     draft-schema cross-check:** completed; **Phase 2.3 — compound serialization** and **Phase 2.9 —
     flat DTO reader:** may proceed in parallel after their listed dependencies.
-14. **Phase 2.3 — Jackson 3 compound serialization** and **Phase 2.9 — flat DTO reader:** add
+15. **Phase 2.3 — Jackson 3 compound serialization** and **Phase 2.9 — flat DTO reader:** add
     explicit inclusion and validated resource-to-DTO binding independently.
-15. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
+16. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
     their respective compound and flat-read foundations.
-16. **Phase 2.11 — Jackson 3 PATCH binding:** composes update validation and typed DTO envelopes
+17. **Phase 2.11 — Jackson 3 PATCH binding:** composes update validation and typed DTO envelopes
     into presence-aware commands.
-17. **Phase 3.1 — query parser:** remains an independent optional artifact.
-18. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
+18. **Phase 3.1 — query parser:** remains an independent optional artifact.
+19. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
     documents, query arguments, and safe errors.
-19. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
+20. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
     envelope, inclusion/fieldset, and PATCH experience.
-20. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
+21. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
     stable.
-21. **Phase 2.6 — Jackson 2 document writer:** starts the later parity track after the Jackson
+22. **Phase 2.6 — Jackson 2 document writer:** starts the later parity track after the Jackson
     3/Spring path, without adding an artificial Spring dependency.
-22. **Phase 2.7 — Jackson 2 document reader** and **Phase 2.12 — domain mapping:** may proceed after
+23. **Phase 2.7 — Jackson 2 document reader** and **Phase 2.12 — domain mapping:** may proceed after
     the Jackson 2 writer and their respective Jackson 3 contracts.
-23. **Phase 2.13 — Jackson 2 compound serialization** and **Phase 2.15 — flat DTO reader:** build
+24. **Phase 2.13 — Jackson 2 compound serialization** and **Phase 2.15 — flat DTO reader:** build
     independently on stable mapping/read contracts.
-24. **Phase 2.14 — Jackson 2 sparse fieldsets** and **Phase 2.16 — typed domain envelope:** finish
+25. **Phase 2.14 — Jackson 2 sparse fieldsets** and **Phase 2.16 — typed domain envelope:** finish
     write-policy and read-envelope parity independently.
-25. **Phase 2.17 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
-26. **Phase 4.1 — conformance and hardening.**
-27. **Phase 4.2 — stable release.**
+26. **Phase 2.17 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
+27. **Phase 4.1 — conformance and hardening.**
+28. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -61,6 +62,7 @@ milestone file.
 - [Phase 0.8 — JSpecify Nullness](phase-0-8-jspecify-nullness.md) — build, core, and agent guidance — Complete
 - [Phase 0.9 — ArchUnit Core Dependency Guard](phase-0-9-archunit-core-deps.md) — core architecture and agent guidance — Complete
 - [Phase 0.10 — Task-Scoped Discovery and Documentation Pattern](phase-0-10-task-scoped-discovery-and-doc-pattern.md) — repository workflow and agent guidance — Complete
+- [Phase 0.11 — Implement-Milestone Workflow](phase-0-11-implement-milestone-workflow.md) — repository workflow — In progress
 - [Phase 1.1 — Document Model and Validation](phase-1-1-spec-data-model.md) — `jsonapi-java-core` — Complete
 - [Phase 1.2 — Domain-Mapping Annotations](phase-1-2-annotations.md) — `jsonapi-java-annotations` — Complete
 - [Phase 1.3 — Resource Update Request Validation](phase-1-3-update-request-validation.md) — `jsonapi-java-core` — Complete
@@ -105,8 +107,22 @@ dependencies.
 A `Not started` milestone may be refined or decomposed. Once implementation starts, the milestone
 is a fixed delivery contract; changed or additional scope belongs in a follow-up milestone.
 
+## Milestone implementation
+
+Implement a milestone with the explicitly invoked project `implement-milestone` skill. It resolves
+one milestone, reads its contract and affected module documentation, implements within the
+milestone boundaries, runs the completion gates, and then runs the `milestone-review` procedure in
+a fresh-context subagent so the review is not influenced by the implementing session. Findings are
+fixed and re-reviewed with a new subagent, capped at two re-reviews. Completion gates are re-run
+after every fix batch and before the next review, so `Complete` is based on the post-fix results.
+
+The milestone `Status` moves `Not started` → `In progress` when implementation starts and
+`Complete` only after a review `Pass`. The status stays in sync between the milestone file and the
+index entry. Acceptance criteria are marked `[x]` by the implementer as
+evidence; the review verifies them but never edits them.
+
 ## Milestone reviews
 
-Milestones are permanent delivery contracts. On-demand reviews of an implementation against one milestone are ephemeral working artifacts produced with the project `milestone-review` skill.
+Milestones are permanent delivery contracts. On-demand reviews of an implementation against one milestone are ephemeral working artifacts produced with the project `milestone-review` skill. The `implement-milestone` skill runs the same procedure in a fresh-context subagent after implementation; manual on-demand reviews remain available.
 
 Reviews are written to `.agentWork/.session/milestone-review-<milestone-basename>.md`. They are excluded from version control and overwritten when the same milestone is reviewed again.

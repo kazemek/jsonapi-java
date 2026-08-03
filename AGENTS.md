@@ -6,15 +6,17 @@ Requires JDK 21 (enforced via Gradle toolchain).
 It is not a discovery step. Before declaring implementation complete, follow **Completion gates**
 (`clean build` → `spotless-format` → `sonar-quality-gate`).
 
+Run a single Spock spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
+`./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
+
 Dependency verification is enabled via `gradle/verification-metadata.xml`. After adding or
 changing dependencies (or when CI fails verification), regenerate checksums with
 `./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`
 (Renovate PRs do this as well).
 
-IDE sync may download extra artifacts (sources jars, Gradle src zips, and Groovy 4.x
-`.module`/`.pom` metadata from the Gradle distribution's "Gradle Libs" repo). Those are trusted
-by pattern in `verification-metadata.xml`; do **not** disable verification globally.
-Build dependencies (including Groovy 5.x used by Spock) remain checksum-verified.
+Do **not** disable dependency verification globally: IDE-synced sources jars, Gradle src zips, and
+Gradle-distribution metadata are already trusted by pattern in `verification-metadata.xml`, while
+build dependencies (including Groovy 5.x used by Spock) stay checksum-verified.
 
 # Project structure
 
@@ -27,7 +29,7 @@ Source lives under `<module>/src/`. Tests use Groovy + Spock (`<module>/src/test
 
 Choose the narrowest applicable route. Do **not** scan the whole repository first.
 
-Project skills live at `.cursor/skills/<name>/SKILL.md`. When this file names a skill, read that
+Project skills live at `.agents/skills/<name>/SKILL.md`. When this file names a skill, read that
 path and follow it (skills use explicit invocation only).
 
 ### Plan, refine, or decompose a milestone
@@ -36,6 +38,17 @@ When the user explicitly requests milestone planning, use the project `milestone
 Start with `docs/vision.md` and `.agentWork/milestones/README.md`; then read only the target
 milestone, directly relevant dependencies or adjacent work, affected module documentation, and
 narrow feasibility evidence.
+
+### Implement a milestone
+
+When the user asks to implement a milestone, use the project `implement-milestone` skill. It
+resolves one milestone, reads its contract and affected module documentation, implements within the
+milestone boundaries, runs the completion gates (re-running them after every review-fix batch), and
+then runs the `milestone-review` procedure in
+a fresh-context subagent so the review is not influenced by the implementing session's reasoning.
+The milestone `Status` moves `Not started` → `In progress` when implementation starts and
+`Complete` only after a review `Pass`; the status is kept in sync between the milestone file and
+the index in `.agentWork/milestones/README.md`.
 
 ### Implement in an existing module
 
@@ -56,9 +69,11 @@ already governed by a milestone and module documentation does not require reread
 
 When reviewing against a milestone (including when the user requests a milestone review), read
 exactly one governing milestone and establish the diff or path boundary; use the project
-`milestone-review` skill for on-demand milestone reviews. For module-scoped changes, follow the
-affected-module route above. When no affected module exists (repository-wide build, CI, or
-workflow work), or when no milestone governs the change, follow the repository-wide route below
+`milestone-review` skill for on-demand milestone reviews. The `implement-milestone` skill runs the
+same procedure in a fresh-context subagent after implementation; manual on-demand reviews remain
+available. For module-scoped changes, follow the affected-module route above. When no affected
+module exists (repository-wide build, CI, or workflow work), or when no milestone governs the
+change, follow the repository-wide route below
 instead of reading irrelevant module documentation. Milestone reviews verify the `module-docs`
 checklist when public module surface changed.
 
@@ -90,7 +105,8 @@ to create or refresh dual-audience documentation.
 
 Shared build configuration lives in `build-logic/` as precompiled script plugins.
 `jsonapi-java-library` owns library, test, coverage, toolchain, and static-analysis defaults;
-`jsonapi-java-spotless` owns repository formatting.
+`jsonapi-java-spotless` owns repository formatting. Dependencies and versions are declared in the
+Version Catalog `gradle/libs.versions.toml`.
 
 New submodules need `include("...")` in `settings.gradle.kts`, the library plugin below, and the
 `module-docs` skill for dual-audience documentation and root registry updates:
@@ -131,7 +147,9 @@ decomposition, and index synchronization.
 
 Milestones may be refined while their status is `Not started`. Once implementation has started,
 preserve the milestone as a historical delivery contract and capture changed or additional scope in
-a follow-up milestone.
+a follow-up milestone. `implement-milestone` marks the status `In progress` on implementation start
+and `Complete` only after a fresh-context review passes; the status is kept in sync between the
+milestone file and the index in `.agentWork/milestones/README.md`.
 
 ## Completion gates
 
