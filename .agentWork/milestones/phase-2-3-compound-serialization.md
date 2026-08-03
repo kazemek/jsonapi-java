@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phase 2.2  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -107,11 +107,11 @@ The mapper has no persistence dependency and never calls JPA/Hibernate initializ
 
 ## Acceptance criteria
 
-- [ ] No related resource enters `included` without an explicit include request; nested paths include required intermediates; off-path relationships are not accessed for inclusion traversal (access-counting fixture); first-encounter output order is deterministic; primary identities are never re-emitted in `included`; prefix-overlapping paths still traverse requested suffixes.
-- [ ] Deduplication, conflicting representations (`ResourceObject.equals`), cycles, maximum depth, and maximum included-resource count have stable mapping diagnostics and focused tests (including zero/negative limit boundaries, multi-failure validation precedence, mixed-type collections including a one-shot primary `Iterable` snapshot, nested owner-type policy, factory- vs mapper-time path errors, and concurrent per-call isolation); the default context requests no included resources with finite depth/count limits; `@NullMarked` packages with accurate `@Nullable` per ADR-009; the ArchUnit allowlist is unchanged with no `core.internal` or Jackson 2 production dependencies.
-- [ ] Generated compound documents pass `JsonApiDocumentWriter` identity/full-linkage/lid validation; the two canonical compound fixtures pass round-trip writer validation; `included: []` is emitted for a context with at least one non-empty path resolving to no resources; context-free overloads and contexts with an empty path list all omit `included`; compound mapping uses only the three-argument envelope+context overloads; different-suffix converging paths still traverse requested suffixes.
-- [ ] The canonical `module-docs` checklist passes and `docs/conformance.md` marks compound inclusion **supported** with the exact opt-in policy rather than implying automatic traversal.
-- [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*CompoundSerializationSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.
+- [x] No related resource enters `included` without an explicit include request; nested paths include required intermediates; off-path relationships are not accessed for inclusion traversal (access-counting fixture); first-encounter output order is deterministic; primary identities are never re-emitted in `included`; prefix-overlapping paths still traverse requested suffixes.
+- [x] Deduplication, conflicting representations (`ResourceObject.equals`), cycles, maximum depth, and maximum included-resource count have stable mapping diagnostics and focused tests (including zero/negative limit boundaries, multi-failure validation precedence, mixed-type collections including a one-shot primary `Iterable` snapshot, nested owner-type policy, factory- vs mapper-time path errors, and concurrent per-call isolation); the default context requests no included resources with finite depth/count limits; `@NullMarked` packages with accurate `@Nullable` per ADR-009; the ArchUnit allowlist is unchanged with no `core.internal` or Jackson 2 production dependencies.
+- [x] Generated compound documents pass `JsonApiDocumentWriter` identity/full-linkage/lid validation; the two canonical compound fixtures pass round-trip writer validation; `included: []` is emitted for a context with at least one non-empty path resolving to no resources; context-free overloads and contexts with an empty path list all omit `included`; compound mapping uses only the three-argument envelope+context overloads; different-suffix converging paths still traverse requested suffixes.
+- [x] The canonical `module-docs` checklist passes and `docs/conformance.md` marks compound inclusion **supported** with the exact opt-in policy rather than implying automatic traversal.
+- [x] `./gradlew :jsonapi-java-jackson3:test --tests '*CompoundSerializationSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI must still pass the gate.

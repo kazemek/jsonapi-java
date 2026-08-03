@@ -56,6 +56,8 @@ class JsonApiDraftSchemaSpec extends Specification {
     "errors-document": "response",
     "jsonapi-object": "response",
     "compound-document": "response",
+    "compound-nested-intermediate": "response",
+    "compound-shared-identity": "response",
     "local-identifier": "create",
     "member-order": "response",
     "extension-and-at-members": "response",

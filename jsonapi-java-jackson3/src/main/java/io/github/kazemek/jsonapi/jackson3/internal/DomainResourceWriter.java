@@ -11,7 +11,7 @@ import io.github.kazemek.jsonapi.jackson3.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson3.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson3.MappingDiagnostic;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +85,72 @@ public final class DomainResourceWriter {
     return new ResourceIdentifier(mapping.resourceType(), id, null, null, Map.of());
   }
 
+  /** Resolves the cached mapping definition for {@code rawType}. */
+  ResourceMapping mappingFor(Class<?> rawType) {
+    return cache.resolve(rawType);
+  }
+
+  /** Reads a relationship property for inclusion traversal (not linkage construction). */
+  @Nullable Object readRelationshipValue(Object resource, MappingProperty property) {
+    return readValue(resource, property, PropertyRole.RELATIONSHIP);
+  }
+
+  static boolean isToManyType(JavaType type) {
+    if (type.isArrayType()) {
+      return true;
+    }
+    if (type.isCollectionLikeType()) {
+      return true;
+    }
+    return type.isTypeOrSubTypeOf(Iterable.class);
+  }
+
+  static @Nullable JavaType resolveContentType(JavaType type) {
+    if (type.isArrayType() || type.isCollectionLikeType()) {
+      return type.getContentType();
+    }
+    if (type.containedTypeCount() > 0) {
+      return type.containedType(0);
+    }
+    return null;
+  }
+
+  static @Nullable Object unwrapOptional(@Nullable Object value) {
+    if (value instanceof Optional<?> optional) {
+      return optional.orElse(null);
+    }
+    return value;
+  }
+
+  static List<Object> convertToCollection(Object value) {
+    return switch (value) {
+      case List<?> list -> {
+        List<Object> result = new ArrayList<>(list.size());
+        result.addAll(list);
+        yield result;
+      }
+      case Object[] array -> {
+        List<Object> result = new ArrayList<>(array.length);
+        Collections.addAll(result, array);
+        yield result;
+      }
+      case Iterable<?> iterable -> {
+        List<Object> result = new ArrayList<>();
+        for (Object item : iterable) {
+          result.add(item);
+        }
+        yield result;
+      }
+      default ->
+          throw new JsonApiMappingException(
+              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+              value.getClass(),
+              null,
+              "To-many relationship value is not a supported collection type: "
+                  + value.getClass().getName());
+    };
+  }
+
   private Attributes buildAttributes(Object resource, ResourceMapping mapping) {
     if (mapping.attributes().isEmpty()) {
       return Attributes.empty();
@@ -138,7 +204,7 @@ public final class DomainResourceWriter {
     if (value == null) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
     }
-    List<?> items = convertToCollection(value);
+    List<Object> items = convertToCollection(value);
     if (items.isEmpty()) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
     }
@@ -248,54 +314,6 @@ public final class DomainResourceWriter {
       return value;
     }
     return mapper.convertValue(value, Object.class);
-  }
-
-  private static List<?> convertToCollection(Object value) {
-    return switch (value) {
-      case List<?> list -> list;
-      case Object[] array -> Arrays.asList(array);
-      case Iterable<?> iterable -> {
-        List<Object> result = new ArrayList<>();
-        for (Object item : iterable) {
-          result.add(item);
-        }
-        yield result;
-      }
-      default ->
-          throw new JsonApiMappingException(
-              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
-              value.getClass(),
-              null,
-              "To-many relationship value is not a supported collection type: "
-                  + value.getClass().getName());
-    };
-  }
-
-  private static boolean isToManyType(JavaType type) {
-    if (type.isArrayType()) {
-      return true;
-    }
-    if (type.isCollectionLikeType()) {
-      return true;
-    }
-    return type.isTypeOrSubTypeOf(Iterable.class);
-  }
-
-  private static @Nullable JavaType resolveContentType(JavaType type) {
-    if (type.isArrayType() || type.isCollectionLikeType()) {
-      return type.getContentType();
-    }
-    if (type.containedTypeCount() > 0) {
-      return type.containedType(0);
-    }
-    return null;
-  }
-
-  private static @Nullable Object unwrapOptional(@Nullable Object value) {
-    if (value instanceof Optional<?> optional) {
-      return optional.orElse(null);
-    }
-    return value;
   }
 
   private static void checkResourceAnnotation(Class<?> rawType) {

@@ -1,6 +1,8 @@
 package io.github.kazemek.jsonapi.testfixtures.writer
 
 import io.github.kazemek.jsonapi.testfixtures.writer.cases.CompoundDocumentCase
+import io.github.kazemek.jsonapi.testfixtures.writer.cases.CompoundNestedIntermediateCase
+import io.github.kazemek.jsonapi.testfixtures.writer.cases.CompoundSharedIdentityCase
 import io.github.kazemek.jsonapi.testfixtures.writer.cases.EmptyErrorsCase
 import io.github.kazemek.jsonapi.testfixtures.writer.cases.EmptyIdentifierCollectionCase
 import io.github.kazemek.jsonapi.testfixtures.writer.cases.EmptyIncludedCase
@@ -48,6 +50,8 @@ final class WriterFixtures {
     ErrorsDocumentCase.fixture(),
     JsonApiObjectCase.fixture(),
     CompoundDocumentCase.fixture(),
+    CompoundNestedIntermediateCase.fixture(),
+    CompoundSharedIdentityCase.fixture(),
     LocalIdentifierCase.fixture(),
     ExtensionAndAtMembersCase.fixture(),
     MemberOrderCase.fixture(),

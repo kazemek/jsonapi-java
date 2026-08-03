@@ -35,6 +35,17 @@ JsonApiDocument doc = mapper.toDocument(someAnnotatedPojo);
 String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 ```
 
+Compound inclusion (explicit context only; relationship mapping alone never includes):
+
+```java
+CompoundSerializationContext context =
+    CompoundSerializationContext.defaults()
+        .withIncludePaths(List.of(IncludePath.of("comments.author")))
+        .withIncludePolicy(IncludePolicy.allowAll());
+
+JsonApiDocument compound = mapper.toDocument(article, null, context);
+```
+
 Bare resource (inspect or compose a document yourself; not a top-level wire payload):
 
 ```java
@@ -57,8 +68,8 @@ types for resource metadata but do not register a Jackson module.
 
 ## Non-goals
 
-Compound-inclusion, sparse-fieldset write policy, and bidirectional (read-side) DTO mapping are
-planned for later Phase 2 milestones. Jackson 2 parity is a separate artifact; see
+Sparse-fieldset write policy and bidirectional (read-side) DTO mapping are planned for later
+Phase 2 milestones. Jackson 2 parity is a separate artifact; see
 [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
@@ -84,6 +95,11 @@ planned for later Phase 2 milestones. Jackson 2 parity is a separate artifact; s
   for serialization. Mapping uses Jackson's logical property model and caches `ResourceMapping`
   by type and mapper config identity. Mapping diagnostics use `MappingDiagnostic` + domain class
   rather than core validation codes.
+- **Opt-in inclusion:** Compound `included` resources require a `CompoundSerializationContext` on
+  the three-argument mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
+  context). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
+  full. Empty include paths omit `included`; a non-empty request that resolves to nothing emits
+  `included: []`. Defaults are deny-all with finite depth/count limits.
 - **Primary-data kind:** Ambiguous `{"type","id"}` and `[]` require explicit `PrimaryDataKind` on
   `DocumentReadContext`; never guess from object members.
 - **Wire states:** Omit members for Java `null` components; emit/decode JSON `null` for sealed
