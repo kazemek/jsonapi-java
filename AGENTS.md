@@ -30,7 +30,9 @@ Choose the narrowest applicable route. Do **not** scan the whole repository firs
 Project skills live at `.agents/skills/<name>/SKILL.md`. When this file names a skill, read that
 path and follow it (skills use explicit invocation only).
 
-- **Plan/refine/decompose a milestone:** use the `milestone-planning` skill.
+- **Plan/refine/decompose a milestone:** use the `milestone-planning` skill; it verifies each
+  created or refined milestone with the `milestone-plan-review` procedure in a fresh-context
+  subagent.
 - **Implement a milestone:** use the `implement-milestone` skill; it runs the applicable
   completion gates and verifies with the `milestone-review` procedure in a fresh-context subagent.
 - **Implement in an existing module:** select the governing milestone from the index (stop and
@@ -38,6 +40,8 @@ path and follow it (skills use explicit invocation only).
   affected `<module>/README.md`, read `package-info.java` for changed packages, open the exact
   production files and mirrored tests, and follow linked ADRs/conformance only when the change
   touches their contract.
+- **Review a milestone plan/spec:** use the `milestone-plan-review` skill for on-demand reviews;
+  the `milestone-planning` skill runs the same procedure in a fresh subagent.
 - **Review an implementation:** use the `milestone-review` skill for on-demand reviews; the
   `implement-milestone` skill runs the same procedure in a fresh subagent.
 - **Repository-wide build, CI, or workflow work:** read only the root configuration, workflow,

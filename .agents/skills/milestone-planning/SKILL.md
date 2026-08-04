@@ -1,12 +1,18 @@
 ---
 name: milestone-planning
-description: Creates, refines, or decomposes research-backed implementation milestones under `.agentWork/milestones/`. Use only when the user explicitly requests milestone planning, refinement, or breakdown.
+description: Creates, refines, or decomposes research-backed implementation milestones under `.agentWork/milestones/`, then verifies each with a milestone plan review executed by a fresh-context subagent and a bounded fix loop. Use only when the user explicitly requests milestone planning, refinement, or breakdown.
 disable-model-invocation: true
 ---
 
 # Milestone Planning
 
-Produce permanent, implementation-ready milestone files. Planning ends when the milestone files and milestone index are written; do not implement the planned feature.
+Produce permanent, implementation-ready milestone files and verify them with a context-isolated plan
+review. Planning ends only after the milestone files and index are synchronized and each created or
+refined milestone receives a fresh-context `milestone-plan-review` Pass. Do not implement the
+planned feature.
+
+The plan review must never see this session's context or reasoning; it is executed by a fresh
+subagent that derives everything from the milestone contract and repository evidence.
 
 ## Resolve the operation
 
@@ -165,4 +171,62 @@ After writing all milestone files:
 3. Reapply the size gate to each emitted milestone.
 4. Confirm decomposed milestones do not overlap or omit requirements from the source request.
 5. Confirm milestone prose links to rather than duplicates vision, ADR, conformance, and module documentation.
-6. Report the files created or refined, research that materially changed the scope, and any decomposition rationale.
+
+Then proceed to the fresh-context plan review. Do not treat planning as finished until every
+created or refined milestone in this run has a plan-review Pass (or the fix-loop cap / Blocked stop
+is reached).
+
+## Review with fresh context
+
+The plan review is mandatory and non-negotiable. Its purpose is to verify each milestone contract
+without any influence from this session's context or reasoning.
+
+1. Collect the list of milestone files created or refined in this run. Review each one.
+2. For each such milestone, spawn a NEW general-purpose subagent with write access (for example,
+   opencode `general` or the equivalent general subagent in the harness in use):
+   - fresh context: never resume or reuse a previous subagent session;
+   - write capability: it must create the review artifact under `.agentWork/.session/`.
+3. Send the reviewer prompt below verbatim, filling only the placeholder. Do not add anything to
+   it: no summaries, self-assessment, reasoning, planning narrative, or draft diffs.
+4. Never answer the reviewer's questions with planning narrative. When it asks for facts, direct it
+   to repository evidence (files, the milestone contract, the milestone index).
+5. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
+   session: write a contract-only handoff document (milestone path, artifact path, suggested skill
+   `milestone-plan-review`) to the OS temporary directory following the `handoff` skill convention,
+   and print the exact one-liner the user should run to start the review in a new session.
+
+### Reviewer prompt (send verbatim)
+
+```text
+You are the milestone plan reviewer for this repository. Your context was intentionally started
+empty so you review independently of the planning session.
+
+Task inputs (the only facts you may assume):
+- Milestone: <milestone path>
+- Review artifact: .agentWork/.session/milestone-plan-review-<milestone basename>.md (create or
+  completely replace)
+
+Procedure:
+1. Read .agents/skills/milestone-plan-review/SKILL.md and follow it exactly.
+2. Base every conclusion only on the milestone contract and repository evidence. Do not accept or
+   ask for summaries from the planning session; ignore editor or IDE state.
+3. Write the artifact, then report the artifact path and verdict.
+```
+
+## Handle the verdict
+
+Overall planning Pass only when every created or refined milestone in this run receives Pass.
+
+- **Pass (all):** report and finish.
+- **Changes required (any):** fix the findings in the affected milestone file(s) and index, re-run
+  Synchronize and verify, then re-review each affected milestone with a NEW fresh subagent. Cap the
+  loop at two re-reviews; when any verdict is still `Changes required`, stop and report the
+  remaining findings.
+- **Blocked (any):** stop and report.
+
+## Report
+
+Report to the user: the files created or refined, research that materially changed the scope, any
+decomposition rationale, the plan-review artifact path(s), the verdict(s), and residual risks. When
+this run decomposes into N milestones, expect N plan-review artifacts (and re-reviews for any that
+need changes).
