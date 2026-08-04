@@ -1,6 +1,6 @@
 ---
 name: milestone-review
-description: Produces an evidence-based code review against a project milestone and writes the result to `.agentWork/.session/`. Use when the user explicitly requests a milestone review, phase audit, or acceptance review against `.agentWork/milestones/`.
+description: Produces an evidence-based code review against a project milestone and writes the result to `.agentWork/.session/`. Use when the user explicitly requests a milestone review, phase audit, or acceptance review against `.agentWork/milestones/`, or when `implement-milestone` delegates review to a fresh-context subagent.
 disable-model-invocation: true
 ---
 
