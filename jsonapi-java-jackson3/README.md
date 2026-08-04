@@ -35,6 +35,24 @@ JsonApiDocument doc = mapper.toDocument(someAnnotatedPojo);
 String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 ```
 
+Flat resource-to-DTO binding (validated document model → DTO; bind after `JsonApiDocumentReader`):
+
+```java
+JsonApiResourceBinder binder = JsonApiJackson3.resourceBinder(callerMapper);
+
+JsonApiDocument document = JsonApiJackson3.reader(callerMapper, DocumentReadContext.resourceDefaults())
+    .readValue(json);
+ResourceObject resource = ((DocumentData.SingleResource) document.data()).resource();
+
+FlatArticleDto dto = binder.fromResource(resource, FlatArticleDto.class);
+
+JsonApiDocument collectionDocument = JsonApiJackson3.reader(callerMapper, DocumentReadContext.resourceDefaults())
+    .readValue(collectionJson);
+List<ResourceObject> resources = ((DocumentData.ResourceCollection) collectionDocument.data()).resources();
+
+List<FlatArticleDto> dtos = binder.fromResources(resources, FlatArticleDto.class);
+```
+
 Compound inclusion (explicit context only; relationship mapping alone never includes):
 
 ```java
@@ -59,18 +77,19 @@ JsonApiDocument collDoc = mapper.toResourceCollection(allPojos);
 ```
 
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
-`IdentifierConverter` to `resourceMapper` only when you need a different wire form.
+`IdentifierConverter` to `resourceMapper` or `resourceBinder` only when you need a different wire
+form; read binding inverts it through `IdentifierConverter.parse(String)`.
 
-`JsonApiJackson3.writer` / `reader` / `resourceMapper` always derive a **new** mapper via
-`rebuild()`; the caller's mapper or builder is never mutated. Writers validate before emission.
-Readers decode through public core constructors, then run aggregate validation. Mappers introspect
-types for resource metadata but do not register a Jackson module.
+`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` always derive a **new**
+mapper via `rebuild()`; the caller's mapper or builder is never mutated. Writers validate before
+emission. Readers decode through public core constructors, then run aggregate validation. Mappers
+and binders introspect types for resource metadata but do not register a Jackson module.
 
 ## Non-goals
 
-Sparse-fieldset write policy and bidirectional (read-side) DTO mapping are planned for later
-Phase 2 milestones. Jackson 2 parity is a separate artifact; see
-[ADR-007](../docs/adr/007-module-boundaries.md).
+Sparse-fieldset write policy and typed domain envelopes (including independent binding of
+`included` resources) are planned for later Phase 2 milestones. Jackson 2 parity is a separate
+artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
 
@@ -82,6 +101,7 @@ Phase 2 milestones. Jackson 2 parity is a separate artifact; see
 - [ADR-007 — Module boundaries](../docs/adr/007-module-boundaries.md)
 - [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
+- [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Root agent workflow](../AGENTS.md)
 
@@ -95,6 +115,18 @@ Phase 2 milestones. Jackson 2 parity is a separate artifact; see
   for serialization. Mapping uses Jackson's logical property model and caches `ResourceMapping`
   by type and mapper config identity. Mapping diagnostics use `MappingDiagnostic` + domain class
   rather than core validation codes.
+- **Validate then bind:** `JsonApiResourceBinder` binds already-validated `ResourceObject` values
+  to flat DTOs; it never parses JSON, never reads document `included`, and assembles no domain
+  graph. `fromResource`/`fromResources` validate `type` against `@JsonApiResource.type()` and
+  report `MappingDiagnostic` + a resource-relative pointer (`/type`, `/id`, `/lid`,
+  `/relationships/<name>/data`, and the Jackson property name, e.g. `/count`, for bulk
+  construction failures). Missing members are omitted; explicit JSON
+  `null` binds null; relationship linkage binds `ResourceIdentifier` (plus Optional/List/Set/array
+  shapes) directly, and any other target class needs a registered `RelationshipLinkageMapper`.
+  Bind failures throw `JsonApiMappingException`, never `JsonApiDocumentReadException`.
+- **Identifier round-trip:** read binding calls `IdentifierConverter.parse(String)` on the wire
+  identifier and coerces the result to the identifier property type via `convertValue`; custom
+  write converters must override `parse` to invert their wire form.
 - **Opt-in inclusion:** Compound `included` resources require a `CompoundSerializationContext` on
   the three-argument mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
   context). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains

@@ -1,19 +1,22 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
+import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
 import io.github.kazemek.jsonapi.jackson3.internal.JsonApiDocumentModule;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
+import java.util.Map;
 import java.util.Objects;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Factory for Jackson 3 JSON:API document writers, readers, and resource mappers.
+ * Factory for Jackson 3 JSON:API document writers, readers, resource mappers, and flat DTO binders.
  *
  * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
  * replaces the caller's configuration in place. Public surface consists of {@link
- * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, and {@link JsonApiResourceMapper}.
+ * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, and {@link
+ * JsonApiResourceBinder}.
  */
 public final class JsonApiJackson3 {
 
@@ -112,6 +115,73 @@ public final class JsonApiJackson3 {
       JsonMapper.Builder base, IdentifierConverter identifierConverter) {
     Objects.requireNonNull(base, "base");
     return resourceMapper(base.build(), identifierConverter);
+  }
+
+  /**
+   * Returns a flat DTO binder with default identifier conversion and no custom relationship linkage
+   * mappers. Derives a new mapper via {@link JsonMapper#rebuild()} and never mutates the caller's
+   * mapper.
+   */
+  public static JsonApiResourceBinder resourceBinder(JsonMapper base) {
+    return resourceBinder(base, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a flat DTO binder with the given identifier converter and no custom relationship
+   * linkage mappers. Derives a new mapper via {@link JsonMapper#rebuild()} and never mutates the
+   * caller's mapper.
+   */
+  public static JsonApiResourceBinder resourceBinder(
+      JsonMapper base, IdentifierConverter identifierConverter) {
+    return resourceBinder(base, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a flat DTO binder with the given identifier converter and relationship linkage mappers
+   * keyed by relationship target class. Derives a new mapper via {@link JsonMapper#rebuild()} and
+   * never mutates the caller's mapper.
+   */
+  public static JsonApiResourceBinder resourceBinder(
+      JsonMapper base,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    Objects.requireNonNull(identifierConverter, "identifierConverter");
+    Objects.requireNonNull(linkageMappers, "linkageMappers");
+    JsonMapper derived = resourceMappingMapper(base);
+    DomainResourceBinder binder =
+        new DomainResourceBinder(
+            derived, identifierConverter, new MappingDefinitionCache(derived), linkageMappers);
+    return new JsonApiResourceBinder(derived, binder);
+  }
+
+  /**
+   * Returns a flat DTO binder derived from a caller-supplied builder with default identifier
+   * conversion. The builder is not given the JSON:API module.
+   */
+  public static JsonApiResourceBinder resourceBinder(JsonMapper.Builder base) {
+    return resourceBinder(base, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a flat DTO binder derived from a caller-supplied builder and identifier converter. The
+   * builder is not given the JSON:API module.
+   */
+  public static JsonApiResourceBinder resourceBinder(
+      JsonMapper.Builder base, IdentifierConverter identifierConverter) {
+    return resourceBinder(base, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a flat DTO binder derived from a caller-supplied builder, identifier converter, and
+   * relationship linkage mappers. The builder is not given the JSON:API module.
+   */
+  public static JsonApiResourceBinder resourceBinder(
+      JsonMapper.Builder base,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    return resourceBinder(base.build(), identifierConverter, linkageMappers);
   }
 
   /**

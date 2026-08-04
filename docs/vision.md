@@ -82,8 +82,8 @@ The base model preserves valid extension members and `@` members. It does not im
 
 - `jsonapi-java-core` — dependency-free document model and validation.
 - `jsonapi-java-annotations` — dependency-free, opt-in domain-mapping annotations.
-- `jsonapi-java-jackson3` — Jackson 3 document writer and reader are available; bidirectional flat
-  DTO mapping remains later Phase 2 work.
+- `jsonapi-java-jackson3` — Jackson 3 document writer and reader are available, as is flat
+  resource-to-DTO binding; typed domain envelopes and PATCH binding remain later Phase 2 work.
 - `jsonapi-java-jackson2` — later Jackson 2 artifact with the same stable conceptual contracts.
 - `jsonapi-java-query` — optional framework-neutral query-parameter parsing.
 - `jsonapi-java-spring-webmvc` — optional Spring Boot WebMVC integration.
