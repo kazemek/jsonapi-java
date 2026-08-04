@@ -22,7 +22,10 @@ import tools.jackson.databind.json.JsonMapper;
  * ADR-011). Relationship properties receive linkage only — {@link
  * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} (and {@link java.util.Optional}, {@link
  * java.util.List}, {@link java.util.Set}, or array variants) bind from linkage directly; any other
- * target class requires a registered {@link RelationshipLinkageMapper}.
+ * target class requires a registered {@link RelationshipLinkageMapper}. Built-in identifier linkage
+ * materializes {@code type}/{@code id}/{@code lid} only; identifier {@code meta} and additional
+ * members are not carried into bound relationship values (mirroring the Phase 2.2 write mapping,
+ * which produces identifiers without meta or additional members).
  *
  * <p>Binding failures throw {@link JsonApiMappingException} with a stable {@link MappingDiagnostic}
  * and a resource-relative JSON Pointer-like path.
