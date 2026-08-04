@@ -70,7 +70,7 @@ context and reasoning; keep on-demand plan/spec review available.
 - [x] `.agents/skills/milestone-plan-review/SKILL.md` defines an explicitly invoked plan/spec review
   workflow that does not mutate milestone contracts.
 - [x] `.agents/skills/milestone-planning/SKILL.md` requires a fresh-context plan review after
-  synchronize-and-verify; the reviewer prompt contains only the milestone path, artifact path, and
+  synchronize-and-verify; the reviewer task inputs contain only the milestone path, artifact path, and
   reference to `milestone-plan-review`; no planning narrative is passed.
 - [x] Re-reviews always use new subagents; the fix loop is capped at two re-reviews; overall Pass
   requires every created or refined milestone in the run to Pass.
