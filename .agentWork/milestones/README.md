@@ -19,35 +19,37 @@ Milestones are planned, testable increments. They may change until implementatio
     fresh-context plan review and a bounded fix loop.
 13. **Phase 1.1 — document model/validation** and **Phase 1.2 — annotations:** completed,
     independent foundations with no functional third-party runtime dependencies.
-14. **Phase 2.1 — Jackson 3 document writer:** creates the first major-specific codec artifact and
+14. **Phase 1.3 — resource update request validation:** completed; depends on Phase 1.1 and
+    feeds later PATCH binding.
+15. **Phase 2.1 — Jackson 3 document writer:** creates the first major-specific codec artifact and
     proves deterministic model-to-wire behavior.
-15. **Phase 2.2 — Jackson 3 write mapping**, **Phase 2.4 — document reader**, and **Phase 2.5 —
+16. **Phase 2.2 — Jackson 3 write mapping**, **Phase 2.4 — document reader**, and **Phase 2.5 —
     draft-schema cross-check:** completed; **Phase 2.3 — compound serialization** and **Phase 2.9 —
     flat DTO reader:** may proceed in parallel after their listed dependencies.
-16. **Phase 2.3 — Jackson 3 compound serialization** and **Phase 2.9 — flat DTO reader:** add
+17. **Phase 2.3 — Jackson 3 compound serialization** and **Phase 2.9 — flat DTO reader:** add
     explicit inclusion and validated resource-to-DTO binding independently.
-17. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
+18. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
     their respective compound and flat-read foundations.
-18. **Phase 2.11 — Jackson 3 PATCH binding:** composes update validation and typed DTO envelopes
+19. **Phase 2.11 — Jackson 3 PATCH binding:** composes update validation and typed DTO envelopes
     into presence-aware commands.
-19. **Phase 3.1 — query parser:** remains an independent optional artifact.
-20. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
+20. **Phase 3.1 — query parser:** remains an independent optional artifact.
+21. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
     documents, query arguments, and safe errors.
-21. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
+22. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
     envelope, inclusion/fieldset, and PATCH experience.
-22. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
+23. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
     stable.
-23. **Phase 2.6 — Jackson 2 document writer:** starts the later parity track after the Jackson
+24. **Phase 2.6 — Jackson 2 document writer:** starts the later parity track after the Jackson
     3/Spring path, without adding an artificial Spring dependency.
-24. **Phase 2.7 — Jackson 2 document reader** and **Phase 2.12 — domain mapping:** may proceed after
+25. **Phase 2.7 — Jackson 2 document reader** and **Phase 2.12 — domain mapping:** may proceed after
     the Jackson 2 writer and their respective Jackson 3 contracts.
-25. **Phase 2.13 — Jackson 2 compound serialization** and **Phase 2.15 — flat DTO reader:** build
+26. **Phase 2.13 — Jackson 2 compound serialization** and **Phase 2.15 — flat DTO reader:** build
     independently on stable mapping/read contracts.
-26. **Phase 2.14 — Jackson 2 sparse fieldsets** and **Phase 2.16 — typed domain envelope:** finish
+27. **Phase 2.14 — Jackson 2 sparse fieldsets** and **Phase 2.16 — typed domain envelope:** finish
     write-policy and read-envelope parity independently.
-27. **Phase 2.17 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
-28. **Phase 4.1 — conformance and hardening.**
-29. **Phase 4.2 — stable release.**
+28. **Phase 2.17 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
+29. **Phase 4.1 — conformance and hardening.**
+30. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
