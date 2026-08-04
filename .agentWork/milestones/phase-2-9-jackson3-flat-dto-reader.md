@@ -100,8 +100,20 @@ properties, without reading `included` or assembling a domain graph.
   fields.
 - Shared write diagnostics (`MISSING_RESOURCE_ANNOTATION`, `DUPLICATE_ROLE`, …) still apply when
   resolving the mapping definition. Do not invent a parallel registry.
-- `RelationshipLinkageMapper` receives the non-null `RelationshipData` and target `JavaType` and
-  returns the property value (or null). Failures become `LINKAGE_MAPPING_FAILED`.
+- Relationship target dispatch (after the presence rules above):
+  1. Resolve the target `Class` (unwrap `Optional`; use collection content type for to-many).
+  2. **Built-in** `ResourceIdentifier` → apply the cardinality rules above; never call a custom
+     mapper.
+  3. **Registered** `RelationshipLinkageMapper` for that `Class`:
+     - missing relationship key or `data == null` → omit (do not call mapper);
+     - enforce cardinality **before** mapper (same illegal shapes as built-in: `NullLinkage` on
+       to-many, collection linkage on to-one → `RELATIONSHIP_CARDINALITY_MISMATCH`);
+     - to-one `NullLinkage` → Java `null` / empty `Optional` **without** calling mapper;
+     - to-many empty `IdentifierCollectionLinkage` → empty collection **without** calling mapper;
+     - to-one `SingleLinkage` or to-many non-empty collection → invoke mapper with that
+       `RelationshipData` and target `JavaType`; place the returned value in the synthetic map
+       (`null` return → null property); mapper exceptions → `LINKAGE_MAPPING_FAILED`.
+  4. Else → `UNSUPPORTED_RELATIONSHIP_TARGET`.
 
 ## Test strategy
 
@@ -112,8 +124,17 @@ properties, without reading `included` or assembling a domain graph.
 - Positive: records, mutable POJOs, `@JsonCreator` / immutable creators, inheritance, naming
   strategies, `@JsonProperty`, `@JsonIgnore`, mix-ins, custom deserializers, default and custom
   `IdentifierConverter` (including non-`String` id types via `convertValue`), `id`-only, `lid`-only,
-  explicit-null attributes, omitted attributes, null/single/empty to-many linkage, Optional
-  relationship targets, homogeneous `fromResources`.
+  explicit-null attributes, omitted attributes, homogeneous `fromResources`.
+- Relationship matrix:
+  - to-one `ResourceIdentifier`: omitted key; links/meta-only `data == null`; `NullLinkage` → null;
+    `SingleLinkage` success; collection linkage → `RELATIONSHIP_CARDINALITY_MISMATCH`;
+  - to-many `List`/`Set`/array of `ResourceIdentifier`: empty collection success; non-empty
+    success; `NullLinkage` → `RELATIONSHIP_CARDINALITY_MISMATCH`; single linkage →
+    `RELATIONSHIP_CARDINALITY_MISMATCH`;
+  - Optional to-one: `NullLinkage` → empty `Optional`;
+  - custom mapper target: success on `SingleLinkage` and non-empty collection; `NullLinkage`/empty
+    short-circuit without invoking the mapper; cardinality fails before mapper; mapper throw →
+    `LINKAGE_MAPPING_FAILED`.
 - Negative: `RESOURCE_TYPE_MISMATCH`; to-one vs to-many cardinality mismatches; unregistered
   `Person`/`Comment`-typed relationship properties → `UNSUPPORTED_RELATIONSHIP_TARGET`; identifier
   parse/`convertValue` failures → `IDENTIFIER_CONVERSION_FAILED`; creator-required property absent
@@ -126,10 +147,11 @@ properties, without reading `included` or assembling a domain graph.
 
 ## Acceptance criteria
 
-- [ ] `fromResource` / `fromResources` bind type, `id`/`lid`, attributes, and built-in
-      `ResourceIdentifier` relationship shapes as the documented inverse of Phase 2.2 for those
-      flat shapes; unregistered non-identifier relationship targets fail without reading
-      `included`.
+- [ ] `fromResource` / `fromResources` validate `ResourceObject.type()` against
+      `@JsonApiResource.type()` (`RESOURCE_TYPE_MISMATCH` on mismatch) and bind `id`/`lid`,
+      attributes, and built-in `ResourceIdentifier` relationship shapes as the documented inverse
+      of Phase 2.2 for those flat shapes; unregistered non-identifier relationship targets fail
+      without reading `included`.
 - [ ] Mapping definitions come from the Phase 2.2 resolver/cache; caller mapper configuration is
       preserved via `rebuild()`; production code imports neither `core.internal` nor another
       integration module’s internals; public binder APIs satisfy ADR-009 nullness.
