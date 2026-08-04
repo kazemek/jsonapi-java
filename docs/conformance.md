@@ -5,9 +5,10 @@ Conformance is reported per feature as: **supported**, **pass-through**, **deleg
 This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
 (`jsonapi-java-annotations`), Phase 1.3 (`jsonapi-java-core` update validation), Phase 2.1
 (`jsonapi-java-jackson3` document writer), Phase 2.2 (`jsonapi-java-jackson3` domain-to-resource
-write mapping), and Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-checked by
-Phase 2.5 against pinned JSON:API 1.1 draft schemas. Read-side mapping and typed envelopes remain
-**deferred** to their Phase 2 milestones.
+write mapping), Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-checked by
+Phase 2.5 against pinned JSON:API 1.1 draft schemas. Flat resource-to-DTO binding (Phase 2.9)
+binds validated resource objects without reading `included`; typed envelopes and independent
+included binding remain **deferred** to their Phase 2 milestones.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -115,14 +116,14 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phase 2.2–2.3 — supported; Phases 2.8–2.17 — deferred)
+## Domain mapping (Phases 2.2–2.3 and 2.9 — supported; Phases 2.8, 2.10–2.17 — deferred)
 
 | Rule                                                    | Status       | Notes                                                                                          |
 |---------------------------------------------------------|--------------|------------------------------------------------------------------------------------------------|
 | Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types                                         |
 | Compound inclusion (explicit context / IncludePolicy)   | supported    | Phase 2.3; opt-in paths and policy only — no automatic graph traversal                         |
+| Flat resource-to-DTO binding                            | supported    | Phase 2.9; validated document first; linkage only — never reads `included`                     |
 | Sparse fieldsets on write                               | deferred     | Phase 2.8                                                                                      |
-| Flat resource-to-DTO binding                            | deferred     | Phases 2.9 and 2.15; validated document first                                                  |
 | Typed domain document envelopes                         | deferred     | Phases 2.10 and 2.16                                                                           |
 | Independent typed binding of `included` resources       | deferred     | Phases 2.10 and 2.16; no relationship injection                                                |
 | Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17 |

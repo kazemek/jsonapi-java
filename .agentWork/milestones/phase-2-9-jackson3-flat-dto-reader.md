@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3`
 > **Dependencies:** Phases 2.2 and 2.4
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -147,20 +147,20 @@ properties, without reading `included` or assembling a domain graph.
 
 ## Acceptance criteria
 
-- [ ] `fromResource` / `fromResources` validate `ResourceObject.type()` against
+- [x] `fromResource` / `fromResources` validate `ResourceObject.type()` against
       `@JsonApiResource.type()` (`RESOURCE_TYPE_MISMATCH` on mismatch) and bind `id`/`lid`,
       attributes, and built-in `ResourceIdentifier` relationship shapes as the documented inverse
       of Phase 2.2 for those flat shapes; unregistered non-identifier relationship targets fail
       without reading `included`.
-- [ ] Mapping definitions come from the Phase 2.2 resolver/cache; caller mapper configuration is
+- [x] Mapping definitions come from the Phase 2.2 resolver/cache; caller mapper configuration is
       preserved via `rebuild()`; production code imports neither `core.internal` nor another
       integration module’s internals; public binder APIs satisfy ADR-009 nullness.
-- [ ] Read-path `MappingDiagnostic` codes and resource-relative paths are asserted for the negative
+- [x] Read-path `MappingDiagnostic` codes and resource-relative paths are asserted for the negative
       cases listed in Test strategy.
-- [ ] The canonical `module-docs` checklist passes and `docs/conformance.md` marks flat
+- [x] The canonical `module-docs` checklist passes and `docs/conformance.md` marks flat
       resource-to-DTO binding **supported** without claiming typed envelopes or graph hydration.
-- [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*ResourceBinderSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew :jsonapi-java-jackson3:test --tests '*ResourceBinderSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.

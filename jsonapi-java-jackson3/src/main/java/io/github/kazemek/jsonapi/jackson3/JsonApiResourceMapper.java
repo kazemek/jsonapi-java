@@ -20,7 +20,8 @@ import org.jspecify.annotations.Nullable;
  * property model and caches resolved definitions by type and configuration identity.
  *
  * <p>Mapping is write-only: this mapper produces core model objects. Feed them to a {@link
- * JsonApiDocumentWriter} for serialization. Read-side binding is deferred to later milestones.
+ * JsonApiDocumentWriter} for serialization. Read-side flat DTO binding is provided by {@link
+ * JsonApiResourceBinder}.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the three-argument
  * {@link #toDocument(Object, DocumentEnvelope, CompoundSerializationContext)} and {@link

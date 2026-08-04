@@ -11,7 +11,9 @@
  * JsonApiResourceMapper} from a caller's {@link tools.jackson.databind.json.JsonMapper} or builder.
  * Mapping is explicit, respects Jackson's logical property model, and never mutates the caller's
  * mapper. Mapping diagnostics use {@link MappingDiagnostic} stable codes; identifier conversion is
- * pluggable through {@link IdentifierConverter}.
+ * pluggable through {@link IdentifierConverter}. Read-side flat DTO binding uses {@link
+ * JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder}; relationship linkage
+ * conversion is pluggable through {@link RelationshipLinkageMapper}.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
