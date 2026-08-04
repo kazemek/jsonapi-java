@@ -1,82 +1,142 @@
 # Phase 2.9 — Jackson 3 Flat DTO Reader
 
-> **Module:** `jsonapi-java-jackson3`  
-> **Dependencies:** Phases 2.2 and 2.4  
+> **Module:** `jsonapi-java-jackson3`
+> **Dependencies:** Phases 2.2 and 2.4
 > **Status:** Not started
 
 ## Goal
 
-Bind validated JSON:API resource objects to annotated flat records and POJOs without resolving
-included resources into a domain graph.
+Bind a validated `ResourceObject` to an annotated flat record or POJO through Jackson logical
+properties, without reading `included` or assembling a domain graph.
 
 ## Research and constraints
 
-- [ADR-011](../../docs/adr/011-flat-dto-read-binding.md) — binding runs after document validation,
-  uses flat DTOs, and never injects `included` resources into relationships.
-- [ADR-004](../../docs/adr/004-jackson-integration.md) — Jackson logical properties, creators,
-  naming, ignores, mix-ins, converters, and configured modules remain authoritative.
-- Phase 2.2 owns immutable mapping definitions and identifier conversion; read binding reuses them
-  in reverse rather than introducing a second annotation/reflection scanner.
-- Phase 2.4 owns JSON parsing, primary resource-versus-identifier interpretation, source locations,
-  and core validation. Mapping failures add domain diagnostics without replacing codec failures.
-- [ADR-002](../../docs/adr/002-document-representation.md) — explicit null, empty collections, and
-  member absence must remain distinguishable wherever the target DTO shape can represent them.
+- [ADR-011](../../docs/adr/011-flat-dto-read-binding.md) — binding runs only after document
+  validation; relationship properties receive linkage only; `included` is never injected.
+- [ADR-006](../../docs/adr/006-read-boundary.md) — Phase 2.4 remains the sole JSON→document path;
+  this milestone starts from core `ResourceObject` values, not raw JSON.
+- [ADR-004](../../docs/adr/004-jackson-integration.md) — Jackson visibility, naming, ignores,
+  mix-ins, creators, converters, custom deserializers, and configured modules remain authoritative
+  for attribute and bean construction.
+- [ADR-002](../../docs/adr/002-document-representation.md) — omit Jackson input for absent resource
+  members; pass a present null token for explicit JSON null; do not collapse empty to-many linkage
+  with null or absent.
+- [ADR-009](../../docs/adr/009-jspecify-nullness.md) — public packages stay `@NullMarked`; binder
+  APIs annotate absence-nullable parameters and results with `@Nullable`.
+- Phase 2.2 — reuse `MappingDefinitionResolver` / `ResourceMapping` / `MappingDefinitionCache` for
+  `@JsonApiResource` type, `@JsonApiId` / conventional `id`, attribute and relationship roles, and
+  JSON:API name overrides. Do not add a second annotation scanner.
+- Phase 2.2 write asymmetry — write may extract linkage from related `@JsonApiResource` domain
+  values (`Person`, `Comment`). Read does **not** fabricate those domain types from linkage. The
+  documented bidirectional relationship shapes are `ResourceIdentifier` (and Optional / List / Set /
+  array variants). Other relationship Java types require an explicit `RelationshipLinkageMapper`.
+- Phase 2.2 `IdentifierConverter` — today write-only (`Object`→`String`). Extend it with a default
+  `parse(String)` that returns the wire string unchanged; the binder then applies
+  `JsonMapper.convertValue` to the identifier property’s `JavaType`. Custom write converters that
+  alter the wire form must override `parse` to invert that form. Keep a single abstract `convert`
+  method so existing lambdas/`@FunctionalInterface` call sites remain valid.
+- Phase 2.4 — codec/validation failures stay on `JsonApiDocumentReadException`. Binding failures
+  throw `JsonApiMappingException` with `MappingDiagnostic` and a resource-relative JSON
+  Pointer-like `propertyPath` (`/type`, `/id`, `/lid`, `/attributes/...`,
+  `/relationships/<name>/data`…).
 
 ## Deliverables
 
-- Add a public Jackson 3 resource binder configured from the same caller mapper and immutable
-  mapping registry used by Phase 2.2, with `Class`, `JavaType`, and type-safe convenience entry
-  points for one resource and declared homogeneous resource collections.
-- Bind resource `type`, `id`/`lid`, and attributes to Jackson logical properties, using inverse
-  identifier conversion and normal Jackson creator/deserializer behavior.
-- Bind annotated relationship properties from linkage only: scalar and collection identifier
-  targets use registered identifier conversion, richer reference targets require an explicit
-  linkage mapper, and no value is read from `included`.
-- Add stable mapping categories and logical JSON Pointer-like paths for type mismatch, unsupported
-  target/cardinality, identifier conversion, missing creator input, unknown mapped member, and
-  custom linkage failures.
-- Refresh module docs/Javadoc and conformance rows for the flat DTO read flow.
+- Add public `JsonApiResourceBinder` and factory methods
+  `JsonApiJackson3.resourceBinder(JsonMapper|Builder)` /
+  `resourceBinder(..., IdentifierConverter)` /
+  `resourceBinder(..., IdentifierConverter, Map<Class<?>, RelationshipLinkageMapper>)`, deriving a
+  mapper via `rebuild()` exactly as `resourceMapper` does. Entry points:
+  `fromResource(ResourceObject, Class<T>|JavaType)` and
+  `fromResources(List<ResourceObject>, Class<T>|JavaType)` for declared homogeneous collections.
+- Validate `ResourceObject.type()` against `@JsonApiResource.type()` (`RESOURCE_TYPE_MISMATCH` on
+  mismatch). Place only mapped identifier (`id` if present, else `lid` if present, else omit),
+  attribute, and relationship values into a synthetic Jackson property map keyed by **Jackson
+  logical names**, then construct the bean with one `JsonMapper.convertValue` so
+  creators/deserializers apply. Extend `IdentifierConverter` with default `parse` as constrained
+  above.
+- Bind relationships from linkage only with built-in targets
+  `ResourceIdentifier` / `Optional<ResourceIdentifier>` / List·Set·array of `ResourceIdentifier`;
+  register `RelationshipLinkageMapper` for any other target `Class`. Never read document `included`.
+- Add `MappingDiagnostic` values used only on the read path:
+  `RESOURCE_TYPE_MISMATCH`, `IDENTIFIER_CONVERSION_FAILED`, `RELATIONSHIP_CARDINALITY_MISMATCH`,
+  `UNSUPPORTED_RELATIONSHIP_TARGET`, `LINKAGE_MAPPING_FAILED`, and `MISSING_CREATOR_INPUT`. Map
+  bulk-`convertValue` failures by Jackson cause: missing creator / instantiation input →
+  `MISSING_CREATOR_INPUT`; any other coercion, type, or property failure → existing
+  `UNSUPPORTED_ATTRIBUTE_VALUE`. Use the best available resource-relative path (property name when
+  Jackson exposes it, otherwise `/`). Do not add a separate per-attribute conversion diagnostic.
+  Refresh module docs/Javadoc (via `module-docs`) and mark flat resource-to-DTO binding
+  **supported** in `docs/conformance.md`.
 
 ## Non-goals
 
-- Binding document-level members or `included`; Phase 2.10 owns the typed envelope.
-- Automatic graph hydration, persistence lookup, identity maps, or cycle resolution.
-- Presence-aware partial updates; Phase 2.11 owns PATCH binding.
-- Resource-identifier documents as if they were full resource DTOs.
-- Jackson 2 support; Phase 2.15 ports this contract after the Jackson 3/Spring path is stable.
+- Document-level members, heterogeneous primary data, or `included` binding (Phase 2.10).
+- Parsing JSON or calling `JsonApiDocumentReader` inside the binder (callers validate first).
+- Auto-stubbing related `@JsonApiResource` domain types from linkage.
+- Graph hydration, persistence lookup, identity maps, cycles, or PATCH commands (Phase 2.11).
+- Treating `ResourceIdentifier` primary data as a full resource DTO.
+- Jackson 2 port (Phase 2.15).
 
 ## Implementation boundaries
 
-- Public APIs live in `io.github.kazemek.jsonapi.jackson3`; implementation remains in
-  `io.github.kazemek.jsonapi.jackson3.internal` and imports no `core.internal` types.
-- A resource type must match `@JsonApiResource(type)`. Heterogeneous primary collections require
-  explicit per-type registration and are deferred to the Phase 2.10 envelope registry.
-- Attribute values pass through the caller's Jackson deserializers. Unknown and ignored logical
-  properties obey caller mapper configuration after JSON:API role/name resolution.
-- Omitted resource members are omitted from Jackson input; explicit JSON null remains a present
-  null token. Jackson creator/null policy determines whether the target DTO accepts that shape.
-- Relationship absence, absent relationship `data`, explicit null linkage, and empty to-many
-  linkage are not collapsed. Unsupported target shapes fail instead of fabricating related DTOs.
+- Public types in `io.github.kazemek.jsonapi.jackson3`; implementation in
+  `io.github.kazemek.jsonapi.jackson3.internal`. Production code imports no `core.internal` and no
+  sibling module internals.
+- Binder input is already-validated `ResourceObject`. `fromResources` requires every element’s
+  `type` to match the single target `@JsonApiResource.type()`; heterogeneous lists are out of
+  scope.
+- Member presence rules:
+  - missing `attributes` object / missing attribute key → omit that logical property;
+  - attribute key present with JSON null → put Java `null` in the synthetic map;
+  - missing relationship key → omit;
+  - relationship present with `data == null` (links/meta-only) → omit the relationship property;
+  - `NullLinkage` → Java `null` on to-one / Optional empty; illegal on to-many targets
+    (`RELATIONSHIP_CARDINALITY_MISMATCH`);
+  - empty `IdentifierCollectionLinkage` → empty collection on to-many; illegal on to-one;
+  - `SingleLinkage` / non-empty collection linkage must match to-one vs to-many property shape.
+- Unmapped resource attribute or relationship names (not in `ResourceMapping`) are ignored. Only
+  mapped logical properties are placed into the synthetic map; caller
+  `DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES` therefore does not see unmapped JSON:API
+  fields.
+- Shared write diagnostics (`MISSING_RESOURCE_ANNOTATION`, `DUPLICATE_ROLE`, …) still apply when
+  resolving the mapping definition. Do not invent a parallel registry.
+- `RelationshipLinkageMapper` receives the non-null `RelationshipData` and target `JavaType` and
+  returns the property value (or null). Failures become `LINKAGE_MAPPING_FAILED`.
 
 ## Test strategy
 
-- Cover records, mutable and immutable POJOs, creators, inheritance, naming strategies,
-  `@JsonProperty`, `@JsonIgnore`, mix-ins, custom deserializers, and identifier converters.
-- Exercise single and homogeneous collection resources, explicit-null attributes, omitted
-  properties, null/single/empty/to-many linkage, and stable negative diagnostics.
-- Use compound documents to prove that changing an `included` representation cannot affect the
-  bound primary DTO or relationship fields.
+- Spec class: `ResourceBinderSpec` (plus focused companion specs only if the primary file would
+  become unreadable). Reuse or add testmodel types under
+  `src/test/java/.../testmodel/`; for bidirectional relationship coverage prefer flat DTO shapes
+  with `ResourceIdentifier` relationship fields rather than `Article`/`Person` write models.
+- Positive: records, mutable POJOs, `@JsonCreator` / immutable creators, inheritance, naming
+  strategies, `@JsonProperty`, `@JsonIgnore`, mix-ins, custom deserializers, default and custom
+  `IdentifierConverter` (including non-`String` id types via `convertValue`), `id`-only, `lid`-only,
+  explicit-null attributes, omitted attributes, null/single/empty to-many linkage, Optional
+  relationship targets, homogeneous `fromResources`.
+- Negative: `RESOURCE_TYPE_MISMATCH`; to-one vs to-many cardinality mismatches; unregistered
+  `Person`/`Comment`-typed relationship properties → `UNSUPPORTED_RELATIONSHIP_TARGET`; identifier
+  parse/`convertValue` failures → `IDENTIFIER_CONVERSION_FAILED`; creator-required property absent
+  → `MISSING_CREATOR_INPUT`; attribute value that cannot coerce to the property type (e.g. object
+  where a number is required) → `UNSUPPORTED_ATTRIBUTE_VALUE`; custom linkage mapper failures →
+  `LINKAGE_MAPPING_FAILED`.
+- Compound isolation: bind a primary `ResourceObject` taken from a document that also has
+  `included`; mutate or swap `included` content in the fixture and assert the bound DTO and its
+  relationship fields are unchanged (binder never receives `included`).
 
 ## Acceptance criteria
 
-- [ ] Resource type, identifier, attribute, creator, naming, ignore, mix-in, and custom
-      deserializer behavior is the tested inverse of the documented Phase 2.2 mapping contract.
-- [ ] Relationships bind only from linkage with stable cardinality/conversion failures, and no
-      `included` resource is read or injected.
-- [ ] Mapping definitions are shared with Phase 2.2, caller mapper behavior is preserved, and
-      production code imports neither `core.internal` nor another integration module's internals.
-- [ ] The canonical `module-docs` checklist passes and conformance documentation marks only the
-      delivered flat DTO read shapes **supported**.
+- [ ] `fromResource` / `fromResources` bind type, `id`/`lid`, attributes, and built-in
+      `ResourceIdentifier` relationship shapes as the documented inverse of Phase 2.2 for those
+      flat shapes; unregistered non-identifier relationship targets fail without reading
+      `included`.
+- [ ] Mapping definitions come from the Phase 2.2 resolver/cache; caller mapper configuration is
+      preserved via `rebuild()`; production code imports neither `core.internal` nor another
+      integration module’s internals; public binder APIs satisfy ADR-009 nullness.
+- [ ] Read-path `MappingDiagnostic` codes and resource-relative paths are asserted for the negative
+      cases listed in Test strategy.
+- [ ] The canonical `module-docs` checklist passes and `docs/conformance.md` marks flat
+      resource-to-DTO binding **supported** without claiming typed envelopes or graph hydration.
 - [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*ResourceBinderSpec'` passes.
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
