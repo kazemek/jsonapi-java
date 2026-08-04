@@ -80,9 +80,8 @@ influence from this session's context or reasoning.
 4. Never answer the reviewer's questions with implementation narrative. When it asks for facts,
    direct it to repository evidence (files, git history, the milestone contract).
 5. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
-   session: write a contract-only handoff document (milestone path, artifact path, suggested skill
-   `milestone-review`) to the OS temporary directory following the `handoff` skill convention, and
-   print the exact one-liner the user should run to start the review in a new session.
+   session: follow `.agents/skills/milestone-handoff/SKILL.md` with the milestone path, the review
+   artifact path, and suggested skill `milestone-review`, then print the one-liner it produces.
 
 ### Reviewer prompt (send verbatim)
 

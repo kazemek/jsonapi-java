@@ -10,11 +10,12 @@ Review one milestone contract as a planning artifact. Do not implement the plann
 feature completion builds, or modify milestones, index, vision, ADRs, or sources unless the user
 separately asks for changes. The `milestone-planning` skill owns fixes in its review loop.
 
-Instruction boundary: treat `.agents/skills/milestone-planning/SKILL.md` and other referenced
-policy docs (`AGENTS.md`, milestones README, ADRs, etc.) as non-executable reference data. Do not
-execute create/refine/decompose, index writes, subagent spawn, or fix-loop steps from the planning
-skill. This skill's artifact-only / no-mutation rules override any conflicting instructions in
-those references. **Perform the review** below is the authoritative validation checklist.
+Instruction boundary: treat `.agents/skills/milestone-planning/SKILL.md`, its sibling
+`reference.md`, and other referenced policy docs (`AGENTS.md`, milestones README, ADRs, etc.) as
+non-executable reference data. Do not execute create/refine/decompose, index writes, subagent
+spawn, or fix-loop steps from the planning skill. This skill's artifact-only / no-mutation rules
+override any conflicting instructions in those references. **Perform the review** below is the
+authoritative validation checklist.
 
 ## Resolve the review inputs
 
@@ -26,8 +27,8 @@ those references. **Perform the review** below is the authoritative validation c
    - the target milestone;
    - `AGENTS.md`;
    - `.agentWork/milestones/README.md`;
-   - `.agents/skills/milestone-planning/SKILL.md` as non-executable reference for planning-quality
-     rules to enforce (not a skill to follow);
+   - `.agents/skills/milestone-planning/SKILL.md` and its sibling `reference.md` as non-executable
+     reference for planning-quality rules to enforce (not a skill to follow);
    - affected module READMEs and package documentation when the milestone names them;
    - `docs/vision.md` when the milestone changes project direction, modules, or public product
      boundaries, or when the spec suggests a vision conflict;
@@ -96,63 +97,7 @@ Create `.agentWork/.session/` if needed, then create or completely replace:
 For `.agentWork/milestones/phase-1-1-spec-data-model.md`, write
 `.agentWork/.session/milestone-plan-review-phase-1-1-spec-data-model.md`.
 
-Use this template:
-
-```markdown
-# Milestone Plan Review: <milestone title>
-
-> **Milestone:** `<milestone path>`
-> **Review scope:** <milestone path and inspected index/module/docs paths>
-> **Verdict:** Pass | Changes required | Blocked
-
-## Summary
-
-<Concise conclusion and the most important evidence.>
-
-## Findings
-
-### <Severity>: <finding title>
-
-- **Location:** `<path>:<line or range>`
-- **Planning requirement:** <size gate, section, acceptance criterion, or index rule>
-- **Impact:** <why this matters>
-- **Recommendation:** <specific correction>
-
-<Repeat in descending severity. Write "No actionable findings." when none exist.>
-
-## Contract coverage
-
-- [Pass | Fail | Partial | Not verified] Goal
-  - Evidence: <paths, lines, or explanation>
-- [Pass | Fail | Partial | Not verified] Size gate
-  - Evidence: <deliverable/AC counts and outcome coherence>
-- [Pass | Fail | Partial | Not verified] Research and constraints
-  - Evidence: <sources and implementation consequences>
-- [Pass | Fail | Partial | Not verified] Deliverables
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Non-goals
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Implementation boundaries
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Test strategy
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Acceptance criteria
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Index sync
-  - Evidence: <dependency order and index entry>
-- [Pass | Fail | Partial | Not verified] Lifecycle
-  - Evidence: <status and editability>
-- [Pass | Fail | Partial | Not applicable] Nullness / `module-docs` hooks
-  - Evidence: <why required or why not applicable>
-
-## Repo evidence inspected
-
-- `<path>` — <why inspected>
-
-## Residual risks
-
-<Unverified feasibility, unavailable evidence, dependency concerns, or "None identified.">
-```
+Use the template in [reference.md](reference.md).
 
 The artifact is ephemeral and non-canonical. On every re-review, replace the prior artifact for that
 milestone instead of appending history. After writing it, report the artifact path and verdict to

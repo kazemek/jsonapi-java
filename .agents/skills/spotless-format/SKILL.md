@@ -1,6 +1,6 @@
 ---
 name: spotless-format
-description: Applies and verifies Spotless formatting for Java, Groovy/Spock, Kotlin, and Gradle Kotlin DSL. Use before declaring an implementation task complete, or when the user asks to format code, run Spotless, spotlessApply, or spotlessCheck.
+description: Applies and verifies Spotless formatting for Java, Groovy/Spock, Kotlin, and Gradle Kotlin DSL. Use when the change touches Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`) or the formatter configuration, or when the user asks to format code, run Spotless, spotlessApply, or spotlessCheck. Skip for docs-only and pure workflow changes.
 disable-model-invocation: true
 ---
 
