@@ -44,6 +44,8 @@ path and follow it (skills use explicit invocation only).
   the `milestone-planning` skill runs the same procedure in a fresh subagent.
 - **Review an implementation:** use the `milestone-review` skill for on-demand reviews; the
   `implement-milestone` skill runs the same procedure in a fresh subagent.
+- **Review-isolation handoff:** use `milestone-handoff` only when a write-capable fresh subagent
+  cannot be spawned for plan or implementation review; it is not a primary task route.
 - **Repository-wide build, CI, or workflow work:** read only the root configuration, workflow,
   or guidance files directly implicated; completion follows the gate tiers below.
 - **Scope expansion:** search inside the affected module or root subsystem first; broaden only

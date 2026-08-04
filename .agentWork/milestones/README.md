@@ -148,3 +148,7 @@ artifact for that milestone.
   `.agentWork/.session/milestone-review-<milestone-basename>.md`. The `implement-milestone` skill
   runs the same procedure in a fresh-context subagent after implementation; manual on-demand
   implementation reviews remain available.
+- **Review-isolation handoff:** when a write-capable fresh subagent cannot be spawned, the
+  `milestone-handoff` skill writes a contract-only kickoff file at
+  `.agentWork/.session/milestone-handoff-<review-kind>-<milestone-basename>.md` (not a review
+  verdict). Re-handoff overwrites the prior file for that milestone and kind.
