@@ -10,9 +10,15 @@ Format the repository and verify compliance before declaring implementation work
 
 ## Applicability
 
-Run this skill only when the change touches Spotless-covered files (`.java`, `.groovy`, `.kt`,
-`.gradle.kts`) or the formatter configuration. Docs-only and pure workflow changes have no
-formatting surface; skip this gate for them.
+Run this skill when:
+
+- the change touches Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`) or the
+  formatter configuration; or
+- the user explicitly asks to format code or run Spotless (`spotlessApply` / `spotlessCheck`), even
+  if no covered files changed.
+
+Docs-only and pure workflow changes have no formatting surface by default; skip this gate for them
+unless the user makes an explicit formatting request.
 
 ## Run formatting
 

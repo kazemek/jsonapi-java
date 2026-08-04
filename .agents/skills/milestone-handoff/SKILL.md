@@ -12,14 +12,21 @@ evidence.
 
 ## Resolve inputs
 
-Require all of:
+Require both of:
 
 - **Milestone path** under `.agentWork/milestones/`
-- **Review artifact path** under `.agentWork/.session/` (the path the reviewer will create or
-  replace)
 - **Suggested skill:** `milestone-review` or `milestone-plan-review`
 
-Ask the user when any input is missing or ambiguous.
+Ask the user when either input is missing or ambiguous.
+
+Derive the review artifact path from the suggested skill and the milestone basename (do not accept a
+free-form override):
+
+- `milestone-plan-review` → `.agentWork/.session/milestone-plan-review-<milestone-basename>.md`
+- `milestone-review` → `.agentWork/.session/milestone-review-<milestone-basename>.md`
+
+For `.agentWork/milestones/phase-1-1-spec-data-model.md` with `milestone-review`, the derived path is
+`.agentWork/.session/milestone-review-phase-1-1-spec-data-model.md`.
 
 ## Write the handoff
 
@@ -33,13 +40,13 @@ Use `plan-review` or `implementation-review` as `<review-kind>`. For
 `.agentWork/milestones/phase-1-1-spec-data-model.md` and an implementation review, write
 `.agentWork/.session/milestone-handoff-implementation-review-phase-1-1-spec-data-model.md`.
 
-2. Use this body shape:
+2. Use this body shape (fill **Review artifact** with the derived path):
 
 ```markdown
 # Milestone review handoff
 
 - **Milestone:** `<milestone path>`
-- **Review artifact:** `<artifact path>`
+- **Review artifact:** `<derived artifact path>`
 - **Suggested skill:** `<milestone-review | milestone-plan-review>`
 
 ## Instructions

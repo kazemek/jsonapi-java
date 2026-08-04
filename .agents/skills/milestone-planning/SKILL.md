@@ -122,8 +122,8 @@ without any influence from this session's context or reasoning.
 4. Never answer the reviewer's questions with planning narrative. When it asks for facts, direct it
    to repository evidence (files, the milestone contract, the milestone index).
 5. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
-   session: follow `.agents/skills/milestone-handoff/SKILL.md` with the milestone path, the review
-   artifact path, and suggested skill `milestone-plan-review`, then print the one-liner it produces.
+   session: follow `.agents/skills/milestone-handoff/SKILL.md` with the milestone path and suggested
+   skill `milestone-plan-review`, then print the one-liner it produces.
 
 ### Reviewer prompt (send verbatim)
 
