@@ -162,5 +162,5 @@ properties, without reading `included` or assembling a domain graph.
 - [x] `./gradlew :jsonapi-java-jackson3:test --tests '*ResourceBinderSpec'` passes.
 - [x] `./gradlew clean build` passes.
 - [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
-      must still pass the gate.
+- [x] Sonar Quality Gate passes (passed: gate green and 0 new-code issues via the Issues API,
+      confirmed by local analysis and CI PR analysis).

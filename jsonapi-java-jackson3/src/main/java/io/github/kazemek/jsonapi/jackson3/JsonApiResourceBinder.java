@@ -29,6 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class JsonApiResourceBinder {
 
+  private static final String RESOURCE = "resource";
   private static final String TARGET_TYPE = "targetType";
 
   private final JsonMapper mapper;
@@ -41,14 +42,14 @@ public final class JsonApiResourceBinder {
 
   /** Binds one resource object to the given DTO type. */
   public <T> T fromResource(ResourceObject resource, Class<T> targetType) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(targetType, TARGET_TYPE);
     return targetType.cast(binder.fromResource(resource, mapper.constructType(targetType)));
   }
 
   /** Binds one resource object to the given DTO Java type. */
   public Object fromResource(ResourceObject resource, JavaType targetType) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(targetType, TARGET_TYPE);
     return binder.fromResource(resource, targetType);
   }
@@ -61,9 +62,11 @@ public final class JsonApiResourceBinder {
   public <T> List<T> fromResources(List<ResourceObject> resources, Class<T> targetType) {
     Objects.requireNonNull(resources, "resources");
     Objects.requireNonNull(targetType, TARGET_TYPE);
+    JavaType resolvedType = mapper.constructType(targetType);
     List<T> bound = new ArrayList<>(resources.size());
     for (ResourceObject resource : resources) {
-      bound.add(fromResource(resource, targetType));
+      Objects.requireNonNull(resource, RESOURCE);
+      bound.add(targetType.cast(binder.fromResource(resource, resolvedType)));
     }
     return List.copyOf(bound);
   }

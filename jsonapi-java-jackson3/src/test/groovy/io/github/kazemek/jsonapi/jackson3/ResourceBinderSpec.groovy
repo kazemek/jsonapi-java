@@ -232,17 +232,17 @@ class ResourceBinderSpec extends Specification {
     article.title() == "T"
   }
 
-  def "explicit-null attribute binds null and omitted attribute stays absent"() {
+  def "explicit-null attribute binds null and omitted attribute keeps its default"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
     def resource = resource("articles", "1", [title: null], null)
 
     when:
-    def article = binder.fromResource(resource, FlatArticle)
+    def article = binder.fromResource(resource, FlatDefaultedArticle)
 
     then:
-    article.title() == null
-    article.body() == null
+    article.title == null
+    article.body == "default"
   }
 
   def "unmapped resource attributes are ignored"() {
@@ -777,6 +777,20 @@ class ResourceBinderSpec extends Specification {
     ex.propertyPath() == "/required"
   }
 
+  def "creator throwing during instantiation is MISSING_CREATOR_INPUT"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+    def resource = resource("things", "1", [title: "boom"], null)
+
+    when:
+    binder.fromResource(resource, FlatThrowingCreatorThing)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
+    ex.cause instanceof tools.jackson.databind.exc.ValueInstantiationException
+  }
+
   def "attribute value that cannot coerce is UNSUPPORTED_ATTRIBUTE_VALUE"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
@@ -956,6 +970,39 @@ class ResourceBinderSpec extends Specification {
   static class FlatCountedThing {
     @JsonApiId String id
     int count
+  }
+
+  @JsonApiResource(type = "things")
+  static class FlatThrowingCreatorThing {
+    private final String id
+    private final String title
+
+    @JsonCreator
+    FlatThrowingCreatorThing(
+    @JsonProperty("id") @JsonApiId String id, @JsonProperty("title") String title) {
+      if (title == "boom") {
+        throw new IllegalArgumentException("creator rejected value")
+      }
+      this.id = id
+      this.title = title
+    }
+
+    String getId() {
+      return id
+    }
+
+    String getTitle() {
+      return title
+    }
+  }
+
+  @JsonApiResource(type = "articles")
+  static class FlatDefaultedArticle {
+    @JsonApiId String id
+    String title = "default"
+    String body = "default"
+
+    FlatDefaultedArticle() {}
   }
 
   @JsonApiResource(type = "articles")

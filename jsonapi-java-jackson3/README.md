@@ -45,6 +45,11 @@ JsonApiDocument document = JsonApiJackson3.reader(callerMapper, DocumentReadCont
 ResourceObject resource = ((DocumentData.SingleResource) document.data()).resource();
 
 FlatArticleDto dto = binder.fromResource(resource, FlatArticleDto.class);
+
+JsonApiDocument collectionDocument = JsonApiJackson3.reader(callerMapper, DocumentReadContext.resourceDefaults())
+    .readValue(collectionJson);
+List<ResourceObject> resources = ((DocumentData.ResourceCollection) collectionDocument.data()).resources();
+
 List<FlatArticleDto> dtos = binder.fromResources(resources, FlatArticleDto.class);
 ```
 

@@ -130,8 +130,13 @@ public final class DomainResourceBinder {
       Class<?> rawType, String identifierPath, @Nullable Throwable cause) {
     String message =
         cause == null
-            ? "Identifier converter returned null for wire identifier '" + identifierPath + "'"
-            : "Failed to convert wire identifier '" + identifierPath + "' for " + rawType.getName();
+            ? "Identifier converter returned null for the wire identifier at '"
+                + identifierPath
+                + "'"
+            : "Failed to convert the wire identifier at '"
+                + identifierPath
+                + "' for "
+                + rawType.getName();
     return cause == null
         ? new JsonApiMappingException(
             MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED, rawType, identifierPath, message)
@@ -232,29 +237,15 @@ public final class DomainResourceBinder {
       MappingProperty property,
       RelationshipData data,
       boolean toMany) {
+    boolean empty = validateCardinality(property, data, toMany);
     switch (data) {
-      case RelationshipData.NullLinkage ignored -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "null linkage on to-many relationship");
-        }
-        properties.put(property.logicalName(), null);
-      }
-      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "single linkage on to-many relationship");
-        }
-        properties.put(property.logicalName(), linkageMap(identifier));
-      }
+      case RelationshipData.NullLinkage ignored -> properties.put(property.logicalName(), null);
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          properties.put(property.logicalName(), linkageMap(identifier));
       case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
-        if (identifiers.isEmpty()) {
-          if (!toMany) {
-            throw cardinalityMismatch(property, "empty collection linkage on to-one relationship");
-          }
+        if (empty) {
           properties.put(property.logicalName(), List.of());
           return;
-        }
-        if (!toMany) {
-          throw cardinalityMismatch(property, "collection linkage on to-one relationship");
         }
         List<Object> values = new ArrayList<>(identifiers.size());
         for (ResourceIdentifier identifier : identifiers) {
@@ -272,37 +263,57 @@ public final class DomainResourceBinder {
       boolean toMany,
       RelationshipLinkageMapper linkageMapper,
       JavaType propertyType) {
+    boolean empty = validateCardinality(property, data, toMany);
     switch (data) {
-      case RelationshipData.NullLinkage ignored -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "null linkage on to-many relationship");
-        }
-        properties.put(property.logicalName(), null);
-      }
-      case RelationshipData.SingleLinkage single -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "single linkage on to-many relationship");
-        }
-        properties.put(
-            property.logicalName(),
-            invokeLinkageMapper(linkageMapper, single, propertyType, property));
-      }
+      case RelationshipData.NullLinkage ignored -> properties.put(property.logicalName(), null);
+      case RelationshipData.SingleLinkage single ->
+          properties.put(
+              property.logicalName(),
+              invokeLinkageMapper(linkageMapper, single, propertyType, property));
       case RelationshipData.IdentifierCollectionLinkage collection -> {
-        if (collection.identifiers().isEmpty()) {
-          if (!toMany) {
-            throw cardinalityMismatch(property, "empty collection linkage on to-one relationship");
-          }
+        if (empty) {
           properties.put(property.logicalName(), List.of());
           return;
-        }
-        if (!toMany) {
-          throw cardinalityMismatch(property, "collection linkage on to-one relationship");
         }
         properties.put(
             property.logicalName(),
             invokeLinkageMapper(linkageMapper, collection, propertyType, property));
       }
     }
+  }
+
+  /**
+   * Validates linkage shape against the property's cardinality, throwing {@link
+   * MappingDiagnostic#RELATIONSHIP_CARDINALITY_MISMATCH} for illegal combinations. Returns whether
+   * the linkage denotes an empty value ({@code null} on to-one, empty collection on to-many).
+   */
+  private static boolean validateCardinality(
+      MappingProperty property, RelationshipData data, boolean toMany) {
+    return switch (data) {
+      case RelationshipData.NullLinkage ignored -> {
+        if (toMany) {
+          throw cardinalityMismatch(property, "null linkage on to-many relationship");
+        }
+        yield true;
+      }
+      case RelationshipData.SingleLinkage ignored -> {
+        if (toMany) {
+          throw cardinalityMismatch(property, "single linkage on to-many relationship");
+        }
+        yield false;
+      }
+      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
+        boolean empty = identifiers.isEmpty();
+        if (!toMany) {
+          throw cardinalityMismatch(
+              property,
+              empty
+                  ? "empty collection linkage on to-one relationship"
+                  : "collection linkage on to-one relationship");
+        }
+        yield empty;
+      }
+    };
   }
 
   private static @Nullable Object invokeLinkageMapper(
