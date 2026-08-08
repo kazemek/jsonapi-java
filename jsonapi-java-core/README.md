@@ -38,6 +38,7 @@ This module does not provide Jackson codecs, HTTP adapters, query-parameter pars
 ## For contributors / agents
 
 - **Local vs aggregate:** Compact constructors enforce single-value invariants. Cross-document rules live only in `JsonApiDocumentValidator`.
+- **Identity uniqueness:** Duplicate detection is representation-strict (`ResourceObject.equals`) and alias-aware for identifier collections after id↔lid binding.
 - **Wire vocabulary:** `JsonApiMembers` holds shared JSON:API member-name constants for codecs and reserved-name sets; it is not an application-facing entry point.
 - **Diagnostics:** Failures use `JsonApiValidationException` with a stable `ValidationRuleCode` and a JSON Pointer-like path—not bare `IllegalArgumentException`.
 - **Nullness:** Production packages are `@NullMarked` (JSpecify only). Use `@Nullable` for member absence and intentionally null map/list values. Explicit JSON `null` stays a sealed variant (`DocumentData.NullData`, etc.), not a bare nullable reference. Keep `LocalValidation.requireNonNull` for construction; do not use JetBrains/JSR-305/Checker nullness annotations. Groovy tests are not annotated.

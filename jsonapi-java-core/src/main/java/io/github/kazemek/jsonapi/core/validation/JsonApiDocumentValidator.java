@@ -33,7 +33,9 @@ import org.jspecify.annotations.Nullable;
  * <p>Call after constructing a {@link JsonApiDocument}. Local construction already enforces
  * single-value invariants; this validator covers identity uniqueness, full linkage,
  * local-identifier consistency, context-specific links, pagination cardinality, and
- * extension/profile member policy according to the supplied {@link ValidationContext}.
+ * extension/profile member policy according to the supplied {@link ValidationContext}. Identity
+ * uniqueness is representation-strict and alias-aware for identifier collections after
+ * document-wide id↔lid binding.
  */
 public final class JsonApiDocumentValidator {
 
@@ -291,6 +293,93 @@ public final class JsonApiDocumentValidator {
     }
   }
 
+  /**
+   * Rejects identifier-collection entries that resolve to the same canonical identity after
+   * document-wide id↔lid binding. Runs before full-linkage early returns so documents without
+   * {@code included} still receive the check.
+   */
+  private void ensureCanonicalUniqueIdentifierCollections(
+      @Nullable DocumentData primaryData,
+      @Nullable List<ResourceObject> included,
+      IdentityRegistry registry) {
+    if (primaryData instanceof DocumentData.IdentifierCollection(List<ResourceIdentifier> ids)) {
+      ensureCanonicalUniqueIdentifierIdentities(ids, PATH_DATA, registry);
+    }
+    walkRelationshipIdentifierCollections(primaryData, included, registry);
+  }
+
+  private void walkRelationshipIdentifierCollections(
+      @Nullable DocumentData primaryData,
+      @Nullable List<ResourceObject> included,
+      IdentityRegistry registry) {
+    if (primaryData != null) {
+      switch (primaryData) {
+        case DocumentData.SingleResource(ResourceObject resource) ->
+            ensureCanonicalUniqueFromResource(resource, PATH_DATA, registry);
+        case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
+          for (int index = 0; index < resources.size(); index++) {
+            ensureCanonicalUniqueFromResource(
+                resources.get(index), PATH_DATA + "/" + index, registry);
+          }
+        }
+        default -> {
+          // Identifier primary data has no relationship collections.
+        }
+      }
+    }
+    if (included == null) {
+      return;
+    }
+    for (int index = 0; index < included.size(); index++) {
+      ensureCanonicalUniqueFromResource(included.get(index), "/included/" + index, registry);
+    }
+  }
+
+  private void ensureCanonicalUniqueFromResource(
+      ResourceObject resource, String path, IdentityRegistry registry) {
+    if (resource.relationships() == null) {
+      return;
+    }
+    for (Map.Entry<String, Relationship> entry :
+        resource.relationships().relationships().entrySet()) {
+      RelationshipData data = entry.getValue().data();
+      if (data
+          instanceof RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> ids)) {
+        String relPath = JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()) + PATH_DATA;
+        ensureCanonicalUniqueIdentifierIdentities(ids, relPath, registry);
+      }
+    }
+  }
+
+  private void ensureCanonicalUniqueIdentifierIdentities(
+      List<ResourceIdentifier> identifiers, String path, IdentityRegistry registry) {
+    Set<ResourceIdentity> seen = new HashSet<>();
+    for (int index = 0; index < identifiers.size(); index++) {
+      ResourceIdentity canonical = canonicalIdentityFor(identifiers.get(index), registry);
+      if (!seen.add(canonical)) {
+        throw duplicateIdentity(path + "/" + index, canonical);
+      }
+    }
+  }
+
+  private static ResourceIdentity canonicalIdentityFor(
+      ResourceIdentifier identifier, IdentityRegistry registry) {
+    ResourceIdentity preferred = identifier.identityKey();
+    ResourceIdentity canonical = registry.canonicalIdentity(preferred);
+    if (canonical != null) {
+      return canonical;
+    }
+    if (identifier.hasId() && identifier.hasLid()) {
+      ResourceIdentity lid =
+          ResourceIdentity.ofLid(identifier.type(), Objects.requireNonNull(identifier.lid()));
+      ResourceIdentity viaLid = registry.canonicalIdentity(lid);
+      if (viaLid != null) {
+        return viaLid;
+      }
+    }
+    return preferred;
+  }
+
   private static JsonApiValidationException duplicateIdentity(String path, ResourceIdentity alias) {
     return new JsonApiValidationException(
         ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY,
@@ -430,6 +519,7 @@ public final class JsonApiDocumentValidator {
         registerLinkageFromResource(resource, path, registry);
       }
     }
+    ensureCanonicalUniqueIdentifierCollections(primaryData, included, registry);
     if (included == null || context.sparseFieldsetException()) {
       return;
     }
