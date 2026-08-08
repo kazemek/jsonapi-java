@@ -44,14 +44,21 @@ signatures.
     `@Nullable Meta meta`, `@Nullable JsonApiObject jsonapi`, `@Nullable Links links`,
     `@Nullable IncludedResources included`, `Map<String, @Nullable Object> additionalMembers`
     (same absence/`null` member rules as `JsonApiDocument`; no `JsonApiDocument` /
-    `ResourceObject` / `DocumentData` fields on the public envelope).
+    `ResourceObject` / `DocumentData` fields on the public envelope). Constructors defensively
+    copy `errors` and `additionalMembers` (`List.copyOf` / ordered map copy); accessors return
+    unmodifiable views so mutating a caller-supplied source or a returned collection cannot change
+    the envelope.
   - sealed `DomainData` permitting `NullData`, `SingleResource(Object resource)`,
     `ResourceCollection(List<Object> resources)`, `SingleIdentifier(ResourceIdentifier)`,
     `IdentifierCollection(List<ResourceIdentifier>)`. Resource DTO payloads are `Object` because
     primary/included collections may be heterogeneous; callers cast using their registrations.
+    `ResourceCollection` and `IdentifierCollection` defensively copy their lists and expose
+    unmodifiable accessors.
   - `IncludedResources` — immutable wire-order `List<Object> resources()` plus identity lookup
     `Optional<Object> find(ResourceIdentity)`; when a bound resource has both `id` and `lid`,
     index under both `ResourceIdentity.ofId` and `ofLid` keys to the same DTO instance.
+    Defensively copy the wire-order list and identity index at construction; mutating a returned
+    `resources()` list or a construction-time source must not change wire order or `find` results.
   - `ResourceTypeRegistry` built via `ResourceTypeRegistry.builder().register(Class|JavaType)...`
     `.build()`. Registration only records target `Class`/`JavaType` and keys by reading
     `@JsonApiResource.type()` from the raw class (annotation lookup only — no
@@ -88,13 +95,14 @@ signatures.
   `CONFLICTING_TYPE_REGISTRATION` (both carried only by `JsonApiMappingException`). Expose document
   members as the already-decoded core `Links` / `Meta` / `JsonApiObject` / `ErrorObject` /
   additional-member map values (no reflective serialization of those core records). Add
-  `metaAs(Class|JavaType)` on `JsonApiDomainDocument` that `convertValue`s `Meta.members()` using
-  the same domain-reader `rebuild()`-derived binder mapper that bound the document (retained via
-  package-private envelope construction — not a public document component and not a fresh default
-  mapper). Absent `meta` → return null; present meta conversion failure →
-  `JsonApiMappingException` + `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta`. Refresh module docs/Javadoc
-  via `module-docs` and mark typed domain envelopes plus independent included binding **supported**
-  in `docs/conformance.md` without claiming graph hydration or PATCH commands.
+  `@Nullable metaAs(Class|JavaType)` on `JsonApiDomainDocument` that `convertValue`s
+  `Meta.members()` using the same domain-reader `rebuild()`-derived binder mapper that bound the
+  document (retained via package-private envelope construction — not a public document component
+  and not a fresh default mapper). Both overloads return `@Nullable`; absent `meta` → return null;
+  present meta conversion failure → `JsonApiMappingException` + `UNSUPPORTED_ATTRIBUTE_VALUE` at
+  `/meta`. Refresh module docs/Javadoc via `module-docs` and mark typed domain envelopes plus
+  independent included binding **supported** in `docs/conformance.md` without claiming graph
+  hydration or PATCH commands.
 
 ## Non-goals
 
@@ -126,6 +134,9 @@ signatures.
   custom `RelationshipLinkageMapper` registrations on the domain reader apply to both.
 - `metaAs` must not construct a new default `JsonMapper`; it reuses the domain reader's derived
   binder mapper retained at envelope construction.
+- Envelope collection members match core document mutability: defensive copies at construction and
+  unmodifiable accessors for `errors`, `additionalMembers`, `DomainData` collection variants, and
+  `IncludedResources` (including the id/lid index).
 - Public nullness follows ADR-009.
 
 ## Test strategy
@@ -136,9 +147,14 @@ signatures.
   `src/test/java/.../testmodel/` only when existing types are insufficient.
 - Positive: single-resource, homogeneous collection, heterogeneous collection (two registered
   types), `data: null`, absent data (meta-only / errors), identifier primary data (pass-through),
-  compound fixtures (`compound-document`, `compound-shared-identity`, `empty-included`,
-  `extension-and-at-members`), `metaAs` into a simple POJO, nullable links, additional/`@`
-  members preserved.
+  compound fixtures (`compound-document`, `compound-shared-identity`, `extension-and-at-members`),
+  nullable links, additional/`@` members preserved. Assert absent `included` (no member) →
+  `included == null` and `empty-included` → non-null empty `IncludedResources` separately.
+  `metaAs`: both overloads return null when meta is absent; successful conversion uses a
+  caller-mapper module or feature that a fresh default mapper cannot apply, exercised on envelopes
+  from both `readValue` and `fromDocument`. Immutability: mutate construction-time source lists
+  and returned `resources()` / `errors` / `additionalMembers` collections and assert wire order and
+  id/lid `find` results are unchanged.
 - Included: wire order preserved; `find` by id and by lid when both present; shared identity
   yields one DTO instance reachable from both keys; cyclic/shared linkage fixtures prove
   relationship fields remain `ResourceIdentifier` (or registered linkage-mapper values) while
@@ -148,9 +164,10 @@ signatures.
   included type → same at `/included/n`; duplicate registry type → `JsonApiMappingException` /
   `CONFLICTING_TYPE_REGISTRATION` at `build()` with `propertyPath` equal to the conflicting type
   name and `resourceClass` the later registrant; Phase 2.9 binder failures surface as
-  `JsonApiMappingException` with joined document+binder paths (e.g. `/data/type`);
-  codec/validation failures from `readValue` remain `JsonApiDocumentReadException` (assert
-  category unchanged vs Phase 2.4).
+  `JsonApiMappingException` with joined document+binder paths (e.g. `/data/type`); incompatible
+  `metaAs` target → `JsonApiMappingException` with `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta` (not
+  `JsonApiDocumentReadException`); codec/validation failures from `readValue` remain
+  `JsonApiDocumentReadException` (assert category unchanged vs Phase 2.4).
 - Isolation: mutate or swap `included` in a fixture after constructing a binder-only baseline and
   assert domain-envelope relationship fields still match linkage-only binding (no injection).
 
@@ -159,9 +176,12 @@ signatures.
 - [ ] `readValue` / `fromDocument` preserve absent, `NullData`, single-resource, resource-collection,
       single-identifier, and identifier-collection primary states plus document-level
       links/meta/jsonapi/errors/additional members without requiring `JsonApiDocument` in routine
-      `readValue` signatures; identifier primary data is never DTO-bound; `metaAs` uses the
-      reader's derived binder mapper (absent → null; conversion failure →
-      `JsonApiMappingException` / `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta`).
+      `readValue` signatures; identifier primary data is never DTO-bound; absent `included` stays
+      null while present-empty `included: []` is a non-null empty `IncludedResources`; envelope
+      collections and the id/lid index are mutation-safe; `@Nullable metaAs(Class|JavaType)` uses
+      the reader's derived binder mapper on both entry paths (absent meta → null for both
+      overloads; conversion failure → `JsonApiMappingException` /
+      `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta`).
 - [ ] Explicit `ResourceTypeRegistry` registration deterministically binds heterogeneous
       primary/included resources, preserves included wire order and dual id/lid identity lookup,
       and throws `JsonApiMappingException` for `UNREGISTERED_RESOURCE_TYPE` (document-pointer
