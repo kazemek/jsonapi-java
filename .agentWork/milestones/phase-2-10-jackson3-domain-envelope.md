@@ -168,13 +168,16 @@ signatures.
   `/data/0/type`, `/included/1/title`, and `/data/0/relationships/author/data` (single joining
   `/`); incompatible `metaAs` target → `JsonApiMappingException` with
   `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta` (not `JsonApiDocumentReadException`); codec/validation
-  failures from `readValue` remain `JsonApiDocumentReadException` (assert category unchanged vs
-  Phase 2.4).
+  failures from `readValue` remain `JsonApiDocumentReadException` with the same
+  `CodecFailureCategory`, JSON Pointer-like path, and safe `SourceLocation` as Phase 2.4, plus the
+  originating `ValidationRuleCode` for validation failures.
 - Ownership: on success and failure, caller-owned `InputStream` and `JsonParser` remain open;
   `String` / `byte[]` / `InputStream` convenience overloads close only the `JsonParser` instances
   they create (no reader-created streams).
-- Isolation: mutate or swap `included` in a fixture after constructing a binder-only baseline and
-  assert domain-envelope relationship fields still match linkage-only binding (no injection).
+- Isolation: independently bind two documents that share identical primary relationship linkage but
+  differ in `included` (matching related resource vs unrelated resource); assert primary and
+  included DTO relationship fields are identical across both envelopes and remain linkage-only (no
+  injection).
 
 ## Acceptance criteria
 
@@ -193,7 +196,8 @@ signatures.
       `propertyPath`, null `resourceClass`) and `CONFLICTING_TYPE_REGISTRATION` (`propertyPath` =
       conflicting type name, `resourceClass` = later registrant) before a partial envelope escapes.
 - [ ] Included resources are never injected into primary or included DTO relationship properties,
-      including cyclic and shared-identity fixtures; binding reuses Phase 2.9 binder contracts.
+      including cyclic and shared-identity fixtures and independent envelopes that share linkage
+      but differ in `included`; binding reuses Phase 2.9 binder contracts.
 - [ ] Public envelope APIs satisfy ADR-009 nullness; the canonical `module-docs` checklist passes;
       `docs/conformance.md` marks typed domain envelopes and independent included binding
       **supported** without claiming graph hydration or PATCH commands.
