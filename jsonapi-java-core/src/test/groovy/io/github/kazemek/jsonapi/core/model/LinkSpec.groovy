@@ -137,4 +137,72 @@ class LinkSpec extends Specification {
     links.additionalMembers()["@context"] == "https://example.com/ctx"
     links.flatten().containsKey("@context")
   }
+
+  def "links rejects reserved additional member '#name'"(String name) {
+    when:
+    Links.of([:], [(name): 42])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.RESERVED_FIELD_NAME
+    ex.jsonPointer() == "/links/" + name
+
+    where:
+    name << [
+      "self",
+      "related",
+      "describedby",
+      "first",
+      "last",
+      "prev",
+      "next",
+      "about",
+      "type"
+    ]
+  }
+
+  def "reserved names remain valid in the typed links map"(String name) {
+    when:
+    def links = Links.ofLinks([(name): new Link.StringLink("http://example.com")])
+
+    then:
+    links.links().containsKey(name)
+    links.links().get(name) instanceof Link.StringLink
+
+    where:
+    name << [
+      "self",
+      "related",
+      "describedby",
+      "first",
+      "last",
+      "prev",
+      "next",
+      "about",
+      "type"
+    ]
+  }
+
+  def "non-reserved overlapping keys collide between maps"() {
+    when:
+    Links.of(
+        ["ext:custom": new Link.StringLink("http://example.com")],
+        ["ext:custom": true])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.MEMBER_NAME_COLLISION
+  }
+
+  def "reserved name in both maps fails as reserved before collision"() {
+    when:
+    Links.of(
+        [self: new Link.StringLink("http://example.com")],
+        [self: 42])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.RESERVED_FIELD_NAME
+    ex.jsonPointer() == "/links/self"
+  }
 }
