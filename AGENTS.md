@@ -140,3 +140,4 @@ Gate details:
 * **Architectural tests:** ArchUnit enforces production type-dependency allowlists per library module (see [`docs/adr/010-architectural-tests.md`](docs/adr/010-architectural-tests.md)). Do not weaken allowlists without updating the ADR; add rules when adding modules.
 * **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
 * **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure
+* **Session artifacts:** `.agentWork/.session/` is gitignored — review and handoff artifacts can live there without polluting git
