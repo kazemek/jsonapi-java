@@ -5,7 +5,10 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
-/** Syntax validation for URI references, link relations, language tags, and media types. */
+/**
+ * Syntax validation for URI references, link relations, language tags, media types, and JSON
+ * Pointers.
+ */
 public final class SyntaxValidators {
 
   /** RFC 7230 tchar: token characters for media-type type/subtype and parameter names/values. */
@@ -98,6 +101,38 @@ public final class SyntaxValidators {
       return false;
     }
     return parseUriReference(value, true);
+  }
+
+  /**
+   * RFC 6901 JSON Pointer syntax only. Empty string is valid; {@code null} is not. Does not resolve
+   * against a document. URI-fragment form ({@code #/…}) is rejected.
+   */
+  public static boolean isValidJsonPointer(@Nullable String value) {
+    if (value == null) {
+      return false;
+    }
+    if (value.isEmpty()) {
+      return true;
+    }
+    if (value.charAt(0) != '/') {
+      return false;
+    }
+    int i = 0;
+    while (i < value.length()) {
+      if (value.charAt(i) != '~') {
+        i++;
+        continue;
+      }
+      if (i + 1 >= value.length()) {
+        return false;
+      }
+      char escape = value.charAt(i + 1);
+      if (escape != '0' && escape != '1') {
+        return false;
+      }
+      i += 2;
+    }
+    return true;
   }
 
   /**

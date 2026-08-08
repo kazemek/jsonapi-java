@@ -37,7 +37,9 @@ This module does not provide Jackson codecs, HTTP adapters, query-parameter pars
 
 ## For contributors / agents
 
-- **Local vs aggregate:** Compact constructors enforce single-value invariants. Cross-document rules live only in `JsonApiDocumentValidator`.
+- **Local vs aggregate:** Compact constructors enforce single-value invariants (including RFC 6901
+  syntax for `ErrorSource.pointer`). Cross-document rules live only in `JsonApiDocumentValidator`.
+  Pointer validation is syntax-only and does not resolve against a document; see [conformance](../docs/conformance.md).
 - **Identity uniqueness:** Duplicate detection is representation-strict (`ResourceObject.equals`) and alias-aware for identifier collections after id↔lid binding.
 - **Wire vocabulary:** `JsonApiMembers` holds shared JSON:API member-name constants for codecs and reserved-name sets; it is not an application-facing entry point.
 - **Diagnostics:** Failures use `JsonApiValidationException` with a stable `ValidationRuleCode` and a JSON Pointer-like path—not bare `IllegalArgumentException`.
