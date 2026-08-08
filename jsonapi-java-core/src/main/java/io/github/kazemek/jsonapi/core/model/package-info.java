@@ -6,7 +6,9 @@
  * io.github.kazemek.jsonapi.core.model.DocumentData} and {@link
  * io.github.kazemek.jsonapi.core.model.RelationshipData} represent explicit JSON {@code null},
  * single, and collection forms. Additional members hold pass-through extension and {@code @} names
- * without treating them as attributes, relationships, or links.
+ * without treating them as attributes, relationships, or links. {@link
+ * io.github.kazemek.jsonapi.core.model.Links} additionally reserves context-standard link names out
+ * of its {@code additionalMembers} map so those keys cannot hold open JSON.
  *
  * <p>See ADR-002, ADR-009, and {@code docs/conformance.md} for the representation and nullness
  * contracts. Local construction invariants are enforced here; aggregate rules require {@link

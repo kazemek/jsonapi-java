@@ -1,7 +1,7 @@
 package io.github.kazemek.jsonapi.core.model;
 
+import io.github.kazemek.jsonapi.core.internal.AdditionalMembers;
 import io.github.kazemek.jsonapi.core.internal.JsonPointers;
-import io.github.kazemek.jsonapi.core.internal.OpenJsonValues;
 import io.github.kazemek.jsonapi.core.internal.OrderedMaps;
 import io.github.kazemek.jsonapi.core.internal.SyntaxValidators;
 import io.github.kazemek.jsonapi.core.validation.LinksContext;
@@ -12,9 +12,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
-/** Flat links object with nullable link values and pass-through members. */
+/**
+ * Flat links object with nullable link values and {@code @} / non-reserved pass-through members.
+ */
 public final class Links {
 
   private static final String PATH = "/links";
@@ -38,6 +41,11 @@ public final class Links {
           JsonApiMembers.NEXT);
   private static final Set<String> ERROR_STANDARD =
       Set.of(JsonApiMembers.ABOUT, JsonApiMembers.TYPE);
+  private static final Set<String> RESERVED_ADDITIONAL =
+      Set.copyOf(
+          Stream.of(TOP_LEVEL_STANDARD, RESOURCE_STANDARD, RELATIONSHIP_STANDARD, ERROR_STANDARD)
+              .flatMap(Set::stream)
+              .toList());
 
   private final Map<String, @Nullable Link> entries;
   private final Map<String, @Nullable Object> additionalMembers;
@@ -130,21 +138,7 @@ public final class Links {
 
   private static Map<String, @Nullable Object> copyAdditionalMembers(
       @Nullable Map<String, ?> source) {
-    if (source == null || source.isEmpty()) {
-      return Map.of();
-    }
-    Map<String, @Nullable Object> copy = new LinkedHashMap<String, @Nullable Object>();
-    for (Map.Entry<String, ?> entry : source.entrySet()) {
-      String name = entry.getKey();
-      if (!MemberNames.isValid(name)) {
-        LocalValidation.fail(
-            ValidationRuleCode.INVALID_MEMBER_NAME,
-            JsonPointers.child(PATH, name),
-            "Invalid links member name: " + name);
-      }
-      copy.put(name, OpenJsonValues.copy(entry.getValue(), JsonPointers.child(PATH, name)));
-    }
-    return OrderedMaps.copyOfNullableValues(copy);
+    return AdditionalMembers.copy(source, PATH, "Invalid links member name: ", RESERVED_ADDITIONAL);
   }
 
   @Override
