@@ -3,7 +3,8 @@
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
 This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
-(`jsonapi-java-annotations`), Phase 1.3 (`jsonapi-java-core` update validation), Phase 2.1
+(`jsonapi-java-annotations`), Phase 1.3 (`jsonapi-java-core` update validation), Phase 1.5
+(`jsonapi-java-core` error `source.pointer` RFC 6901 syntax), Phase 2.1
 (`jsonapi-java-jackson3` document writer), Phase 2.2 (`jsonapi-java-jackson3` domain-to-resource
 write mapping), Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-checked by
 Phase 2.5 against pinned JSON:API 1.1 draft schemas. Flat resource-to-DTO binding (Phase 2.9)
@@ -33,6 +34,7 @@ included binding remain **deferred** to their Phase 2 milestones.
 | Nullable pagination links                                                   | supported    | `Links` null-preserving map                                                                                                                                                                                                                                                                  |
 | Meta flat object (no synthetic `members` key)                               | supported    | `Meta`                                                                                                                                                                                                                                                                                       |
 | Error object requires ≥1 standard member                                    | supported    | `ErrorObject`                                                                                                                                                                                                                                                                                |
+| Error `source.pointer` RFC 6901 syntax                                      | supported    | `ErrorSource.pointer`; syntax only via `SyntaxValidators.isValidJsonPointer`; empty string allowed; no document resolution; URI-fragment form rejected                                                                                                                                       |
 | Error source additional members                                             | pass-through | `ErrorSource.additionalMembers`                                                                                                                                                                                                                                                              |
 | Additional member name grammar                                              | supported    | `MemberNames` (alphanumeric namespaces, may start with digit)                                                                                                                                                                                                                                |
 | Reserved dedicated members in additional maps                               | supported    | Document, resource, identifier, relationship, error, jsonapi, link, source                                                                                                                                                                                                                   |

@@ -142,4 +142,26 @@ class SyntaxValidatorsSpec extends Specification {
     null                            | false
     ""                              | false
   }
+
+  def "isValidJsonPointer('#value') is #valid"() {
+    expect:
+    SyntaxValidators.isValidJsonPointer(value) == valid
+
+    where:
+    value        | valid
+    ""           | true
+    "/"          | true
+    "/data"      | true
+    "/data/0/id" | true
+    "/a~0b"      | true
+    "/a~1b"      | true
+    "/a~01b"     | true
+    "/données"   | true
+    "data"       | false
+    "/a~"        | false
+    "/a~2"       | false
+    "/a~x"       | false
+    "#/data"     | false
+    null         | false
+  }
 }
