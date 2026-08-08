@@ -164,10 +164,15 @@ signatures.
   included type → same at `/included/n`; duplicate registry type → `JsonApiMappingException` /
   `CONFLICTING_TYPE_REGISTRATION` at `build()` with `propertyPath` equal to the conflicting type
   name and `resourceClass` the later registrant; Phase 2.9 binder failures surface as
-  `JsonApiMappingException` with joined document+binder paths (e.g. `/data/type`); incompatible
-  `metaAs` target → `JsonApiMappingException` with `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta` (not
-  `JsonApiDocumentReadException`); codec/validation failures from `readValue` remain
-  `JsonApiDocumentReadException` (assert category unchanged vs Phase 2.4).
+  `JsonApiMappingException` with joined document+binder paths covering `/data/type`,
+  `/data/0/type`, `/included/1/title`, and `/data/0/relationships/author/data` (single joining
+  `/`); incompatible `metaAs` target → `JsonApiMappingException` with
+  `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta` (not `JsonApiDocumentReadException`); codec/validation
+  failures from `readValue` remain `JsonApiDocumentReadException` (assert category unchanged vs
+  Phase 2.4).
+- Ownership: on success and failure, caller-owned `InputStream` and `JsonParser` remain open;
+  `String` / `byte[]` / `InputStream` convenience overloads close only the `JsonParser` instances
+  they create (no reader-created streams).
 - Isolation: mutate or swap `included` in a fixture after constructing a binder-only baseline and
   assert domain-envelope relationship fields still match linkage-only binding (no injection).
 
