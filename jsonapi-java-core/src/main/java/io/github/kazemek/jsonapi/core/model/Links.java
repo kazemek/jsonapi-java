@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -41,16 +42,10 @@ public final class Links {
   private static final Set<String> ERROR_STANDARD =
       Set.of(JsonApiMembers.ABOUT, JsonApiMembers.TYPE);
   private static final Set<String> RESERVED_ADDITIONAL =
-      Set.of(
-          JsonApiMembers.SELF,
-          JsonApiMembers.RELATED,
-          JsonApiMembers.DESCRIBEDBY,
-          JsonApiMembers.FIRST,
-          JsonApiMembers.LAST,
-          JsonApiMembers.PREV,
-          JsonApiMembers.NEXT,
-          JsonApiMembers.ABOUT,
-          JsonApiMembers.TYPE);
+      Set.copyOf(
+          Stream.of(TOP_LEVEL_STANDARD, RESOURCE_STANDARD, RELATIONSHIP_STANDARD, ERROR_STANDARD)
+              .flatMap(Set::stream)
+              .toList());
 
   private final Map<String, @Nullable Link> entries;
   private final Map<String, @Nullable Object> additionalMembers;
