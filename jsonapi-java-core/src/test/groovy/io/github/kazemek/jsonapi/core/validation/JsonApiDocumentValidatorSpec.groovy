@@ -1282,6 +1282,141 @@ class JsonApiDocumentValidatorSpec extends Specification {
     ex.jsonPointer() == "/data/relationships/comments/data/1"
   }
 
+  def "cross-alias duplicate primary identifier collection is rejected after binding"() {
+    given:
+    def binder = new ResourceObject("people", "9", "p-local", null, null, null, null, [:])
+    def doc = new JsonApiDocument(
+        new DocumentData.IdentifierCollection([
+          ResourceIdentifier.of("people", "9"),
+          ResourceIdentifier.withLid("people", "p-local")
+        ]),
+        null, null, null, null,
+        [binder],
+        [:])
+    def context = ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST)
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
+    ex.jsonPointer() == "/data/1"
+  }
+
+  def "cross-alias duplicate relationship identifier collection is rejected after binding"() {
+    given:
+    def comment = new ResourceObject("comments", "5", "c-local", null, null, null, null, [:])
+    def article = new ResourceObject(
+        "articles", "1", null, null,
+        Relationships.ofRelationships([
+          comments: Relationship.withData(new RelationshipData.IdentifierCollectionLinkage([
+            ResourceIdentifier.of("comments", "5"),
+            ResourceIdentifier.withLid("comments", "c-local")
+          ]))
+        ]),
+        null, null, [:])
+    def doc = new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null, null, null, null,
+        [comment],
+        [:])
+    def context = ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST)
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
+    ex.jsonPointer() == "/data/relationships/comments/data/1"
+  }
+
+  def "cross-alias duplicate relationship collection is rejected when included is absent"() {
+    given:
+    def article = new ResourceObject(
+        "articles", "1", "a-local", null,
+        Relationships.ofRelationships([
+          related: Relationship.withData(new RelationshipData.IdentifierCollectionLinkage([
+            ResourceIdentifier.of("articles", "1"),
+            ResourceIdentifier.withLid("articles", "a-local")
+          ]))
+        ]),
+        null, null, [:])
+    def doc = JsonApiDocument.withData(new DocumentData.SingleResource(article))
+    def context = ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST)
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
+    ex.jsonPointer() == "/data/relationships/related/data/1"
+  }
+
+  def "cyclic included graph validates when fully linked"() {
+    given:
+    def person = new ResourceObject(
+        "people", "9", null, null,
+        Relationships.ofRelationships([
+          articles: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("articles", "1")))
+        ]),
+        null, null, [:])
+    def article = new ResourceObject(
+        "articles", "1", null, null,
+        Relationships.ofRelationships([
+          author: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "9")))
+        ]),
+        null, null, [:])
+    def doc = new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null, null, null, null,
+        [person],
+        [:])
+
+    when:
+    validator.validate(doc, ValidationContext.defaults())
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "multi-primary shared included identity validates"() {
+    given:
+    def author = new ResourceObject(
+        "people", "9", null,
+        Attributes.ofAttributes([name: "Dan"]),
+        null, null, null, [:])
+    def article1 = new ResourceObject(
+        "articles", "1", null, null,
+        Relationships.ofRelationships([
+          author: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "9")))
+        ]),
+        null, null, [:])
+    def article2 = new ResourceObject(
+        "articles", "2", null, null,
+        Relationships.ofRelationships([
+          author: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "9")))
+        ]),
+        null, null, [:])
+    def doc = new JsonApiDocument(
+        new DocumentData.ResourceCollection([article1, article2]),
+        null, null, null, null,
+        [author],
+        [:])
+
+    when:
+    validator.validate(doc, ValidationContext.defaults())
+
+    then:
+    noExceptionThrown()
+  }
+
   def "alternate-only links-only relationship is rejected at aggregate"() {
     given:
     def article = new ResourceObject(

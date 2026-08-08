@@ -6,7 +6,8 @@
  * grammar. {@link io.github.kazemek.jsonapi.core.validation.JsonApiDocumentValidator} and {@link
  * io.github.kazemek.jsonapi.core.validation.ValidationContext} validate rules that need full
  * document context (resource identity uniqueness, full linkage, local-identifier consistency,
- * link-member context, and extension/profile policy). {@link
+ * link-member context, and extension/profile policy). Resource identity uniqueness is
+ * representation-strict and alias-aware for identifier collections after id↔lid binding. {@link
  * io.github.kazemek.jsonapi.core.validation.DocumentUsage#UPDATE_REQUEST} additionally requires
  * single-resource primary data, replacement {@code data} on every relationship supplied by the
  * primary resource, and — when an {@link
