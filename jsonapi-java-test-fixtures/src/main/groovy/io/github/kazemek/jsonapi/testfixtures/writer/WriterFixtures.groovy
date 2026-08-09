@@ -26,7 +26,8 @@ import io.github.kazemek.jsonapi.testfixtures.writer.cases.SingleResourceCase
 import io.github.kazemek.jsonapi.testfixtures.writer.cases.StringAndObjectLinksCase
 
 /**
- * Explicit catalog of writer fixtures in manifest order. Phase 2.6 Jackson 2 tests reuse this list.
+ * Explicit catalog of writer fixtures in manifest order. Phase 2.16 Jackson 2 tests reuse this list
+ * through the Phase 2.12 capability-tagged codec catalog.
  */
 final class WriterFixtures {
 

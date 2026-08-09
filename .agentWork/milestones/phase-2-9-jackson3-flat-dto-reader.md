@@ -73,9 +73,9 @@ properties, without reading `included` or assembling a domain graph.
 - Document-level members, heterogeneous primary data, or `included` binding (Phase 2.10).
 - Parsing JSON or calling `JsonApiDocumentReader` inside the binder (callers validate first).
 - Auto-stubbing related `@JsonApiResource` domain types from linkage.
-- Graph hydration, persistence lookup, identity maps, cycles, or PATCH commands (Phase 2.11).
+- Graph hydration, persistence lookup, identity maps, cycles, or PATCH commands (Phase 2.15).
 - Treating `ResourceIdentifier` primary data as a full resource DTO.
-- Jackson 2 port (Phase 2.15).
+- Jackson 2 port (Phase 2.21).
 
 ## Implementation boundaries
 

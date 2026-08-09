@@ -21,7 +21,7 @@ already cover IDE/Gradle metadata while build dependencies stay checksum-verifie
 Multi-module Gradle build (Kotlin DSL); `settings.gradle.kts` is the source of truth for current
 submodules. Production sources live under `<module>/src/main/`; tests are Groovy + Spock under
 `<module>/src/test/groovy/` mirroring the main package structure. `fixtures/jsonapi-1.1/` holds
-canonical version-neutral writer fixtures that the Jackson 3 tests cross-check against.
+canonical version-neutral document fixtures that Jackson codec tests share across majors.
 
 # Task-scoped discovery
 

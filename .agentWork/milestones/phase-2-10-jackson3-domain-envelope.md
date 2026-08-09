@@ -124,10 +124,10 @@ signatures.
 - Exposing unbound resource-level links/meta/additional members through the envelope (callers that
   need them keep using `JsonApiDocumentReader`).
 - Applying extension/profile semantics beyond preserving their document additional members.
-- Presence-aware PATCH commands; Phase 2.11 owns update binding (and may compose this reader).
+- Presence-aware PATCH commands; Phase 2.15 owns update binding (and may compose this reader).
 - Replacing or deprecating `JsonApiDocumentReader` / `JsonApiResourceBinder` for advanced callers.
 - Changing write-side `DocumentEnvelope` or inventing a second resource binder.
-- Jackson 2 support; Phase 2.16 ports this contract.
+- Jackson 2 support; Phase 2.22 ports this contract.
 
 ## Implementation boundaries
 

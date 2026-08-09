@@ -137,8 +137,8 @@ and binders introspect types for resource metadata but do not register a Jackson
 
 HTTP `fields[TYPE]` parsing and field authorization beyond the explicit `FieldPolicy` allow-list
 remain application/adapter responsibilities (Phase 3.1 / 3.3). Domain graph hydration and
-persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.11 and
-2.17 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
+persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.15 and
+  2.23 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
 artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading

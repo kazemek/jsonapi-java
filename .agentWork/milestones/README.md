@@ -36,26 +36,38 @@ Milestones are planned, testable increments. They may change until implementatio
    explicit inclusion and validated resource-to-DTO binding independently.
 21. **Phase 2.8 — Jackson 3 sparse fieldsets** and **Phase 2.10 — typed domain envelope:** build on
    their respective compound and flat-read foundations.
-22. **Phase 2.11 — Jackson 3 PATCH binding:** composes update validation and typed DTO envelopes
-   into presence-aware commands.
-23. **Phase 3.1 — query parser:** remains an independent optional artifact.
-24. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
+22. **Phase 2.11 — Jackson common contracts:** extracts Jackson-import-free public policy,
+   diagnostic, context, and envelope types into `jsonapi-java-jackson-common` and migrates
+   Jackson 3 onto them before any Jackson 2 work.
+23. **Phase 2.12 — canonical codec fixtures:** capability-tags the shared document corpus for
+   write/read/schema parity and adds a shared read-only negative corpus.
+24. **Phase 2.13 — shared domain-write fixtures** and **Phase 2.14 — shared domain-read fixtures:**
+   extract version-neutral flat mapping and flat DTO-binding test catalogs after common contracts.
+25. **Phase 2.15 — Jackson 3 PATCH binding:** composes document reading, Phase 1.3 update
+   validation, and presence-aware binding into commands and shared PATCH scenarios (not typed
+   envelopes).
+26. **Phase 2.24 — shared compound write fixtures**, **Phase 2.25 — shared sparse-fieldset fixtures**,
+   and **Phase 2.26 — shared envelope read fixtures:** extract the remaining domain-fixture catalogs
+   before their Jackson 2 consumers.
+27. **Phase 3.1 — query parser:** remains an independent optional artifact.
+28. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
    documents, query arguments, and safe errors.
-25. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
+29. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
    envelope, inclusion/fieldset, and PATCH experience.
-26. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
+30. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
    stable.
-27. **Phase 2.6 — Jackson 2 document writer:** starts the later parity track after the Jackson
-   3/Spring path, without adding an artificial Spring dependency.
-28. **Phase 2.7 — Jackson 2 document reader** and **Phase 2.12 — domain mapping:** may proceed after
-   the Jackson 2 writer and their respective Jackson 3 contracts.
-29. **Phase 2.13 — Jackson 2 compound serialization** and **Phase 2.15 — flat DTO reader:** build
-   independently on stable mapping/read contracts.
-30. **Phase 2.14 — Jackson 2 sparse fieldsets** and **Phase 2.16 — typed domain envelope:** finish
-   write-policy and read-envelope parity independently.
-31. **Phase 2.17 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
-32. **Phase 4.1 — conformance and hardening.**
-33. **Phase 4.2 — stable release.**
+31. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after common contracts and
+   codec fixtures, without an artificial Spring dependency.
+32. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
+   parallel after the Jackson 2 writer and their respective Jackson 3 / fixture contracts.
+33. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
+   independently on stable mapping/read contracts and shared domain fixtures (2.19 needs 2.24;
+   2.21 needs 2.14).
+34. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
+   write-policy and read-envelope parity independently (2.20 needs 2.25; 2.22 needs 2.26).
+35. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
+36. **Phase 4.1 — conformance and hardening.**
+37. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -85,18 +97,25 @@ milestone file.
 - [Phase 2.3 — Jackson 3 Compound Serialization Context](phase-2-3-compound-serialization.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.4 — Jackson 3 Document Reader](phase-2-4-document-reads.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.5 — JSON:API 1.1 Draft-Schema Cross-Check](phase-2-5-json-schema-cross-check.md) — `jsonapi-java-jackson3` test suite — Complete
-- [Phase 2.6 — Jackson 2 Document Writer](phase-2-6-jackson2-document-writer.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.7 — Jackson 2 Document Reader](phase-2-7-jackson2-document-reader.md) — `jsonapi-java-jackson2` — Not started
 - [Phase 2.8 — Jackson 3 Sparse Fieldsets](phase-2-8-sparse-fieldsets.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.9 — Jackson 3 Flat DTO Reader](phase-2-9-jackson3-flat-dto-reader.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.10 — Jackson 3 Typed Domain Envelope](phase-2-10-jackson3-domain-envelope.md) — `jsonapi-java-jackson3` — Complete
-- [Phase 2.11 — Jackson 3 Presence-Aware PATCH Binding](phase-2-11-jackson3-patch-binding.md) — `jsonapi-java-jackson3` — Not started
-- [Phase 2.12 — Jackson 2 Domain-to-Resource Mapping](phase-2-12-jackson2-domain-resource-mapping.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.13 — Jackson 2 Compound Serialization](phase-2-13-jackson2-compound-serialization.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.14 — Jackson 2 Sparse Fieldsets](phase-2-14-jackson2-sparse-fieldsets.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.15 — Jackson 2 Flat DTO Reader](phase-2-15-jackson2-flat-dto-reader.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.16 — Jackson 2 Typed Domain Envelope](phase-2-16-jackson2-domain-envelope.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.17 — Jackson 2 Presence-Aware PATCH Binding](phase-2-17-jackson2-patch-binding.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.11 — Jackson Common Contracts](phase-2-11-jackson-common-contracts.md) — `jsonapi-java-jackson-common` / `jsonapi-java-jackson3` — Not started
+- [Phase 2.12 — Canonical Codec Fixture Contract](phase-2-12-canonical-codec-fixtures.md) — fixtures / `jsonapi-java-test-fixtures` / jackson3 codec tests — Not started
+- [Phase 2.13 — Shared Domain Write Test Fixtures](phase-2-13-shared-domain-write-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `ResourceMapperSpec` — Not started
+- [Phase 2.14 — Shared Domain Read Test Fixtures](phase-2-14-shared-domain-read-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `ResourceBinderSpec` — Not started
+- [Phase 2.15 — Jackson 3 Presence-Aware PATCH Binding](phase-2-15-jackson3-patch-binding.md) — `jsonapi-java-jackson3` / `jsonapi-java-jackson-common` / `jsonapi-java-test-fixtures` — Not started
+- [Phase 2.16 — Jackson 2 Document Writer](phase-2-16-jackson2-document-writer.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.17 — Jackson 2 Document Reader](phase-2-17-jackson2-document-reader.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.18 — Jackson 2 Domain-to-Resource Mapping](phase-2-18-jackson2-domain-resource-mapping.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.19 — Jackson 2 Compound Serialization](phase-2-19-jackson2-compound-serialization.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.20 — Jackson 2 Sparse Fieldsets](phase-2-20-jackson2-sparse-fieldsets.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.21 — Jackson 2 Flat DTO Reader](phase-2-21-jackson2-flat-dto-reader.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.22 — Jackson 2 Typed Domain Envelope](phase-2-22-jackson2-domain-envelope.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.23 — Jackson 2 Presence-Aware PATCH Binding](phase-2-23-jackson2-patch-binding.md) — `jsonapi-java-jackson2` — Not started
+- [Phase 2.24 — Shared Compound Write Test Fixtures](phase-2-24-shared-compound-write-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `CompoundSerializationSpec` — Not started
+- [Phase 2.25 — Shared Sparse-Fieldset Write Test Fixtures](phase-2-25-shared-sparse-fieldset-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `SparseFieldsetSpec` — Not started
+- [Phase 2.26 — Shared Typed Envelope Read Test Fixtures](phase-2-26-shared-envelope-read-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `DomainDocumentReaderSpec` — Not started
 - [Phase 3.1 — Optional Query-Parameter Parser](phase-3-1-query-parameters.md) — `jsonapi-java-query` — Not started
 - [Phase 3.2 — Spring WebMVC Adapter](phase-3-2-spring-webmvc.md) — `jsonapi-java-spring-webmvc` — Not started
 - [Phase 3.3 — Spring WebMVC Flat DTO Binding](phase-3-3-spring-webmvc-dto-binding.md) — `jsonapi-java-spring-webmvc` — Not started

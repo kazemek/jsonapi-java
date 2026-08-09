@@ -18,7 +18,7 @@ presence-aware PATCH commands without directly handling core documents.
 - Phase 3.2 owns converter selection, media-type negotiation, core transport, query arguments, and
   safe error rendering. This milestone extends that adapter rather than registering a competing
   converter.
-- Phases 2.8, 2.10, and 2.11 own sparse-fieldset/inclusion context, typed envelopes, and PATCH
+- Phases 2.8, 2.10, and 2.15 own sparse-fieldset/inclusion context, typed envelopes, and PATCH
   semantics. Spring only transports explicit caller policy into those APIs.
 - Spring MVC return-value and argument resolution must remain conditional and must not alter
   ordinary `application/json` controller behavior.
