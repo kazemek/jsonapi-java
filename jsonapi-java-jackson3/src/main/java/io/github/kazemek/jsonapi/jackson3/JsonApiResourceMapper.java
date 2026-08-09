@@ -181,7 +181,8 @@ public final class JsonApiResourceMapper {
           MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT,
           null,
           null,
-          "Non-empty fieldsets require toMappedDocument / toMappedResourceCollection");
+          "Non-empty fieldsets require toMappedDocument / toMappedResourceCollection; types: "
+              + context.fieldsets().keySet());
     }
   }
 

@@ -121,6 +121,7 @@ class SparseFieldsetSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic() == MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT
+    e.message.contains("types: [articles]")
   }
 
   def "three-argument toResourceCollection rejects non-empty fieldsets"() {
@@ -268,8 +269,7 @@ class SparseFieldsetSpec extends Specification {
       "people"
     ]
     mapped.document().included().findAll { it.type() == "comments" }.every {
-      it.attributes().attributes().keySet() as List == ["body"]
-      it.relationships() == null
+      (it.attributes().attributes().keySet() as List) == ["body"] && it.relationships() == null
     }
     mapped.document().included().findAll { it.type() == "people" }.every {
       it.attributes().attributes().containsKey("name")
@@ -487,10 +487,11 @@ class SparseFieldsetSpec extends Specification {
 
     when:
     start.countDown()
-    done.await(10, TimeUnit.SECONDS)
+    def completed = done.await(10, TimeUnit.SECONDS)
     pool.shutdown()
 
     then:
+    completed
     error.get() == null
     omitResult.get().sparseFieldsetException()
     !linkResult.get().sparseFieldsetException()
