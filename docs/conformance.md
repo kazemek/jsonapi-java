@@ -87,13 +87,13 @@ PATCH commands.
 
 ## Codec / wire format (Phases 2.1 and 2.4 — supported)
 
-| Rule                                             | Status   | Notes |
-|--------------------------------------------------|----------|-------|
-| JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write |
+| Rule                                             | Status    | Notes                                                                                                 |
+|--------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------|
+| JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write                                                           |
 | Canonical member ordering                        | supported | Standard members in model accessor order; additional members insertion order; `hreflang` always array |
-| Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` |
-| JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind` |
-| Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location |
+| Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/`                                                                               |
+| JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind`                          |
+| Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location                              |
 
 ## Draft-schema cross-check (Phase 2.5 — supplemental)
 
@@ -106,11 +106,11 @@ never changes a feature status on this page: disagreements are resolved in favor
 specification, and `JsonApiDraftSchemaSpec` keeps allow-listed fixtures failing so a schema fix
 forces an intentional re-review.
 
-| Fixture                          | Draft-schema gap                                                                      | Governing rule                                                                                                          |
-|----------------------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `member-order`                   | Draft forbids `lid` in response resources and models only `@` members, so `ext:` members are unevaluated | [v1.1 local identifiers](https://jsonapi.org/format/1.1/#document-resource-object-local-identifiers) and [extension members](https://jsonapi.org/format/1.1/#extension-members) |
-| `extension-and-at-members`       | Draft models only `@` members; `ext:` members at top level and in the resource are unevaluated | [v1.1 extension members](https://jsonapi.org/format/1.1/#extension-members); PR #1603 description states @/extension rules are incomplete |
-| `string-and-object-links`        | Draft `linkObject.hreflang` accepts only a string                                     | [v1.1 links](https://jsonapi.org/format/1.1/#document-links): `hreflang` is a canonical list representation; the writer always emits the array form |
+| Fixture                    | Draft-schema gap                                                                                         | Governing rule                                                                                                                                                                  |
+|----------------------------|----------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `member-order`             | Draft forbids `lid` in response resources and models only `@` members, so `ext:` members are unevaluated | [v1.1 local identifiers](https://jsonapi.org/format/1.1/#document-resource-object-local-identifiers) and [extension members](https://jsonapi.org/format/1.1/#extension-members) |
+| `extension-and-at-members` | Draft models only `@` members; `ext:` members at top level and in the resource are unevaluated           | [v1.1 extension members](https://jsonapi.org/format/1.1/#extension-members); PR #1603 description states @/extension rules are incomplete                                       |
+| `string-and-object-links`  | Draft `linkObject.hreflang` accepts only a string                                                        | [v1.1 links](https://jsonapi.org/format/1.1/#document-links): `hreflang` is a canonical list representation; the writer always emits the array form                             |
 
 `JsonApiDraftSchemaSpec` runs fully offline: the draft URI referenced by the request schemas is
 mapped to the vendored response schema, all four schema files are SHA-256-pinned, every applicable
@@ -119,19 +119,19 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phases 2.2–2.3, 2.9–2.10 — supported; Phases 2.8, 2.11–2.17 — deferred)
+## Domain mapping (Phases 2.2–2.3, 2.8–2.10 — supported; Phases 2.11–2.17 — deferred)
 
-| Rule                                                    | Status       | Notes                                                                                          |
-|---------------------------------------------------------|--------------|------------------------------------------------------------------------------------------------|
-| Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types                                         |
-| Compound inclusion (explicit context / IncludePolicy)   | supported    | Phase 2.3; opt-in paths and policy only — no automatic graph traversal                         |
-| Flat resource-to-DTO binding                            | supported    | Phase 2.9; validated document first; linkage only — never reads `included`                     |
-| Typed domain document envelopes                         | supported    | Phase 2.10; `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                 |
-| Independent typed binding of `included` resources       | supported    | Phase 2.10; wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection |
-| Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17 |
-| Sparse fieldsets on write                               | deferred     | Phase 2.8                                                                                      |
-| Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                  |
-| Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                  |
+| Rule                                                    | Status       | Notes                                                                                                                                                                                                                          |
+|---------------------------------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types                                                                                                                                                                         |
+| Compound inclusion (explicit context / IncludePolicy)   | supported    | Phase 2.3; opt-in paths and policy only — no automatic graph traversal                                                                                                                                                         |
+| Sparse fieldsets on write                               | supported    | Phase 2.8; `CompoundSerializationContext` fieldsets + `FieldPolicy`; `MappedDocument` / `applyTo` for full-linkage exception; HTTP `fields[TYPE]` parsing and caller authorization remain application/adapter responsibilities |
+| Flat resource-to-DTO binding                            | supported    | Phase 2.9; validated document first; linkage only — never reads `included`                                                                                                                                                     |
+| Typed domain document envelopes                         | supported    | Phase 2.10; `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                                                                                                                                                 |
+| Independent typed binding of `included` resources       | supported    | Phase 2.10; wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                |
+| Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17                                                                                                                                 |
+| Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                                                                                                                                                  |
+| Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                                                                                                                                                  |
 
 ## Query parameters (Phase 3.1 — delegated)
 
@@ -141,9 +141,9 @@ documents.
 
 ## HTTP / endpoints (out of scope)
 
-| Rule                                             | Status       | Notes                   |
-|--------------------------------------------------|--------------|-------------------------|
+| Rule                                            | Status       | Notes                   |
+|-------------------------------------------------|--------------|-------------------------|
 | Spring annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
 | Endpoint availability and operation semantics   | out of scope | Application-owned       |
-| HTTP status selection                            | out of scope | Except adapter behavior |
-| Content negotiation beyond adapter               | out of scope | Application-owned       |
+| HTTP status selection                           | out of scope | Except adapter behavior |
+| Content negotiation beyond adapter              | out of scope | Application-owned       |

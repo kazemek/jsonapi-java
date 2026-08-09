@@ -27,7 +27,8 @@ import tools.jackson.databind.JavaType;
  * Pre-validates include paths and walks domain graphs for compound-document inclusion.
  *
  * <p>All visit, identity, and included-output state is allocated per {@link #collectIncluded}
- * invocation. The engine instance itself is immutable and safe to share.
+ * invocation. The engine instance itself is immutable and safe to share. Included resources are
+ * emitted through the fieldset-aware selective write path.
  */
 public final class CompoundInclusionEngine {
 
@@ -40,10 +41,10 @@ public final class CompoundInclusionEngine {
   /**
    * Collects included resources for the given primary domain snapshot and context.
    *
-   * @return {@code null} when no inclusion was requested (empty path list); otherwise an ordered
-   *     list (possibly empty) for {@code included}
+   * @return included list {@code null} when no inclusion was requested (empty path list), plus an
+   *     aggregated bit for relationships omitted by fieldsets during included selective writes
    */
-  public @Nullable List<ResourceObject> collectIncluded(
+  public IncludedResourcesResult collectIncluded(
       List<?> primarySnapshot,
       List<ResourceObject> primaryResources,
       CompoundSerializationContext context) {
@@ -56,7 +57,7 @@ public final class CompoundInclusionEngine {
 
     List<IncludePath> paths = context.includePaths();
     if (paths.isEmpty()) {
-      return null;
+      return new IncludedResourcesResult(null, false);
     }
 
     List<Class<?>> distinctTypes = distinctTypesInOrder(primarySnapshot);
@@ -163,6 +164,7 @@ public final class CompoundInclusionEngine {
     private final Set<ResourceIdentity> primaryIdentities = new HashSet<>();
     private final Map<ResourceIdentity, ResourceObject> includedByIdentity = new LinkedHashMap<>();
     private final Set<VisitKey> visited = new HashSet<>();
+    private boolean relationshipOmittedByFieldset;
 
     Traversal(
         CompoundSerializationContext context,
@@ -173,7 +175,7 @@ public final class CompoundInclusionEngine {
       this.primaryResources = primaryResources;
     }
 
-    List<ResourceObject> run() {
+    IncludedResourcesResult run() {
       for (ResourceObject primary : primaryResources) {
         ResourceIdentity identity = primary.identityKey();
         if (identity != null) {
@@ -187,7 +189,8 @@ public final class CompoundInclusionEngine {
           walkPath(primaryDomain, paths.get(pathIndex), pathIndex);
         }
       }
-      return List.copyOf(includedByIdentity.values());
+      return new IncludedResourcesResult(
+          List.copyOf(includedByIdentity.values()), relationshipOmittedByFieldset);
     }
 
     private void walkPath(Object primaryDomain, IncludePath path, int pathIndex) {
@@ -243,8 +246,10 @@ public final class CompoundInclusionEngine {
           }
           continue;
         }
-        ResourceObject relatedResource = writer.toResource(relatedDomain);
-        offerIncluded(relatedResource, path.dottedThrough(current.segmentIndex()));
+        DomainResourceWriter.SelectiveResource selective =
+            writer.toResource(relatedDomain, context);
+        relationshipOmittedByFieldset |= selective.relationshipOmittedByFieldset();
+        offerIncluded(selective.resource(), path.dottedThrough(current.segmentIndex()));
         if (!lastSegment) {
           queue.add(new DomainAtSegment(relatedDomain, nextSegment));
         }

@@ -2,7 +2,7 @@
 
 > **Module:** `jsonapi-java-jackson3`  
 > **Dependencies:** Phase 2.3  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -277,28 +277,28 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
 
 ## Acceptance criteria
 
-- [ ] Fieldsets use final JSON:API names on primary and included resources, always preserve `type`
+- [x] Fieldsets use final JSON:API names on primary and included resources, always preserve `type`
       and `id`/`lid`, treat absent type keys as unrestricted and present empty lists as identity-only,
       and are applied only by the `MappedDocument` overloads; three-argument `toDocument` /
       `toResourceCollection` reject non-empty fieldset maps with
       `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`; defensive-copy isolation holds for fieldset/`FieldAllowance`
       inputs; concurrent mappings on a shared mapper yield isolated documents and independent
       `MappedDocument.sparseFieldsetException` values.
-- [ ] Inclusion and fieldsets compose as specified: linkage omits excluded relationships; inclusion
+- [x] Inclusion and fieldsets compose as specified: linkage omits excluded relationships; inclusion
       traversal may still follow fieldset-excluded relationships on validated include paths;
       access-counting fixtures prove the read split; `MappedDocument.sparseFieldsetException` is true
       only after an actual relationship omission by fieldset; `mapped.applyTo` skips only full
       linkage while other aggregate validation remains active.
-- [ ] Unknown or disallowed fieldset names fail with `INVALID_FIELDSET_FIELD` or
+- [x] Unknown or disallowed fieldset names fail with `INVALID_FIELDSET_FIELD` or
       `DENIED_FIELDSET_FIELD` using mapping-then-policy precedence, with `resourceClass` equal to the
       domain resource class and `propertyPath` equal to the first failing JSON:API field name in
       stored list encounter order.
-- [ ] The canonical `module-docs` checklist passes; `docs/conformance.md` marks sparse fieldsets on
+- [x] The canonical `module-docs` checklist passes; `docs/conformance.md` marks sparse fieldsets on
       write **supported** with query parsing and field authorization remaining application/adapter
       responsibilities; new public types are `@NullMarked` with accurate `@Nullable` (ADR-009); the
       ArchUnit allowlist is unchanged.
-- [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*SparseFieldsetSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew :jsonapi-java-jackson3:test --tests '*SparseFieldsetSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.
