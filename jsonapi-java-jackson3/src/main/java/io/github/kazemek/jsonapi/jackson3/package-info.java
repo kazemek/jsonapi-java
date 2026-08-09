@@ -15,6 +15,12 @@
  * JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder}; relationship linkage
  * conversion is pluggable through {@link RelationshipLinkageMapper}.
  *
+ * <p>Typed domain envelopes use {@link JsonApiJackson3#domainDocumentReader} with an explicit
+ * {@link ResourceTypeRegistry}: a {@link JsonApiDomainDocument} carries flat primary DTOs and
+ * independently bound {@code included} DTOs (wire-ordered, dual id/lid identity lookup, never
+ * injected into relationships). Identifier primary data stays as core {@link
+ * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} values and error documents never bind.
+ *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
  * an explicit include request and {@link IncludePolicy}.

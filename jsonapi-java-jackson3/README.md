@@ -76,6 +76,38 @@ Collection primary data (also a `JsonApiDocument`; feed it to the same writer):
 JsonApiDocument collDoc = mapper.toResourceCollection(allPojos);
 ```
 
+Typed domain envelope (validated JSON:API JSON → flat DTOs; no `JsonApiDocument` in routine
+signatures):
+
+```java
+ResourceTypeRegistry registry =
+    ResourceTypeRegistry.builder()
+        .register(FlatArticleDto.class)
+        .register(AuthorDto.class)
+        .build();
+
+JsonApiDomainDocumentReader domainReader =
+    JsonApiJackson3.domainDocumentReader(
+        callerMapper, DocumentReadContext.resourceDefaults(), registry);
+
+JsonApiDomainDocument envelope = domainReader.readValue(json);
+FlatArticleDto article = (FlatArticleDto) ((DomainData.SingleResource) envelope.data()).resource();
+Optional<Object> includedAuthor =
+    envelope.included() == null
+        ? Optional.empty()
+        : envelope.included().find(ResourceIdentity.ofId("people", "9"));
+```
+
+`included` resources bind independently through the registry, stay wire-ordered, and are never
+injected into relationship properties; identifier primary data passes through as core
+`ResourceIdentifier` values. `domainDocumentReader` derives the binder mapper exactly like
+`resourceBinder`; `fromDocument(JsonApiDocument)` binds an already-validated document without
+re-parsing. The envelope is a public low-level domain-binding result, not a required application
+controller/service abstraction: framework integrations (Phase 3.3) may unwrap its primary payload
+into the application's declared DTO type, so applications can consume typed DTOs without depending
+on `JsonApiDomainDocument` (the envelope stays available for document metadata, `included`, or
+explicit representation-state access).
+
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper` or `resourceBinder` only when you need a different wire
 form; read binding inverts it through `IdentifierConverter.parse(String)`.
@@ -87,8 +119,9 @@ and binders introspect types for resource metadata but do not register a Jackson
 
 ## Non-goals
 
-Sparse-fieldset write policy and typed domain envelopes (including independent binding of
-`included` resources) are planned for later Phase 2 milestones. Jackson 2 parity is a separate
+Sparse-fieldset write policy is planned for a later Phase 2 milestone. Domain graph hydration and
+persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.11 and
+2.17 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
 artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
@@ -124,6 +157,17 @@ artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
   `null` binds null; relationship linkage binds `ResourceIdentifier` (plus Optional/List/Set/array
   shapes) directly, and any other target class needs a registered `RelationshipLinkageMapper`.
   Bind failures throw `JsonApiMappingException`, never `JsonApiDocumentReadException`.
+- **Typed domain envelope:** `JsonApiDomainDocumentReader` composes the document reader with the
+  Phase 2.9 binder. Primary and included resources bind only through the `ResourceTypeRegistry`
+  (keyed by `@JsonApiResource.type()` on the registered raw class; annotation lookup only);
+  unregistered types fail with `UNREGISTERED_RESOURCE_TYPE` at the document pointer
+  (`/data`, `/data/n`, `/included/n`), duplicate type registrations fail at `build()` with
+  `CONFLICTING_TYPE_REGISTRATION`. Identifier primary data never binds; absent `included` stays
+  null while `included: []` is a non-null empty `IncludedResources` with dual id/lid identity
+  lookup. Binder failures are rethrown with document pointer + binder path joined by a single
+  `/`. Envelope collections are defensively copied at construction and unmodifiable; `metaAs`
+  reuses the reader-derived binder mapper (never a fresh default mapper). No relationship
+  injection: `included` DTOs are independently listed/indexed only.
 - **Identifier round-trip:** read binding calls `IdentifierConverter.parse(String)` on the wire
   identifier and coerces the result to the identifier property type via `convertValue`; custom
   write converters must override `parse` to invert their wire form.
