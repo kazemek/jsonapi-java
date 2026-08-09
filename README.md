@@ -43,7 +43,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 |--------|--------|---------|
 | [`jsonapi-java-core`](jsonapi-java-core/README.md) | Available — Phase 1.1 complete | Dependency-free document model and validation |
 | [`jsonapi-java-annotations`](jsonapi-java-annotations/README.md) | Available — Phase 1.2 complete | Dependency-free domain-mapping role annotations |
-| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md) | Available — Phases 2.1 (writer), 2.4 (reader), 2.2 (resource mapping), 2.3 (compound inclusion), 2.9 (flat DTO binding), 2.10 (typed domain envelopes) complete | Jackson 3 document codec and annotated domain mapping; later PATCH, sparse fieldsets |
+| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md) | Available — Phases 2.1 (writer), 2.4 (reader), 2.2 (resource mapping), 2.3 (compound inclusion), 2.8 (sparse fieldsets), 2.9 (flat DTO binding), 2.10 (typed domain envelopes) complete | Jackson 3 document codec and annotated domain mapping; later PATCH binding |
 | `jsonapi-java-jackson2` | Planned — parity track not started | Separately compiled Jackson 2 parity artifact |
 | `jsonapi-java-query` | Planned — Phase 3.1 not started | Optional query-parameter parsing |
 | `jsonapi-java-spring-webmvc` | Planned — Phases 3.2–3.3 not started | Jackson 3-based Spring WebMVC transport and DTO binding |

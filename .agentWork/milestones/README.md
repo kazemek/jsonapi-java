@@ -87,7 +87,7 @@ milestone file.
 - [Phase 2.5 — JSON:API 1.1 Draft-Schema Cross-Check](phase-2-5-json-schema-cross-check.md) — `jsonapi-java-jackson3` test suite — Complete
 - [Phase 2.6 — Jackson 2 Document Writer](phase-2-6-jackson2-document-writer.md) — `jsonapi-java-jackson2` — Not started
 - [Phase 2.7 — Jackson 2 Document Reader](phase-2-7-jackson2-document-reader.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.8 — Jackson 3 Sparse Fieldsets](phase-2-8-sparse-fieldsets.md) — `jsonapi-java-jackson3` — Not started
+- [Phase 2.8 — Jackson 3 Sparse Fieldsets](phase-2-8-sparse-fieldsets.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.9 — Jackson 3 Flat DTO Reader](phase-2-9-jackson3-flat-dto-reader.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.10 — Jackson 3 Typed Domain Envelope](phase-2-10-jackson3-domain-envelope.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.11 — Jackson 3 Presence-Aware PATCH Binding](phase-2-11-jackson3-patch-binding.md) — `jsonapi-java-jackson3` — Not started

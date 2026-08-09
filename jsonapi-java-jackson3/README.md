@@ -64,6 +64,22 @@ CompoundSerializationContext context =
 JsonApiDocument compound = mapper.toDocument(article, null, context);
 ```
 
+Sparse fieldsets (same context; only via `MappedDocument` overloads):
+
+```java
+CompoundSerializationContext fieldsets =
+    CompoundSerializationContext.defaults()
+        .withIncludePaths(List.of(IncludePath.of("author")))
+        .withIncludePolicy(IncludePolicy.allowAll())
+        .withFieldsets(Map.of("articles", List.of("title")))
+        .withFieldPolicy(FieldPolicy.allowAll());
+
+MappedDocument mapped = mapper.toMappedDocument(article, null, fieldsets);
+String json =
+    JsonApiJackson3.writer(callerMapper, mapped.applyTo(ValidationContext.defaults()))
+        .writeValueAsString(mapped.document());
+```
+
 Bare resource (inspect or compose a document yourself; not a top-level wire payload):
 
 ```java
@@ -119,7 +135,8 @@ and binders introspect types for resource metadata but do not register a Jackson
 
 ## Non-goals
 
-Sparse-fieldset write policy is planned for a later Phase 2 milestone. Domain graph hydration and
+HTTP `fields[TYPE]` parsing and field authorization beyond the explicit `FieldPolicy` allow-list
+remain application/adapter responsibilities (Phase 3.1 / 3.3). Domain graph hydration and
 persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.11 and
 2.17 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
 artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
@@ -174,8 +191,16 @@ artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - **Opt-in inclusion:** Compound `included` resources require a `CompoundSerializationContext` on
   the three-argument mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
   context). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
-  full. Empty include paths omit `included`; a non-empty request that resolves to nothing emits
-  `included: []`. Defaults are deny-all with finite depth/count limits.
+  full when fieldsets are empty. Empty include paths omit `included`; a non-empty request that
+  resolves to nothing emits `included: []`. Defaults are deny-all with finite depth/count limits.
+- **Sparse fieldsets:** `fieldsets` + `FieldPolicy` on the same context select attributes and
+  relationships by final JSON:API names (absent type key = unrestricted; present empty list =
+  identity-only). Applied only by `toMappedDocument` / `toMappedResourceCollection`; three-argument
+  `toDocument` / `toResourceCollection` reject a non-empty fieldset map with
+  `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`. Inclusion traversal may still follow fieldset-excluded
+  relationships on validated include paths; `MappedDocument.sparseFieldsetException` is true only
+  after an actual relationship omission, and `mapped.applyTo(ValidationContext)` enables the core
+  full-linkage exception for that write.
 - **Primary-data kind:** Ambiguous `{"type","id"}` and `[]` require explicit `PrimaryDataKind` on
   `DocumentReadContext`; never guess from object members.
 - **Wire states:** Omit members for Java `null` components; emit/decode JSON `null` for sealed

@@ -23,7 +23,10 @@
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
- * an explicit include request and {@link IncludePolicy}.
+ * an explicit include request and {@link IncludePolicy}. Sparse fieldsets share that context
+ * ({@code fieldsets} + {@link FieldPolicy}) and are applied only by the {@link MappedDocument}
+ * overloads; pass {@link MappedDocument#applyTo} into the writer factory when relationships were
+ * omitted by fieldset while inclusion still traversed them.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson3;

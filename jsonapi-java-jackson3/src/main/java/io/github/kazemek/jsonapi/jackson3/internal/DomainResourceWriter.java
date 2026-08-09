@@ -7,16 +7,20 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
+import io.github.kazemek.jsonapi.jackson3.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson3.FieldPolicy;
 import io.github.kazemek.jsonapi.jackson3.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson3.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson3.MappingDiagnostic;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.json.JsonMapper;
@@ -34,12 +38,122 @@ public final class DomainResourceWriter {
     this.cache = Objects.requireNonNull(cache, "cache");
   }
 
+  /**
+   * Selective emission result: the mapped resource plus whether any relationship member was omitted
+   * because a present fieldset for that resource's type did not include that relationship name.
+   */
+  public record SelectiveResource(ResourceObject resource, boolean relationshipOmittedByFieldset) {
+
+    public SelectiveResource {
+      Objects.requireNonNull(resource, "resource");
+    }
+  }
+
   public ResourceObject toResource(Object resource) {
     Objects.requireNonNull(resource, "resource");
     ResourceMapping mapping = cache.resolve(resource.getClass());
     String id = extractId(resource, mapping);
-    Attributes attributes = buildAttributes(resource, mapping);
-    Relationships relationships = buildRelationships(resource, mapping);
+    Attributes attributes = buildAttributes(resource, mapping, null);
+    Relationships relationships = buildRelationships(resource, mapping, null);
+    return buildResourceObject(mapping, id, attributes, relationships);
+  }
+
+  /**
+   * Selective emission using fieldsets and {@link FieldPolicy} from {@code context}. Validates a
+   * present fieldset entry for the resource's mapped type before any selective attribute or
+   * relationship reads.
+   */
+  public SelectiveResource toResource(Object resource, CompoundSerializationContext context) {
+    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(context, "context");
+    ResourceMapping mapping = cache.resolve(resource.getClass());
+    List<String> fields = fieldsFor(context, mapping.resourceType());
+    if (fields != null) {
+      validateFieldset(resource.getClass(), mapping, fields, context.fieldPolicy());
+    }
+    return toResource(resource, fields);
+  }
+
+  /**
+   * Selective emission. {@code fields == null} means unrestricted; empty means identity-only;
+   * non-empty is an allow-list of JSON:API attribute and relationship names. Does not consult
+   * {@link FieldPolicy}; callers that need policy checks must validate first (or use {@link
+   * #toResource(Object, CompoundSerializationContext)}).
+   */
+  public SelectiveResource toResource(Object resource, @Nullable List<String> fields) {
+    Objects.requireNonNull(resource, "resource");
+    if (fields == null) {
+      return new SelectiveResource(toResource(resource), false);
+    }
+    ResourceMapping mapping = cache.resolve(resource.getClass());
+    String id = extractId(resource, mapping);
+    Set<String> allowed = Set.copyOf(fields);
+    boolean relationshipOmitted = false;
+    for (MappingProperty property : mapping.relationships()) {
+      if (!allowed.contains(property.jsonapiName())) {
+        relationshipOmitted = true;
+        break;
+      }
+    }
+    Attributes attributes = buildAttributes(resource, mapping, allowed);
+    Relationships relationships = buildRelationships(resource, mapping, allowed);
+    return new SelectiveResource(
+        buildResourceObject(mapping, id, attributes, relationships), relationshipOmitted);
+  }
+
+  /**
+   * Resolves the fieldset list for {@code resourceType}: {@code null} when the type key is absent
+   * (unrestricted), otherwise the stored list (possibly empty for identity-only).
+   */
+  public static @Nullable List<String> fieldsFor(
+      CompoundSerializationContext context, String resourceType) {
+    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(resourceType, "resourceType");
+    Map<String, List<String>> fieldsets = context.fieldsets();
+    if (!fieldsets.containsKey(resourceType)) {
+      return null;
+    }
+    return fieldsets.get(resourceType);
+  }
+
+  private static void validateFieldset(
+      Class<?> resourceClass,
+      ResourceMapping mapping,
+      List<String> fields,
+      FieldPolicy fieldPolicy) {
+    if (fields.isEmpty()) {
+      return;
+    }
+    Set<String> mappedNames = new HashSet<>();
+    for (MappingProperty property : mapping.attributes()) {
+      mappedNames.add(property.jsonapiName());
+    }
+    for (MappingProperty property : mapping.relationships()) {
+      mappedNames.add(property.jsonapiName());
+    }
+    for (String name : fields) {
+      if (!mappedNames.contains(name)) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.INVALID_FIELDSET_FIELD,
+            resourceClass,
+            name,
+            "Unknown fieldset field '" + name + "' on " + mapping.resourceType());
+      }
+      if (!fieldPolicy.allows(mapping.resourceType(), name)) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.DENIED_FIELDSET_FIELD,
+            resourceClass,
+            name,
+            "Fieldset field denied for " + mapping.resourceType() + "." + name);
+      }
+    }
+  }
+
+  private static ResourceObject buildResourceObject(
+      ResourceMapping mapping,
+      @Nullable String id,
+      Attributes attributes,
+      Relationships relationships) {
     return new ResourceObject(
         mapping.resourceType(),
         id,
@@ -151,12 +265,16 @@ public final class DomainResourceWriter {
     };
   }
 
-  private Attributes buildAttributes(Object resource, ResourceMapping mapping) {
+  private Attributes buildAttributes(
+      Object resource, ResourceMapping mapping, @Nullable Set<String> allowedFields) {
     if (mapping.attributes().isEmpty()) {
       return Attributes.empty();
     }
     Map<String, Object> attributes = new LinkedHashMap<>();
     for (MappingProperty property : mapping.attributes()) {
+      if (allowedFields != null && !allowedFields.contains(property.jsonapiName())) {
+        continue;
+      }
       Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
       if (rawValue instanceof Optional<?> optional && optional.isEmpty()) {
         continue;
@@ -167,12 +285,16 @@ public final class DomainResourceWriter {
     return Attributes.ofAttributes(attributes);
   }
 
-  private Relationships buildRelationships(Object resource, ResourceMapping mapping) {
+  private Relationships buildRelationships(
+      Object resource, ResourceMapping mapping, @Nullable Set<String> allowedFields) {
     if (mapping.relationships().isEmpty()) {
       return Relationships.empty();
     }
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     for (MappingProperty property : mapping.relationships()) {
+      if (allowedFields != null && !allowedFields.contains(property.jsonapiName())) {
+        continue;
+      }
       relationships.put(property.jsonapiName(), buildRelationship(resource, property));
     }
     return Relationships.ofRelationships(relationships);
