@@ -15,10 +15,13 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
  * replaces the caller's configuration in place. Public surface consists of {@link
- * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, and {@link
- * JsonApiResourceBinder}.
+ * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link
+ * JsonApiResourceBinder}, and {@link JsonApiDomainDocumentReader}.
  */
 public final class JsonApiJackson3 {
+
+  private static final String CONTEXT = "context";
+  private static final String IDENTIFIER_CONVERTER = "identifierConverter";
 
   private JsonApiJackson3() {}
 
@@ -36,7 +39,7 @@ public final class JsonApiJackson3 {
    */
   public static JsonApiDocumentWriter writer(JsonMapper base, ValidationContext context) {
     Objects.requireNonNull(base, "base");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(context, CONTEXT);
     return new JsonApiDocumentWriter(documentMapper(base), context);
   }
 
@@ -64,7 +67,7 @@ public final class JsonApiJackson3 {
    */
   public static JsonApiDocumentReader reader(JsonMapper base, DocumentReadContext context) {
     Objects.requireNonNull(base, "base");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(context, CONTEXT);
     return new JsonApiDocumentReader(base, context);
   }
 
@@ -92,7 +95,7 @@ public final class JsonApiJackson3 {
   public static JsonApiResourceMapper resourceMapper(
       JsonMapper base, IdentifierConverter identifierConverter) {
     Objects.requireNonNull(base, "base");
-    Objects.requireNonNull(identifierConverter, "identifierConverter");
+    Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
     JsonMapper derived = resourceMappingMapper(base);
     DomainResourceWriter writer =
         new DomainResourceWriter(derived, identifierConverter, new MappingDefinitionCache(derived));
@@ -146,7 +149,7 @@ public final class JsonApiJackson3 {
       IdentifierConverter identifierConverter,
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     Objects.requireNonNull(base, "base");
-    Objects.requireNonNull(identifierConverter, "identifierConverter");
+    Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
     Objects.requireNonNull(linkageMappers, "linkageMappers");
     JsonMapper derived = resourceMappingMapper(base);
     DomainResourceBinder binder =
@@ -182,6 +185,87 @@ public final class JsonApiJackson3 {
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     Objects.requireNonNull(base, "base");
     return resourceBinder(base.build(), identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a typed domain envelope reader with default identifier conversion and no custom
+   * relationship linkage mappers. Document decoding/validation behaves exactly like {@link
+   * #reader(JsonMapper, DocumentReadContext)}; primary and included resources bind through the
+   * Phase 2.9 binder after a {@link ResourceTypeRegistry} lookup, using a mapper derived via {@link
+   * JsonMapper#rebuild()} that never mutates the caller's mapper.
+   */
+  public static JsonApiDomainDocumentReader domainDocumentReader(
+      JsonMapper base, DocumentReadContext context, ResourceTypeRegistry registry) {
+    return domainDocumentReader(base, context, registry, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a typed domain envelope reader with the given identifier converter and no custom
+   * relationship linkage mappers. Derives a new mapper via {@link JsonMapper#rebuild()} and never
+   * mutates the caller's mapper.
+   */
+  public static JsonApiDomainDocumentReader domainDocumentReader(
+      JsonMapper base,
+      DocumentReadContext context,
+      ResourceTypeRegistry registry,
+      IdentifierConverter identifierConverter) {
+    return domainDocumentReader(base, context, registry, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a typed domain envelope reader with the given identifier converter and relationship
+   * linkage mappers keyed by relationship target class. Derives a new mapper via {@link
+   * JsonMapper#rebuild()} and never mutates the caller's mapper.
+   */
+  public static JsonApiDomainDocumentReader domainDocumentReader(
+      JsonMapper base,
+      DocumentReadContext context,
+      ResourceTypeRegistry registry,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    Objects.requireNonNull(context, CONTEXT);
+    Objects.requireNonNull(registry, "registry");
+    Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
+    Objects.requireNonNull(linkageMappers, "linkageMappers");
+    return new JsonApiDomainDocumentReader(
+        base, context, registry, identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a typed domain envelope reader derived from a caller-supplied builder with default
+   * identifier conversion. The builder is not given the JSON:API module.
+   */
+  public static JsonApiDomainDocumentReader domainDocumentReader(
+      JsonMapper.Builder base, DocumentReadContext context, ResourceTypeRegistry registry) {
+    return domainDocumentReader(base, context, registry, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a typed domain envelope reader derived from a caller-supplied builder and identifier
+   * converter. The builder is not given the JSON:API module.
+   */
+  public static JsonApiDomainDocumentReader domainDocumentReader(
+      JsonMapper.Builder base,
+      DocumentReadContext context,
+      ResourceTypeRegistry registry,
+      IdentifierConverter identifierConverter) {
+    return domainDocumentReader(base, context, registry, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a typed domain envelope reader derived from a caller-supplied builder, identifier
+   * converter, and relationship linkage mappers. The builder is not given the JSON:API module.
+   */
+  public static JsonApiDomainDocumentReader domainDocumentReader(
+      JsonMapper.Builder base,
+      DocumentReadContext context,
+      ResourceTypeRegistry registry,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    return domainDocumentReader(
+        base.build(), context, registry, identifierConverter, linkageMappers);
   }
 
   /**

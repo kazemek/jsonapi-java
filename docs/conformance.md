@@ -8,8 +8,9 @@ This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
 (`jsonapi-java-jackson3` document writer), Phase 2.2 (`jsonapi-java-jackson3` domain-to-resource
 write mapping), Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-checked by
 Phase 2.5 against pinned JSON:API 1.1 draft schemas. Flat resource-to-DTO binding (Phase 2.9)
-binds validated resource objects without reading `included`; typed envelopes and independent
-included binding remain **deferred** to their Phase 2 milestones.
+binds validated resource objects without reading `included`; typed domain envelopes (Phase 2.10)
+bind primary and included resources through an explicit type registry without graph hydration or
+PATCH commands.
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -118,17 +119,17 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phases 2.2–2.3 and 2.9 — supported; Phases 2.8, 2.10–2.17 — deferred)
+## Domain mapping (Phases 2.2–2.3, 2.9–2.10 — supported; Phases 2.8, 2.11–2.17 — deferred)
 
 | Rule                                                    | Status       | Notes                                                                                          |
 |---------------------------------------------------------|--------------|------------------------------------------------------------------------------------------------|
 | Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types                                         |
 | Compound inclusion (explicit context / IncludePolicy)   | supported    | Phase 2.3; opt-in paths and policy only — no automatic graph traversal                         |
 | Flat resource-to-DTO binding                            | supported    | Phase 2.9; validated document first; linkage only — never reads `included`                     |
-| Sparse fieldsets on write                               | deferred     | Phase 2.8                                                                                      |
-| Typed domain document envelopes                         | deferred     | Phases 2.10 and 2.16                                                                           |
-| Independent typed binding of `included` resources       | deferred     | Phases 2.10 and 2.16; no relationship injection                                                |
+| Typed domain document envelopes                         | supported    | Phase 2.10; `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                 |
+| Independent typed binding of `included` resources       | supported    | Phase 2.10; wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection |
 | Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17 |
+| Sparse fieldsets on write                               | deferred     | Phase 2.8                                                                                      |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                  |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                  |
 

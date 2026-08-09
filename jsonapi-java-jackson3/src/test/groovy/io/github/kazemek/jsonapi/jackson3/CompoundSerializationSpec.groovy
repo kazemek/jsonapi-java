@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.jackson3.testmodel.AccessCountingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.Article
 import io.github.kazemek.jsonapi.jackson3.testmodel.BaseComment
