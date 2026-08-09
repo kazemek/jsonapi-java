@@ -2,7 +2,17 @@
 
 > **Module:** `jsonapi-java-jackson3`
 > **Dependencies:** Phase 2.9
-> **Status:** Not started
+> **Status:** Complete
+>
+> **Refinement note:** The implementation review on this branch passed and the working-tree Status
+> briefly read `Complete`, but nothing was committed or shipped (`feat/jackson3-domain-envelope`
+> unmerged; the committed contract still reads `Not started`). By explicit user decision the
+> contract was reopened to `In progress` and the `MetaConverter` seam folded into it instead of a
+> follow-up milestone. The seam is internal-only (package-private); the public surface is
+> unchanged, and acceptance criteria 2–8 retained their `[x]` marks from the pre-seam
+> implementation only as re-verification targets — the seam rework preserved their observable
+> behaviors, and every acceptance criterion and completion gate was re-verified on the final tree.
+> Also added by user decision: the low-level-binding-result architectural boundary.
 
 ## Goal
 
@@ -89,7 +99,7 @@ signatures.
   Present-empty `included: []` yields a non-null empty `IncludedResources`; absent `included`
   stays `@Nullable` null. When rethrowing binder `JsonApiMappingException`s, set `propertyPath` to
   document pointer + binder path with a single joining `/` (binder paths already start with `/`):
-  e.g. `/included/1` + `/title` → `/included/1/title`, `/data` + `/type` → `/data/type`,
+  e.g. `/included/1` + `/title` → `/included/1/title`,
   `/data/0` + `/relationships/author/data` → `/data/0/relationships/author/data`.
 - Add `MappingDiagnostic` values `UNREGISTERED_RESOURCE_TYPE` and
   `CONFLICTING_TYPE_REGISTRATION` (both carried only by `JsonApiMappingException`). Expose document
@@ -97,8 +107,11 @@ signatures.
   additional-member map values (no reflective serialization of those core records). Add
   `@Nullable metaAs(Class|JavaType)` on `JsonApiDomainDocument` that `convertValue`s
   `Meta.members()` using the same domain-reader `rebuild()`-derived binder mapper that bound the
-  document (retained via package-private envelope construction — not a public document component
-  and not a fresh default mapper). Both overloads return `@Nullable`; absent `meta` → return null;
+  document, retained at package-private envelope construction behind a `MetaConverter` seam — a
+  package-private two-method interface (`convert(Meta, JavaType)` / `convert(Meta, Class<?>)`)
+  closing over the reader's derived binder mapper, constructed once per reader and shared by all
+  envelopes (not a public document component, not a `JsonMapper` field on the envelope, and not a
+  fresh default mapper). Both overloads return `@Nullable`; absent `meta` → return null;
   present meta conversion failure → `JsonApiMappingException` + `UNSUPPORTED_ATTRIBUTE_VALUE` at
   `/meta`. Refresh module docs/Javadoc via `module-docs` and mark typed domain envelopes plus
   independent included binding **supported** in `docs/conformance.md` without claiming graph
@@ -118,6 +131,12 @@ signatures.
 
 ## Implementation boundaries
 
+- `JsonApiDomainDocument` is a public low-level domain-binding result, not a required application
+  controller/service abstraction. Framework integrations may unwrap its primary domain payload into
+  the application's declared DTO type, so applications can consume typed `T` / collections of `T`
+  without depending on `JsonApiDomainDocument`. The envelope remains available for applications
+  that need document-level JSON:API metadata, included resources, or explicit representation-state
+  access.
 - Public types in `io.github.kazemek.jsonapi.jackson3`; implementation in
   `io.github.kazemek.jsonapi.jackson3.internal`. Production code imports no `core.internal` and no
   sibling module internals.
@@ -133,7 +152,7 @@ signatures.
 - Relationship properties on primary and included DTOs remain linkage-only under Phase 2.9 rules;
   custom `RelationshipLinkageMapper` registrations on the domain reader apply to both.
 - `metaAs` must not construct a new default `JsonMapper`; it reuses the domain reader's derived
-  binder mapper retained at envelope construction.
+  binder mapper, retained at envelope construction behind the package-private `MetaConverter` seam.
 - Envelope collection members match core document mutability: defensive copies at construction and
   unmodifiable accessors for `errors`, `additionalMembers`, `DomainData` collection variants, and
   `IncludedResources` (including the id/lid index).
@@ -163,10 +182,16 @@ signatures.
   `UNREGISTERED_RESOURCE_TYPE` at `/data` or `/data/n` (`resourceClass` null); unregistered
   included type → same at `/included/n`; duplicate registry type → `JsonApiMappingException` /
   `CONFLICTING_TYPE_REGISTRATION` at `build()` with `propertyPath` equal to the conflicting type
-  name and `resourceClass` the later registrant; Phase 2.9 binder failures surface as
-  `JsonApiMappingException` with joined document+binder paths covering `/data/type`,
-  `/data/0/type`, `/included/1/title`, and `/data/0/relationships/author/data` (single joining
-  `/`); incompatible `metaAs` target → `JsonApiMappingException` with
+   name and `resourceClass` the later registrant; Phase 2.9 binder failures surface as
+   `JsonApiMappingException` with joined document+binder paths covering `/data/type`,
+   `/data/0/type`, `/included/1/title`, and `/data/0/relationships/author/data` (single joining
+   `/`). Note: the two `RESOURCE_TYPE_MISMATCH` shapes (`/data/type`, `/data/0/type`) are
+   unreachable through the registry gate — the registry key and the bind-time mapping both derive
+   from `@JsonApiResource.type()` on the same raw class and no caller type-name override exists —
+   so they remain binder-level defense in depth, covered by Phase 2.9 `ResourceBinderSpec`
+   (`RESOURCE_TYPE_MISMATCH` at `/type`); the spec exercises the reachable joined shapes
+   (`/included/1/title`, `/data/relationships/author/data`, `/data/0/relationships/author/data`);
+   incompatible `metaAs` target → `JsonApiMappingException` with
   `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta` (not `JsonApiDocumentReadException`); codec/validation
   failures from `readValue` remain `JsonApiDocumentReadException` with the same
   `CodecFailureCategory`, JSON Pointer-like path, and safe `SourceLocation` as Phase 2.4, plus the
@@ -181,7 +206,7 @@ signatures.
 
 ## Acceptance criteria
 
-- [ ] `readValue` / `fromDocument` preserve absent, `NullData`, single-resource, resource-collection,
+- [x] `readValue` / `fromDocument` preserve absent, `NullData`, single-resource, resource-collection,
       single-identifier, and identifier-collection primary states plus document-level
       links/meta/jsonapi/errors/additional members without requiring `JsonApiDocument` in routine
       `readValue` signatures; identifier primary data is never DTO-bound; absent `included` stays
@@ -189,20 +214,21 @@ signatures.
       collections and the id/lid index are mutation-safe; `@Nullable metaAs(Class|JavaType)` uses
       the reader's derived binder mapper on both entry paths (absent meta → null for both
       overloads; conversion failure → `JsonApiMappingException` /
-      `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta`).
-- [ ] Explicit `ResourceTypeRegistry` registration deterministically binds heterogeneous
+      `UNSUPPORTED_ATTRIBUTE_VALUE` at `/meta`); the envelope retains the binder mapper only
+      behind a package-private `MetaConverter` seam (no `JsonMapper` field on the envelope).
+- [x] Explicit `ResourceTypeRegistry` registration deterministically binds heterogeneous
       primary/included resources, preserves included wire order and dual id/lid identity lookup,
       and throws `JsonApiMappingException` for `UNREGISTERED_RESOURCE_TYPE` (document-pointer
       `propertyPath`, null `resourceClass`) and `CONFLICTING_TYPE_REGISTRATION` (`propertyPath` =
       conflicting type name, `resourceClass` = later registrant) before a partial envelope escapes.
-- [ ] Included resources are never injected into primary or included DTO relationship properties,
+- [x] Included resources are never injected into primary or included DTO relationship properties,
       including cyclic and shared-identity fixtures and independent envelopes that share linkage
       but differ in `included`; binding reuses Phase 2.9 binder contracts.
-- [ ] Public envelope APIs satisfy ADR-009 nullness; the canonical `module-docs` checklist passes;
+- [x] Public envelope APIs satisfy ADR-009 nullness; the canonical `module-docs` checklist passes;
       `docs/conformance.md` marks typed domain envelopes and independent included binding
       **supported** without claiming graph hydration or PATCH commands.
-- [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*DomainDocumentReaderSpec'` passes.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew :jsonapi-java-jackson3:test --tests '*DomainDocumentReaderSpec'` passes.
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.

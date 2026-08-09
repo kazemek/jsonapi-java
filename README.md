@@ -3,14 +3,14 @@
 > Read and write JSON:API v1.1 documents in Java without surrendering control of persistence, endpoints, or application architecture.
 
 A lightweight [JSON:API v1.1](https://jsonapi.org/) document model and validation library for
-**Java 21+**. Opt-in bidirectional flat DTO mapping, typed envelopes, presence-aware PATCH commands,
-query parsing, and Spring adapters are planned. Compliance is tracked by feature and layer; the
-library does not claim that an application's endpoint behavior is automatically JSON:API
+**Java 21+**. Opt-in bidirectional flat DTO mapping and typed envelopes are available; presence-aware
+PATCH commands, query parsing, and Spring adapters are planned. Compliance is tracked by feature and
+layer; the library does not claim that an application's endpoint behavior is automatically JSON:API
 compliant.
 
 ## Status
 
-**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, Phase 1.1 document model/validation in `jsonapi-java-core`, Phase 1.2 domain-mapping annotations in `jsonapi-java-annotations`, Phase 2.1/2.4 Jackson 3 document writer/reader, Phase 2.2 domain-to-resource mapping, Phase 2.3 compound inclusion, and Phase 2.9 flat resource-to-DTO binding in `jsonapi-java-jackson3` are in place. Later adapters and query parsing are not started.
+**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, Phase 1.1 document model/validation in `jsonapi-java-core`, Phase 1.2 domain-mapping annotations in `jsonapi-java-annotations`, Phase 2.1/2.4 Jackson 3 document writer/reader, Phase 2.2 domain-to-resource mapping, Phase 2.3 compound inclusion, Phase 2.9 flat resource-to-DTO binding, and Phase 2.10 typed domain envelopes in `jsonapi-java-jackson3` are in place. Later adapters and query parsing are not started.
 
 Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
@@ -30,7 +30,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 |------|---------|
 | `jsonapi-java-core/` | Zero-dependency JSON:API document model and validation |
 | `jsonapi-java-annotations/` | Dependency-free domain-mapping annotations |
-| `jsonapi-java-jackson3/` | Jackson 3 document codec and domain-to-resource mapping (write and flat DTO read) |
+| `jsonapi-java-jackson3/` | Jackson 3 document codec, domain-to-resource mapping, flat DTO reads, and typed domain envelopes |
 | `jsonapi-java-test-fixtures/` | Internal shared writer fixture builders (not a published module) |
 | `fixtures/jsonapi-1.1/` | Version-neutral canonical JSON:API writer fixtures |
 | `build-logic/` | Shared Gradle convention plugins |
@@ -43,7 +43,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 |--------|--------|---------|
 | [`jsonapi-java-core`](jsonapi-java-core/README.md) | Available — Phase 1.1 complete | Dependency-free document model and validation |
 | [`jsonapi-java-annotations`](jsonapi-java-annotations/README.md) | Available — Phase 1.2 complete | Dependency-free domain-mapping role annotations |
-| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md) | Available — Phases 2.1 (writer), 2.4 (reader), 2.2 (resource mapping), 2.3 (compound inclusion), 2.9 (flat DTO binding) complete | Jackson 3 document codec and annotated domain mapping; later PATCH, sparse fieldsets |
+| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md) | Available — Phases 2.1 (writer), 2.4 (reader), 2.2 (resource mapping), 2.3 (compound inclusion), 2.9 (flat DTO binding), 2.10 (typed domain envelopes) complete | Jackson 3 document codec and annotated domain mapping; later PATCH, sparse fieldsets |
 | `jsonapi-java-jackson2` | Planned — parity track not started | Separately compiled Jackson 2 parity artifact |
 | `jsonapi-java-query` | Planned — Phase 3.1 not started | Optional query-parameter parsing |
 | `jsonapi-java-spring-webmvc` | Planned — Phases 3.2–3.3 not started | Jackson 3-based Spring WebMVC transport and DTO binding |
