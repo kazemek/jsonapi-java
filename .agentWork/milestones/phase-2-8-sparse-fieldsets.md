@@ -29,7 +29,7 @@ scoped full-linkage validation stay intact.
   a second parallel context type).
 - [ADR-009](../../docs/adr/009-jspecify-nullness.md) / [ADR-010](../../docs/adr/010-architectural-tests.md)
   — new public types are `@NullMarked` with accurate `@Nullable`; no new production package; the
-  existing jackson3 ArchUnit allowlist stays unchanged (no `core.internal`, no Jackson 2).
+  existing Jackson 3 ArchUnit allowlist stays unchanged (no `core.internal`, no Jackson 2).
 - Phase 2.2 — `ResourceMapping` / `MappingProperty.jsonapiName()` remain the only field-name
   authority; fieldsets must not rescan domain types or invent alternate names.
 - Phase 2.3 — `IncludePolicy` continues to gate inclusion traversal only; `DomainResourceWriter.toResource`
@@ -53,14 +53,21 @@ Extend the existing immutable `CompoundSerializationContext` (do not replace it)
   to the first occurrence (same retention rule Phase 3.1 will use for `fields[TYPE]`).
 - `FieldPolicy fieldPolicy` — application allow-list over `(resourceType, fieldName)` pairs, with
   the same mode shape as `IncludePolicy`: `allowAll()` / `denyAll()` / `allowing(Set<FieldAllowance>)`.
-  Default is `FieldPolicy.allowAll()`. `FieldAllowance` is a public jackson3 record of
+  Default is `FieldPolicy.allowAll()`. `FieldAllowance` is a public record of
   `resourceType` + `fieldName` (JSON:API names, not Java names).
+
+Growing the public record with `fieldsets` and `fieldPolicy` changes the canonical constructor;
+that API break is intentional for the pre-release (`0.1.0-SNAPSHOT`) line. Do **not** add a
+legacy four-argument compatibility overload.
 
 Constructor and every `withX()` method defensively copy the fieldset map: reject null map, null
 keys, null value lists, and null field-name elements; copy each value through a null-rejecting
 `LinkedHashSet` then `List.copyOf` so duplicates collapse while encounter order is preserved
-(do **not** rely on bare `Set.copyOf` iteration order for diagnostics). `withFieldsets` /
-`withFieldPolicy` copy methods required.
+(do **not** rely on bare `Set.copyOf` iteration order for diagnostics); store the outer map as
+`Map.copyOf(...)` so `fieldsets()` cannot expose mutable state. `FieldPolicy.allowing` rejects a
+null set and null elements and retains an unmodifiable defensive copy via `Set.copyOf`, matching
+`IncludePolicy.allowing`. Every `withX()` reconstructs from those immutable copies.
+`withFieldsets` / `withFieldPolicy` copy methods required.
 
 **Per-type semantics when emitting a resource of JSON:API type `T`:**
 
@@ -147,9 +154,9 @@ map is non-empty, and not for attribute-only omissions).
   behavior and **reject** a context whose fieldset map is non-empty with
   `MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT` (stable code; `resourceClass` / `propertyPath`
   may be null). Callers that need fieldsets must use the `MappedDocument` overloads and write with
-  `mapped.applyTo(...)`.
-- Optional convenience: `JsonApiJackson3.writer(JsonMapper, ValidationContext, MappedDocument)` that
-  binds `mapped.applyTo(base)`.
+  `mapped.applyTo(...)` passed into the existing `JsonApiJackson3.writer(JsonMapper, ValidationContext)`
+  factory. Do **not** add a `writer(..., MappedDocument)` convenience that binds a document-specific
+  `sparseFieldsetException` onto a reusable writer (that writer accepts any `JsonApiDocument`).
 
 Context-free overloads and bare `toResource(Object)` remain full emission (no fieldset). Fieldset-only
 use (empty include-path list) goes through the `MappedDocument` overloads.
@@ -195,13 +202,16 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
 - Public types stay in `io.github.kazemek.jsonapi.jackson3`; selective emission helpers stay in
   `io.github.kazemek.jsonapi.jackson3.internal`. No new production package; ArchUnit allowlist
   unchanged.
-- Prefer a package-visible selective write helper on `DomainResourceWriter` that returns both the
-  `ResourceObject` and whether any relationship was omitted by the applied fieldset—for example an
-  internal `record SelectiveResource(ResourceObject resource, boolean relationshipOmittedByFieldset)`
-  with `toResource(Object, @Nullable List<String> fields)` (null = unrestricted; empty = identity
-  only; non-empty = allow-list by `jsonapiName`) plus a helper that resolves the list from
+- Prefer a **public** selective write helper on `DomainResourceWriter` (same visibility pattern as
+  existing `toResource(Object)`) that returns both the `ResourceObject` and whether any relationship
+  was omitted by the applied fieldset—for example an internal
+  `record SelectiveResource(ResourceObject resource, boolean relationshipOmittedByFieldset)` with
+  `toResource(Object, @Nullable List<String> fields)` (null = unrestricted; empty = identity only;
+  non-empty = allow-list by `jsonapiName`) plus a helper that resolves the list from
   `CompoundSerializationContext` for the resource’s mapped type. Do not use a `ResourceObject`-only
-  return that drops the omission bit.
+  return that drops the omission bit. Package-private visibility is insufficient:
+  `JsonApiResourceMapper` lives in the parent package and must invoke the helper for primary
+  selective emission.
 - Fold omission with OR via return values only: primary selective writes contribute their bits;
   `CompoundInclusionEngine` returns included resources plus an aggregated omission bit from the
   same selective helper (for example an internal
@@ -221,9 +231,8 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
   `SparseFieldsetSpec.groovy`, plus any small access-counting test models under
   `src/test/java/.../testmodel/`. Files to edit: `CompoundSerializationContext.java`,
   `JsonApiResourceMapper.java`, `DomainResourceWriter.java`, `CompoundInclusionEngine.java`,
-  `MappingDiagnostic.java`, optionally `JsonApiJackson3.java` (writer convenience),
-  `jsonapi-java-jackson3/README.md`, `package-info.java`, entry-point Javadoc,
-  `docs/conformance.md`.
+  `MappingDiagnostic.java`, `jsonapi-java-jackson3/README.md`, `package-info.java`, entry-point
+  Javadoc, `docs/conformance.md`.
 
 ## Test strategy
 
@@ -231,6 +240,8 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
   same inputs via `MappedDocument` overloads; three-argument `toDocument` /
   `toResourceCollection` with an empty fieldset map remain Phase 2.3-equivalent.
 - Present empty list for a type: identity-only primary (and included, when that type appears).
+- Present empty list with `FieldPolicy.denyAll()`: identity-only emission succeeds and does not raise
+  `DENIED_FIELDSET_FIELD` (empty lists skip per-field policy checks).
 - **Entry-point split:** three-argument `toDocument` / `toResourceCollection` with a non-empty
   fieldset map fail with `FIELDSETS_REQUIRE_MAPPED_DOCUMENT` before property access; at least one
   positive fieldset case (identity-only or attribute-only, empty include-path list) is asserted
@@ -256,6 +267,10 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
 - Concurrent isolation: two concurrent fieldset mappings on a shared mapper (at least one omitting
   a relationship) produce isolated documents and independent
   `MappedDocument.sparseFieldsetException` values.
+- Defensive-copy isolation: mutating a caller-supplied fieldset map/list or `FieldAllowance` set
+  after context construction (and mutating collections returned by accessors, if any mutable view
+  were exposed) must not change an existing context; duplicate field names collapse to first
+  occurrence while preserved encounter order remains stable.
 - Identity preservation (`type` + `id`/`lid`) under every fieldset shape; deterministic member
   iteration order matches mapping definition order among surviving fields.
 - Existing `CompoundSerializationSpec` scenarios remain green when the fieldset map is empty.
@@ -266,7 +281,9 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
       and `id`/`lid`, treat absent type keys as unrestricted and present empty lists as identity-only,
       and are applied only by the `MappedDocument` overloads; three-argument `toDocument` /
       `toResourceCollection` reject non-empty fieldset maps with
-      `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`.
+      `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`; defensive-copy isolation holds for fieldset/`FieldAllowance`
+      inputs; concurrent mappings on a shared mapper yield isolated documents and independent
+      `MappedDocument.sparseFieldsetException` values.
 - [ ] Inclusion and fieldsets compose as specified: linkage omits excluded relationships; inclusion
       traversal may still follow fieldset-excluded relationships on validated include paths;
       access-counting fixtures prove the read split; `MappedDocument.sparseFieldsetException` is true
