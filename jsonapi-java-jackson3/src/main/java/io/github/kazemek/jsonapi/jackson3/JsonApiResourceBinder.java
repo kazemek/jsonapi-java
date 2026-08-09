@@ -12,10 +12,10 @@ import tools.jackson.databind.json.JsonMapper;
  * Binds validated JSON:API {@link ResourceObject} values to annotated flat DTO types.
  *
  * <p>Construct instances via {@link JsonApiJackson3#resourceBinder(JsonMapper)} or its overloads,
- * never directly. The binder is safe for concurrent use once created. Binding uses the Phase 2.2
- * mapping definitions (resolver and cache) and one {@link JsonMapper#convertValue(Object,
- * JavaType)} per resource, so Jackson's logical property model, creators, deserializers,
- * converters, naming, mix-ins, and configured modules remain authoritative (ADR-004).
+ * never directly. The binder is safe for concurrent use once created. Binding uses the mapping
+ * definitions (resolver and cache) and one {@link JsonMapper#convertValue(Object, JavaType)} per
+ * resource, so Jackson's logical property model, creators, deserializers, converters, naming,
+ * mix-ins, and configured modules remain authoritative (ADR-004).
  *
  * <p>Binding is read-only and document-first: callers pass an already-validated {@link
  * ResourceObject} and the binder never parses JSON nor reads document {@code included} (ADR-006,
@@ -24,8 +24,8 @@ import tools.jackson.databind.json.JsonMapper;
  * java.util.List}, {@link java.util.Set}, or array variants) bind from linkage directly; any other
  * target class requires a registered {@link RelationshipLinkageMapper}. Built-in identifier linkage
  * materializes {@code type}/{@code id}/{@code lid} only; identifier {@code meta} and additional
- * members are not carried into bound relationship values (mirroring the Phase 2.2 write mapping,
- * which produces identifiers without meta or additional members).
+ * members are not carried into bound relationship values (mirroring the write mapping, which
+ * produces identifiers without meta or additional members).
  *
  * <p>Binding failures throw {@link JsonApiMappingException} with a stable {@link MappingDiagnostic}
  * and a resource-relative JSON Pointer-like path.

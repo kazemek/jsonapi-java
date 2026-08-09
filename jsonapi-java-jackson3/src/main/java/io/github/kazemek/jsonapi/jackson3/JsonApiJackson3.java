@@ -190,8 +190,8 @@ public final class JsonApiJackson3 {
   /**
    * Returns a typed domain envelope reader with default identifier conversion and no custom
    * relationship linkage mappers. Document decoding/validation behaves exactly like {@link
-   * #reader(JsonMapper, DocumentReadContext)}; primary and included resources bind through the
-   * Phase 2.9 binder after a {@link ResourceTypeRegistry} lookup, using a mapper derived via {@link
+   * #reader(JsonMapper, DocumentReadContext)}; primary and included resources bind through the flat
+   * DTO binder after a {@link ResourceTypeRegistry} lookup, using a mapper derived via {@link
    * JsonMapper#rebuild()} that never mutates the caller's mapper.
    */
   public static JsonApiDomainDocumentReader domainDocumentReader(

@@ -294,7 +294,7 @@ class DomainDocumentReaderSpec extends Specification {
     included.find(ResourceIdentity.ofLid("people", "9")).isEmpty()
   }
 
-  def "compound shared identity yields one DTO instance for both primary resources"() {
+  def "compound shared identity binds one included DTO reachable from both primary resources"() {
     given:
     def reader = fixtureReader('compound-shared-identity', FlatArticle, Person)
 

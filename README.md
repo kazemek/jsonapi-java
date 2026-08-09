@@ -30,7 +30,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 |------|---------|
 | `jsonapi-java-core/` | Zero-dependency JSON:API document model and validation |
 | `jsonapi-java-annotations/` | Dependency-free domain-mapping annotations |
-| `jsonapi-java-jackson3/` | Jackson 3 document codec and domain-to-resource mapping (write and flat DTO read) |
+| `jsonapi-java-jackson3/` | Jackson 3 document codec, domain-to-resource mapping, flat DTO reads, and typed domain envelopes |
 | `jsonapi-java-test-fixtures/` | Internal shared writer fixture builders (not a published module) |
 | `fixtures/jsonapi-1.1/` | Version-neutral canonical JSON:API writer fixtures |
 | `build-logic/` | Shared Gradle convention plugins |
