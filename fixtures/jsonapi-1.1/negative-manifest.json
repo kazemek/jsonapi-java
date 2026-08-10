@@ -1,0 +1,158 @@
+{
+  "version": "1.1",
+  "cases": [
+    {
+      "id": "malformed-json-without-payload",
+      "path": "negative/malformed-json-without-payload.json",
+      "category": "MALFORMED_JSON",
+      "pointer": null,
+      "ruleCode": null,
+      "sourceLocation": false,
+      "notes": "Unterminated object; diagnostics must not echo the source text"
+    },
+    {
+      "id": "truncated-document-enclosing-path",
+      "path": "negative/truncated-document-enclosing-path.json",
+      "category": "MALFORMED_JSON",
+      "pointer": "/data",
+      "ruleCode": null,
+      "sourceLocation": false,
+      "notes": "End-of-input inside primary data; pointer captures the enclosing path"
+    },
+    {
+      "id": "empty-input",
+      "path": "negative/empty-input.json",
+      "category": "MALFORMED_JSON",
+      "pointer": "",
+      "ruleCode": null,
+      "sourceLocation": false,
+      "notes": "Empty input and whitespace-only variants"
+    },
+    {
+      "id": "trailing-content-after-document",
+      "path": "negative/trailing-content-after-document.json",
+      "category": "UNEXPECTED_TOKEN",
+      "pointer": "",
+      "ruleCode": null,
+      "sourceLocation": false,
+      "notes": "Whole-input reads reject content after the document"
+    },
+    {
+      "id": "unexpected-token-path-location",
+      "path": "negative/unexpected-token-path-location.json",
+      "category": "UNEXPECTED_TOKEN",
+      "pointer": "",
+      "ruleCode": null,
+      "sourceLocation": true,
+      "notes": "Wrong root token reports path and location"
+    },
+    {
+      "id": "duplicate-members",
+      "path": "negative/duplicate-members.json",
+      "category": "DUPLICATE_MEMBER",
+      "pointer": "/meta",
+      "ruleCode": null,
+      "sourceLocation": true,
+      "notes": "Repeated object member is rejected"
+    },
+    {
+      "id": "local-validation-top-level",
+      "path": "negative/local-validation-top-level.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/data/type",
+      "ruleCode": "MISSING_RESOURCE_TYPE",
+      "sourceLocation": false,
+      "notes": "Core constructor failure exposes a rule code and top-level path"
+    },
+    {
+      "id": "included-missing-type",
+      "path": "negative/included-missing-type.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/included/0/type",
+      "ruleCode": "MISSING_RESOURCE_TYPE",
+      "sourceLocation": false,
+      "notes": "Included resource without type reports a nested pointer"
+    },
+    {
+      "id": "collection-missing-type",
+      "path": "negative/collection-missing-type.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/data/0/type",
+      "ruleCode": "MISSING_RESOURCE_TYPE",
+      "sourceLocation": false,
+      "notes": "Collection element without type reports an indexed pointer"
+    },
+    {
+      "id": "relationship-identifier-missing-type",
+      "path": "negative/relationship-identifier-missing-type.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/data/relationships/author/data/type",
+      "ruleCode": "MISSING_RESOURCE_TYPE",
+      "sourceLocation": false,
+      "notes": "Relationship identifier without type reports a nested pointer"
+    },
+    {
+      "id": "reserved-attribute",
+      "path": "negative/reserved-attribute.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/data/attributes/type",
+      "ruleCode": "RESERVED_FIELD_NAME",
+      "sourceLocation": false,
+      "notes": "Reserved member name inside attributes"
+    },
+    {
+      "id": "missing-link-href",
+      "path": "negative/missing-link-href.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/data/links/self/href",
+      "ruleCode": "NULL_REQUIRED_VALUE",
+      "sourceLocation": false,
+      "notes": "Object-form link without href"
+    },
+    {
+      "id": "invalid-dynamic-link-relation",
+      "path": "negative/invalid-dynamic-link-relation.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/links/foo~0bar~1baz",
+      "ruleCode": "INVALID_LINK_RELATION",
+      "sourceLocation": false,
+      "notes": "Dynamic link relation escapes pointer segments"
+    },
+    {
+      "id": "invalid-dynamic-attribute-name",
+      "path": "negative/invalid-dynamic-attribute-name.json",
+      "category": "LOCAL_VALIDATION",
+      "pointer": "/data/attributes/foo~0bar~1baz",
+      "ruleCode": "INVALID_MEMBER_NAME",
+      "sourceLocation": true,
+      "notes": "Dynamic attribute name escapes pointer segments"
+    },
+    {
+      "id": "aggregate-uri-link-relation",
+      "path": "negative/aggregate-uri-link-relation.json",
+      "category": "AGGREGATE_VALIDATION",
+      "pointer": "/links/http:~1~1example.com~1rel",
+      "ruleCode": "INVALID_LINKS_CONTEXT",
+      "sourceLocation": true,
+      "notes": "Aggregate link-context failure escapes pointer segments"
+    },
+    {
+      "id": "aggregate-validation-resource-location",
+      "path": "negative/aggregate-validation-resource-location.json",
+      "category": "AGGREGATE_VALIDATION",
+      "pointer": "/data/1",
+      "ruleCode": "DUPLICATE_RESOURCE_IDENTITY",
+      "sourceLocation": true,
+      "notes": "Aggregate failure locates the offending resource; Jackson 3 also asserts line 4"
+    },
+    {
+      "id": "extension-members-require-context",
+      "path": "documents/extension-and-at-members.json",
+      "category": "AGGREGATE_VALIDATION",
+      "pointer": "/ext:request-id",
+      "ruleCode": "DISALLOWED_ADDITIONAL_MEMBER",
+      "sourceLocation": false,
+      "notes": "Valid extension document fails under a context without the extension namespace"
+    }
+  ]
+}

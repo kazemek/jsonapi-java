@@ -11,7 +11,9 @@ Phase 2.5 against pinned JSON:API 1.1 draft schemas. Flat resource-to-DTO bindin
 binds validated resource objects without reading `included`; typed domain envelopes (Phase 2.10)
 bind primary and included resources through an explicit type registry without graph hydration or
 PATCH commands. Codec and mapping policy, diagnostics, contexts, and domain envelope values are
-Jackson-major-neutral contracts in `jsonapi-java-jackson-common` (Phase 2.11).
+Jackson-major-neutral contracts in `jsonapi-java-jackson-common` (Phase 2.11); the capability-tagged
+document corpus, closed negative corpus, and dual-success ambiguous primary-data cases under
+`fixtures/jsonapi-1.1/` are the shared codec contract for every Jackson major (Phase 2.12).
 
 ## Document structure (Phase 1.1 — supported)
 
@@ -92,9 +94,11 @@ Jackson-major-neutral contracts in `jsonapi-java-jackson-common` (Phase 2.11).
 |--------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------|
 | JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write                                                           |
 | Canonical member ordering                        | supported | Standard members in model accessor order; additional members insertion order; `hreflang` always array |
-| Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/`                                                                               |
+| Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` capability-selected catalog (`CodecFixture` metadata); stable ids and paths    |
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind`                          |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location                              |
+| Shared read-only negative corpus                 | supported | `negative-manifest.json`: closed Phase 2.4 failure inventory with version-neutral expectations        |
+| Ambiguous primary data requires explicit kind    | supported | Shared dual-success object/empty-array cases decode under both `PrimaryDataKind` values               |
 
 ## Draft-schema cross-check (Phase 2.5 — supplemental)
 
@@ -115,7 +119,8 @@ forces an intentional re-review.
 
 `JsonApiDraftSchemaSpec` runs fully offline: the draft URI referenced by the request schemas is
 mapped to the vendored response schema, all four schema files are SHA-256-pinned, every applicable
-writer fixture is classified as response or create-resource document and validated against the
+fixture is classified for a schema kind through its `CodecFixture` capability metadata (response or
+create-resource; update kinds reserved for later usage-specific cases) and validated against the
 matching usage-specific schema, and one malformed control per schema kind (response,
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.

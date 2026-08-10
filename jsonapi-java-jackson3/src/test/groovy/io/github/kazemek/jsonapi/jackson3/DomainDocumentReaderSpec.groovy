@@ -31,8 +31,8 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.FlatStrictArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.InvalidResourceType
 import io.github.kazemek.jsonapi.jackson3.testmodel.Person
-import io.github.kazemek.jsonapi.testfixtures.writer.WriterFixture
-import io.github.kazemek.jsonapi.testfixtures.writer.WriterFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixture
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -992,12 +992,12 @@ class DomainDocumentReaderSpec extends Specification {
   private final Path fixturesDir = Path.of(System.getProperty('jsonapi.fixtures.dir'))
 
   private String fixtureText(String id) {
-    WriterFixture fixture = WriterFixtures.byId(id)
+    CodecFixture fixture = CodecFixtures.byId(id)
     Files.readString(fixturesDir.resolve(fixture.expectedPath), StandardCharsets.UTF_8)
   }
 
   private static JsonApiDomainDocumentReader fixtureReader(String id, Class<?>... targetClasses) {
-    WriterFixture fixture = WriterFixtures.byId(id)
+    CodecFixture fixture = CodecFixtures.byId(id)
     JsonApiJackson3.domainDocumentReader(
         JsonMapper.builder().build(),
         DocumentReadContext.of(fixture.context, PrimaryDataKind.RESOURCE),

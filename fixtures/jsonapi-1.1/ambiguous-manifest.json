@@ -1,0 +1,15 @@
+{
+  "version": "1.1",
+  "cases": [
+    {
+      "id": "ambiguous-object-primary-data",
+      "path": "documents/ambiguous-object-primary-data.json",
+      "notes": "Object primary data whose decoded model depends on the read PrimaryDataKind"
+    },
+    {
+      "id": "ambiguous-empty-array-primary-data",
+      "path": "documents/ambiguous-empty-array-primary-data.json",
+      "notes": "Empty-array primary data whose decoded model depends on the read PrimaryDataKind"
+    }
+  ]
+}

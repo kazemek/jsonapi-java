@@ -1,0 +1,81 @@
+package io.github.kazemek.jsonapi.testfixtures.codec
+
+import java.nio.file.Files
+import java.nio.file.Path
+
+import groovy.json.JsonSlurper
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
+import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
+import spock.lang.Shared
+import spock.lang.Specification
+
+class NegativeCodecCasesCatalogSpec extends Specification {
+
+  private static final List<String> CLOSED_IDS = [
+    'malformed-json-without-payload',
+    'truncated-document-enclosing-path',
+    'empty-input',
+    'trailing-content-after-document',
+    'unexpected-token-path-location',
+    'duplicate-members',
+    'local-validation-top-level',
+    'included-missing-type',
+    'collection-missing-type',
+    'relationship-identifier-missing-type',
+    'reserved-attribute',
+    'missing-link-href',
+    'invalid-dynamic-link-relation',
+    'invalid-dynamic-attribute-name',
+    'aggregate-uri-link-relation',
+    'aggregate-validation-resource-location',
+    'extension-members-require-context',
+  ]
+
+  @Shared
+  Path fixturesDir = Path.of(System.getProperty("jsonapi.fixtures.dir"))
+
+  def "negative corpus is exactly the closed Phase 2.4 case set without duplicates"() {
+    expect:
+    NegativeCodecCases.all()*.id == CLOSED_IDS
+  }
+
+  def "manifest entries match the loaded corpus and every input exists"() {
+    given:
+    def manifest = new JsonSlurper().parse(fixturesDir.resolve("negative-manifest.json").toFile()) as Map
+    def manifestCases = manifest.cases as List
+
+    expect:
+    manifestCases*.id == NegativeCodecCases.all()*.id
+
+    and:
+    NegativeCodecCases.all().each { entry ->
+      def manifestEntry = manifestCases.find { it.id == entry.id }
+      assert manifestEntry.path == entry.path
+      assert manifestEntry.category == entry.category
+      assert (manifestEntry.pointer as String) == entry.pointer
+      assert (manifestEntry.ruleCode as String) == entry.ruleCode
+      assert (manifestEntry.sourceLocation ?: false) as boolean == entry.sourceLocation
+      assert Files.isRegularFile(fixturesDir.resolve(entry.path))
+    }
+  }
+
+  def "every negative case records a known category and a valid pointer"() {
+    expect:
+    NegativeCodecCases.all().every { entry ->
+      CodecFailureCategory.values().any { it.name() == entry.category }
+      entry.pointer == null || entry.pointer.isEmpty() || entry.pointer.startsWith('/')
+    }
+  }
+
+  def "rule codes appear exactly for validation categories and are known codes"() {
+    expect:
+    NegativeCodecCases.all().every { entry ->
+      def validation = entry.category == 'LOCAL_VALIDATION' || entry.category == 'AGGREGATE_VALIDATION'
+      if (entry.ruleCode == null) {
+        return !validation
+      }
+      validation
+      ValidationRuleCode.values().any { it.name() == entry.ruleCode }
+    }
+  }
+}

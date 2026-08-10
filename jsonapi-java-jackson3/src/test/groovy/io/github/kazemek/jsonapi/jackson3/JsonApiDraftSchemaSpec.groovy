@@ -9,7 +9,8 @@ import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.dialect.Dialects
 
-import io.github.kazemek.jsonapi.testfixtures.writer.WriterFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -21,8 +22,8 @@ import tools.jackson.databind.json.JsonMapper
  *
  * The draft schemas are unreleased and not an official conformance oracle: a schema result never
  * changes a conformance status in docs/conformance.md. Fixtures that fail the draft only because
- * of a known draft gap are explicitly allow-listed and must keep failing, so a schema fix forces
- * an intentional re-review.
+ * of a known draft gap carry {@link io.github.kazemek.jsonapi.testfixtures.codec.SchemaDisagreement}
+ * metadata and must keep failing, so a schema fix forces an intentional re-review.
  */
 class JsonApiDraftSchemaSpec extends Specification {
 
@@ -37,53 +38,11 @@ class JsonApiDraftSchemaSpec extends Specification {
     "schema_update_relationship.json",
   ]
 
-  private static final Map<String, String> SCHEMA_KIND_BY_FIXTURE = [
-    "single-resource": "response",
-    "resource-collection": "response",
-    "single-identifier": "response",
-    "identifier-collection": "response",
-    "null-data": "response",
-    "meta-only": "response",
-    "empty-identifier-collection": "response",
-    "empty-wrappers": "response",
-    "empty-errors": "response",
-    "empty-included": "response",
-    "open-values": "response",
-    "relationship-null-linkage": "response",
-    "relationship-empty-to-many": "response",
-    "relationship-link-only": "response",
-    "relationship-meta-only": "response",
-    "errors-document": "response",
-    "jsonapi-object": "response",
-    "compound-document": "response",
-    "compound-nested-intermediate": "response",
-    "compound-shared-identity": "response",
-    "local-identifier": "create",
-    "member-order": "response",
-    "extension-and-at-members": "response",
-    "string-and-object-links": "response",
-  ]
-
-  private static final Map<String, Map<String, Object>> ALLOWED_DISAGREEMENTS = [
-    "member-order": [
-      reason: "response resource carries both id and lid and top-level ext: members; the draft schema requires id and forbids lid in response resources and only models @ members",
-      expected: [
-        [keyword: "not", path: "/data"],
-        [keyword: "unevaluatedProperties", path: ""],
-      ],
-    ],
-    "extension-and-at-members": [
-      reason: "top-level ext: member; PR json-api/json-api#1603 does not yet model extension members (see its description)",
-      expected: [
-        [keyword: "unevaluatedProperties", path: ""],
-      ],
-    ],
-    "string-and-object-links": [
-      reason: "hreflang canonical list form; draft linkObject.hreflang only accepts a string",
-      expected: [
-        [keyword: "type", path: "/links/related/hreflang"],
-      ],
-    ],
+  private static final Map<SchemaKind, String> SCHEMA_FILE_BY_KIND = [
+    (SchemaKind.RESPONSE): "schema.json",
+    (SchemaKind.CREATE): "schema_create_resource.json",
+    (SchemaKind.UPDATE): "schema_update_resource.json",
+    (SchemaKind.UPDATE_RELATIONSHIP): "schema_update_relationship.json",
   ]
 
   private static final List<Map<String, String>> INVALID_CONTROLS = [
@@ -103,12 +62,9 @@ class JsonApiDraftSchemaSpec extends Specification {
   SchemaRegistry registry = SchemaRegistry.withDialect(Dialects.getDraft202012(), this.&configureRegistry)
 
   @Shared
-  Map<String, Schema> schemas = [
-    response: loadSchema("schema.json"),
-    create: loadSchema("schema_create_resource.json"),
-    update: loadSchema("schema_update_resource.json"),
-    updateRelationship: loadSchema("schema_update_relationship.json"),
-  ]
+  Map<SchemaKind, Schema> schemas = SCHEMA_FILE_BY_KIND.collectEntries { kind, file ->
+    [(kind): loadSchema(file)]
+  }
 
   def "vendored draft schemas match the recorded sha256 pin"() {
     given:
@@ -129,29 +85,27 @@ class JsonApiDraftSchemaSpec extends Specification {
     mapper.readTree(readBytes("schema.json")).get("\$id").asString() == DRAFT_URI
   }
 
-  def "every writer fixture is classified for a schema kind"() {
+  def "every schema-checked fixture declares a known schema kind"() {
     expect:
-    WriterFixtures.all().every { it.id in SCHEMA_KIND_BY_FIXTURE }
+    CodecFixtures.schemaChecked().every { it.schemaKind in SCHEMA_FILE_BY_KIND }
   }
 
   def "fixture #fixture.id passes the #kind draft schema"() {
     given:
-    def errors = errorsFor(fixture, kind)
+    def errors = errorsFor(fixture)
 
     expect:
     errors.isEmpty()
 
     where:
-    fixture << WriterFixtures.all().findAll {
-      it.id in SCHEMA_KIND_BY_FIXTURE && !ALLOWED_DISAGREEMENTS.containsKey(it.id)
-    }
-    kind = SCHEMA_KIND_BY_FIXTURE[fixture.id]
+    fixture << CodecFixtures.schemaChecked().findAll { it.schemaDisagreement == null }
+    kind = fixture.schemaKind
   }
 
   def "allow-listed fixture #fixture.id fails for the documented draft-schema gap"() {
     given:
-    def disagreement = ALLOWED_DISAGREEMENTS[fixture.id]
-    def errors = errorsFor(fixture, SCHEMA_KIND_BY_FIXTURE[fixture.id])
+    def disagreement = fixture.schemaDisagreement
+    def errors = errorsFor(fixture)
     def observed = errors.collect { [keyword: it.keyword, path: it.instanceLocation.toString()] }
 
     expect:
@@ -160,13 +114,13 @@ class JsonApiDraftSchemaSpec extends Specification {
     }
 
     where:
-    fixture << WriterFixtures.all().findAll { it.id in ALLOWED_DISAGREEMENTS }
+    fixture << CodecFixtures.schemaChecked().findAll { it.schemaDisagreement != null }
   }
 
   def "invalid control #control.file fails the #control.kind schema at #control.path with #control.keyword"() {
     given:
     def json = mapper.readTree(readText("invalid-controls/" + control.file))
-    def errors = schemas[control.kind].validate(json)
+    def errors = schemas[schemaKindFor(control.kind)].validate(json)
 
     expect:
     errors.any { it.keyword == control.keyword && it.instanceLocation.toString() == control.path }
@@ -175,9 +129,24 @@ class JsonApiDraftSchemaSpec extends Specification {
     control << INVALID_CONTROLS
   }
 
-  private List<?> errorsFor(fixture, String kind) {
+  private List<?> errorsFor(fixture) {
     def json = JsonApiJackson3.writer(mapper, fixture.context).writeValueAsString(fixture.document)
-    return schemas[kind].validate(mapper.readTree(json))
+    return schemas[fixture.schemaKind].validate(mapper.readTree(json))
+  }
+
+  private static final Map<String, SchemaKind> SCHEMA_KIND_BY_NAME = [
+    'response': SchemaKind.RESPONSE,
+    'create': SchemaKind.CREATE,
+    'update': SchemaKind.UPDATE,
+    'updateRelationship': SchemaKind.UPDATE_RELATIONSHIP,
+  ]
+
+  private static SchemaKind schemaKindFor(String name) {
+    def kind = SCHEMA_KIND_BY_NAME[name]
+    if (kind == null) {
+      throw new IllegalArgumentException('Unknown schema kind name: ' + name)
+    }
+    return kind
   }
 
   private void configureRegistry(SchemaRegistry.Builder builder) {

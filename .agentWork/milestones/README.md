@@ -109,7 +109,7 @@ milestone file.
 - [Phase 2.9 — Jackson 3 Flat DTO Reader](phase-2-9-jackson3-flat-dto-reader.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.10 — Jackson 3 Typed Domain Envelope](phase-2-10-jackson3-domain-envelope.md) — `jsonapi-java-jackson3` — Complete
 - [Phase 2.11 — Jackson Common Contracts](phase-2-11-jackson-common-contracts.md) — `jsonapi-java-jackson-common` / `jsonapi-java-jackson3` — Complete
-- [Phase 2.12 — Canonical Codec Fixture Contract](phase-2-12-canonical-codec-fixtures.md) — fixtures / `jsonapi-java-test-fixtures` / jackson3 codec tests — Not started
+- [Phase 2.12 — Canonical Codec Fixture Contract](phase-2-12-canonical-codec-fixtures.md) — fixtures / `jsonapi-java-test-fixtures` / jackson3 codec tests — Complete
 - [Phase 2.13 — Shared Domain Write Test Fixtures](phase-2-13-shared-domain-write-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `ResourceMapperSpec` — Not started
 - [Phase 2.14 — Shared Domain Read Test Fixtures](phase-2-14-shared-domain-read-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `ResourceBinderSpec` — Not started
 - [Phase 2.15 — Jackson 3 Presence-Aware PATCH Binding](phase-2-15-jackson3-patch-binding.md) — `jsonapi-java-jackson3` / `jsonapi-java-jackson-common` / `jsonapi-java-test-fixtures` — Not started
