@@ -1,10 +1,13 @@
 package io.github.kazemek.jsonapi.jackson;
 
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Independently bound {@code included} resources of a domain document envelope.
@@ -18,11 +21,12 @@ import java.util.Optional;
  * construction, and mutating a construction-time source or a returned {@link #resources()} list
  * never changes wire order or {@link #find(ResourceIdentity)} results.
  *
- * <p>Assemble instances with {@link #of(List, Map)}. The identity index maps each identity to the
- * position of its bound DTO in the resource list, so an index entry can never point at an object
- * outside the list: inconsistent states are unrepresentable, and out-of-range positions are
- * rejected at construction. Major-specific readers build the index from validated documents, so
- * wire order and identity lookup always agree.
+ * <p>Assemble instances with {@link #of(List, List)}. The identity index is derived from the
+ * identities declared for each wire-order position, so {@code find(identity)} can only return the
+ * DTO at the position that declared that identity: inconsistent states are unrepresentable.
+ * Duplicate identities across positions, length mismatches, and {@code null} elements are rejected
+ * at construction. Major-specific readers build the declarations from validated documents, so wire
+ * order and identity lookup always agree.
  */
 public final class IncludedResources {
 
@@ -35,33 +39,53 @@ public final class IncludedResources {
   }
 
   /**
-   * Creates an instance from wire-ordered bound DTOs and an identity index of {@code 0}-based
-   * positions into {@code resources}.
+   * Creates an instance from wire-ordered bound DTOs and the identities declared for each
+   * wire-order position.
    *
-   * <p>Both arguments are defensively copied. Every index position must fall within the resource
-   * list, and duplicate or {@code null} identities are rejected.
+   * <p>{@code identitiesByPosition} must have exactly one entry per resource, in the same order.
+   * The identity index is derived from the declarations, so every declared identity resolves to the
+   * position that declared it and no identity can resolve to an undeclared position.
    *
-   * @throws NullPointerException when {@code resources}, {@code identityIndex}, an element, an
-   *     identity, or a position is {@code null}
-   * @throws IllegalArgumentException when a position is negative or not less than the resource list
-   *     size
+   * <p>All arguments are defensively copied.
+   *
+   * @throws NullPointerException when an argument, a resource, an identity set, or an identity is
+   *     {@code null}
+   * @throws IllegalArgumentException when {@code identitiesByPosition} has a different size than
+   *     {@code resources}, or the same identity is declared for more than one position
    */
   public static IncludedResources of(
-      List<Object> resources, Map<ResourceIdentity, Integer> identityIndex) {
+      List<Object> resources, List<Set<ResourceIdentity>> identitiesByPosition) {
     List<Object> copiedResources = List.copyOf(Objects.requireNonNull(resources, "resources"));
-    Map<ResourceIdentity, Integer> copiedIndex =
-        Map.copyOf(Objects.requireNonNull(identityIndex, "identityIndex"));
-    for (Integer position : copiedIndex.values()) {
-      Objects.requireNonNull(position, "identity index position");
-      if (position < 0 || position >= copiedResources.size()) {
-        throw new IllegalArgumentException(
-            "Identity index position out of range [0, "
-                + copiedResources.size()
-                + "): "
-                + position);
+    List<Set<ResourceIdentity>> copiedIdentities =
+        copyIdentities(Objects.requireNonNull(identitiesByPosition, "identitiesByPosition"));
+    if (copiedIdentities.size() != copiedResources.size()) {
+      throw new IllegalArgumentException(
+          "Identities per position ("
+              + copiedIdentities.size()
+              + ") must match the resource count ("
+              + copiedResources.size()
+              + ")");
+    }
+    Map<ResourceIdentity, Integer> index = new LinkedHashMap<>();
+    for (int position = 0; position < copiedIdentities.size(); position++) {
+      for (ResourceIdentity identity : copiedIdentities.get(position)) {
+        Integer previous = index.putIfAbsent(identity, position);
+        if (previous != null) {
+          throw new IllegalArgumentException(
+              "Identity " + identity + " declared at positions " + previous + " and " + position);
+        }
       }
     }
-    return new IncludedResources(copiedResources, copiedIndex);
+    return new IncludedResources(copiedResources, index);
+  }
+
+  private static List<Set<ResourceIdentity>> copyIdentities(
+      List<Set<ResourceIdentity>> identitiesByPosition) {
+    List<Set<ResourceIdentity>> copied = new ArrayList<>(identitiesByPosition.size());
+    for (Set<ResourceIdentity> identities : identitiesByPosition) {
+      copied.add(Set.copyOf(Objects.requireNonNull(identities, "identities at a position")));
+    }
+    return List.copyOf(copied);
   }
 
   /** Bound DTOs in wire order; unmodifiable. */

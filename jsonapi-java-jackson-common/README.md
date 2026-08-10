@@ -53,10 +53,11 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   `com.fasterxml.jackson.*`, or any major-specific adapter package (`jackson2..`, `jackson3..`).
   ArchUnit enforces this via `JacksonCommonDependencyRulesSpec` (ADR-010). Moved-type Javadocs
   must not `{@link}` Jackson-major-specific types; keep wording neutral.
-- **IncludedResources invariant:** Assemble with `IncludedResources.of(resources, identityIndex)`
-  where index values are 0-based positions into the resource list. Positions make
-  identity-index/resource-list inconsistency unrepresentable; out-of-range positions are rejected.
-  Do not re-introduce a raw two-collection constructor.
+- **IncludedResources invariant:** Assemble with `IncludedResources.of(resources,
+  identitiesByPosition)` where each position declares the identities of its bound DTO. The index is
+  derived from those declarations, so `find` can only return the DTO at the position that declared
+  the identity: inconsistent states are unrepresentable. Duplicate identities across positions and
+  length mismatches are rejected. Do not re-introduce a raw two-collection constructor.
 - **Move policy:** Neutral contracts live here, not in the adapters. When a type can be expressed
   without Jackson imports, move it here rather than duplicating it per major; when it exposes
   Jackson APIs it must stay in the adapter.

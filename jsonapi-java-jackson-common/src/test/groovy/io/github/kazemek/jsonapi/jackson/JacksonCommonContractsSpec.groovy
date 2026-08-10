@@ -182,33 +182,89 @@ class JacksonCommonContractsSpec extends Specification {
 
   // IncludedResources
 
-  def "of preserves wire order and resolves identities through index positions"() {
+  def "of preserves wire order and resolves identities through declared positions"() {
     given:
     def dto = "dto"
     def included =
         IncludedResources.of(
         ["x", dto] as List<Object>,
         [
-          (ResourceIdentity.ofId("people", "9")): 1,
-          (ResourceIdentity.ofLid("people", "9")): 1
-        ] as Map<ResourceIdentity, Integer>)
+          [
+            ResourceIdentity.ofId("people", "9"),
+            ResourceIdentity.ofLid("people", "9")
+          ] as Set<ResourceIdentity>,
+          [] as Set<ResourceIdentity>
+        ] as List<Set<ResourceIdentity>>)
 
     expect:
     included.resources() == ["x", "dto"]
-    included.find(ResourceIdentity.ofId("people", "9")).get() == "dto"
-    included.find(ResourceIdentity.ofLid("people", "9")).get() == "dto"
+    included.find(ResourceIdentity.ofId("people", "9")).get() == "x"
+    included.find(ResourceIdentity.ofLid("people", "9")).get() == "x"
     included.find(ResourceIdentity.ofId("people", "99")).isEmpty()
   }
 
-  def "of rejects out-of-range identity index positions"() {
+  def "identity resolves only to the position that declared it"() {
+    given:
+    def first = "first"
+    def second = "second"
+    def included =
+        IncludedResources.of(
+        [first, second] as List<Object>,
+        [
+          [
+            ResourceIdentity.ofId("people", "9")
+          ] as Set<ResourceIdentity>,
+          [
+            ResourceIdentity.ofId("people", "2")
+          ] as Set<ResourceIdentity>
+        ] as List<Set<ResourceIdentity>>)
+
+    expect:
+    included.find(ResourceIdentity.ofId("people", "9")).get() == first
+    included.find(ResourceIdentity.ofId("people", "2")).get() == second
+    // an identity never declared anywhere resolves empty, never a non-declaring position
+    included.find(ResourceIdentity.ofId("people", "99")).isEmpty()
+  }
+
+  def "of rejects identity declarations that do not match the resource count"() {
     when:
-    IncludedResources.of(["x"] as List<Object>, [(ResourceIdentity.ofId("people", "9")): 1])
+    IncludedResources.of(
+        ["x"] as List<Object>,
+        [
+          [
+            ResourceIdentity.ofId("people", "9")
+          ] as Set<ResourceIdentity>,
+          [] as Set<ResourceIdentity>
+        ] as List<Set<ResourceIdentity>>)
 
     then:
     thrown(IllegalArgumentException)
 
     when:
-    IncludedResources.of(["x"] as List<Object>, [(ResourceIdentity.ofId("people", "9")): -1])
+    IncludedResources.of(
+        ["x", "y"] as List<Object>,
+        [
+          [
+            ResourceIdentity.ofId("people", "9")
+          ] as Set<ResourceIdentity>
+        ])
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
+  def "of rejects the same identity declared for more than one position"() {
+    when:
+    IncludedResources.of(
+        ["x", "y"] as List<Object>,
+        [
+          [
+            ResourceIdentity.ofId("people", "9")
+          ] as Set<ResourceIdentity>,
+          [
+            ResourceIdentity.ofId("people", "9")
+          ] as Set<ResourceIdentity>
+        ] as List<Set<ResourceIdentity>>)
 
     then:
     thrown(IllegalArgumentException)
@@ -217,16 +273,20 @@ class JacksonCommonContractsSpec extends Specification {
   def "of defensively copies construction sources"() {
     given:
     def sourceList = ["x"] as List<Object>
-    def sourceIndex = [(ResourceIdentity.ofId("people", "9")): 0] as Map<ResourceIdentity, Integer>
+    def mutableIdentities = new LinkedHashSet<ResourceIdentity>([
+      ResourceIdentity.ofId("people", "9")
+    ])
+    List<Set<ResourceIdentity>> sourceIdentities = [mutableIdentities]
 
     when:
-    def included = IncludedResources.of(sourceList, sourceIndex)
+    def included = IncludedResources.of(sourceList, sourceIdentities)
     sourceList.add("y")
-    sourceIndex.put(ResourceIdentity.ofId("people", "9"), 1)
+    mutableIdentities.add(ResourceIdentity.ofId("people", "99"))
 
     then:
     included.resources() == ["x"]
     included.find(ResourceIdentity.ofId("people", "9")).get() == "x"
+    included.find(ResourceIdentity.ofId("people", "99")).isEmpty()
 
     when:
     included.resources().add("z")
