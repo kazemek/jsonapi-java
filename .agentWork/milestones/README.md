@@ -2,7 +2,12 @@
 
 Milestones are planned, testable increments. They may change until implementation starts; after completion they are retained as documentation of the delivered contract.
 
-## Dependency order
+## Planned execution order
+
+Preferred sequencing for agents and humans. It is not a strict dependency graph: milestones later
+in this list may run earlier when their own **Dependencies** headers allow (for example Jackson 2
+parity after common contracts/fixtures without waiting on Spring). Each milestone’s **Dependencies**
+field remains the authoritative prerequisite set.
 
 1. **Phase 0.1 — Public namespace:** gates every public source package.
 2. **Phase 0.2 — milestone review workflow:** defines the repository's on-demand review process.

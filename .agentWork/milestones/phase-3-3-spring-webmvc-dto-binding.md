@@ -19,9 +19,10 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   safe error rendering. This milestone extends that adapter rather than registering a competing
   converter.
 - Phase 2.9 owns flat DTO binding, Phase 2.10 owns typed domain documents
-  (`JsonApiDomainDocument`) and `ResourceTypeRegistry`, Phase 2.8 owns sparse-fieldset/inclusion
-  context plus `MappedDocument` write coordination, and Phase 2.11 supplies common contracts Spring
-  consumes. Spring only transports explicit caller policy into those APIs.
+  (`JsonApiDomainDocument`) and `ResourceTypeRegistry`, Phase 2.3 owns inclusion context
+  (`CompoundSerializationContext` / `IncludePolicy`), Phase 2.8 extends that context with
+  sparse-fieldset policy and `MappedDocument` write coordination, and Phase 2.11 supplies common
+  contracts Spring consumes. Spring only transports explicit caller policy into those APIs.
 - Activation types: request arguments are `JsonApiDomainDocument` only; return values are (a) a
   bare type or collection element type carrying `@JsonApiResource`, or (b) an explicit library
   Spring response wrapper that carries domain data plus `DocumentEnvelope` members and

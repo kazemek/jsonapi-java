@@ -31,9 +31,17 @@ leaving Jackson-bound implementation and entry points in separately compiled maj
   exposes `JsonMapper`, `JavaType`, parser/generator, introspection, serializer, or deserializer
   APIs (`JsonApiJackson3`, readers/writers, binders, `JsonApiDomainDocument`,
   `ResourceTypeRegistry`, `RelationshipLinkageMapper`, `JsonApiResourceMapper`).
-- `IncludedResources` today uses a package-private constructor from `JsonApiDomainDocumentReader`;
-  after the move it must expose a public factory/constructor in the common package so major-specific
-  readers can assemble it without package coupling.
+- `IncludedResources` today uses a package-private constructor from `JsonApiDomainDocumentReader`
+  that takes a wire-order resource list and an identity index that must agree. After the move it
+  must expose a public common-package construction API so major-specific readers can assemble it
+  without package coupling. Prefer the simplest API that preserves the `resources()` ↔ identity-index
+  invariant by making inconsistent states unrepresentable or by reliably rejecting them; do not
+  simply publish the existing two-collection constructor without that guarantee, and do not
+  prescribe a particular factory/constructor shape or add unnecessary validation complexity.
+- Moved-type Javadocs must not `{@link}` Jackson-major-specific types excluded from the inventory
+  (for example `JsonApiDomainDocument`, `JsonApiDomainDocumentReader`, `ResourceTypeRegistry`).
+  Adapt `DomainData`, `IncludedResources`, and any other moved Javadoc that currently cites those
+  types to neutral wording before or as part of the move.
 
 ## Deliverables
 
@@ -41,7 +49,9 @@ leaving Jackson-bound implementation and entry points in separately compiled maj
   `io.github.kazemek.jsonapi.jackson`, depending only on public core/annotation contracts and
   compile-only JSpecify; add ArchUnit coverage for that exact boundary.
 - Move exactly the closed inventory above into the common package, including a public
-  `IncludedResources` factory/constructor suitable for major-specific readers.
+  `IncludedResources` construction API that preserves the wire-order/`find` identity-index
+  invariant (unrepresentable or reliably rejected inconsistency), and with moved-type Javadocs
+  free of Jackson-major-specific `{@link}` targets.
 - Migrate Jackson 3 production code, tests, and public signatures to consume the common types and
   remove the former `io.github.kazemek.jsonapi.jackson3` duplicates without compatibility wrappers
   or semantic changes (visibility of `IncludedResources` construction may widen as specified).
@@ -69,7 +79,9 @@ leaving Jackson-bound implementation and entry points in separately compiled maj
   `io.github.kazemek.jsonapi.jackson`.
 - Existing equality, defensive-copy, diagnostic-code, nullness, presence, ordering, policy-default,
   and validation-context behavior moves unchanged except for the documented `IncludedResources`
-  construction visibility change.
+  construction visibility/API change and moved-Javadoc neutralization.
+- Public `IncludedResources` construction keeps `resources()` wire order and `find` identity-index
+  results consistent; construction API design is otherwise open to the implementer.
 - `jsonapi-java-core` and `jsonapi-java-annotations` must not depend on the common module.
 
 ## Test strategy
@@ -90,9 +102,11 @@ leaving Jackson-bound implementation and entry points in separately compiled maj
 - [ ] Exactly the closed inventory types are moved, each retains its Phase 2.1–2.10 semantics, and
       none remain as public duplicates under `io.github.kazemek.jsonapi.jackson3`.
 - [ ] `IncludedResources` is assemblable from major-specific readers via a public common-package
-      factory/constructor without package-private coupling.
+      construction API that preserves the `resources()` ↔ identity-index invariant (inconsistent
+      states unrepresentable or reliably rejected) without package-private coupling.
 - [ ] Jackson 3 codec, mapping, inclusion, fieldset, binder, and envelope entry points consume the
-      common contracts while all Jackson-bound signatures and implementation remain major-specific.
+      common contracts while all Jackson-bound signatures and implementation remain major-specific;
+      moved-type Javadocs do not `{@link}` excluded Jackson-major-specific types.
 - [ ] ADR-007/ADR-010, vision/conformance, publication metadata, dependency verification, and the
       canonical `module-docs` checklist pass for the new common module and changed Jackson 3 surface.
 - [ ] `./gradlew clean build` passes.
