@@ -22,10 +22,11 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   (`JsonApiDomainDocument`) and `ResourceTypeRegistry`, Phase 2.8 owns sparse-fieldset/inclusion
   context plus `MappedDocument` write coordination, and Phase 2.11 supplies common contracts Spring
   consumes. Spring only transports explicit caller policy into those APIs.
-- Activation types: request arguments are `JsonApiDomainDocument` only; return values are bare
-  annotated DTO / collection or an explicit Spring response wrapper that carries domain data plus
-  `DocumentEnvelope` members and `CompoundSerializationContext` policy. Plain POJO
-  `application/json` handling stays Spring/Jackson-owned.
+- Activation types: request arguments are `JsonApiDomainDocument` only; return values are (a) a
+  bare type or collection element type carrying `@JsonApiResource`, or (b) an explicit library
+  Spring response wrapper that carries domain data plus `DocumentEnvelope` members and
+  `CompoundSerializationContext` policy. Never activate for arbitrary POJOs; always only with the
+  JSON:API media type. Plain POJO `application/json` handling stays Spring/Jackson-owned.
 - Included-type registry: applications provide a `ResourceTypeRegistry` Spring bean; auto-config
   does not invent a default registry of domain types.
 - Response writes: non-empty fieldsets use `toMappedDocument` / `toMappedResourceCollection` then
@@ -51,7 +52,7 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   independently registered/bound `included` DTOs and stable codec/mapping error rendering.
 - Add MockMvc fixtures and safe error mappings for DTO/envelope endpoints.
 - Use `module-docs` for the changed Spring WebMVC surface and update the HTTP/endpoints conformance
-  row for Spring annotated DTO and typed-envelope binding to **supported**.
+  row for Spring-annotated DTO and typed-envelope binding to **supported**.
 
 ## Non-goals
 
@@ -65,8 +66,10 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
 
 ## Implementation boundaries
 
-- DTO behavior activates only for the named request/return types and the JSON:API media type.
-  Plain POJO handling remains Spring/Jackson-owned.
+- DTO behavior activates only for `JsonApiDomainDocument` request arguments, returns whose
+  (element) type carries `@JsonApiResource`, or an explicit library response wrapper—and only with
+  the JSON:API media type. Arbitrary POJO returns never activate JSON:API handling. Plain POJO
+  `application/json` handling remains Spring/Jackson-owned.
 - Input always follows Phase 3.2 decode/validation before Phase 2.10 domain-document binding.
   Mapping failures use the registered safe JSON:API error policy without exposing application
   values or internals.

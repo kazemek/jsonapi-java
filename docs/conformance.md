@@ -143,7 +143,7 @@ documents.
 
 | Rule                                            | Status       | Notes                   |
 |-------------------------------------------------|--------------|-------------------------|
-| Spring annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
+| Spring-annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
 | Spring presence-aware PATCH command binding     | deferred     | Phase 3.4               |
 | Endpoint availability and operation semantics   | out of scope | Application-owned       |
 | HTTP status selection                           | out of scope | Except adapter behavior |
