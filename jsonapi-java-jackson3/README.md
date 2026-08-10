@@ -148,7 +148,7 @@ remain application/adapter responsibilities (Phase 3.1 / 3.3). Domain graph hydr
 persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.15 and
   2.23 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
 artifact; both majors share the neutral contracts of
-[jsonapi-java-jackson-common](jsonapi-java-jackson-common/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
+[jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
 
@@ -162,7 +162,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
-- [Jackson common contracts module](jsonapi-java-jackson-common/README.md)
+- [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
