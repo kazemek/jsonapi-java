@@ -27,8 +27,18 @@
  * ({@code fieldsets} + {@link FieldPolicy}) and are applied only by the {@link MappedDocument}
  * overloads; pass {@link MappedDocument#applyTo} into the writer factory when relationships were
  * omitted by fieldset while inclusion still traversed them.
+ *
+ * <p>Codec and mapping policy, diagnostics, contexts, and domain envelope values are
+ * Jackson-major-neutral contracts in {@link io.github.kazemek.jsonapi.jackson}; this package holds
+ * only Jackson 3-bound factories, readers, writers, binders, and their implementation.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson3;
 
+import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson.FieldPolicy;
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.IncludePolicy;
+import io.github.kazemek.jsonapi.jackson.MappedDocument;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import org.jspecify.annotations.NullMarked;

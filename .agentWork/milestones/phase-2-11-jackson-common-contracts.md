@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-jackson-common` and `jsonapi-java-jackson3` public contracts  
 > **Dependencies:** Phases 1.1, 1.2, and 2.10  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -95,21 +95,21 @@ leaving Jackson-bound implementation and entry points in separately compiled maj
 
 ## Acceptance criteria
 
-- [ ] `jsonapi-java-jackson-common` is a published, `@NullMarked` module whose production/runtime
+- [x] `jsonapi-java-jackson-common` is a published, `@NullMarked` module whose production/runtime
       graph contains no Jackson major or adapter, whose canonical package is
       `io.github.kazemek.jsonapi.jackson`, and whose moved null-bearing members retain accurate
       `@Nullable` decorations per ADR-009.
-- [ ] Exactly the closed inventory types are moved, each retains its Phase 2.1–2.10 semantics, and
+- [x] Exactly the closed inventory types are moved, each retains its Phase 2.1–2.10 semantics, and
       none remain as public duplicates under `io.github.kazemek.jsonapi.jackson3`.
-- [ ] `IncludedResources` is assemblable from major-specific readers via a public common-package
+- [x] `IncludedResources` is assemblable from major-specific readers via a public common-package
       construction API that preserves the `resources()` ↔ identity-index invariant (inconsistent
       states unrepresentable or reliably rejected) without package-private coupling.
-- [ ] Jackson 3 codec, mapping, inclusion, fieldset, binder, and envelope entry points consume the
+- [x] Jackson 3 codec, mapping, inclusion, fieldset, binder, and envelope entry points consume the
       common contracts while all Jackson-bound signatures and implementation remain major-specific;
       moved-type Javadocs do not `{@link}` excluded Jackson-major-specific types.
-- [ ] ADR-007/ADR-010, vision/conformance, publication metadata, dependency verification, and the
+- [x] ADR-007/ADR-010, vision/conformance, publication metadata, dependency verification, and the
       canonical `module-docs` checklist pass for the new common module and changed Jackson 3 surface.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.

@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson3.testmodel.Article
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper

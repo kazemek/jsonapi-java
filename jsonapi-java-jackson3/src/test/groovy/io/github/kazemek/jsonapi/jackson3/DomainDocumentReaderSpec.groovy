@@ -11,6 +11,15 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
+import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
+import io.github.kazemek.jsonapi.jackson.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.DomainData
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.IncludedResources
+import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.EmptyResourceType
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticle
@@ -859,34 +868,18 @@ class DomainDocumentReaderSpec extends Specification {
     withUnrelated.included().resources() == [new Person("99", "Other")]
   }
 
-  def "envelope collections are mutation-safe"() {
+  def "reader-derived envelope collections are mutation-safe"() {
     given:
     def reader = newReader(FlatArticle, Person)
-    def sourceList = ["x"] as List<Object>
-    def sourceIndex = [(ResourceIdentity.ofId("people", "9")): "dto"] as Map<ResourceIdentity, Object>
-
-    when:
-    def collection = new DomainData.ResourceCollection(sourceList)
-    def included = new IncludedResources(sourceList, sourceIndex)
-    sourceList.add("y")
-    sourceIndex.put(ResourceIdentity.ofId("people", "9"), "changed")
     def envelope = reader.readValue(fixtureText('compound-document'))
     def errorEnvelope = reader.readValue(fixtureText('errors-document'))
 
-    then:
-    collection.resources() == ["x"]
-    included.resources() == ["x"]
-    included.find(ResourceIdentity.ofId("people", "9")).get() == "dto"
-
-    when:
-    collection.resources().add("z")
-    then:
-    thrown(UnsupportedOperationException)
-
-    when:
-    included.resources().add("z")
-    then:
-    thrown(UnsupportedOperationException)
+    expect:
+    envelope.included() != null
+    envelope.included().resources() == [
+      new Person("9", "Dan")
+    ]
+    envelope.included().find(ResourceIdentity.ofId("people", "9")).get() == new Person("9", "Dan")
 
     when:
     envelope.additionalMembers().put("k", "v")

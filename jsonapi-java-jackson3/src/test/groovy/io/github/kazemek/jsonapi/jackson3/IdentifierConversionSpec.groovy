@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson3.testmodel.Person
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper

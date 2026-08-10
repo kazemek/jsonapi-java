@@ -5,14 +5,22 @@ import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
+import io.github.kazemek.jsonapi.jackson.DocumentReadContext;
+import io.github.kazemek.jsonapi.jackson.DomainData;
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.IncludedResources;
+import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JavaType;
@@ -135,34 +143,34 @@ public final class JsonApiDomainDocumentReader {
       return null;
     }
     List<Object> bound = new ArrayList<>(included.size());
-    Map<ResourceIdentity, Object> index = new LinkedHashMap<>();
+    List<Set<ResourceIdentity>> identitiesByPosition = new ArrayList<>(included.size());
+    Set<ResourceIdentity> seen = new LinkedHashSet<>();
     for (int i = 0; i < included.size(); i++) {
       ResourceObject resource = included.get(i);
       String pointer = "/included/" + i;
       Object dto = bindResource(resource, pointer);
       bound.add(dto);
+      Set<ResourceIdentity> identities = new LinkedHashSet<>();
       if (resource.hasId()) {
-        putIdentity(
-            index,
-            ResourceIdentity.ofId(resource.type(), Objects.requireNonNull(resource.id())),
-            dto,
-            pointer);
+        ResourceIdentity identity =
+            ResourceIdentity.ofId(resource.type(), Objects.requireNonNull(resource.id()));
+        putIdentity(seen, identity, pointer);
+        identities.add(identity);
       }
       if (resource.hasLid()) {
-        putIdentity(
-            index,
-            ResourceIdentity.ofLid(resource.type(), Objects.requireNonNull(resource.lid())),
-            dto,
-            pointer);
+        ResourceIdentity identity =
+            ResourceIdentity.ofLid(resource.type(), Objects.requireNonNull(resource.lid()));
+        putIdentity(seen, identity, pointer);
+        identities.add(identity);
       }
+      identitiesByPosition.add(identities);
     }
-    return new IncludedResources(bound, index);
+    return IncludedResources.of(bound, identitiesByPosition);
   }
 
   private static void putIdentity(
-      Map<ResourceIdentity, Object> index, ResourceIdentity identity, Object dto, String pointer) {
-    Object previous = index.putIfAbsent(identity, dto);
-    if (previous != null) {
+      Set<ResourceIdentity> seen, ResourceIdentity identity, String pointer) {
+    if (!seen.add(identity)) {
       throw new JsonApiMappingException(
           MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION,
           null,

@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 /** Stable diagnostic codes for domain-to-resource mapping failures. */
 public enum MappingDiagnostic {

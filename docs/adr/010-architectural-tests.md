@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (Phase 2.1 implements jackson3 allowlist and `core.internal` ban)
+**Amended:** 2026-07-30 (Phase 2.1 implements jackson3 allowlist and `core.internal` ban); 2026-08-10 (Phase 2.11 registers the jackson-common allowlist and the jackson3 common-contract dependency)
 
 ## Context
 
@@ -17,9 +17,15 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Current allowlists:
   - `io.github.kazemek.jsonapi.core..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.core..` types.
   - `io.github.kazemek.jsonapi.annotation..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.annotation..` types.
+  - `io.github.kazemek.jsonapi.jackson..` (jackson-common) → `java..`, `org.jspecify.annotations..`,
+    `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`, and
+    other `io.github.kazemek.jsonapi.jackson..` types. Production sources must not depend on
+    `core.internal`, on either Jackson major (`tools.jackson..`, `com.fasterxml.jackson..`), or on
+    a major-specific adapter package (`jackson2..`, `jackson3..`).
   - `io.github.kazemek.jsonapi.jackson3..` → `java..`, `org.jspecify.annotations..`,
     `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`,
-    `io.github.kazemek.jsonapi.annotation..`, `io.github.kazemek.jsonapi.jackson3..`, and
+    `io.github.kazemek.jsonapi.annotation..`, `io.github.kazemek.jsonapi.jackson..`,
+    `io.github.kazemek.jsonapi.jackson3..`, and
     `tools.jackson..`. Production sources must not depend on
     `io.github.kazemek.jsonapi.core.internal..` or `com.fasterxml.jackson..`.
 - Major-specific Jackson 2 allowlist (when registered):
@@ -32,7 +38,10 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Gradle continues to own artifact selection and publication; ArchUnit owns package/type coupling that Gradle cannot express.
 - Changing an allowlist requires updating this ADR.
 - Sibling modules must not depend on `io.github.kazemek.jsonapi.core.internal..`. That ban is
-  enforced for `jsonapi-java-jackson3` and must be added when further sibling modules register.
+  enforced for `jsonapi-java-jackson3` and `jsonapi-java-jackson-common` and must be added when
+  further sibling modules register.
+- Major-specific adapters must not re-declare types that live in `jsonapi-java-jackson-common`;
+  `Jackson3DependencyRulesSpec` asserts no moved contract type remains under the jackson3 package.
 
 ## Consequences
 

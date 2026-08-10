@@ -7,11 +7,11 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
-import io.github.kazemek.jsonapi.jackson3.CompoundSerializationContext;
-import io.github.kazemek.jsonapi.jackson3.FieldPolicy;
-import io.github.kazemek.jsonapi.jackson3.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson3.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson3.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson.FieldPolicy;
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -26,6 +26,8 @@ import tools.jackson.databind.JavaType;
 import tools.jackson.databind.json.JsonMapper;
 
 public final class DomainResourceWriter {
+
+  private static final String RESOURCE = "resource";
 
   private final JsonMapper mapper;
   private final IdentifierConverter identifierConverter;
@@ -45,12 +47,12 @@ public final class DomainResourceWriter {
   public record SelectiveResource(ResourceObject resource, boolean relationshipOmittedByFieldset) {
 
     public SelectiveResource {
-      Objects.requireNonNull(resource, "resource");
+      Objects.requireNonNull(resource, RESOURCE);
     }
   }
 
   public ResourceObject toResource(Object resource) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     ResourceMapping mapping = cache.resolve(resource.getClass());
     String id = extractId(resource, mapping);
     Attributes attributes = buildAttributes(resource, mapping, null);
@@ -64,7 +66,7 @@ public final class DomainResourceWriter {
    * relationship reads.
    */
   public SelectiveResource toResource(Object resource, CompoundSerializationContext context) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(context, "context");
     ResourceMapping mapping = cache.resolve(resource.getClass());
     List<String> fields = fieldsFor(context, mapping.resourceType());
@@ -81,7 +83,7 @@ public final class DomainResourceWriter {
    * #toResource(Object, CompoundSerializationContext)}).
    */
   public SelectiveResource toResource(Object resource, @Nullable List<String> fields) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     if (fields == null) {
       return new SelectiveResource(toResource(resource), false);
     }
@@ -192,7 +194,7 @@ public final class DomainResourceWriter {
   }
 
   public ResourceIdentifier extractIdentifier(Object resource) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Class<?> rawType = resource.getClass();
     ResourceMapping mapping = cache.resolve(rawType);
     String id = extractId(resource, mapping);
@@ -270,17 +272,14 @@ public final class DomainResourceWriter {
     if (mapping.attributes().isEmpty()) {
       return Attributes.empty();
     }
-    Map<String, Object> attributes = new LinkedHashMap<>();
+    Map<String, @Nullable Object> attributes = new LinkedHashMap<>();
     for (MappingProperty property : mapping.attributes()) {
-      if (allowedFields != null && !allowedFields.contains(property.jsonapiName())) {
-        continue;
+      if (allowedFields == null || allowedFields.contains(property.jsonapiName())) {
+        Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
+        if (!(rawValue instanceof Optional<?> optional) || optional.isPresent()) {
+          attributes.put(property.jsonapiName(), convertAttributeValue(unwrapOptional(rawValue)));
+        }
       }
-      Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
-      if (rawValue instanceof Optional<?> optional && optional.isEmpty()) {
-        continue;
-      }
-      Object value = unwrapOptional(rawValue);
-      attributes.put(property.jsonapiName(), convertAttributeValue(value));
     }
     return Attributes.ofAttributes(attributes);
   }

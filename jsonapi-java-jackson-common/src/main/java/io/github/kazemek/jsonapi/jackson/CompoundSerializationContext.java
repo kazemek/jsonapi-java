@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -16,11 +16,10 @@ import java.util.Objects;
  * that resolves to zero resources emits {@code included: []}. An empty fieldset map means
  * unrestricted mapped fields; a present empty list for a type means identity-only emission.
  *
- * <p>This context does not carry a validation context; aggregate validation remains on {@link
- * JsonApiDocumentWriter}. Callers that apply fieldsets must use the {@link MappedDocument} mapper
- * overloads and pass {@link
- * MappedDocument#applyTo(io.github.kazemek.jsonapi.core.validation.ValidationContext)} into the
- * writer factory.
+ * <p>This context does not carry a validation context; aggregate validation remains on the codec
+ * writer. Callers that apply fieldsets must use the {@link MappedDocument} mapper overloads and
+ * pass {@link MappedDocument#applyTo(io.github.kazemek.jsonapi.core.validation.ValidationContext)}
+ * into the writer factory.
  *
  * <p>{@code maxDepth == 0} rejects any non-empty include path at pre-validation with {@link
  * MappingDiagnostic#INCLUDE_DEPTH_EXCEEDED}. {@code maxIncluded == 0} fails with {@link

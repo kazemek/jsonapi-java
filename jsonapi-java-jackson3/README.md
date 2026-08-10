@@ -9,6 +9,14 @@ and for mapping annotated domain types to resource objects.
 |------------------------------------------------|-----------------------------------------------------------------------|
 | `io.github.kazemek.jsonapi.jackson3`           | Public writer/reader/mapper factories and validate-then-codec entry points |
 | `io.github.kazemek.jsonapi.jackson3.internal`  | Streaming serializers/decoders, mapping engine, module registration; not public API |
+| `io.github.kazemek.jsonapi.jackson`            | Jackson-major-neutral policy/context/diagnostic/envelope contracts (in `jsonapi-java-jackson-common`) |
+
+Codec and mapping policy, contexts, diagnostics, and domain envelope values (`DocumentReadContext`,
+`CompoundSerializationContext`, `IncludePath`, `IncludePolicy`, `FieldPolicy`, `MappedDocument`,
+`IdentifierConverter`, `DomainData`, `IncludedResources`, and the failure types) live in the
+Jackson-major-neutral package `io.github.kazemek.jsonapi.jackson` and are imported from
+`jsonapi-java-jackson-common`; this module holds only Jackson 3-bound factories, readers, writers,
+and binders.
 
 ## Minimal usage
 
@@ -139,7 +147,8 @@ HTTP `fields[TYPE]` parsing and field authorization beyond the explicit `FieldPo
 remain application/adapter responsibilities (Phase 3.1 / 3.3). Domain graph hydration and
 persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.15 and
   2.23 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
-artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
+artifact; both majors share the neutral contracts of
+[jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
 
@@ -153,6 +162,7 @@ artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
+- [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
@@ -213,8 +223,12 @@ artifact; see [ADR-007](../docs/adr/007-module-boundaries.md).
   absence and intentionally null map values. Do not import `core.internal`.
 - **Mapping grammar:** JSON:API member-name validation delegates to
   `core.validation.MemberNames`. Do not import `core.internal`.
+- **Common contracts:** Neutral policy, context, diagnostic, and envelope types are imported from
+  `io.github.kazemek.jsonapi.jackson` (module `jsonapi-java-jackson-common`); never redefine them
+  here or in another major adapter. Assemble `IncludedResources` via its public `of(...)` API.
 - **Architectural tests:** `Jackson3DependencyRulesSpec` allows JDK, JSpecify, core public
-  packages, annotations, `tools.jackson..`, and this module; bans `core.internal` and Jackson 2
-  (`com.fasterxml.jackson..`) in production sources (ADR-010).
+  packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
+  `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
+  moved common-contract type is re-declared here (ADR-010).
 - **Tests:** Spock specs under `src/test/groovy/`; test domain types under
   `src/test/java/io/github/kazemek/jsonapi/jackson3/testmodel/`.

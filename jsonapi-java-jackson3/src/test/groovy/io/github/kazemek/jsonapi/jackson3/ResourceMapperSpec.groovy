@@ -9,6 +9,7 @@ import io.github.kazemek.jsonapi.core.model.JsonApiObject
 import io.github.kazemek.jsonapi.core.model.Links
 import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.jackson.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson3.testmodel.Article
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithSet
 import io.github.kazemek.jsonapi.jackson3.testmodel.BlogWithJsonProperty
