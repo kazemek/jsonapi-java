@@ -56,8 +56,9 @@ Do not scan the whole repository.
    - build-configuration changes need `./gradlew clean build` (plus Spotless when Spotless-covered
      files or the formatter configuration changed);
    - production/test source changes need the full gates:
+     - `spotless-format` skill: `./gradlew spotlessApply` then `./gradlew spotlessCheck` — run it
+       before the build so the build's own `spotlessCheck` passes on the first run;
      - `./gradlew clean build` passes;
-     - `spotless-format` skill: `./gradlew spotlessApply` then `./gradlew spotlessCheck`;
      - `sonar-quality-gate` skill: without `SONAR_TOKEN`, Sonar is blocked and must not count as a
        completed gate for source-scope work; keep `Status` `In progress` until CI confirms the
        Quality Gate and zero new-code issues via the Issues API.

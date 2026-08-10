@@ -112,7 +112,7 @@ union of their gates.
 | Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`, READMEs)                 | None — review the docs themselves (links, consistency, section order)                                 |
 | Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`)       | None locally — CI validates the workflow itself                                                       |
 | Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; Spotless when a Spotless-covered file or the formatter configuration changed |
-| Production/test sources (`**/src/**`)                                               | Full: `clean build` → `spotless-format` → `sonar-quality-gate`                                        |
+| Production/test sources (`**/src/**`)                                               | Full: `spotless-format` → `clean build` → `sonar-quality-gate`                                        |
 | Other/unclassified paths (e.g. `fixtures/**`, `LICENSE`, `opencode.jsonc`)          | Classify explicitly; otherwise apply the full source tier                                             |
 
 Gate details:
@@ -124,7 +124,9 @@ Gate details:
    configuration. Skip it for docs-only or workflow-only changes.
 3. Use `spotless-format` (`./gradlew spotlessApply` then `./gradlew spotlessCheck`) only when the
    change touches Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`) or the
-   formatter configuration.
+   formatter configuration. Run it before `clean build`: `build` already executes `spotlessCheck`
+   via `check`, so applying formatting first lets the build pass on the first run instead of
+   failing and requiring a re-run.
 4. Use `sonar-quality-gate` only when the change touches production/test sources; Sonar analyzes
    new code, so it adds nothing for docs, workflow, or build-config-only changes. Without
    `SONAR_TOKEN`, report Sonar blocked for source-scope changes and keep them uncompleted until CI
