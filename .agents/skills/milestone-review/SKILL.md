@@ -49,8 +49,9 @@ Review an implementation against one milestone contract. Do not fix findings or 
      the checklist; do not copy it into the review instructions.
 4. Run the narrowest relevant tests when practical, then run `./gradlew clean build` when the
    milestone acceptance criteria or the change-scope gate tiers in `AGENTS.md` require it. For
-   production/test source changes, also run (or verify recorded evidence of) the `spotless-format`
-   and `sonar-quality-gate` skills; docs-only, workflow-only, and build-configuration changes need
+   production/test source changes, run (or verify recorded evidence of) the `spotless-format` skill
+   before the build — `build` already executes `spotlessCheck` via `check` — then run the build and
+   the `sonar-quality-gate` skill; docs-only, workflow-only, and build-configuration changes need
    only their tier's gates. Record each command and its outcome in the artifact.
    - Do not change implementation files to make tests pass.
    - Record commands, outcomes, and any inability to run them.
