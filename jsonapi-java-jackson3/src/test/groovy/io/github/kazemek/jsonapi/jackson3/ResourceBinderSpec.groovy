@@ -15,6 +15,10 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.jackson.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson3.testmodel.BlogWithJsonProperty
 import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticle
@@ -34,6 +38,7 @@ import tools.jackson.databind.JavaType
 import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.annotation.JsonDeserialize
 import tools.jackson.databind.deser.std.StdDeserializer
+import tools.jackson.databind.exc.ValueInstantiationException
 import tools.jackson.databind.json.JsonMapper
 
 class ResourceBinderSpec extends Specification {
@@ -785,7 +790,7 @@ class ResourceBinderSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
-    ex.cause instanceof tools.jackson.databind.exc.ValueInstantiationException
+    ex.cause instanceof ValueInstantiationException
   }
 
   def "attribute value that cannot coerce is UNSUPPORTED_ATTRIBUTE_VALUE"() {

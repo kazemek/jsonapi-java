@@ -5,6 +5,14 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
+import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.FieldAllowance
+import io.github.kazemek.jsonapi.jackson.FieldPolicy
+import io.github.kazemek.jsonapi.jackson.IncludePath
+import io.github.kazemek.jsonapi.jackson.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappedDocument
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson3.testmodel.AccessCountingFieldsetArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.Article
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithRenamedAuthor

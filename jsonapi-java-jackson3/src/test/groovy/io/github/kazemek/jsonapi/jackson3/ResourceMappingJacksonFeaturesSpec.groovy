@@ -7,6 +7,9 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithArray
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithFormattedTitle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptional

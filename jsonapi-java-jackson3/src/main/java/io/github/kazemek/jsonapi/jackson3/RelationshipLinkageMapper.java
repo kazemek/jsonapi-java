@@ -1,6 +1,8 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JavaType;
 

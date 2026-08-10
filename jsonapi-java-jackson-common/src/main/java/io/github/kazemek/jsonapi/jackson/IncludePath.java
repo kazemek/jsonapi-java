@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 import java.util.List;
 import java.util.Objects;

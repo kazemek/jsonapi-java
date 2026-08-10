@@ -2,9 +2,9 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.Link;
 import io.github.kazemek.jsonapi.core.model.Relationship;
-import io.github.kazemek.jsonapi.jackson3.CodecFailureCategory;
-import io.github.kazemek.jsonapi.jackson3.JsonApiDocumentReadException;
-import io.github.kazemek.jsonapi.jackson3.SourceLocation;
+import io.github.kazemek.jsonapi.jackson.CodecFailureCategory;
+import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
+import io.github.kazemek.jsonapi.jackson.SourceLocation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -62,7 +62,7 @@ final class WireTokens {
       case FLOAT -> parser.getFloatValue();
       case DOUBLE -> parser.getDoubleValue();
       case BIG_DECIMAL -> parser.getDecimalValue();
-      case null, default -> throw unexpectedToken(token, "number", pointer, parser);
+      case null -> throw unexpectedToken(token, "number", pointer, parser);
     };
   }
 

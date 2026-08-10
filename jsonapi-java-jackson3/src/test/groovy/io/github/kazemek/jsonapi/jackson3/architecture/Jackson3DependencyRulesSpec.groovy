@@ -29,6 +29,7 @@ class Jackson3DependencyRulesSpec extends Specification {
         "io.github.kazemek.jsonapi.core.model..",
         "io.github.kazemek.jsonapi.core.validation..",
         "io.github.kazemek.jsonapi.annotation..",
+        "io.github.kazemek.jsonapi.jackson..",
         "io.github.kazemek.jsonapi.jackson3..",
         "tools.jackson..")
         .check(jackson3Classes)
@@ -44,6 +45,21 @@ class Jackson3DependencyRulesSpec extends Specification {
         .resideInAnyPackage(
         "io.github.kazemek.jsonapi.core.internal..",
         "com.fasterxml.jackson..")
+        .check(jackson3Classes)
+  }
+
+  def "jackson3 exposes no duplicate moved common contract types"() {
+    expect:
+    classes()
+        .that()
+        .resideInAPackage("io.github.kazemek.jsonapi.jackson3")
+        .should()
+        .haveNameNotMatching(
+        "io\\.github\\.kazemek\\.jsonapi\\.jackson3\\."
+        + "(CodecFailureCategory|CompoundSerializationContext|DocumentEnvelope|DocumentReadContext|"
+        + "DomainData|FieldAllowance|FieldPolicy|IdentifierConverter|IncludePath|IncludePolicy|"
+        + "IncludedResources|JsonApiDocumentReadException|JsonApiMappingException|MappedDocument|"
+        + "MappingDiagnostic|PrimaryDataKind|RelationshipAllowance|SourceLocation)")
         .check(jackson3Classes)
   }
 }

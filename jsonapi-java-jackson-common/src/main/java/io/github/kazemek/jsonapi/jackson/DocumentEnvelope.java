@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiObject;
 import io.github.kazemek.jsonapi.core.model.Links;
@@ -6,8 +6,8 @@ import io.github.kazemek.jsonapi.core.model.Meta;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Carries optional document-level members — links, meta, and JSON:API object — into {@link
- * JsonApiResourceMapper#toDocument(Object, DocumentEnvelope)}.
+ * Carries optional document-level members — links, meta, and JSON:API object — that write mapping
+ * attaches to a document.
  *
  * <p>Each component may be {@code null}; absent members are omitted from the serialized document.
  */

@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import java.io.Serial;

@@ -2,6 +2,8 @@ package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.validation.MemberNames;
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;

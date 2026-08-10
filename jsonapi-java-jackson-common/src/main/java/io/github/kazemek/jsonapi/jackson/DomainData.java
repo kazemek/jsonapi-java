@@ -1,18 +1,18 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Primary data of a {@link JsonApiDomainDocument}, preserving explicit null, single, and collection
+ * Primary data of a domain document envelope, preserving explicit null, single, and collection
  * states.
  *
- * <p>A Java {@code null} {@code data} component on {@link JsonApiDomainDocument} means the member
- * is absent; {@link NullData} means the document contains {@code "data": null}. Resource payloads
- * are {@link Object} because primary collections may be heterogeneous; callers cast using their
- * {@link ResourceTypeRegistry} registrations. Identifier variants pass through the core {@link
- * ResourceIdentifier} values without DTO binding.
+ * <p>A Java {@code null} {@code data} component on the envelope means the member is absent; {@link
+ * NullData} means the document contains {@code "data": null}. Resource payloads are {@link Object}
+ * because primary collections may be heterogeneous; callers cast using their resource-type registry
+ * registrations. Identifier variants pass through the core {@link ResourceIdentifier} values
+ * without DTO binding.
  */
 public sealed interface DomainData
     permits DomainData.NullData,

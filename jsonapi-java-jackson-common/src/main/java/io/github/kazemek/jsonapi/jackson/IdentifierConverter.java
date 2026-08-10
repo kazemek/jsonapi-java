@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 import org.jspecify.annotations.Nullable;
 

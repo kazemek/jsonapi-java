@@ -1,5 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.jackson.DocumentReadContext
+
 import java.lang.reflect.Modifier
 
 import tools.jackson.databind.json.JsonMapper

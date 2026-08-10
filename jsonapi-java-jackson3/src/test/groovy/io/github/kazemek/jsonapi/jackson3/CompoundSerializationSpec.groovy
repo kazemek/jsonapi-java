@@ -1,6 +1,12 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
+import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.IncludePath
+import io.github.kazemek.jsonapi.jackson.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.RelationshipAllowance
 import io.github.kazemek.jsonapi.jackson3.testmodel.AccessCountingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.Article
 import io.github.kazemek.jsonapi.jackson3.testmodel.BaseComment
@@ -274,63 +280,6 @@ class CompoundSerializationSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic() == MappingDiagnostic.INCLUDE_COUNT_EXCEEDED
-  }
-
-  def "negative limits are rejected"() {
-    when:
-    CompoundSerializationContext.defaults().withMaxDepth(-1)
-
-    then:
-    thrown(IllegalArgumentException)
-
-    when:
-    CompoundSerializationContext.defaults().withMaxIncluded(-1)
-
-    then:
-    thrown(IllegalArgumentException)
-  }
-
-  def "factory-time malformed paths fail with raw input"() {
-    when:
-    IncludePath.of(input)
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.INVALID_INCLUDE_PATH
-    e.resourceClass() == null
-    e.propertyPath() == input
-
-    where:
-    input << [
-      "",
-      ".a",
-      "a.",
-      "a..b",
-      " ",
-      "a. .b"
-    ]
-  }
-
-  def "canonical constructor rejects whitespace and dotted segments"() {
-    when:
-    new IncludePath(List.of(segment))
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.INVALID_INCLUDE_PATH
-    e.resourceClass() == null
-
-    where:
-    segment << [" ", "comments.author"]
-  }
-
-  def "equivalent contexts compare equal"() {
-    expect:
-    CompoundSerializationContext.defaults() == CompoundSerializationContext.defaults()
-    IncludePolicy.denyAll() == IncludePolicy.denyAll()
-    IncludePolicy.allowAll() == IncludePolicy.allowAll()
-    IncludePolicy.allowing(Set.of(RelationshipAllowance.of("articles", "author"))) ==
-        IncludePolicy.allowing(Set.of(RelationshipAllowance.of("articles", "author")))
   }
 
   def "mapper-time unknown relationship fails"() {

@@ -4,6 +4,8 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 

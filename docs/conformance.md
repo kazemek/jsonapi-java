@@ -10,7 +10,8 @@ write mapping), Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-c
 Phase 2.5 against pinned JSON:API 1.1 draft schemas. Flat resource-to-DTO binding (Phase 2.9)
 binds validated resource objects without reading `included`; typed domain envelopes (Phase 2.10)
 bind primary and included resources through an explicit type registry without graph hydration or
-PATCH commands.
+PATCH commands. Codec and mapping policy, diagnostics, contexts, and domain envelope values are
+Jackson-major-neutral contracts in `jsonapi-java-jackson-common` (Phase 2.11).
 
 ## Document structure (Phase 1.1 — supported)
 

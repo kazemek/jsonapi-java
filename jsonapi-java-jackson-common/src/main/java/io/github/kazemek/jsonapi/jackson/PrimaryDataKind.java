@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3;
+package io.github.kazemek.jsonapi.jackson;
 
 /**
  * Explicit interpretation of top-level primary {@code data} objects and arrays.

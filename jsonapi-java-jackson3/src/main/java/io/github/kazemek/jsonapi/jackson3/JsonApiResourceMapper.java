@@ -3,6 +3,12 @@ package io.github.kazemek.jsonapi.jackson3;
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
+import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappedDocument;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson3.internal.CompoundInclusionEngine;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
 import io.github.kazemek.jsonapi.jackson3.internal.IncludedResourcesResult;
@@ -42,6 +48,9 @@ import org.jspecify.annotations.Nullable;
  */
 public final class JsonApiResourceMapper {
 
+  private static final String CONTEXT = "context";
+  private static final String RESOURCES = "resources";
+
   private final DomainResourceWriter writer;
   private final CompoundInclusionEngine inclusionEngine;
 
@@ -71,7 +80,7 @@ public final class JsonApiResourceMapper {
   public JsonApiDocument toDocument(
       Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(context, CONTEXT);
     rejectNonEmptyFieldsets(context);
     List<Object> snapshot = List.of(resource);
     ResourceObject resourceObject = writer.toResource(resource);
@@ -89,7 +98,7 @@ public final class JsonApiResourceMapper {
   public MappedDocument toMappedDocument(
       Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = List.of(resource);
     DomainResourceWriter.SelectiveResource selective = writer.toResource(resource, context);
     boolean relationshipOmitted = selective.relationshipOmittedByFieldset();
@@ -111,7 +120,7 @@ public final class JsonApiResourceMapper {
 
   public JsonApiDocument toResourceCollection(
       Iterable<?> resources, @Nullable DocumentEnvelope envelope) {
-    Objects.requireNonNull(resources, "resources");
+    Objects.requireNonNull(resources, RESOURCES);
     List<Object> snapshot = materialize(resources);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
     for (Object resource : snapshot) {
@@ -131,8 +140,8 @@ public final class JsonApiResourceMapper {
       Iterable<?> resources,
       @Nullable DocumentEnvelope envelope,
       CompoundSerializationContext context) {
-    Objects.requireNonNull(resources, "resources");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(resources, RESOURCES);
+    Objects.requireNonNull(context, CONTEXT);
     rejectNonEmptyFieldsets(context);
     List<Object> snapshot = materialize(resources);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
@@ -155,8 +164,8 @@ public final class JsonApiResourceMapper {
       Iterable<?> resources,
       @Nullable DocumentEnvelope envelope,
       CompoundSerializationContext context) {
-    Objects.requireNonNull(resources, "resources");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(resources, RESOURCES);
+    Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
     boolean relationshipOmitted = false;

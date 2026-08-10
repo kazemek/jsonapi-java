@@ -5,6 +5,13 @@ import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
+import io.github.kazemek.jsonapi.jackson.DocumentReadContext;
+import io.github.kazemek.jsonapi.jackson.DomainData;
+import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.IncludedResources;
+import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import java.io.InputStream;
@@ -135,7 +142,7 @@ public final class JsonApiDomainDocumentReader {
       return null;
     }
     List<Object> bound = new ArrayList<>(included.size());
-    Map<ResourceIdentity, Object> index = new LinkedHashMap<>();
+    Map<ResourceIdentity, Integer> index = new LinkedHashMap<>();
     for (int i = 0; i < included.size(); i++) {
       ResourceObject resource = included.get(i);
       String pointer = "/included/" + i;
@@ -145,30 +152,33 @@ public final class JsonApiDomainDocumentReader {
         putIdentity(
             index,
             ResourceIdentity.ofId(resource.type(), Objects.requireNonNull(resource.id())),
-            dto,
+            i,
             pointer);
       }
       if (resource.hasLid()) {
         putIdentity(
             index,
             ResourceIdentity.ofLid(resource.type(), Objects.requireNonNull(resource.lid())),
-            dto,
+            i,
             pointer);
       }
     }
-    return new IncludedResources(bound, index);
+    return IncludedResources.of(bound, index);
   }
 
   private static void putIdentity(
-      Map<ResourceIdentity, Object> index, ResourceIdentity identity, Object dto, String pointer) {
-    Object previous = index.putIfAbsent(identity, dto);
-    if (previous != null) {
+      Map<ResourceIdentity, Integer> index,
+      ResourceIdentity identity,
+      int position,
+      String pointer) {
+    if (index.containsKey(identity)) {
       throw new JsonApiMappingException(
           MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION,
           null,
           pointer,
           "Duplicate included identity " + identity);
     }
+    index.put(identity, position);
   }
 
   private Object bindResource(ResourceObject resource, String documentPointer) {
