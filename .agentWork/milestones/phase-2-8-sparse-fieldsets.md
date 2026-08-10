@@ -36,7 +36,7 @@ scoped full-linkage validation stay intact.
   today always emits full mapped attributes/relationships. Fieldsets introduce selective emission
   on that path. Include-path pre-validation (depth → mapping → policy) is unchanged and is **not**
   failed merely because a path segment is fieldset-excluded.
-- Phase 2.14 ports this contract to Jackson 2; keep conceptual parity (fieldsets on the compound
+- Phase 2.20 ports this contract to Jackson 2; keep conceptual parity (fieldsets on the compound
   context, selective emission, traversal vs linkage split, `MappedDocument`-equivalent validation
   coordination).
 - Phase 3.1 owns `fields[TYPE]` query grammar; Phase 3.3 consumes the immutable context and
@@ -193,7 +193,7 @@ when the exception is enabled; only the full-linkage walk is skipped (existing c
   Phase 2.3 include-path / depth / count / dedup rules.
 - Fieldset filtering of bare `toResource(Object)`, context-free mapper overloads, resource `links` /
   `meta`, or read-side DTO / envelope / PATCH APIs.
-- Jackson 2 sparse fieldsets (Phase 2.14); canonical `fixtures/jsonapi-1.1/` codec fixtures (fieldsets
+- Jackson 2 sparse fieldsets (Phase 2.20); canonical `fixtures/jsonapi-1.1/` codec fixtures (fieldsets
   are a mapping policy, not a document-codec wire form).
 - Two-argument context overloads that would reintroduce `DocumentEnvelope` ambiguity.
 

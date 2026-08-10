@@ -84,7 +84,9 @@ The base model preserves valid extension members and `@` members. It does not im
 - `jsonapi-java-annotations` — dependency-free, opt-in domain-mapping annotations.
 - `jsonapi-java-jackson3` — Jackson 3 document writer and reader are available, as are flat
   resource-to-DTO binding and typed domain envelopes (Phase 2.10); PATCH binding remains later
-  Phase 2 work.
+  Phase 2 work. Jackson-import-free policy types move to `jsonapi-java-jackson-common` (Phase 2.11).
+- `jsonapi-java-jackson-common` — Jackson-major-neutral public contracts for policies, diagnostics,
+  contexts, and domain envelopes shared by both Jackson adapters.
 - `jsonapi-java-jackson2` — later Jackson 2 artifact with the same stable conceptual contracts.
 - `jsonapi-java-query` — optional framework-neutral query-parameter parsing.
 - `jsonapi-java-spring-webmvc` — optional Spring Boot WebMVC integration.

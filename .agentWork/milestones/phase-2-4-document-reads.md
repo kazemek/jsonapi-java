@@ -31,7 +31,7 @@ Read JSON:API JSON into validated core documents with explicit primary-data inte
 - Guessing whether an ambiguous object/array is resource data or resource-identifier linkage.
 - Lenient parsing that returns an invalid document.
 - Input size, nesting, and collection limits; Phase 4.1 owns the coordinated hardening policy and deterministic limit failures.
-- Jackson 2 reads; Phase 2.7 ports this contract after it is stable.
+- Jackson 2 reads; Phase 2.17 ports this contract after it is stable.
 
 ## Implementation boundaries
 

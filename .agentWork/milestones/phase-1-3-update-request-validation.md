@@ -119,11 +119,11 @@ resource identity against a caller-supplied expected endpoint identity.
 4. **Conformance and module documentation.** Add a new
    `## Resource update request validation (Phase 1.3 — supported)` section to `docs/conformance.md`
    with rows marking the four supported rules above plus the presence-preservation rows; mark
-   command application **deferred** (Phases 2.11/2.17) and HTTP/route identity derivation
+   command application **deferred** (Phases 2.15/2.23) and HTTP/route identity derivation
    **out of scope** (application-owned). Reconcile the existing `docs/conformance.md:87` row
    ("Presence-aware resource-update commands — deferred — Phases 1.3, 2.11, and 2.17") to
-   "Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and
-   2.17". Update the intro (`docs/conformance.md:5–9`) to include Phase 1.3 as a seeding milestone.
+   "Core update validation supported (Phase 1.3); command binding deferred to Phases 2.15 and
+   2.23". Update the intro (`docs/conformance.md:5–9`) to include Phase 1.3 as a seeding milestone.
    Use the `module-docs` skill to refresh `jsonapi-java-core/README.md` (one sentence in the
    validate-flow paragraph: update requests use `UPDATE_REQUEST` and an optional expected endpoint
    identity for body/endpoint identity checks; HTTP/route derivation and mutation stay
@@ -140,7 +140,7 @@ resource identity against a caller-supplied expected endpoint identity.
 ## Non-goals
 
 - Parsing HTTP methods, request URLs, route variables, headers, or media types.
-- Binding update members to DTO properties; Phase 2.11 owns Jackson 3 patch commands.
+- Binding update members to DTO properties; Phase 2.15 owns Jackson 3 patch commands.
 - Applying updates, authorization, persistence, transaction behavior, or relationship endpoints.
 - JSON Merge Patch, JSON Patch, bulk updates, atomic operations, or create semantics.
 - Making links, metadata, extension/profile members, or `included` patchable properties.

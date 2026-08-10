@@ -53,9 +53,11 @@ Use Spring context and MockMvc integration tests for:
 ## Non-goals
 
 - Annotated DTO or typed domain-envelope controller binding; Phase 3.3 owns that integration.
+  Presence-aware PATCH arguments are Phase 3.4.
 - Presence-aware PATCH command arguments, domain mapping, compound traversal, or sparse fieldsets.
 - Controller generation, endpoint semantics, persistence, authorization, or query execution.
-- WebFlux or reactive types; Phase 3.4 evaluates that adapter after WebMVC DTO behavior stabilizes.
+- WebFlux or reactive types; Phase 3.5 evaluates that adapter after WebMVC DTO/PATCH behavior
+  stabilizes.
 
 ## Acceptance criteria
 

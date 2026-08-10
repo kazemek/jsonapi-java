@@ -73,7 +73,7 @@ PATCH commands.
 | Omitted/present-empty attribute and relationship wrappers; explicit-null attribute values preserved             | supported    | Absent vs `Attributes.empty()` vs explicit null values; no normalization                     |
 | Optional expected endpoint identity comparison                                                                  | supported    | `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`; supplied via `ValidationContext` |
 | Update rules scoped to the primary resource                                                                     | supported    | `included` resources keep response semantics; full linkage still enforced                    |
-| Command application (PATCH binding)                                                                             | deferred     | Phases 2.11 and 2.17; adapters bind, applications apply                                      |
+| Command application (PATCH binding)                                                                             | deferred     | Phases 2.15 and 2.23; adapters bind, applications apply                                      |
 | HTTP/route identity derivation and mutation                                                                     | out of scope | Application-owned; core compares only a supplied expected identity                           |
 
 ## Annotation metadata (Phase 1.2 — supported)
@@ -119,7 +119,7 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phases 2.2–2.3, 2.8–2.10 — supported; Phases 2.11–2.17 — deferred)
+## Domain mapping (Phases 2.2–2.3, 2.8–2.10 — supported; PATCH 2.15/2.23 and Jackson 2 parity — deferred)
 
 | Rule                                                    | Status       | Notes                                                                                                                                                                                                                          |
 |---------------------------------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -129,7 +129,7 @@ documents.
 | Flat resource-to-DTO binding                            | supported    | Phase 2.9; validated document first; linkage only — never reads `included`                                                                                                                                                     |
 | Typed domain document envelopes                         | supported    | Phase 2.10; `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                                                                                                                                                 |
 | Independent typed binding of `included` resources       | supported    | Phase 2.10; wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                |
-| Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.11 and 2.17                                                                                                                                 |
+| Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.15 and 2.23                                                                                                                                 |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                                                                                                                                                  |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                                                                                                                                                  |
 
@@ -143,7 +143,8 @@ documents.
 
 | Rule                                            | Status       | Notes                   |
 |-------------------------------------------------|--------------|-------------------------|
-| Spring annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
+| Spring-annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
+| Spring presence-aware PATCH command binding     | deferred     | Phase 3.4               |
 | Endpoint availability and operation semantics   | out of scope | Application-owned       |
 | HTTP status selection                           | out of scope | Except adapter behavior |
 | Content negotiation beyond adapter              | out of scope | Application-owned       |

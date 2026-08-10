@@ -1,7 +1,7 @@
 # Phase 4.1 — Conformance and Hardening
 
 > **Scope:** All implemented modules  
-> **Dependencies:** Phases 1.1–3.3  
+> **Dependencies:** Phases 1.1–3.4  
 > **Status:** Not started
 
 ## Goal
