@@ -275,7 +275,7 @@ public final class DomainResourceWriter {
     Map<String, @Nullable Object> attributes = new LinkedHashMap<>();
     for (MappingProperty property : mapping.attributes()) {
       if (allowedFields == null || allowedFields.contains(property.jsonapiName())) {
-        @Nullable Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
+        Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
         if (!(rawValue instanceof Optional<?> optional) || optional.isPresent()) {
           attributes.put(property.jsonapiName(), convertAttributeValue(unwrapOptional(rawValue)));
         }
