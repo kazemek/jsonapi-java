@@ -52,22 +52,25 @@ Milestones are planned, testable increments. They may change until implementatio
 27. **Phase 3.1 — query parser:** remains an independent optional artifact.
 28. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
    documents, query arguments, and safe errors.
-29. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO,
-   envelope, inclusion/fieldset, and PATCH experience.
-30. **Phase 3.4 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
+29. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO and
+   typed-envelope experience.
+30. **Phase 3.4 — Spring WebMVC PATCH binding:** adds presence-aware PATCH command arguments on
+   top of Phase 3.3.
+31. **Phase 3.5 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
    stable.
-31. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after common contracts and
+32. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after common contracts and
    codec fixtures, without an artificial Spring dependency.
-32. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
+33. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
    parallel after the Jackson 2 writer and their respective Jackson 3 / fixture contracts.
-33. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
+34. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
    independently on stable mapping/read contracts and shared domain fixtures (2.19 needs 2.24;
    2.21 needs 2.14).
-34. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
+35. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
    write-policy and read-envelope parity independently (2.20 needs 2.25; 2.22 needs 2.26).
-35. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity.
-36. **Phase 4.1 — conformance and hardening.**
-37. **Phase 4.2 — stable release.**
+36. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity after the
+   Jackson 2 document reader (2.17) and flat DTO reader (2.21); does not depend on envelopes (2.22).
+37. **Phase 4.1 — conformance and hardening.**
+38. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -119,7 +122,8 @@ milestone file.
 - [Phase 3.1 — Optional Query-Parameter Parser](phase-3-1-query-parameters.md) — `jsonapi-java-query` — Not started
 - [Phase 3.2 — Spring WebMVC Adapter](phase-3-2-spring-webmvc.md) — `jsonapi-java-spring-webmvc` — Not started
 - [Phase 3.3 — Spring WebMVC Flat DTO Binding](phase-3-3-spring-webmvc-dto-binding.md) — `jsonapi-java-spring-webmvc` — Not started
-- [Phase 3.4 — WebFlux Adapter Evaluation](phase-3-4-webflux-evaluation.md) — candidate `jsonapi-java-spring-webflux` — Not started
+- [Phase 3.4 — Spring WebMVC Presence-Aware PATCH Binding](phase-3-4-spring-webmvc-patch-binding.md) — `jsonapi-java-spring-webmvc` — Not started
+- [Phase 3.5 — WebFlux Adapter Evaluation](phase-3-5-webflux-evaluation.md) — candidate `jsonapi-java-spring-webflux` — Not started
 - [Phase 4.1 — Conformance and Hardening](phase-4-1-conformance-and-hardening.md) — all implemented modules — Not started
 - [Phase 4.2 — Stable Release](phase-4-2-stable-release.md) — publication and compatibility — Not started
 

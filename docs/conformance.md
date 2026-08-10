@@ -119,7 +119,7 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phases 2.2–2.3, 2.8–2.10 — supported; Phases 2.11–2.23 — deferred)
+## Domain mapping (Phases 2.2–2.3, 2.8–2.10 — supported; PATCH 2.15/2.23 and Jackson 2 parity — deferred)
 
 | Rule                                                    | Status       | Notes                                                                                                                                                                                                                          |
 |---------------------------------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -144,6 +144,7 @@ documents.
 | Rule                                            | Status       | Notes                   |
 |-------------------------------------------------|--------------|-------------------------|
 | Spring annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
+| Spring presence-aware PATCH command binding     | deferred     | Phase 3.4               |
 | Endpoint availability and operation semantics   | out of scope | Application-owned       |
 | HTTP status selection                           | out of scope | Except adapter behavior |
 | Content negotiation beyond adapter              | out of scope | Application-owned       |

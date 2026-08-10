@@ -1,7 +1,7 @@
 # Phase 2.23 — Jackson 2 Presence-Aware PATCH Binding
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 1.3, 2.11, 2.15, and 2.22  
+> **Dependencies:** Phases 1.3, 2.11, 2.15, 2.17, and 2.21  
 > **Status:** Not started
 
 ## Goal
@@ -14,22 +14,31 @@ reusing common command contracts and the shared scenarios established by Phase 2
 - [ADR-012](../../docs/adr/012-resource-patch-binding.md) and Phase 1.3 define update shape,
   identity, omitted/null semantics, and the application-owned mutation boundary.
 - Phase 2.15 defines the stable typed command/property/linkage contract in common packages and the
-  shared PATCH fixture catalog.
-- Phase 2.22 supplies Jackson 2 domain envelopes and Phase 2.21 supplies property/linkage binding.
+  shared PATCH fixture catalog; its pipeline is one `JsonApiDocumentReader` validate-on-read via
+  `DocumentReadContext` (`PrimaryDataKind.RESOURCE` + `ValidationContext` forced to
+  `UPDATE_REQUEST`, optional `EndpointIdentity`) then presence-aware binding—not typed envelopes.
+- Phase 2.17 supplies the Jackson 2 document reader; Phase 2.21 supplies Jackson 2 flat DTO /
+  mapping-definition parity used by the patch binder. Phase 2.22 envelopes are not a dependency.
+- Phase 2.15 adapter-local cases for cross-major parity (major-local harnesses only):
+  `custom deserializer applies to attribute change`; `patch-custom-linkage-conversion`.
 - Jackson major differences may alter implementation APIs but not requested-change presence,
   encounter order, conversion, or diagnostics.
+- Conformance: Domain mapping “Presence-aware resource-update commands” → mark **supported** for
+  Jackson 2 binding (Jackson 3 already Phase 2.15); keep command application out of scope.
 
 ## Deliverables
 
 - Add Jackson 2 patch reader/command entry points using `com.fasterxml.jackson.databind.JavaType`
-  and the Phase 2.15/2.11 common command contracts.
-- Port supplied-only attribute binding with explicit nullable changes and no fabricated omitted
-  values.
-- Port null/single/collection relationship linkage changes and endpoint identity validation.
-- Consume the shared Phase 2.15 PATCH scenarios to compare command values, ordering, mapping
-  failures, and update-validation failures across both Jackson majors.
-- Use `module-docs` to refresh Jackson 2 module docs/Javadoc and conformance examples for PATCH
-  binding.
+  and the Phase 2.15/2.11 common command contracts, mirroring the Phase 2.15 validate-on-read then
+  bind pipeline (no typed envelopes).
+- Port supplied-only per-member attribute binding with explicit nullable changes and no fabricated
+  omitted values; never call a whole-DTO binder/`convertValue` construction path.
+- Port null/single/collection relationship linkage changes, typed identity (exposed separately,
+  never as a change), and endpoint identity validation.
+- Consume every shared Phase 2.15 PATCH scenario plus the named adapter-local cases to compare
+  command values, ordering, mapping failures, and update-validation failures across both majors.
+- Use `module-docs` to refresh Jackson 2 module docs/Javadoc and apply the named conformance matrix
+  edit above.
 
 ## Non-goals
 
@@ -37,32 +46,41 @@ reusing common command contracts and the shared scenarios established by Phase 2
 - Graph hydration, included resolution, or patching links/meta/extensions.
 - JSON Merge Patch, JSON Patch, bulk updates, or atomic operations.
 - Redefining common patch-command types under the `jackson2` package.
+- Composing typed domain envelopes into PATCH commands.
 
 ## Implementation boundaries
 
-- Decode and Phase 1.3 validation complete before binding; no partial command escapes.
-- DTO target type supplies metadata only and no constructor runs for omitted properties.
+- Convenience path: one Jackson 2 `JsonApiDocumentReader` validate-on-read with
+  `DocumentReadContext` (`PrimaryDataKind.RESOURCE` + `ValidationContext` forced to
+  `UPDATE_REQUEST`, optional `EndpointIdentity`) then presence-aware bind—no second defaults
+  validate; no partial command escapes.
+- Binding reuses Phase 2.21 mapping definitions and relationship/identifier diagnostics with
+  per-member typed attribute conversion—not whole-DTO construction. Typed identity is never listed
+  among changes.
 - Public/production APIs use Jackson 2 and common contracts only and import no Jackson 3 or sibling
   internal.
+- Jackson 2 `*PatchBindingSpec` covers the shared Phase 2.15 inventory and the named adapter-local
+  cases with major-local harnesses.
 
 ## Test strategy
 
-- Parameterize Phase 2.15 attribute, explicit-null, relationship, custom conversion, identity, and
-  negative fixtures across both majors.
-- Assert exact change presence/order and stable categories/paths; permit source-location
-  differences only where Phase 2.17 already documents parser differences.
+- Parameterize every shared Phase 2.15 scenario through Jackson 2; also cover
+  `custom deserializer applies to attribute change` and `patch-custom-linkage-conversion` locally.
+- Assert exact change presence/order, typed identity outside the change set, and stable
+  categories/paths; permit source-location differences only where Phase 2.17 already documents
+  parser differences.
 
 ## Acceptance criteria
 
 - [ ] Jackson 2 and Jackson 3 commands contain the same supplied changes, nullable values,
-      relationship linkage, identity, and encounter order for every shared Phase 2.15 fixture.
-- [ ] Omitted properties never invoke constructors/deserializers or appear as changes through
-      either major.
-- [ ] Validation/mapping diagnostics retain stable parity and no application mutation, included
-      binding, Jackson 3/runtime dependency, or duplicated common command types is introduced.
-- [ ] The canonical `module-docs` checklist passes and conformance docs cover Jackson 2 PATCH
-      commands without claiming application semantics; public patch APIs satisfy ADR-009
-      `@NullMarked` / `@Nullable` rules.
+      relationship linkage, identity (separate from changes), and encounter order for every shared
+      Phase 2.15 fixture; Jackson 2 `*PatchBindingSpec` also covers the named adapter-local cases.
+- [ ] Pipeline mirrors Phase 2.15 (one validate-on-read `DocumentReadContext` + presence-aware
+      bind; never whole-DTO construction, typed envelopes, `included`, or application mutation).
+- [ ] Omitted properties never invoke constructors/deserializers or appear as changes; public patch
+      APIs satisfy ADR-009 `@NullMarked` / `@Nullable` rules.
+- [ ] The canonical `module-docs` checklist passes; Domain mapping “Presence-aware resource-update
+      commands” is **supported** for Jackson 2; no application-mutation claim is introduced.
 - [ ] `./gradlew :jsonapi-java-jackson2:test --tests '*PatchBindingSpec'` passes.
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
