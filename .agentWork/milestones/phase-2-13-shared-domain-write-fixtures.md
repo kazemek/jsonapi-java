@@ -35,11 +35,12 @@ without per-major copies.
   `io.github.kazemek.jsonapi.testfixtures.domainwrite` under
   `jsonapi-java-test-fixtures/src/main/java/`. It owns the eight moved models, the
   `DomainWriteScenario` operation/input/outcome types, `DomainWriteComparisonPolicy`, the
-  `DomainWriteScenarios` catalog entry
-  point, and the `DomainWriteExclusionManifest`; `DomainWriteExclusion` is an immutable record of
+  `DomainWriteScenarios` catalog entry point, and the reusable `DomainWriteExclusion` /
+  `DomainWriteExclusionCategory` value types; `DomainWriteExclusion` is an immutable record of
   non-null `suiteId`, `DomainWriteExclusionCategory`, and non-blank `reason`, with the category
   enum fixed to `ADAPTER_SPECIFIC` or `LATER_FIXTURE_PHASE`; later fixture phases reuse these types
-  and do not create parallel copies or package names.
+  and do not create parallel copies or package names. Adapter-specific manifests are test-local
+  to their Jackson adapter and are not shared main-source data.
 - Deleting the seven old records also affects same-package Java test helpers that currently resolve
   `Comment` or `Person` without imports. The complete helper inventory is:
   `ArticleWithArray.java` (`Comment`), `ArticleWithOptionalRelationship.java` (`Comment`),
@@ -100,8 +101,8 @@ without per-major copies.
   `SparseFieldsetSpec`, `CompoundSerializationSpec`, and `DomainDocumentReaderSpec`); those seven
   keep their behavior unchanged but must repoint their moved-model imports to the new shared
   package, and are **not** added to the shared catalog. The closed
-  `DomainWriteExclusionManifest` contains exactly these fully qualified suite-id/category/reason
-  triples: `io.github.kazemek.jsonapi.jackson3.IdentifierConversionSpec` /
+  The Jackson 3 adapter-local `Jackson3DomainWriteExclusionManifest` contains exactly these fully
+  qualified suite-id/category/reason triples: `io.github.kazemek.jsonapi.jackson3.IdentifierConversionSpec` /
   `ADAPTER_SPECIFIC` (identifier conversion),
   `io.github.kazemek.jsonapi.jackson3.ResourceMappingJacksonFeaturesSpec` /
   `ADAPTER_SPECIFIC` (Jackson mix-ins, naming strategy, serializers, optional values, and
@@ -113,8 +114,10 @@ without per-major copies.
   `io.github.kazemek.jsonapi.jackson3.CompoundSerializationSpec` / `LATER_FIXTURE_PHASE`
   (compound inclusion), and `io.github.kazemek.jsonapi.jackson3.DomainDocumentReaderSpec` /
   `LATER_FIXTURE_PHASE` (domain document/read binding). This manifest is the only exclusion set
-  whose completeness the catalog-integrity spec validates; model names and wildcard lists are not
-  completeness claims.
+  whose completeness the Jackson 3 coverage test validates; model names and wildcard lists are not
+  completeness claims. A future Jackson 2 suite owns a separate adapter-local manifest using the
+  same shared `DomainWriteExclusion` value type and may not add Jackson 3 suite ids to shared main
+  data.
 - Phase 2.14 owns the flat DTO-binding scenario catalog and the behavioral refactor of
   `ResourceBinderSpec`, but it depends on Phase 2.13 for the fixed domain-write package and the
   initial import repoint. Phase 2.13 performs only that mechanical `ResourceBinderSpec` import
@@ -178,8 +181,9 @@ without per-major copies.
   single/List values for `author`/`comments`, and an explicit unordered comparison policy for the
   Set-based `tags` case. The catalog and model sources are major-neutral (enforced by the ArchUnit
   rule below). Expose the immutable catalog through `DomainWriteScenarios.all()` in closed
-  inventory order and `DomainWriteScenarios.byId(String)`; expose the same package's
-  `DomainWriteExclusionManifest.all()` as the reusable seven-entry exclusion manifest.
+  inventory order and `DomainWriteScenarios.byId(String)`; expose `DomainWriteExclusion` and
+  `DomainWriteExclusionCategory` as reusable neutral values, while keeping
+  `Jackson3DomainWriteExclusionManifest.all()` adapter-local in the Jackson 3 test source set.
 - Refactor Jackson 3 `ResourceMapperSpec` to derive the 14 named cases from the shared catalog
   and to retain only demonstrably major-specific cases locally; repoint every other jackson3 spec
   that imports a moved model to the shared package (verified by `rg` over the jackson3 test
@@ -205,21 +209,23 @@ without per-major copies.
   package, or `core.internal..` — rather than a source-import scan (prohibited by ADR-010); add a
   catalog-integrity spec (mirroring `CodecFixturesCatalogSpec`) asserting unique scenario ids, that
   every entry carries exactly one operation, typed input, envelope state, discriminated outcome,
-  and comparison policy, that the declared catalog equals exactly the 14-case closed inventory and
-  operation/input/comparison-policy matrix, and that `DomainWriteExclusionManifest` equals the seven
-  fully qualified suite-id/
-  category/reason triples above; amend ADR-010's "Current allowlists" to register the test-fixtures
-  allowlist. The ArchUnit and catalog specs, `DomainWriteScenarios`, `DomainWriteExclusion`,
-  `DomainWriteExclusionCategory`, and `DomainWriteExclusionManifest` all live under the fixed
-  `io.github.kazemek.jsonapi.testfixtures.domainwrite` package; the manifest is shared
-  `src/main/java` data, not a test-local hard-coded list.
-  Document the Jackson 2 extension workflow (run every applicable shared scenario and maintain a
-  closed, reasoned exclusion manifest for that adapter) in the test-fixtures module docs.
+  and comparison policy, and that the declared catalog equals exactly the 14-case closed inventory
+  and operation/input/comparison-policy matrix; add the adapter-local
+  `Jackson3DomainWriteExclusionManifest` under
+  `jsonapi-java-jackson3/src/test/groovy/io/github/kazemek/jsonapi/jackson3/`, and require its
+  coverage test to assert `executedScenarioIds == catalogScenarioIds` for all 14 applicable write
+  scenarios and exact equality with the seven suite-id/category/reason triples above. Amend ADR-010's "Current
+  allowlists" to register the test-fixtures allowlist. The ArchUnit and catalog specs,
+  `DomainWriteScenarios`, `DomainWriteExclusion`, and `DomainWriteExclusionCategory` use the fixed
+  `io.github.kazemek.jsonapi.testfixtures.domainwrite` package; no adapter-specific manifest is
+  shared main-source data. Document the Jackson 2 extension workflow (run every applicable shared
+  scenario and maintain a separate closed, reasoned adapter-local exclusion manifest with the same
+  coverage equality) in the test-fixtures module docs.
 - Use the `module-docs` skill to update `jsonapi-java-test-fixtures` documentation: add the new
   `io.github.kazemek.jsonapi.testfixtures.domainwrite` package to the package table; add the
-  `DomainWriteScenarios.all()`/`byId(String)` and `DomainWriteExclusionManifest.all()`
-  (`DomainWriteComparisonPolicy`, `DomainWriteExclusion`/`DomainWriteExclusionCategory`) entry
-  points to "Minimal usage"; update
+  `DomainWriteScenarios.all()`/`byId(String)` and the reusable
+  `DomainWriteExclusion`/`DomainWriteExclusionCategory` value types (with the Jackson 3 manifest
+  remaining adapter-local) to "Minimal usage"; update
   "Non-goals" (remove the write-fixtures deferral, keep read, compound,
   sparse-fieldset, typed-envelope, and PATCH deferrals); extend the agent notes with the ArchUnit
   major-neutral boundary, null-bearing members, and the extension workflow; and refresh the
@@ -235,8 +241,11 @@ without per-major copies.
 - Sharing production mapping implementations or introducing a common Jackson introspection API
   (ADR-004).
 - Moving or extracting major-specific models or specs (`IdentifierConversionSpec`,
-  `ResourceMappingJacksonFeaturesSpec`, and any suite in `DomainWriteExclusionManifest`) into the
-  shared catalog; the manifest is the finite exclusion boundary for this milestone.
+  `ResourceMappingJacksonFeaturesSpec`, and any suite in
+  `Jackson3DomainWriteExclusionManifest`) into the shared catalog; the manifest is the finite
+  exclusion boundary for this milestone.
+- Putting Jackson 3 or Jackson 2 suite ids into a shared adapter-agnostic exclusion manifest;
+  adapter-local manifests use the shared `DomainWriteExclusion` value type independently.
 - Moving or refactoring the flat DTO-binding scenarios in `ResourceBinderSpec`; Phase 2.14 owns
   that catalog after consuming the shared models and import migration from this milestone.
 - Changing the mapper contract, introducing new mapping behaviors, adding Jackson 2, or altering
@@ -267,8 +276,8 @@ without per-major copies.
   over-broad policy entries.
 - The fixed Java package `io.github.kazemek.jsonapi.testfixtures.domainwrite` under
   `src/main/java` owns the models, `DomainWriteScenario` operation/input/outcome types,
-  `DomainWriteComparisonPolicy`, `DomainWriteScenarios`, and `DomainWriteExclusionManifest`; the
-  package is `@NullMarked` per
+  `DomainWriteComparisonPolicy`, `DomainWriteScenarios`, `DomainWriteExclusion`, and
+  `DomainWriteExclusionCategory`; the package is `@NullMarked` per
   ADR-009. `Supplier<@Nullable Object>` and `@Nullable DocumentEnvelope` preserve the catalog's
   intentional null states, while outcome values and non-null collection suppliers remain non-null.
   NullAway and `RequireExplicitNullMarking` (wired in `jsonapi-java-library`) enforce this at
@@ -276,15 +285,19 @@ without per-major copies.
 - `jackson-annotations` is `implementation` in test-fixtures (runtime-retained; consumers already
   resolve it via their own databind). No Jackson databind/core dependency enters test-fixtures.
 - The major-neutral coupling above is enforced by a `TestFixturesDependencyRulesSpec` ArchUnit rule
-  (per ADR-010; `testImplementation(libs.archunit)`), not a source-import scan. ArchUnit sees both
-  the Groovy `codec` and the Java `domainwrite` bytecode, so the registered
+  (per ADR-010; `testImplementation(libs.archunit)`), not a source-import scan. It must import
+  `io.github.kazemek.jsonapi.testfixtures..` with
+  `ImportOption.Predefined.DO_NOT_INCLUDE_TESTS`, so the dependency rule analyzes main fixture
+  bytecode without analyzing the ArchUnit spec or other test output. ArchUnit sees both the Groovy
+  `codec` and the Java `domainwrite` bytecode, so the registered
   `io.github.kazemek.jsonapi.testfixtures..` allowlist covers both.
 - Adapter-local specs that reference moved models keep their major-specific behavior unchanged;
   only their import of a moved model is repointed. `ResourceMapperSpec` invokes the catalog through
   the operation/input descriptor and discriminated outcome, not scenario-id conditionals. The
-  fixed package and named `DomainWriteScenarios`/`DomainWriteExclusionManifest` types are the only
-  shared domain-write entry points; Phase 2.14 consumes them and must not define duplicate model
-  classes or a competing manifest. The
+  fixed package and named `DomainWriteScenarios`/`DomainWriteExclusion`/
+  `DomainWriteExclusionCategory` types are the only shared domain-write entry points; adapter-local
+  manifests remain in their adapter test source sets. Phase 2.14 consumes them and must not define
+  duplicate model classes or a competing shared manifest. The
   `jsonapi-java-annotations` project and
   `jackson-annotations` artifact dependencies are scoped to `jsonapi-java-test-fixtures` and do
   not flow into `jsonapi-java-core` or `jsonapi-java-jackson-common`.
@@ -292,14 +305,19 @@ without per-major copies.
 ## Test strategy
 
 - A new `TestFixturesDependencyRulesSpec` ArchUnit rule enforces the major-neutral coupling (per
-  ADR-010), and a new catalog-integrity spec verifies the 14-case closed inventory, the exact
-  operation/input/envelope/outcome matrix, unique ids, complete expected outcomes, and equality
-  with the closed `DomainWriteExclusionManifest`.
+  ADR-010) using `ClassFileImporter().withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)`
+  before importing `io.github.kazemek.jsonapi.testfixtures..`; a new catalog-integrity spec verifies
+  the 14-case closed inventory and exact operation/input/envelope/outcome/comparison-policy matrix.
 - Jackson 3 `ResourceMapperSpec` parameterizes the 14 cases from the shared catalog, invokes each
   through its operation/input descriptor, and compares full semantic results — `type`, `id`, `lid`,
   attribute keys/values, relationship keys, linkage variants, exact identifier type/id values,
   ordered List identifiers, unordered Set identifiers, document data, envelope members, and
   absent `included` — plus the adapter-entry-point `NullPointerException`, never serialized text.
+  Its coverage assertion records executed scenario ids and requires exact equality with the shared
+  catalog ids because all 14 write scenarios are applicable; the suite-level
+  `Jackson3DomainWriteExclusionManifest` is validated independently and is not subtracted from
+  scenario ids. Future Jackson 2 suites may keep their own adapter-local suite/scenario manifests
+  without changing the shared catalog.
 - Existing Jackson 3-only serializer/mix-in/naming-strategy/isolation cases (notably
   `TitleSerializer`, `@JsonSerialize`, `@JsonIgnore`, `PropertyNamingStrategies`) remain in
   adapter-local specs and continue to pass, with shared-model imports repointed where needed.
@@ -348,23 +366,25 @@ without per-major copies.
       extraction and reuses the Phase 2.13 package/models.
 - [ ] A `TestFixturesDependencyRulesSpec` ArchUnit rule (per ADR-010) fails on any dependency from
       `io.github.kazemek.jsonapi.testfixtures..` on `tools.jackson..`,
-      `com.fasterxml.jackson.databind..`, a major-specific adapter package, or `core.internal..`;
+      `com.fasterxml.jackson.databind..`, a major-specific adapter package, or `core.internal..`,
+      and imports the package with `ImportOption.Predefined.DO_NOT_INCLUDE_TESTS`;
       a catalog-integrity spec fails on missing/duplicate scenario ids, an invalid operation/input/
       envelope/outcome combination, incomplete expected outcomes, a catalog or operation matrix
-      that is not exactly the 14-case set, an invalid/missing comparison policy, or a
-      `DomainWriteExclusionManifest` that is not exactly
-      the seven fully qualified suite-id/category/reason triples defined in the milestone; the
-      manifest is the shared `src/main/java` entry point
-      `io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteExclusionManifest`; ADR-010's
-      "Current allowlists" registers the test-fixtures allowlist; the Jackson 2 extension workflow
-      (run every applicable shared scenario and maintain a closed, reasoned exclusion manifest) is
-      documented.
+      that is not exactly the 14-case set, or an invalid/missing comparison policy; the Jackson 3
+      coverage assertion requires `executedScenarioIds == catalogScenarioIds` for the 14 applicable
+      write scenarios, and that the adapter-local manifest equals the seven fully qualified
+      suite-id/category/reason triples defined in the milestone. The
+      reusable shared entry points are `DomainWriteExclusion` and `DomainWriteExclusionCategory`;
+      the Jackson 3 manifest is not shared main-source data. ADR-010's "Current allowlists"
+      registers the test-fixtures allowlist; the Jackson 2 extension workflow (run every applicable
+      shared scenario and maintain a separate closed, reasoned adapter-local exclusion manifest
+      with the same coverage equality) is documented.
 - [ ] `jsonapi-java-test-fixtures` adds `api(project(":jsonapi-java-annotations"))`,
       `implementation(libs.jackson.annotations)`, and `testImplementation(libs.archunit)`, and no
       Jackson databind/core production/runtime dependency; the canonical `module-docs` checklist
       passes for the fixed `io.github.kazemek.jsonapi.testfixtures.domainwrite` package map,
-      `DomainWriteScenarios.all()`/`byId(String)` and `DomainWriteExclusionManifest.all()` entry
-      points, and non-goals update, and
+      `DomainWriteScenarios.all()`/`byId(String)` and the reusable
+      `DomainWriteExclusion`/`DomainWriteExclusionCategory` entry points, and non-goals update, and
       the existing `jsonapi-java-test-fixtures` row in the root `README.md` **Project structure**
       table is refreshed to mention the shared domain-write catalog (no Module registry row, which
       is reserved for published/available modules).
