@@ -66,6 +66,11 @@ final class CodecFixture {
    * {@code schemaKind}.
    */
   static CodecFixture of(Map args) {
+    def schemaKind = args.schemaKind as SchemaKind
+    def schemaDisagreement = args.schemaDisagreement as SchemaDisagreement
+    if (schemaDisagreement != null && schemaKind == null) {
+      throw new IllegalArgumentException('schemaDisagreement requires schemaKind')
+    }
     return new CodecFixture(
         args.id as String,
         args.notes as String,
@@ -75,8 +80,8 @@ final class CodecFixture {
         (args.writable == null ? true : args.writable) as boolean,
         (args.readable == null ? true : args.readable) as boolean,
         args.primaryDataKind as PrimaryDataKind,
-        args.schemaKind as SchemaKind,
-        args.schemaDisagreement as SchemaDisagreement,
+        schemaKind,
+        schemaDisagreement,
         (args.assertExactUtf8 ?: false) as boolean,
         args.exactUtf8Path as String,
         (args.assertHreflangArray ?: false) as boolean)

@@ -1,7 +1,5 @@
 package io.github.kazemek.jsonapi.testfixtures.codec
 
-import java.util.Objects
-
 /**
  * Documented disagreement between a fixture and the pinned JSON:API 1.1 draft-PR schemas. The
  * fixture must keep failing the draft for the recorded reason, so a schema fix forces an

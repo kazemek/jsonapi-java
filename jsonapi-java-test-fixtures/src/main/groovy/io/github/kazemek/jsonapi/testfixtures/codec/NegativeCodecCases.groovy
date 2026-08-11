@@ -6,9 +6,10 @@ import groovy.json.JsonSlurper
 
 /**
  * Manifest-backed read-only negative codec corpus: loads {@code negative-manifest.json} from the
- * {@code jsonapi.fixtures.dir} test system property. The manifest is the source of truth for the
- * closed case list, expected inputs, and version-neutral diagnostics; adapter tests map the
- * category/rule-code strings onto their own enums.
+ * {@code jsonapi.fixtures.dir} test system property. The manifest is the source of the case
+ * metadata (inputs and version-neutral diagnostics); {@code NegativeCodecCasesCatalogSpec}
+ * additionally pins the intentionally closed case set. Adapter tests map the category/rule-code
+ * strings onto their own enums.
  */
 final class NegativeCodecCases {
 

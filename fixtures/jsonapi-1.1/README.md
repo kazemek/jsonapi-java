@@ -54,17 +54,22 @@ capability instead of maintaining independent hard-coded id lists:
    `exactUtf8Path` on the fixture.
 6. If the document intentionally fails the pinned draft schema, record the disagreement in
    `schemaDisagreement` and keep the fixture failing.
-7. Run `./gradlew :jsonapi-java-test-fixtures:test :jsonapi-java-jackson3:test`.
+7. Run `./gradlew :jsonapi-java-test-fixtures:test :jsonapi-java-jackson3:test`. Changes under
+   `src/main/` or `src/test/` must then pass the full completion gates (see `AGENTS.md`): `./gradlew
+   clean build`, Spotless (`spotlessApply` then `spotlessCheck`), and the Sonar Quality Gate with
+   zero new-code issues.
 
 ## Negative corpus
 
-`negative-manifest.json` is the source of truth for the closed list of inputs that must fail to
-read. Each case records the version-neutral expected failure category, JSON Pointer, and core
-`ValidationRuleCode` — each only when present (codec-only failures such as `MALFORMED_JSON` have
-null pointer or rule code) — plus a `sourceLocation` flag for assertions that are parser-specific
-and must be tagged, not copied. Adapter tests map the category/rule-code strings onto their own
-enums and keep any exact source-location details adapter-local. Never add or remove a negative case
-id without updating the closed inventory in `NegativeCodecCasesCatalogSpec`.
+`negative-manifest.json` is the source of the closed-case metadata: the read-only inputs that
+must fail to read and their version-neutral expected diagnostics. Each case records the expected
+failure category, JSON Pointer, and core `ValidationRuleCode` — each only when present (codec-only
+failures such as `MALFORMED_JSON` have null pointer or rule code) — plus a `sourceLocation` flag
+for assertions that are parser-specific and must be tagged, not copied. The intentionally closed
+case set itself is additionally pinned by `NegativeCodecCasesCatalogSpec`, so accidental additions
+or removals fail the integrity suite. Adapter tests map the category/rule-code strings onto their
+own enums and keep any exact source-location details adapter-local. Never add or remove a negative
+case id without updating the closed inventory in `NegativeCodecCasesCatalogSpec`.
 
 ## Ambiguous primary data
 

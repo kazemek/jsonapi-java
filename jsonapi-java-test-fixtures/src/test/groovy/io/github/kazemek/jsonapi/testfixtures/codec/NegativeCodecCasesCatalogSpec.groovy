@@ -61,21 +61,26 @@ class NegativeCodecCasesCatalogSpec extends Specification {
 
   def "every negative case records a known category and a valid pointer"() {
     expect:
-    NegativeCodecCases.all().every { entry ->
-      CodecFailureCategory.values().any { it.name() == entry.category }
-      entry.pointer == null || entry.pointer.isEmpty() || entry.pointer.startsWith('/')
-    }
+    NegativeCodecCases.all().every { entry -> categoryAndPointerValid(entry) }
   }
 
   def "rule codes appear exactly for validation categories and are known codes"() {
     expect:
-    NegativeCodecCases.all().every { entry ->
-      def validation = entry.category == 'LOCAL_VALIDATION' || entry.category == 'AGGREGATE_VALIDATION'
-      if (entry.ruleCode == null) {
-        return !validation
-      }
-      validation
-      ValidationRuleCode.values().any { it.name() == entry.ruleCode }
+    NegativeCodecCases.all().every { entry -> ruleCodeValid(entry) }
+  }
+
+  private static boolean categoryAndPointerValid(NegativeCodecCase entry) {
+    def knownCategory = CodecFailureCategory.values().any { it.name() == entry.category }
+    def validPointer = entry.pointer == null || entry.pointer.isEmpty() || entry.pointer.startsWith('/')
+    return knownCategory && validPointer
+  }
+
+  private static boolean ruleCodeValid(NegativeCodecCase entry) {
+    def validation = entry.category == 'LOCAL_VALIDATION' || entry.category == 'AGGREGATE_VALIDATION'
+    if (entry.ruleCode == null) {
+      return !validation
     }
+    def knownCode = ValidationRuleCode.values().any { it.name() == entry.ruleCode }
+    return validation && knownCode
   }
 }

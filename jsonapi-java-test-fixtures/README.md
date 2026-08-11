@@ -13,8 +13,9 @@ Not a published module; Jackson 3 (and later Jackson 2) contract tests consume i
 
 ## Minimal usage
 
-No usable public entry point: this module exists for test code only. Jackson adapter tests select
-cases by capability:
+This module is not published and its types are not a supported production/library API, but
+`CodecFixtures`, `NegativeCodecCases`, and `AmbiguousPrimaryDataCases` are public in-repo entry
+points for adapter tests, which select cases by capability:
 
 ```groovy
 fixture << CodecFixtures.readable()            // read / input-source / round-trip suites

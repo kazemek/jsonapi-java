@@ -39,6 +39,17 @@ class CodecFixturesCatalogSpec extends Specification {
     }
   }
 
+  def "catalog and manifest fixture ids are unique"() {
+    given:
+    def manifest = new JsonSlurper().parse(fixturesDir.resolve("manifest.json").toFile()) as Map
+    def manifestIds = (manifest.fixtures as List).collect { it.id as String }
+    def catalogIds = CodecFixtures.all()*.id
+
+    expect:
+    catalogIds.size() == catalogIds.toSet().size()
+    manifestIds.size() == manifestIds.toSet().size()
+  }
+
   def "byId returns each registered fixture"() {
     expect:
     CodecFixtures.all().every { CodecFixtures.byId(it.id).is(it) }
@@ -51,17 +62,7 @@ class CodecFixturesCatalogSpec extends Specification {
 
   def "schema disagreement requires a schema kind and well-formed expected entries"() {
     expect:
-    CodecFixtures.all().every { fixture ->
-      if (fixture.schemaDisagreement == null) {
-        return true
-      }
-      fixture.schemaKind != null
-      !fixture.schemaDisagreement.reason.isEmpty()
-      fixture.schemaDisagreement.expected.size() > 0
-      fixture.schemaDisagreement.expected.every {
-        it.containsKey('keyword') && it.containsKey('path')
-      }
-    }
+    CodecFixtures.all().every { fixture -> schemaDisagreementValid(fixture) }
   }
 
   def "primary data kind metadata matches the constructed document data"() {
@@ -87,5 +88,24 @@ class CodecFixturesCatalogSpec extends Specification {
     !CodecFixtures.schemaChecked().isEmpty()
     !CodecFixtures.exactUtf8().isEmpty()
     !CodecFixtures.hreflangArray().isEmpty()
+  }
+
+  def "every fixture participates in at least one codec suite"() {
+    expect:
+    CodecFixtures.all().every { it.writable || it.readable }
+  }
+
+  private static boolean schemaDisagreementValid(CodecFixture fixture) {
+    if (fixture.schemaDisagreement == null) {
+      return true
+    }
+    def disagreement = fixture.schemaDisagreement
+    def wellFormedEntries = disagreement.expected.every {
+      it.containsKey('keyword') && it.containsKey('path')
+    }
+    def hasKind = fixture.schemaKind != null
+    def hasReason = !disagreement.reason.isEmpty()
+    def hasExpected = disagreement.expected.size() > 0
+    return hasKind && hasReason && hasExpected && wellFormedEntries
   }
 }
