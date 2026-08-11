@@ -2,7 +2,7 @@
 
 > **Scope:** fixtures / `jsonapi-java-test-fixtures` / jackson3 codec tests  
 > **Dependencies:** Phases 2.4, 2.5, and 2.11  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -81,19 +81,19 @@ contract for every Jackson-major adapter.
 
 ## Acceptance criteria
 
-- [ ] All 24 existing valid documents are cataloged for both write and read, and each applicable
+- [x] All 24 existing valid documents are cataloged for both write and read, and each applicable
       writer, reader/input-source, round-trip, and schema test derives its cases from capabilities.
-- [ ] Schema kind, validation/read context, primary-data kind, exact-byte policy, canonical
+- [x] Schema kind, validation/read context, primary-data kind, exact-byte policy, canonical
       `hreflang`, and known draft disagreements have one version-neutral metadata source.
-- [ ] The closed negative corpus lists every Phase 2.4 case id above; each case records category,
+- [x] The closed negative corpus lists every Phase 2.4 case id above; each case records category,
       pointer, and `ValidationRuleCode` only when present (null allowed for `MALFORMED_JSON` /
       codec-only failures); source-location checks are capability-scoped.
-- [ ] Shared ambiguous object and empty-array cases assert dual-success models under both
+- [x] Shared ambiguous object and empty-array cases assert dual-success models under both
       `PrimaryDataKind` values and are not classified as failure fixtures.
-- [ ] No Jackson-major-specific expected JSON or diagnostic corpus exists; fixture/catalog integrity
+- [x] No Jackson-major-specific expected JSON or diagnostic corpus exists; fixture/catalog integrity
       tests reject missing, duplicate, unclassified, or inconsistent entries; fixture guidance and
       conformance traceability describe capability selection and intentional asymmetry.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.

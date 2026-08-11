@@ -48,6 +48,20 @@ tasks.named<JavaCompile>("compileJava").configure {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
+    // Centralized fixture wiring: every module's tests resolve the shared JSON:API 1.1 document
+    // corpus and the pinned draft-schema fixtures from these two root-relative directories.
+    systemProperty(
+        "jsonapi.fixtures.dir",
+        project.rootProject.layout.projectDirectory
+            .dir("fixtures/jsonapi-1.1")
+            .asFile.absolutePath,
+    )
+    systemProperty(
+        "jsonapi.schema.fixtures.dir",
+        project.rootProject.layout.projectDirectory
+            .dir("fixtures/jsonapi-schema/1.1-pr1603")
+            .asFile.absolutePath,
+    )
 }
 
 tasks.jacocoTestReport {

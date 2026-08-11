@@ -9,11 +9,8 @@ import java.nio.file.Path
 
 import tools.jackson.databind.json.JsonMapper
 
-import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.Link
-import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
-import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage
 import io.github.kazemek.jsonapi.core.validation.LinksContext
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
@@ -22,8 +19,9 @@ import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
 import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.testfixtures.writer.WriterFixture
-import io.github.kazemek.jsonapi.testfixtures.writer.WriterFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.AmbiguousPrimaryDataCases
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecCases
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -42,7 +40,8 @@ class DocumentReaderSpec extends Specification {
   def "reads fixture #fixture.id into a document that matches the constructed model"() {
     given:
     def json = readFixtureText(fixture.expectedPath)
-    def context = DocumentReadContext.of(fixture.context, primaryDataKind(fixture))
+    def context = DocumentReadContext.of(
+        fixture.context, fixture.primaryDataKind ?: PrimaryDataKind.RESOURCE)
     def reader = JsonApiJackson3.reader(mapper, context)
     def writer = JsonApiJackson3.writer(mapper, fixture.context)
 
@@ -54,13 +53,14 @@ class DocumentReaderSpec extends Specification {
     mapper.readTree(writer.writeValueAsString(document)) == mapper.readTree(json)
 
     where:
-    fixture << WriterFixtures.all()
+    fixture << CodecFixtures.readable()
   }
 
   def "all read sources decode #fixture.id equivalently"() {
     given:
     def json = readFixtureText(fixture.expectedPath)
-    def context = DocumentReadContext.of(fixture.context, primaryDataKind(fixture))
+    def context = DocumentReadContext.of(
+        fixture.context, fixture.primaryDataKind ?: PrimaryDataKind.RESOURCE)
     def reader = JsonApiJackson3.reader(mapper, context)
     def expected = reader.readValue(json)
     def bytes = json.getBytes(StandardCharsets.UTF_8)
@@ -83,83 +83,72 @@ class DocumentReaderSpec extends Specification {
     parser?.close()
 
     where:
-    fixture << [
-      WriterFixtures.byId('single-resource')
-    ]
+    fixture << CodecFixtures.readable()
   }
 
-  def "preserves JSON null elements inside open-value arrays"() {
+  def "ambiguous case #fixture.id decodes under both PrimaryDataKind values"() {
     given:
-    def json = '{"meta":{"values":[null],"nested":{"items":[null,1]}}}'
+    def json = readFixtureText(fixture.expectedPath)
+
+    when:
+    def asResource = JsonApiJackson3.reader(
+        mapper, DocumentReadContext.of(fixture.context, PrimaryDataKind.RESOURCE))
+        .readValue(json)
+    def asIdentifier = JsonApiJackson3.reader(
+        mapper, DocumentReadContext.of(fixture.context, PrimaryDataKind.RESOURCE_IDENTIFIER))
+        .readValue(json)
+
+    then:
+    asResource == fixture.resourceDocument
+    asIdentifier == fixture.identifierDocument
+
+    and:
+    def writer = JsonApiJackson3.writer(mapper, fixture.context)
+    mapper.readTree(writer.writeValueAsString(asResource)) == mapper.readTree(json)
+    mapper.readTree(writer.writeValueAsString(asIdentifier)) == mapper.readTree(json)
+
+    where:
+    fixture << AmbiguousPrimaryDataCases.all()
+  }
+
+  def "negative corpus case #fixture.id fails with the documented diagnostics"() {
+    given:
+    def json = readFixtureText(fixture.path)
     def reader = JsonApiJackson3.reader(mapper, resourceContext)
 
     when:
-    def document = reader.readValue(json)
-
-    then:
-    document.meta().members().get('values') == [null]
-    document.meta().members().get('nested').get('items') == [null, 1]
-  }
-
-  def "ambiguous object primary data obeys PrimaryDataKind"() {
-    given:
-    def json = '{"data":{"type":"articles","id":"1"}}'
-
-    when:
-    def asResource = JsonApiJackson3.reader(mapper, DocumentReadContext.resourceDefaults())
-        .readValue(json)
-    def asIdentifier = JsonApiJackson3.reader(mapper, DocumentReadContext.identifierDefaults())
-        .readValue(json)
-
-    then:
-    asResource.data() instanceof DocumentData.SingleResource
-    ((DocumentData.SingleResource) asResource.data()).resource() == ResourceObject.of('articles', '1')
-    asIdentifier.data() instanceof DocumentData.SingleIdentifier
-    ((DocumentData.SingleIdentifier) asIdentifier.data()).identifier() ==
-        ResourceIdentifier.of('articles', '1')
-  }
-
-  def "ambiguous empty array primary data obeys PrimaryDataKind"() {
-    given:
-    def json = '{"data":[]}'
-
-    when:
-    def asResource = JsonApiJackson3.reader(mapper, DocumentReadContext.resourceDefaults())
-        .readValue(json)
-    def asIdentifier = JsonApiJackson3.reader(mapper, DocumentReadContext.identifierDefaults())
-        .readValue(json)
-
-    then:
-    asResource.data() instanceof DocumentData.ResourceCollection
-    ((DocumentData.ResourceCollection) asResource.data()).resources().isEmpty()
-    asIdentifier.data() instanceof DocumentData.IdentifierCollection
-    ((DocumentData.IdentifierCollection) asIdentifier.data()).identifiers().isEmpty()
-  }
-
-  def "malformed JSON reports MALFORMED_JSON without payload text"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('{')
+    reader.readValue(json)
 
     then:
     def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.MALFORMED_JSON
-    ex.ruleCode() == null
-    !ex.message.contains('{')
+    ex.category() == CodecFailureCategory.valueOf(fixture.category)
+
+    and:
+    if (fixture.pointer != null) {
+      assert ex.jsonPointer() == fixture.pointer
+    }
+
+    and:
+    if (fixture.ruleCode != null) {
+      assert ex.ruleCode() == ValidationRuleCode.valueOf(fixture.ruleCode)
+    } else {
+      assert ex.ruleCode() == null
+    }
+
+    and:
+    if (fixture.sourceLocation) {
+      assert ex.sourceLocation().isKnown()
+    }
     ex.cause == null
+    if (!json.isEmpty()) {
+      assert !ex.message.contains(json)
+    }
+
+    where:
+    fixture << NegativeCodecCases.all()
   }
 
-  def "truncated document reports MALFORMED_JSON with enclosing path"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('{"data":{"type":"articles","id":')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.MALFORMED_JSON
-    ex.jsonPointer().startsWith('/data')
-    ex.ruleCode() == null
-  }
-
-  def "empty input reports MALFORMED_JSON for #source"() {
+  def "empty input and whitespace-only variants report MALFORMED_JSON for #source"() {
     when:
     readWhole(source, input)
 
@@ -177,14 +166,32 @@ class DocumentReaderSpec extends Specification {
     'bytes'  | '  '.getBytes(StandardCharsets.UTF_8)
   }
 
-  def "trailing content after whole-input document is rejected"() {
+  def "aggregate validation resource location is precise on Jackson 3"() {
+    given:
+    def entry = NegativeCodecCases.byId('aggregate-validation-resource-location')
+    def json = readFixtureText(entry.path)
+
     when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('{"meta":{}}{}')
+    JsonApiJackson3.reader(mapper, resourceContext).readValue(json)
 
     then:
     def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.UNEXPECTED_TOKEN
-    ex.message == 'Trailing content after JSON:API document'
+    ex.sourceLocation().isKnown()
+    ex.sourceLocation().lineNumber() == 4
+    ex.sourceLocation().charOffset() < json.length() - 1
+  }
+
+  def "preserves JSON null elements inside open-value arrays"() {
+    given:
+    def json = '{"meta":{"values":[null],"nested":{"items":[null,1]}}}'
+    def reader = JsonApiJackson3.reader(mapper, resourceContext)
+
+    when:
+    def document = reader.readValue(json)
+
+    then:
+    document.meta().members().get('values') == [null]
+    document.meta().members().get('nested').get('items') == [null, 1]
   }
 
   def "caller-owned parser may sequence multiple root documents"() {
@@ -218,232 +225,6 @@ class DocumentReaderSpec extends Specification {
 
     cleanup:
     parser?.close()
-  }
-
-  def "unexpected token reports path and location"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('[]')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.UNEXPECTED_TOKEN
-    ex.jsonPointer() == ''
-    ex.sourceLocation() != null
-  }
-
-  def "duplicate members are rejected"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('{"meta":{},"meta":{}}')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.DUPLICATE_MEMBER
-    ex.jsonPointer() == '/meta'
-    ex.sourceLocation().isKnown()
-  }
-
-  def "local validation failures expose rule codes and top-level path"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('{"data":{"id":"1"}}')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.MISSING_RESOURCE_TYPE
-    ex.jsonPointer() == '/data/type'
-    ex.message == 'Local validation failed'
-    !ex.message.contains('1')
-    ex.cause == null
-  }
-
-  def "included missing type reports nested pointer"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "data":{"type":"articles","id":"1"},
-        "included":[{"id":"2"}]
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.MISSING_RESOURCE_TYPE
-    ex.jsonPointer() == '/included/0/type'
-    ex.message == 'Local validation failed'
-  }
-
-  def "collection missing type reports indexed pointer"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('{"data":[{"id":"1"}]}')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.MISSING_RESOURCE_TYPE
-    ex.jsonPointer() == '/data/0/type'
-  }
-
-  def "relationship identifier missing type reports nested pointer"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "data":{
-          "type":"articles",
-          "id":"1",
-          "relationships":{
-            "author":{"data":{"id":"9"}}
-          }
-        }
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.MISSING_RESOURCE_TYPE
-    ex.jsonPointer() == '/data/relationships/author/data/type'
-  }
-
-  def "reserved attribute reports attributes pointer"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "data":{
-          "type":"articles",
-          "id":"1",
-          "attributes":{"type":"wrong"}
-        }
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.RESERVED_FIELD_NAME
-    ex.jsonPointer() == '/data/attributes/type'
-    ex.message == 'Local validation failed'
-    !ex.message.contains('wrong')
-  }
-
-  def "missing link href reports LOCAL_VALIDATION"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "data":{
-          "type":"articles",
-          "id":"1",
-          "links":{"self":{"title":"Self"}}
-        }
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.NULL_REQUIRED_VALUE
-    ex.jsonPointer() == '/data/links/self/href'
-  }
-
-  def "invalid dynamic link relation escapes pointer segments"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "meta":{},
-        "links":{"foo~bar/baz":"https://example.com/"}
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.INVALID_LINK_RELATION
-    ex.jsonPointer() == '/links/foo~0bar~1baz'
-    ex.message == 'Local validation failed'
-    !ex.message.contains('foo~bar')
-    ex.cause == null
-  }
-
-  def "invalid dynamic attribute name escapes pointer segments"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "data":{
-          "type":"articles",
-          "id":"1",
-          "attributes":{"foo~bar/baz":1}
-        }
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.LOCAL_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.INVALID_MEMBER_NAME
-    ex.jsonPointer() == '/data/attributes/foo~0bar~1baz'
-    ex.message == 'Local validation failed'
-    ex.cause == null
-    ex.sourceLocation().isKnown()
-  }
-
-  def "aggregate URI link relation escapes pointer segments"() {
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue('''
-      {
-        "meta":{},
-        "links":{"http://example.com/rel":"https://example.com/"}
-      }
-      ''')
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.AGGREGATE_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.INVALID_LINKS_CONTEXT
-    ex.jsonPointer() == '/links/http:~1~1example.com~1rel'
-    ex.message == 'Aggregate validation failed'
-    ex.cause == null
-    ex.sourceLocation().isKnown()
-  }
-
-  def "aggregate validation failures expose rule codes and resource location"() {
-    given:
-    def json = '''
-      {
-        "data": [
-          {"type":"articles","id":"1"},
-          {"type":"articles","id":"1"}
-        ]
-      }
-      '''.stripIndent().trim()
-
-    when:
-    JsonApiJackson3.reader(mapper, resourceContext).readValue(json)
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.AGGREGATE_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
-    ex.jsonPointer() == '/data/1'
-    ex.message == 'Aggregate validation failed'
-    !ex.message.contains('articles')
-    ex.cause == null
-    ex.sourceLocation().isKnown()
-    ex.sourceLocation().lineNumber() == 4
-    ex.sourceLocation().charOffset() < json.length() - 1
-  }
-
-  def "extension members require matching validation context"() {
-    given:
-    def json = readFixtureText('documents/extension-and-at-members.json')
-
-    when:
-    JsonApiJackson3.reader(mapper, DocumentReadContext.resourceDefaults()).readValue(json)
-
-    then:
-    def ex = thrown(JsonApiDocumentReadException)
-    ex.category() == CodecFailureCategory.AGGREGATE_VALIDATION
-    ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
-    ex.message == 'Aggregate validation failed'
   }
 
   def "namespaced link relation decodes as Link not additional member"() {
@@ -495,15 +276,6 @@ class DocumentReaderSpec extends Specification {
     } else {
       reader.readValue((byte[]) input)
     }
-  }
-
-  private static PrimaryDataKind primaryDataKind(WriterFixture fixture) {
-    def data = fixture.document.data()
-    if (data instanceof DocumentData.SingleIdentifier
-        || data instanceof DocumentData.IdentifierCollection) {
-      return PrimaryDataKind.RESOURCE_IDENTIFIER
-    }
-    return PrimaryDataKind.RESOURCE
   }
 
   private static boolean wireEqual(

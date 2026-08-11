@@ -1,0 +1,7 @@
+{
+  "data":{
+    "type":"articles",
+    "id":"1",
+    "attributes":{"foo~bar/baz":1}
+  }
+}

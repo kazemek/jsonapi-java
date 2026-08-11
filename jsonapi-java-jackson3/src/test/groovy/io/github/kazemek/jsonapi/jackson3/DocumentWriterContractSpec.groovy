@@ -7,7 +7,7 @@ import java.nio.file.Path
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 
-import io.github.kazemek.jsonapi.testfixtures.writer.WriterFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -35,7 +35,7 @@ class DocumentWriterContractSpec extends Specification {
     new String(asBytes, StandardCharsets.UTF_8) == asString
 
     where:
-    fixture << WriterFixtures.all()
+    fixture << CodecFixtures.writable()
   }
 
   def "emits exact UTF-8 for #fixture.id"() {
@@ -47,7 +47,7 @@ class DocumentWriterContractSpec extends Specification {
     writer.writeValueAsString(fixture.document) == expected
 
     where:
-    fixture << WriterFixtures.exactUtf8()
+    fixture << CodecFixtures.exactUtf8()
   }
 
   def "emits array-form hreflang for #fixture.id"() {
@@ -60,7 +60,7 @@ class DocumentWriterContractSpec extends Specification {
     !json.contains('"hreflang":"en"')
 
     where:
-    fixture << WriterFixtures.hreflangArray()
+    fixture << CodecFixtures.hreflangArray()
   }
 
   private JsonNode readFixtureJson(String relativePath) {
