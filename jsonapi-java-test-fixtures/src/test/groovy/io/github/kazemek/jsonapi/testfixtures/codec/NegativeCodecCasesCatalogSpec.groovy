@@ -71,8 +71,32 @@ class NegativeCodecCasesCatalogSpec extends Specification {
 
   private static boolean categoryAndPointerValid(NegativeCodecCase entry) {
     def knownCategory = CodecFailureCategory.values().any { it.name() == entry.category }
-    def validPointer = entry.pointer == null || entry.pointer.isEmpty() || entry.pointer.startsWith('/')
-    return knownCategory && validPointer
+    return knownCategory && validJsonPointer(entry.pointer)
+  }
+
+  private static boolean validJsonPointer(String pointer) {
+    if (pointer == null || pointer.isEmpty()) {
+      return true
+    }
+    if (!pointer.startsWith('/')) {
+      return false
+    }
+    def i = 0
+    while (i < pointer.length()) {
+      if (pointer.charAt(i) != '~') {
+        i++
+        continue
+      }
+      if (i + 1 >= pointer.length()) {
+        return false
+      }
+      def escape = pointer.charAt(i + 1)
+      if (escape != '0' && escape != '1') {
+        return false
+      }
+      i += 2
+    }
+    return true
   }
 
   private static boolean ruleCodeValid(NegativeCodecCase entry) {

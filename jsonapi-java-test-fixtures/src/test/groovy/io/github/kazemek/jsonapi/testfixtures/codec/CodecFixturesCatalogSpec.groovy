@@ -100,11 +100,12 @@ class CodecFixturesCatalogSpec extends Specification {
       return true
     }
     def disagreement = fixture.schemaDisagreement
-    def wellFormedEntries = disagreement.expected.every {
-      it.containsKey('keyword') && it.containsKey('path')
+    def nonBlankString = { value -> value instanceof String && !((String) value).trim().isEmpty() }
+    def wellFormedEntries = disagreement.expected.every { entry ->
+      nonBlankString(entry['keyword']) && entry['path'] instanceof String
     }
     def hasKind = fixture.schemaKind != null
-    def hasReason = !disagreement.reason.isEmpty()
+    def hasReason = nonBlankString(disagreement.reason)
     def hasExpected = disagreement.expected.size() > 0
     return hasKind && hasReason && hasExpected && wellFormedEntries
   }
