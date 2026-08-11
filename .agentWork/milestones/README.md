@@ -46,36 +46,38 @@ field remains the authoritative prerequisite set.
    Jackson 3 onto them before any Jackson 2 work.
 23. **Phase 2.12 — canonical codec fixtures:** capability-tags the shared document corpus for
    write/read/schema parity and adds a shared read-only negative corpus.
-24. **Phase 2.13 — shared domain-write fixtures** and **Phase 2.14 — shared domain-read fixtures:**
-   extract version-neutral flat mapping and flat DTO-binding test catalogs after common contracts.
-25. **Phase 2.15 — Jackson 3 PATCH binding:** composes document reading, Phase 1.3 update
-   validation, and presence-aware binding into commands and shared PATCH scenarios (not typed
-   envelopes).
-26. **Phase 2.24 — shared compound write fixtures**, **Phase 2.25 — shared sparse-fieldset fixtures**,
-   and **Phase 2.26 — shared envelope read fixtures:** extract the remaining domain-fixture catalogs
-   before their Jackson 2 consumers.
-27. **Phase 3.1 — query parser:** remains an independent optional artifact.
-28. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
-   documents, query arguments, and safe errors.
-29. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO and
-   typed-envelope experience.
-30. **Phase 3.4 — Spring WebMVC PATCH binding:** adds presence-aware PATCH command arguments on
-   top of Phase 3.3.
-31. **Phase 3.5 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
-   stable.
-32. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after common contracts and
-   codec fixtures, without an artificial Spring dependency.
-33. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
-   parallel after the Jackson 2 writer and their respective Jackson 3 / fixture contracts.
-34. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
-   independently on stable mapping/read contracts and shared domain fixtures (2.19 needs 2.24;
-   2.21 needs 2.14).
-35. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
-   write-policy and read-envelope parity independently (2.20 needs 2.25; 2.22 needs 2.26).
-36. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity after the
-   Jackson 2 document reader (2.17) and flat DTO reader (2.21); does not depend on envelopes (2.22).
-37. **Phase 4.1 — conformance and hardening.**
-38. **Phase 4.2 — stable release.**
+24. **Phase 2.13 — shared domain-write fixtures:** owns the shared Java domain-write models,
+    operation catalog, exclusion manifest, and Jackson 3 write-suite migration.
+25. **Phase 2.14 — shared domain-read fixtures:** follows Phase 2.13 and reuses its shared models
+    while extracting the flat DTO-binding catalog from `ResourceBinderSpec`.
+26. **Phase 2.15 — Jackson 3 PATCH binding:** composes document reading, Phase 1.3 update
+    validation, and presence-aware binding into commands and shared PATCH scenarios (not typed
+    envelopes).
+27. **Phase 2.24 — shared compound write fixtures**, **Phase 2.25 — shared sparse-fieldset fixtures**,
+    and **Phase 2.26 — shared envelope read fixtures:** extract the remaining domain-fixture catalogs
+    before their Jackson 2 consumers.
+28. **Phase 3.1 — query parser:** remains an independent optional artifact.
+29. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
+    documents, query arguments, and safe errors.
+30. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO and
+    typed-envelope experience.
+31. **Phase 3.4 — Spring WebMVC PATCH binding:** adds presence-aware PATCH command arguments on
+    top of Phase 3.3.
+32. **Phase 3.5 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
+    stable.
+33. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after common contracts and
+    codec fixtures, without an artificial Spring dependency.
+34. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
+    parallel after the Jackson 2 writer and their respective Jackson 3 / fixture contracts.
+35. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
+    independently on stable mapping/read contracts and shared domain fixtures (2.19 needs 2.24;
+    2.21 needs 2.14).
+36. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
+    write-policy and read-envelope parity independently (2.20 needs 2.25; 2.22 needs 2.26).
+37. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity after the
+    Jackson 2 document reader (2.17) and flat DTO reader (2.21); does not depend on envelopes (2.22).
+38. **Phase 4.1 — conformance and hardening.**
+39. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
