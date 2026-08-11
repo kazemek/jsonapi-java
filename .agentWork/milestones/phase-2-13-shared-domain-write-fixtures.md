@@ -2,7 +2,12 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `ResourceMapperSpec`  
 > **Dependencies:** Phases 2.2 and 2.11  
-> **Status:** In progress
+> **Status:** Complete  
+> **Note (2026-08-12):** marked Complete by maintainer decision; the final fresh-context review was
+> skipped. The review loop's last finding (Sonar S1192 duplicated `"comments"`) is fixed and
+> verified closed; the two S3398 findings on untouched jackson3 main sources were fixed and are
+> CLOSED/FIXED in the latest Sonar analysis (search-index reporting lagging at the time; treated
+> as down).
 
 ## Goal
 
@@ -312,7 +317,7 @@ without per-major copies.
 
 ## Acceptance criteria
 
-- [ ] The 8 shared models live in the fixed `@NullMarked` Java package
+- [x] The 8 shared models live in the fixed `@NullMarked` Java package
       `io.github.kazemek.jsonapi.testfixtures.domainwrite` under
       `jsonapi-java-test-fixtures/src/main/java/` with no `tools.jackson.*` or
       `com.fasterxml.jackson.databind.*` imports; `Article.author`, `Comment.author`,
@@ -323,7 +328,7 @@ without per-major copies.
       `ConflictArticle`, `AccessCountingArticle`, `AccessCountingFieldsetArticle`, `BaseComment`,
       and `ModeratedComment`) remains local with explicit imports from `domainwrite`, and every
       Java/Groovy test-source reference to a deleted model resolves to the shared package.
-- [ ] A shared flat-write-mapping catalog exposes scenarios with stable ids via
+- [x] A shared flat-write-mapping catalog exposes scenarios with stable ids via
       `DomainWriteScenarios.all()`/`byId(String)`; every entry has exactly one operation, the
       matching typed single/collection input, the correct nullable/non-null envelope state per
       operation, and one discriminated success/failure outcome. Success values are `ResourceObject`
@@ -336,7 +341,7 @@ without per-major copies.
       for to-many linkage expectations while all other relationships use `ORDERED`;
       `ResourceMapperSpec` dispatches by operation rather than scenario id, and the catalog is
       consumed through `DomainWriteScenarios.all()`/`byId(String)`.
-- [ ] Jackson 3 `ResourceMapperSpec` derives its cases from the shared catalog and retains only
+- [x] Jackson 3 `ResourceMapperSpec` derives its cases from the shared catalog and retains only
       the named major-specific cases locally; its coverage assertion records executed scenario
       ids and requires equality with the live catalog ids; the adapter-specific suites
       (`IdentifierConversionSpec`, `ResourceMappingJacksonFeaturesSpec`,
@@ -348,7 +353,7 @@ without per-major copies.
       `CompoundSerializationSpec`, `DomainDocumentReaderSpec`) keeps its behavior unchanged with
       moved-model imports repointed; Phase 2.14 owns the subsequent `ResourceBinderSpec` catalog
       extraction and reuses the Phase 2.13 package/models.
-- [ ] A `TestFixturesDependencyRulesSpec` ArchUnit rule (per ADR-010) fails on any dependency from
+- [x] A `TestFixturesDependencyRulesSpec` ArchUnit rule (per ADR-010) fails on any dependency from
       `io.github.kazemek.jsonapi.testfixtures..` on `tools.jackson..`,
       `com.fasterxml.jackson.databind..`, a major-specific adapter package, or `core.internal..`,
       and imports the package with `ImportOption.Predefined.DO_NOT_INCLUDE_TESTS`;
@@ -359,7 +364,7 @@ without per-major copies.
       scenario through the adapter mapper and assert full-catalog coverage
       `executedScenarioIds == catalogScenarioIds`) is documented in the module docs and made
       mandatory by Phase 2.18.
-- [ ] `jsonapi-java-test-fixtures` adds `api(project(":jsonapi-java-annotations"))`,
+- [x] `jsonapi-java-test-fixtures` adds `api(project(":jsonapi-java-annotations"))`,
       `implementation(libs.jackson.annotations)`, and `testImplementation(libs.archunit)`, and no
       Jackson databind/core production/runtime dependency; the canonical `module-docs` checklist
       passes for the fixed `io.github.kazemek.jsonapi.testfixtures.domainwrite` package map,
@@ -367,7 +372,7 @@ without per-major copies.
       the existing `jsonapi-java-test-fixtures` row in the root `README.md` **Project structure**
       table is refreshed to mention the shared domain-write catalog (no Module registry row, which
       is reserved for published/available modules).
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that
       CI must still pass the gate.
