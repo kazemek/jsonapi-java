@@ -250,24 +250,6 @@ final class MappingDefinitionResolver {
     }
   }
 
-  private static <A extends Annotation> @Nullable A findAnnotationAnywhere(
-      BeanPropertyDefinition propertyDefinition, Class<A> annotationClass) {
-    for (AnnotatedMember member :
-        new AnnotatedMember[] {
-          propertyDefinition.getField(),
-          propertyDefinition.getGetter(),
-          propertyDefinition.getSetter(),
-          propertyDefinition.getConstructorParameter()
-        }) {
-      // Jackson's getAnnotation is not @Nullable-annotated; use hasAnnotation as the presence
-      // check.
-      if (member != null && member.hasAnnotation(annotationClass)) {
-        return member.getAnnotation(annotationClass);
-      }
-    }
-    return null;
-  }
-
   private record RoleAnnotations(
       @Nullable JsonApiId id,
       @Nullable JsonApiAttribute attribute,
@@ -278,6 +260,24 @@ final class MappingDefinitionResolver {
           findAnnotationAnywhere(propertyDefinition, JsonApiId.class),
           findAnnotationAnywhere(propertyDefinition, JsonApiAttribute.class),
           findAnnotationAnywhere(propertyDefinition, JsonApiRelationship.class));
+    }
+
+    private static <A extends Annotation> @Nullable A findAnnotationAnywhere(
+        BeanPropertyDefinition propertyDefinition, Class<A> annotationClass) {
+      for (AnnotatedMember member :
+          new AnnotatedMember[] {
+            propertyDefinition.getField(),
+            propertyDefinition.getGetter(),
+            propertyDefinition.getSetter(),
+            propertyDefinition.getConstructorParameter()
+          }) {
+        // Jackson's getAnnotation is not @Nullable-annotated; use hasAnnotation as the presence
+        // check.
+        if (member != null && member.hasAnnotation(annotationClass)) {
+          return member.getAnnotation(annotationClass);
+        }
+      }
+      return null;
     }
 
     int count() {

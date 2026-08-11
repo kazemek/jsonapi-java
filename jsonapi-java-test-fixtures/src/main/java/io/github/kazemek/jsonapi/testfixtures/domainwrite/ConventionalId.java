@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3.testmodel;
+package io.github.kazemek.jsonapi.testfixtures.domainwrite;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 

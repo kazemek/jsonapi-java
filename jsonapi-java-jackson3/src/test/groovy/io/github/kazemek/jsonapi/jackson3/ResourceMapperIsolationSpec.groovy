@@ -1,10 +1,12 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
-import io.github.kazemek.jsonapi.jackson3.testmodel.Article
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Article
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
+// Adapter-specific: mapper/builder isolation and converter-overload behavior of this major's own
+// factory, deliberately not shared in the domain-write catalog.
 class ResourceMapperIsolationSpec extends Specification {
 
   static class SampleBean {

@@ -1,253 +1,193 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
-import io.github.kazemek.jsonapi.annotation.JsonApiId
-import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
-import io.github.kazemek.jsonapi.annotation.JsonApiResource
+import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.core.model.JsonApiObject
-import io.github.kazemek.jsonapi.core.model.Links
-import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
-import io.github.kazemek.jsonapi.jackson.DocumentEnvelope
-import io.github.kazemek.jsonapi.jackson3.testmodel.Article
-import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithSet
-import io.github.kazemek.jsonapi.jackson3.testmodel.BlogWithJsonProperty
-import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
-import io.github.kazemek.jsonapi.jackson3.testmodel.ConventionalId
-import io.github.kazemek.jsonapi.jackson3.testmodel.Person
-import io.github.kazemek.jsonapi.jackson3.testmodel.Tag
+import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteComparisonPolicy
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteInput
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteOperation
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteOutcome
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenario
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
 class ResourceMapperSpec extends Specification {
 
-  @JsonApiResource(type = "pojos")
-  static class SamplePojo {
-    @JsonApiId String id
-    @JsonApiAttribute(name = "display-name") String name
-    @JsonApiRelationship List<Comment> comments
+  @Shared
+  JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
-    SamplePojo() {}
+  @Shared
+  Set<String> executedScenarioIds = new LinkedHashSet<>()
 
-    SamplePojo(String id, String name, List<Comment> comments) {
-      this.id = id
-      this.name = name
-      this.comments = comments
+  @Unroll
+  def "derives #scenario.id from the shared catalog"() {
+    given:
+    executedScenarioIds.add(scenario.id())
+
+    when:
+    def result = null
+    def thrownException = null
+    try {
+      result = invoke(scenario)
+    } catch (Throwable t) {
+      thrownException = t
+    }
+
+    then:
+    verifyOutcome(scenario, result, thrownException)
+
+    where:
+    scenario << DomainWriteScenarios.all()
+  }
+
+  def "covers every shared domain-write scenario exactly once"() {
+    expect:
+    executedScenarioIds == DomainWriteScenarios.all()*.id as Set
+  }
+
+  private Object invoke(DomainWriteScenario scenario) {
+    switch (scenario.operation()) {
+      case DomainWriteOperation.TO_RESOURCE:
+        return mapper.toResource(singleValue(scenario))
+      case DomainWriteOperation.TO_DOCUMENT:
+        return mapper.toDocument(singleValue(scenario))
+      case DomainWriteOperation.TO_DOCUMENT_WITH_ENVELOPE:
+        return mapper.toDocument(singleValue(scenario), scenario.envelope())
+      case DomainWriteOperation.TO_RESOURCE_COLLECTION:
+        def input = (DomainWriteInput.CollectionInput) scenario.input()
+        return mapper.toResourceCollection(input.supplier().get())
+      default:
+        throw new IllegalArgumentException("Unknown operation: " + scenario.operation())
     }
   }
 
-  def "maps a record with explicit @JsonApiId and @JsonApiAttribute"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def article = new Article("1", "Hello", "Body text", [], null)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    resource.type() == "articles"
-    resource.id() == "1"
-    resource.lid() == null
-    resource.attributes() != null
-    resource.attributes().attributes().title == "Hello"
-    resource.attributes().attributes().get("body-text") == "Body text"
+  private static Object singleValue(DomainWriteScenario scenario) {
+    return ((DomainWriteInput.SingleInput) scenario.input()).supplier().get()
   }
 
-  def "maps attribute name override"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def article = new Article("1", "Title", "Content", [], null)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    resource.attributes().attributes().containsKey("title")
-    resource.attributes().attributes().containsKey("body-text")
+  private static void verifyOutcome(
+      DomainWriteScenario scenario, Object result, Throwable thrownException) {
+    def outcome = scenario.outcome()
+    if (outcome instanceof DomainWriteOutcome.Failure) {
+      assert thrownException != null
+      assert outcome.exception().isInstance(thrownException)
+      return
+    }
+    assert thrownException == null
+    assertSemantics(scenario, (DomainWriteOutcome.Success) outcome, result)
   }
 
-  def "maps conventional id property"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def conventional = new ConventionalId("42", "name value")
-
-    when:
-    def resource = mapper.toResource(conventional)
-
-    then:
-    resource.type() == "conventionals"
-    resource.id() == "42"
+  private static void assertSemantics(
+      DomainWriteScenario scenario, DomainWriteOutcome.Success success, Object result) {
+    def operation = scenario.operation()
+    if (operation == DomainWriteOperation.TO_RESOURCE) {
+      assert result instanceof ResourceObject
+      assertResource(success.resource(), (ResourceObject) result, scenario.comparisonPolicy())
+      return
+    }
+    if (operation == DomainWriteOperation.TO_DOCUMENT || operation == DomainWriteOperation.TO_DOCUMENT_WITH_ENVELOPE || operation == DomainWriteOperation.TO_RESOURCE_COLLECTION) {
+      assert result instanceof JsonApiDocument
+      assertDocument(success.document(), (JsonApiDocument) result, scenario.comparisonPolicy())
+      return
+    }
+    throw new IllegalArgumentException("Unknown operation: " + operation)
   }
 
-  def "maps @JsonProperty naming"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def blog = new BlogWithJsonProperty("b1", "My Blog")
-
-    when:
-    def resource = mapper.toResource(blog)
-
-    then:
-    resource.type() == "blogs"
-    resource.id() == "b1"
-    resource.attributes().attributes().containsKey("blog_title")
+  private static void assertResource(
+      ResourceObject expected, ResourceObject actual, DomainWriteComparisonPolicy policy) {
+    assert actual.type() == expected.type()
+    assert actual.id() == expected.id()
+    assert actual.lid() == expected.lid()
+    assert attributesEqual(expected.attributes(), actual.attributes())
+    assert relationshipsEqual(expected.relationships(), actual.relationships(), policy)
   }
 
-  def "maps nullable to-one relationship to null linkage"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def article = new Article("1", "T", "B", [], null)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    resource.relationships() != null
-    resource.relationships().relationships().containsKey("author")
-    def rel = resource.relationships().relationships().get("author")
-    rel.data() instanceof RelationshipData.NullLinkage
+  private static void assertDocument(
+      JsonApiDocument expected, JsonApiDocument actual, DomainWriteComparisonPolicy policy) {
+    switch (expected.data()) {
+      case DocumentData.SingleResource:
+        assert actual.data() instanceof DocumentData.SingleResource
+        assertResource(
+            ((DocumentData.SingleResource) expected.data()).resource(),
+            ((DocumentData.SingleResource) actual.data()).resource(),
+            policy)
+        break
+      case DocumentData.ResourceCollection:
+        assert actual.data() instanceof DocumentData.ResourceCollection
+        def expectedResources = ((DocumentData.ResourceCollection) expected.data()).resources()
+        def actualResources = ((DocumentData.ResourceCollection) actual.data()).resources()
+        assert actualResources.size() == expectedResources.size()
+        for (int i = 0; i < expectedResources.size(); i++) {
+          assertResource(expectedResources[i], actualResources[i], policy)
+        }
+        break
+      default:
+        throw new IllegalArgumentException("Unsupported expected primary data: " + expected.data())
+    }
+    assert actual.meta() == expected.meta()
+    assert actual.jsonapi() == expected.jsonapi()
+    assert actual.links() == expected.links()
+    assert expected.included() == null
+    assert actual.included() == null
   }
 
-  def "maps to-one relationship to single linkage"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def person = new Person("p1", "Alice")
-    def article = new Article("1", "T", "B", [], person)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    def rel = resource.relationships().relationships().get("author")
-    rel.data() instanceof RelationshipData.SingleLinkage
-    def linkage = (RelationshipData.SingleLinkage) rel.data()
-    linkage.identifier().type() == "people"
-    linkage.identifier().id() == "p1"
+  private static boolean attributesEqual(Attributes expected, Attributes actual) {
+    if (expected == null || actual == null) {
+      return expected == actual
+    }
+    return expected.attributes() == actual.attributes()
   }
 
-  def "maps empty to-many relationship to empty linkage"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def article = new Article("1", "T", "B", [], null)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    def rel = resource.relationships().relationships().get("comments")
-    rel.data() instanceof RelationshipData.IdentifierCollectionLinkage
-    def linkage = (RelationshipData.IdentifierCollectionLinkage) rel.data()
-    linkage.identifiers().isEmpty()
+  private static boolean relationshipsEqual(
+      Relationships expected,
+      Relationships actual,
+      DomainWriteComparisonPolicy policy) {
+    if (expected == null || actual == null) {
+      return expected == actual
+    }
+    assert actual.relationships().keySet() == expected.relationships().keySet()
+    for (Map.Entry<String, Relationship> entry : expected.relationships().entrySet()) {
+      def expectedData = entry.value.data()
+      def actualData = actual.relationships().get(entry.key).data()
+      assert linkageEqual(expectedData, actualData, policy.orderFor(entry.key))
+    }
+    return true
   }
 
-  def "maps populated to-many relationship"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def c1 = new Comment("c1", "Nice", null)
-    def c2 = new Comment("c2", "Great", null)
-    def article = new Article("1", "T", "B", [c1, c2], null)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    def rel = resource.relationships().relationships().get("comments")
-    rel.data() instanceof RelationshipData.IdentifierCollectionLinkage
-    def linkage = (RelationshipData.IdentifierCollectionLinkage) rel.data()
-    linkage.identifiers().size() == 2
-    linkage.identifiers().get(0).type() == "comments"
-    linkage.identifiers().get(0).id() == "c1"
-    linkage.identifiers().get(1).type() == "comments"
-    linkage.identifiers().get(1).id() == "c2"
-  }
-
-  def "maps Set-based to-many relationship"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def tag1 = new Tag("java")
-    def tag2 = new Tag("groovy")
-    def article = new ArticleWithSet("1", "T", [tag1, tag2] as Set)
-
-    when:
-    def resource = mapper.toResource(article)
-
-    then:
-    def rel = resource.relationships().relationships().get("tags")
-    rel.data() instanceof RelationshipData.IdentifierCollectionLinkage
-    def linkage = (RelationshipData.IdentifierCollectionLinkage) rel.data()
-    linkage.identifiers().size() == 2
-  }
-
-  def "maps mutable POJO"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def pojo = new SamplePojo("p1", "Example", [])
-
-    when:
-    def resource = mapper.toResource(pojo)
-
-    then:
-    resource.type() == "pojos"
-    resource.id() == "p1"
-    resource.attributes().attributes().get("display-name") == "Example"
-  }
-
-  def "toDocument wraps resource in single-resource document"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def article = new Article("1", "T", "B", [], null)
-
-    when:
-    def doc = mapper.toDocument(article)
-
-    then:
-    doc.data() != null
-    doc.data() instanceof DocumentData.SingleResource
-  }
-
-  def "toResourceCollection wraps in resource-collection document"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def a1 = new Article("1", "One", "B1", [], null)
-    def a2 = new Article("2", "Two", "B2", [], null)
-
-    when:
-    def doc = mapper.toResourceCollection([a1, a2])
-
-    then:
-    doc.data() != null
-    doc.data() instanceof DocumentData.ResourceCollection
-    def coll = (DocumentData.ResourceCollection) doc.data()
-    coll.resources().size() == 2
-  }
-
-  def "toDocument with envelope passes links, meta, and jsonapi"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def article = new Article("1", "T", "B", [], null)
-    def links = Links.ofLinks([self: null])
-    def meta = Meta.of(["key": "value"])
-    def jsonapi = JsonApiObject.ofVersion("1.1")
-    def envelope = new DocumentEnvelope(links, meta, jsonapi)
-
-    when:
-    def doc = mapper.toDocument(article, envelope)
-
-    then:
-    doc.links() == links
-    doc.meta() == meta
-    doc.jsonapi() == jsonapi
-  }
-
-  def "null input is rejected"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-
-    when:
-    mapper.toResource(null)
-
-    then:
-    thrown(NullPointerException)
+  private static boolean linkageEqual(
+      RelationshipData expected,
+      RelationshipData actual,
+      DomainWriteComparisonPolicy.ComparisonOrder order) {
+    switch (expected) {
+      case RelationshipData.NullLinkage:
+        return actual instanceof RelationshipData.NullLinkage
+      case RelationshipData.SingleLinkage:
+        if (!(actual instanceof RelationshipData.SingleLinkage)) {
+          return false
+        }
+        return ((RelationshipData.SingleLinkage) actual).identifier() == expected.identifier()
+      case RelationshipData.IdentifierCollectionLinkage:
+        if (!(actual instanceof RelationshipData.IdentifierCollectionLinkage)) {
+          return false
+        }
+        def expectedIdentifiers = expected.identifiers()
+        def actualIdentifiers = ((RelationshipData.IdentifierCollectionLinkage) actual).identifiers()
+        if (expectedIdentifiers.size() != actualIdentifiers.size()) {
+          return false
+        }
+        if (order == DomainWriteComparisonPolicy.ComparisonOrder.UNORDERED_IDENTIFIER_PAIRS) {
+          return expectedIdentifiers.toSet() == actualIdentifiers.toSet()
+        }
+        return expectedIdentifiers == actualIdentifiers
+      default:
+        return false
+    }
   }
 }

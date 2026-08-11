@@ -32,9 +32,15 @@ using common diagnostics and shared domain-write fixtures.
   `io.github.kazemek.jsonapi.jackson2`, derived from caller configuration without mutating the
   caller mapper and consuming common diagnostics; wire emission uses the Phase 2.16 writer.
 - Port default/replaceable identifier conversion, attribute serialization, and null/single/
-  collection relationship linkage through common contracts where applicable.
-- Consume the Phase 2.13 flat-mapping scenario catalog to compare produced core resources and stable
-  mapping categories across majors; keep major-specific serializer/mix-in cases adapter-local.
+  collection relationship linkage through common contracts where applicable, and mirror the
+  Jackson 3 negative-diagnostic surface (missing/unsupported identifiers, duplicate roles,
+  member-name collisions, invalid resource types, unsupported relationship collection values,
+  converter failures) through the common `MappingDiagnostic` categories in adapter-local tests.
+- Run every scenario of the shared Phase 2.13 `DomainWriteScenarios` catalog through the Jackson 2
+  mapper and assert full-catalog coverage (`executedScenarioIds == catalogScenarioIds`), mirroring
+  Jackson 3's `ResourceMapperSpec`, to compare produced core resources and stable mapping
+  categories across majors; keep major-specific serializer/mix-in cases adapter-local, documented
+  in the adapter specs.
 - Refresh Jackson 2 module docs/Javadoc, root registry, and conformance notes for write mapping.
 
 ## Non-goals
@@ -55,15 +61,27 @@ using common diagnostics and shared domain-write fixtures.
 
 ## Test strategy
 
-- Parameterize Phase 2.13 flat-mapping scenarios (records/POJOs, naming, ignores, creators,
-  identifiers, linkage, and negative diagnostics) across both majors.
-- Retain adapter-local Jackson 2 cases for major-specific serializers, mix-ins, and mapper isolation.
-- Prove ordinary caller mapper behavior remains unchanged and both major artifacts can coexist.
+- Parameterize the Phase 2.13 flat-mapping scenarios (records/POJOs, naming, identifiers,
+  linkage, document/envelope wrapping, and the null-input rejection) across both majors, and
+  assert full-catalog coverage: the Jackson 2 write suite records executed scenario ids and
+  requires `executedScenarioIds == catalogScenarioIds` against the live catalog. Ignores,
+  creator/Jackson-API-specific cases, and negative diagnostics are covered by adapter-local
+  Jackson 2 cases, not by the shared catalog.
+- Retain adapter-local Jackson 2 cases for major-specific serializers, mix-ins, and mapper
+  isolation, and for the negative mapping-diagnostic contract mirrored from Jackson 3.
+- Prove ordinary caller mapper behavior remains unchanged and both major artifacts can coexist;
+  the Jackson 2 mapping suite also runs under the Phase 2.16 `jackson2CompatibilityTest` gate
+  against the supported Jackson 2.22.x baseline.
 
 ## Acceptance criteria
 
-- [ ] Jackson 2 mapping produces core resources and stable diagnostic categories equivalent to
-      Phase 2.2 for every applicable Phase 2.13 shared scenario.
+- [ ] The Jackson 2 write suite runs every scenario of the shared Phase 2.13 domain-write catalog
+      through its own mapper, and its coverage assertion requires `executedScenarioIds ==
+      catalogScenarioIds`; Jackson 2 mapping produces core resources equivalent to Phase 2.2 for
+      each shared scenario, and its adapter-local negative cases raise the same common
+      `MappingDiagnostic` categories as Jackson 3 (duplicate roles, member-name collisions,
+      invalid resource types, missing/unsupported identifiers, unsupported relationship
+      collection values, converter failures).
 - [ ] Mapping is invoked explicitly through a mapper derived from caller configuration and does
       not change ordinary serialization through the caller's original Jackson 2 mapper;
       relationship mapping never populates `included`.
@@ -71,7 +89,9 @@ using common diagnostics and shared domain-write fixtures.
 - [ ] The canonical `module-docs` checklist passes, including ADR-009 `@NullMarked` /
       `@Nullable DocumentEnvelope` on the public surface, and conformance docs distinguish Jackson 2
       and Jackson 3 mapping support.
-- [ ] `./gradlew :jsonapi-java-jackson2:test --tests '*ResourceMapperSpec'` passes.
+- [ ] `./gradlew :jsonapi-java-jackson2:test --tests '*ResourceMapperSpec'` passes, and the mapping
+      suite also passes under `:jsonapi-java-jackson2:jackson2CompatibilityTest` (Jackson 2.22.x
+      baseline, per Phase 2.16).
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
 - [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI

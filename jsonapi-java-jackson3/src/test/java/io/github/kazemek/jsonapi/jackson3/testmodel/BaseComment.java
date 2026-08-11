@@ -3,6 +3,7 @@ package io.github.kazemek.jsonapi.jackson3.testmodel;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person;
 
 /** Declared comment owner type for polymorphic include-policy tests. */
 @JsonApiResource(type = "comments")
