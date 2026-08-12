@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `ResourceBinderSpec`  
 > **Dependencies:** Phases 2.9, 2.11, 2.13, 2.27, and 2.28  
-> **Status:** In progress
+> **Status:** Complete
 
 ## Goal
 
@@ -293,5 +293,5 @@ surface.
       `io.github.kazemek.jsonapi.testfixtures.domainread` package and its entry points.
 - [x] `./gradlew clean build` passes.
 - [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.
