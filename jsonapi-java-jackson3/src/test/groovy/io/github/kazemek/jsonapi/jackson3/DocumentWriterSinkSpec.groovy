@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 
 import tools.jackson.databind.json.JsonMapper
 
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 
 import spock.lang.Specification
 
@@ -13,7 +13,7 @@ class DocumentWriterSinkSpec extends Specification {
   def "all write sinks emit equivalent JSON and expose bound context"() {
     given:
     def mapper = JsonMapper.builder().build()
-    def fixture = CodecFixtures.byId('single-resource')
+    def fixture = CodecScenarios.byId('single-resource')
     def writer = JsonApiJackson3.writer(mapper, fixture.context)
     def expected = mapper.readTree(writer.writeValueAsString(fixture.document))
 

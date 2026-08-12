@@ -9,7 +9,8 @@ import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.dialect.Dialects
 
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
+import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind
 
 import spock.lang.Shared
@@ -53,7 +54,7 @@ class JsonApiDraftSchemaSpec extends Specification {
   ]
 
   @Shared
-  Path schemaDir = Path.of(System.getProperty("jsonapi.schema.fixtures.dir"))
+  Path schemaDir = FixtureDirectory.schemaFixtures()
 
   @Shared
   JsonMapper mapper = JsonMapper.builder().build()
@@ -87,7 +88,7 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   def "every schema-checked fixture declares a known schema kind"() {
     expect:
-    CodecFixtures.schemaChecked().every { it.schemaKind in SCHEMA_FILE_BY_KIND }
+    CodecScenarios.schemaChecked().every { it.schemaKind in SCHEMA_FILE_BY_KIND }
   }
 
   def "fixture #fixture.id passes the #kind draft schema"() {
@@ -98,7 +99,7 @@ class JsonApiDraftSchemaSpec extends Specification {
     errors.isEmpty()
 
     where:
-    fixture << CodecFixtures.schemaChecked().findAll { it.schemaDisagreement == null }
+    fixture << CodecScenarios.schemaChecked().findAll { it.schemaDisagreement == null }
     kind = fixture.schemaKind
   }
 
@@ -114,7 +115,7 @@ class JsonApiDraftSchemaSpec extends Specification {
     }
 
     where:
-    fixture << CodecFixtures.schemaChecked().findAll { it.schemaDisagreement != null }
+    fixture << CodecScenarios.schemaChecked().findAll { it.schemaDisagreement != null }
   }
 
   def "invalid control #control.file fails the #control.kind schema at #control.path with #control.keyword"() {

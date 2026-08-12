@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.testfixtures.domainwrite;
 
 import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
+import io.github.kazemek.jsonapi.testfixtures.Scenario;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -14,4 +15,5 @@ public record DomainWriteScenario(
     DomainWriteInput input,
     @Nullable DocumentEnvelope envelope,
     DomainWriteOutcome outcome,
-    DomainWriteComparisonPolicy comparisonPolicy) {}
+    DomainWriteComparisonPolicy comparisonPolicy)
+    implements Scenario {}

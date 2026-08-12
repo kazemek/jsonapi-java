@@ -12,6 +12,7 @@ import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
+import io.github.kazemek.jsonapi.testfixtures.FixtureCatalog;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -19,6 +20,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -230,21 +232,27 @@ public final class DomainWriteScenarios {
               DomainWriteOutcome.failure(NullPointerException.class),
               DomainWriteComparisonPolicy.ordered()));
 
+  private static final FixtureCatalog<DomainWriteScenario> CATALOG =
+      FixtureCatalog.of("domain-write", SCENARIOS);
+
   private DomainWriteScenarios() {}
+
+  public static FixtureCatalog<DomainWriteScenario> catalog() {
+    return CATALOG;
+  }
 
   /** The shared catalog in catalog order; the list is immutable. */
   public static List<DomainWriteScenario> all() {
-    return SCENARIOS;
+    return CATALOG.all();
   }
 
   /** Looks up a scenario by its stable id. */
   public static DomainWriteScenario byId(String id) {
-    for (DomainWriteScenario scenario : SCENARIOS) {
-      if (scenario.id().equals(id)) {
-        return scenario;
-      }
-    }
-    throw new IllegalArgumentException("Unknown domain-write scenario: " + id);
+    return CATALOG.byId(id);
+  }
+
+  public static List<DomainWriteScenario> where(Predicate<? super DomainWriteScenario> predicate) {
+    return CATALOG.where(predicate);
   }
 
   private static ResourceObject articleResource(
