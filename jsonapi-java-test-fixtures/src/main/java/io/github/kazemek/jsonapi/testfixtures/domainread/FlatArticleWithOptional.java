@@ -12,4 +12,4 @@ import org.jspecify.annotations.Nullable;
 public record FlatArticleWithOptional(
     @JsonApiId String id,
     @Nullable String title,
-    @JsonApiRelationship @Nullable Optional<ResourceIdentifier> author) {}
+    @JsonApiRelationship Optional<ResourceIdentifier> author) {}

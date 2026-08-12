@@ -34,6 +34,10 @@ public final class DomainReadScenarios {
   private static final String PEOPLE = "people";
   private static final String TITLE = "title";
   private static final String THINGS = "things";
+  private static final String HELLO = "Hello";
+  private static final String MY_BLOG = "My Blog";
+  private static final String REL_AUTHOR_DATA = "/relationships/author/data";
+  private static final String REL_COMMENTS_DATA = "/relationships/comments/data";
 
   private static final String INCLUDED_PRIMARY =
       "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"}}}},\"included\":[{\"type\":\"people\",\"id\":\"p1\",\"attributes\":{\"name\":\"Alice\"}}]}";
@@ -49,7 +53,7 @@ public final class DomainReadScenarios {
                   resource(
                       ARTICLES,
                       "1",
-                      attrs(TITLE, "Hello", "body-text", "Content"),
+                      attrs(TITLE, HELLO, "body-text", "Content"),
                       rels(
                           AUTHOR,
                           single(PEOPLE, "p1"),
@@ -60,7 +64,7 @@ public final class DomainReadScenarios {
               DomainReadExpectation.bound(
                   new FlatArticle(
                       "1",
-                      "Hello",
+                      HELLO,
                       "Content",
                       ResourceIdentifier.of(PEOPLE, "p1"),
                       List.of(
@@ -69,12 +73,11 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "binds mutable POJO",
               DomainReadInput.single(
-                  resource(
-                      ARTICLES, "1", attrs(TITLE, "Hello"), rels(AUTHOR, single(PEOPLE, "p1")))),
+                  resource(ARTICLES, "1", attrs(TITLE, HELLO), rels(AUTHOR, single(PEOPLE, "p1")))),
               FlatMutableArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatMutableArticle("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1")))),
+                  new FlatMutableArticle("1", HELLO, ResourceIdentifier.of(PEOPLE, "p1")))),
           new DomainReadScenario(
               "binds immutable creator-based POJO",
               DomainReadInput.single(resource(ARTICLES, "42", attrs(TITLE, "Creator"), null)),
@@ -85,19 +88,16 @@ public final class DomainReadScenarios {
               "binds inherited properties",
               DomainReadInput.single(
                   resource(
-                      "blogs",
-                      "b1",
-                      attrs("name", "My Blog", "description", "A description"),
-                      null)),
+                      "blogs", "b1", attrs("name", MY_BLOG, "description", "A description"), null)),
               FlatInheritedBlog.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
-              DomainReadExpectation.bound(new FlatInheritedBlog("b1", "My Blog", "A description"))),
+              DomainReadExpectation.bound(new FlatInheritedBlog("b1", MY_BLOG, "A description"))),
           new DomainReadScenario(
               "binds @JsonProperty named attribute",
-              DomainReadInput.single(resource("blogs", "b1", attrs("blog_title", "My Blog"), null)),
+              DomainReadInput.single(resource("blogs", "b1", attrs("blog_title", MY_BLOG), null)),
               BlogWithJsonProperty.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
-              DomainReadExpectation.bound(new BlogWithJsonProperty("b1", "My Blog"))),
+              DomainReadExpectation.bound(new BlogWithJsonProperty("b1", MY_BLOG))),
           new DomainReadScenario(
               "@JsonIgnore property is not bound",
               DomainReadInput.single(
@@ -201,8 +201,7 @@ public final class DomainReadScenarios {
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
-                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
-                  "/relationships/author/data")),
+                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH, REL_AUTHOR_DATA)),
           new DomainReadScenario(
               "empty collection linkage on to-many binds empty collection",
               DomainReadInput.single(
@@ -308,8 +307,7 @@ public final class DomainReadScenarios {
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
-                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
-                  "/relationships/comments/data")),
+                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH, REL_COMMENTS_DATA)),
           new DomainReadScenario(
               "single linkage on to-many is a cardinality mismatch",
               DomainReadInput.single(
@@ -317,8 +315,7 @@ public final class DomainReadScenarios {
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
-                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
-                  "/relationships/comments/data")),
+                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH, REL_COMMENTS_DATA)),
           new DomainReadScenario(
               "empty collection linkage on to-one is a cardinality mismatch",
               DomainReadInput.single(
@@ -333,8 +330,7 @@ public final class DomainReadScenarios {
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
-                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
-                  "/relationships/author/data")),
+                  MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH, REL_AUTHOR_DATA)),
           new DomainReadScenario(
               "NullLinkage on Optional to-one binds empty Optional",
               DomainReadInput.single(
@@ -370,7 +366,7 @@ public final class DomainReadScenarios {
               FlatPersonArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
-                  MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, "/relationships/author/data")),
+                  MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, REL_AUTHOR_DATA)),
           new DomainReadScenario(
               "unregistered to-many relationship target is UNSUPPORTED_RELATIONSHIP_TARGET",
               DomainReadInput.single(
@@ -379,8 +375,7 @@ public final class DomainReadScenarios {
               FlatCommentArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
-                  MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
-                  "/relationships/comments/data")),
+                  MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, REL_COMMENTS_DATA)),
           new DomainReadScenario(
               "identifier parse exception is IDENTIFIER_CONVERSION_FAILED at /id",
               DomainReadInput.single(resource(ARTICLES, "42", null, null)),
