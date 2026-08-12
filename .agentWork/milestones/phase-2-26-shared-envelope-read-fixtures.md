@@ -83,8 +83,9 @@ parity without forcing every codec fixture into DTO binding.
   it; zero or more input documents (a referenced codec scenario id, or a named binding-variant
   document from the inventory below), with a per-input discriminated expectation for multi-input
   scenarios (each input's expected diagnostic or bound values are pinned individually, as the
-  three-input binder-failure scenario requires); the target DTO `Class`(es); a reader-context
-  discriminator; and a discriminated expectation — expected envelope values
+  three-input binder-failure scenario requires). Document-binding variants carry the target DTO
+  `Class`(es), the entry-point discriminator, a reader-context discriminator, and a discriminated
+  expectation — expected envelope values
   (primary data, included order and identity, errors, jsonapi object, links, meta, with
   absent versus null states `@Nullable`), registration outcomes, or a failure diagnostic joined to
   the document pointer — all version-neutral core/common values. A mutation-safety expectation
@@ -96,7 +97,10 @@ parity without forcing every codec fixture into DTO binding.
   classes and per-group expected registration outcomes — for the three-case registration
   scenario: `MISSING_RESOURCE_ANNOTATION` for the missing-annotation target and
   `INVALID_RESOURCE_TYPE` for each of the two invalid-annotation targets, each with its
-  `resourceClass` — with no input documents and no reader-context discriminator. Multi-input
+  `resourceClass` — with no input documents, entry-point discriminator, or reader-context
+  discriminator. The catalog integrity tests assert these per-variant field invariants
+  (document-binding variants require `entryPoint` and `readerContext`; registry variants omit
+  both). Multi-input
   scenarios carry all
   their input documents in one scenario (one executed id per scenario, not per input). The
   reader-context discriminator is pinned for Phase 2.22 parity: codec-fixture-referencing inputs
@@ -148,7 +152,9 @@ parity without forcing every codec fixture into DTO binding.
 - Refactor Jackson 3 `DomainDocumentReaderSpec` to consume the catalog with a full-catalog coverage
   assertion (`executedScenarioIds == catalogScenarioIds`) while retaining adapter-local
   configuration cases.
-- Add catalog integrity tests for unique ids, resolvable documents/variants, and the
+- Add catalog integrity tests for unique ids, resolvable documents/variants, the per-variant
+  field invariants (document-binding variants require `entryPoint` and `readerContext`;
+  registry variants omit both), and the
   `FixtureCatalog` contract.
 - Use `module-docs` for the `jsonapi-java-test-fixtures` envelope-read package map and agent notes,
   and update the `fixtures/jsonapi-1.1/README.md` layout for the new

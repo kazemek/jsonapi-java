@@ -123,7 +123,7 @@ which annotated DTO properties the client requested to change.
   the shared catalog. Each `PatchScenario` carries: one stable id, one neutral wire document (or a
   supplier of it), the target DTO `Class` (shared from `domainwrite`/`domainread`; the
   `domainpatch` package may add PATCH-specific DTO entries when that set is insufficient for the
-  closed inventory), an optional `@Nullable` expected endpoint identity, and a
+  initial shared inventory), an optional `@Nullable` expected endpoint identity, and a
   discriminated expectation — either the expected ordered attribute-then-relationship changes
   (typed values from shared DTO property types with explicit null/presence states, keyed by final
   JSON:API name) or an expected diagnostic code with its pointer in the pinned space —

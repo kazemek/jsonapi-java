@@ -115,11 +115,13 @@ sources are single-language (Java) and every consumer compiles and passes withou
 - Catalog specs keep `JsonSlurper` in test scope so the production loader is cross-checked
   against an independent parse.
 - NullAway enforces `@NullMarked`/`@Nullable` on the converted Java main sources.
-- Per-fixture capability-flag equality (`writable`/`readable`/`assertExactUtf8`/
-  `assertHreflangArray`) is verified by the fresh-context milestone review's diff check of the
-  converted case classes against the deleted Groovy sources (the conversion is mechanical; the
-  catalog specs' capability selections and the adapter suites exercise the flags at runtime, but
-  no spec asserts per-fixture flag equality, and the catalog specs run unchanged by design).
+- Fixture-equivalence is machine-verified by a one-time `CodecFixtureConversionEquivalenceSpec`
+  (test scope only; the existing catalog specs and the 5 adapter specs run unchanged): an
+  ordered expected id list transcribed from the Groovy sources within the conversion commit,
+  plus per-id checks for the capability flags (`writable`/`readable`/`assertExactUtf8`/
+  `assertHreflangArray`), `schemaKind`, `notes`, `toString() == id`, and catalog ordering across
+  all fixtures. The fresh-context milestone review's diff check of the converted case classes
+  against the deleted Groovy sources remains the secondary check.
 
 ## Acceptance criteria
 
@@ -128,10 +130,10 @@ sources are single-language (Java) and every consumer compiles and passes withou
       allowed in `src/test` for Spock specifications; `groovy-all` is test-scope only.
 - [ ] All codec fixture ids, expected paths, and diagnostics semantics
       are identical to the Groovy version, proven by the 3 catalog specs and 5 jackson3 specs
-      passing with zero source changes. Notes, `toString() == id`, and per-fixture capability
-      flags are verified by the fresh-context milestone review's diff check of the converted
-      sources against the deleted Groovy originals (the capability selections and the adapter
-      suites exercise the flags at runtime; no spec asserts per-fixture flag equality). The
+      passing with zero source changes. Notes, `toString() == id`, per-fixture capability flags,
+      and catalog ordering are machine-verified by the one-time
+      `CodecFixtureConversionEquivalenceSpec` (ordered expected id list plus per-id metadata);
+      the fresh-context diff review is the secondary check. The
       corpus README's `CodecFixture.of(...)` workflow text becomes stale at this milestone (the
       factory is replaced) and is rewritten by Phase 2.28's doc-sweep.
 - [ ] The negative manifest loads through the JSON-P loader with an identical case set;

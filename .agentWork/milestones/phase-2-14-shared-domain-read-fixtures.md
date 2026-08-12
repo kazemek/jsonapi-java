@@ -210,8 +210,10 @@ surface.
   the moved `FlatArticle`/`FlatLidArticle` shared types, keeping its behavior unchanged (the Phase
   2.13 repoint pattern). Record executed ids and require exact full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`), mirroring the Phase 2.13/2.18 write-suite rule.
-  After the repoints land, the moved `testmodel` files and nested spec classes are deleted from
-  the jackson3 test sources (the Phase 2.13 deletion precedent).
+  After the repoints land, the moved `testmodel` files and the nested classes belonging to the
+  moved DTOs are deleted from the jackson3 test sources (the Phase 2.13 deletion precedent); the
+  adapter-local fixtures and helpers listed above (including `UppercaseDeserializer`) are
+  retained.
   The reviewable-unit contract is the explicit two-commit sequence: commit 1 = DTO move +
   repoints with a green build (import-only, behavior unchanged); commit 2 = the catalog plus
   `ResourceBinderSpec` refactor. The milestone review verifies the pair as one unit, checking the

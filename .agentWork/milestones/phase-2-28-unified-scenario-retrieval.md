@@ -47,8 +47,10 @@ vocabulary work: its eight property-read sites live in exactly the files this mi
   in the root package and cannot reach package-private members of the `codec`/`domainwrite`
   packages) returns the same instance. The public statics are delegation shims kept for the
   untouched domain-write consumers (`ResourceMapperSpec`, `DomainWriteScenariosCatalogSpec`);
-  the facade plus the shared contract is the canonical retrieval surface for migrated and future
-  consumers. Migrated consumers (the 5 jackson3 specs and the 3 codec catalog specs, renamed with
+  the facade plus the shared contract is the canonical retrieval API for future consumers and
+  catalogs, while migrated consumers repoint to the renamed static catalogs as accessor swaps
+  only (and may move onto the facade later); the facade is exercised by the facade spec.
+  Migrated consumers (the 5 jackson3 specs and the 3 codec catalog specs, renamed with
   the vocabulary: `CodecScenariosCatalogSpec`, `NegativeCodecScenariosCatalogSpec`,
   `AmbiguousPrimaryDataScenariosCatalogSpec`) repoint to the renamed static catalogs — accessor
   swaps only; the facade is exercised by the facade spec. The retrieval hierarchy is explicit:
@@ -79,9 +81,10 @@ vocabulary work: its eight property-read sites live in exactly the files this mi
 
 - Add the common contract in `io.github.kazemek.jsonapi.testfixtures`: `Scenario` (`id()`, and a
   `default notes()` returning the id, so `DomainWriteScenario` — which has no notes component —
-  implements the contract unchanged) and `FixtureCatalog<T extends Scenario>` (`all()`,
-  `byId(String)`, `where(Predicate<? super T>)` returning an immutable `List<T>`, so Spock data
-  pipes and Groovy collection chains on filtered results migrate as accessor swaps). Unknown
+  implements the contract unchanged) and `FixtureCatalog<T extends Scenario>` with the explicit
+  signatures `List<T> all()` (immutable), `T byId(String)` (throws `IllegalArgumentException`
+  for unknown ids), and `List<T> where(Predicate<? super T>)` (immutable), so Spock data
+  pipes and Groovy collection chains on filtered results migrate as accessor swaps. Unknown
   `byId` ids throw `IllegalArgumentException` with the single shared message format
   `Unknown <area> scenario id: <id>`, with the four area labels pinned as
   `Unknown codec scenario id:`, `Unknown negative-codec scenario id:`,
