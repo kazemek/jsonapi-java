@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` main sources (`io.github.kazemek.jsonapi.testfixtures.codec` and `.codec.cases`), build configuration, ADR-010  
 > **Dependencies:** Phases 2.12 and 2.13  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -125,10 +125,10 @@ sources are single-language (Java) and every consumer compiles and passes withou
 
 ## Acceptance criteria
 
-- [ ] No `src/main/groovy` sources remain in `jsonapi-java-test-fixtures`; no other
+- [x] No `src/main/groovy` sources remain in `jsonapi-java-test-fixtures`; no other
       production/main-source Groovy remains anywhere else in the repository; Groovy remains
       allowed in `src/test` for Spock specifications; `groovy-all` is test-scope only.
-- [ ] All codec fixture ids, expected paths, and diagnostics semantics
+- [x] All codec fixture ids, expected paths, and diagnostics semantics
       are identical to the Groovy version, proven by the 3 catalog specs and 5 jackson3 specs
       passing with zero source changes. Notes, `toString() == id`, per-fixture capability flags,
       and catalog ordering are machine-verified by the one-time
@@ -136,20 +136,20 @@ sources are single-language (Java) and every consumer compiles and passes withou
       the fresh-context diff review is the secondary check. The
       corpus README's `CodecFixture.of(...)` workflow text becomes stale at this milestone (the
       factory is replaced) and is rewritten by Phase 2.28's doc-sweep.
-- [ ] The negative manifest loads through the JSON-P loader with an identical case set;
+- [x] The negative manifest loads through the JSON-P loader with an identical case set;
       `AmbiguousPrimaryDataCases` remains an explicit Java catalog, and the catalog specs still
       cross-check both manifests independently via `JsonSlurper`.
-- [ ] NullAway and `RequireExplicitNullMarking` pass on the converted sources; nullable members
+- [x] NullAway and `RequireExplicitNullMarking` pass on the converted sources; nullable members
       are typed `@Nullable`; `toString()` returns `id`; map insertion order is preserved for
       member-order-sensitive fixtures.
-- [ ] ADR-010 and `TestFixturesDependencyRulesSpec` are amended (no `groovy..` /
+- [x] ADR-010 and `TestFixturesDependencyRulesSpec` are amended (no `groovy..` /
       `org.codehaus.groovy..` allowlist entries; `jakarta.json..` / `org.eclipse.parsson..`
       added) and the ArchUnit spec passes.
-- [ ] JSON-P dependencies are declared in `gradle/libs.versions.toml`, the
+- [x] JSON-P dependencies are declared in `gradle/libs.versions.toml`, the
       `jsonapi-java-test-fixtures` build no longer has a main-scope Groovy dependency, and
       `gradle/verification-metadata.xml` is regenerated.
-- [ ] The canonical `module-docs` checklist passes for the changed test-fixtures package maps and
+- [x] The canonical `module-docs` checklist passes for the changed test-fixtures package maps and
       entry points.
-- [ ] `./gradlew clean build` passes; Spotless passes (`./gradlew spotlessApply` then
+- [x] `./gradlew clean build` passes; Spotless passes (`./gradlew spotlessApply` then
       `./gradlew spotlessCheck`); Sonar Quality Gate passes — if `SONAR_TOKEN` is unavailable,
       report Sonar blocked and that CI must still pass the gate.

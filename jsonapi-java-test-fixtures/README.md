@@ -1,14 +1,14 @@
 # jsonapi-java-test-fixtures
 
-Internal Groovy and Java module holding the shared fixture builders, capability metadata, catalog
-loaders, and version-neutral [JSON:API 1.1 document corpus](../fixtures/jsonapi-1.1/README.md).
-Not a published module; Jackson 3 (and later Jackson 2) contract tests consume it.
+Internal Java module holding the shared fixture builders, capability metadata, catalog loaders, and
+version-neutral [JSON:API 1.1 document corpus](../fixtures/jsonapi-1.1/README.md). Not a published
+module; Jackson 3 (and later Jackson 2) contract tests consume it.
 
 ## Packages
 
 | Package                                                        | Role                                                               |
 |----------------------------------------------------------------|--------------------------------------------------------------------|
-| `io.github.kazemek.jsonapi.testfixtures.codec`                 | `CodecFixture` capability metadata, `CodecFixtures` catalog, `AmbiguousPrimaryDataCases`, manifest-backed `NegativeCodecCases`, `SchemaKind` / `SchemaDisagreement` |
+| `io.github.kazemek.jsonapi.testfixtures.codec`                 | `CodecFixture` capability metadata, `CodecFixtures` catalog, `AmbiguousPrimaryDataCases`, JSON-P-backed `NegativeCodecCases`, `SchemaKind` / `SchemaDisagreement` |
 | `io.github.kazemek.jsonapi.testfixtures.codec.cases`           | One fixture case class per corpus entry (explicit list; no classpath scanning) |
 | `io.github.kazemek.jsonapi.testfixtures.domainwrite`           | Shared flat domain-to-resource write fixtures: annotated domain models plus the `DomainWriteScenarios` catalog and the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types |
 
@@ -44,6 +44,8 @@ fixture phases (2.14–2.15, 2.24–2.26); the flat write catalog is complete as
 
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Conformance checklist](../docs/conformance.md)
+- [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
+- [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
@@ -66,22 +68,26 @@ fixture phases (2.14–2.15, 2.24–2.26); the flat write catalog is complete as
   `primaryDataKind`, `assertExactUtf8`, `assertHreflangArray`, `schemaDisagreement`) instead of
   maintaining independent hard-coded id lists. Adapter write suites dispatch on the
   `DomainWriteOperation`/`DomainWriteInput` descriptor, never on scenario ids.
-- **Negative corpus:** `NegativeCodecCases` loads `negative-manifest.json`; the closed case set is
-  enforced by `NegativeCodecCasesCatalogSpec`. Category and rule-code values are manifest strings;
-  adapters map them onto their own enums.
+- **Negative corpus:** `NegativeCodecCases` loads `negative-manifest.json` with JSON-P (Jakarta
+  JSON Processing + Parsson); the closed case set is enforced by `NegativeCodecCasesCatalogSpec`.
+  Category and rule-code values are manifest strings; adapters map them onto their own enums.
+  Catalog specs still cross-check the manifest independently via `JsonSlurper`.
 - **Ambiguous primary data:** `AmbiguousPrimaryDataCases` holds both expected models per case;
   these are valid dual-success documents, never failure fixtures.
 - **Major-neutral boundary:** production types under `io.github.kazemek.jsonapi.testfixtures..`
   never depend on `tools.jackson..`, `com.fasterxml.jackson.databind..`, a major-specific adapter
-  package, or `core.internal..`; `TestFixturesDependencyRulesSpec` (ArchUnit, per ADR-010)
-  enforces this on main bytecode — do not replace it with a source-import scan.
+  package, `core.internal..`, or Groovy; `TestFixturesDependencyRulesSpec` (ArchUnit, per ADR-010)
+  enforces this on main bytecode — do not replace it with a source-import scan. JSON-P
+  (`jakarta.json..` / `org.eclipse.parsson..`) is allowed for the negative-manifest loader.
 - **Null-bearing write models:** `Article.author`, `Comment.author`, `Person.name`,
   `Comment.body`, and `SamplePojo.{id, name, comments}` are `@Nullable` under the `@NullMarked`
   `domainwrite` package (ADR-009); expected outcomes still hold non-null core values unless the
   scenario exercises an explicit null state.
+- **Nullness:** Production packages are `@NullMarked` (JSpecify). Use `@Nullable` for catalog
+  members that are absent (`CodecFixture.primaryDataKind`, `schemaKind`, `schemaDisagreement`,
+  `exactUtf8Path`; `NegativeCodecCase.pointer`, `ruleCode`). Groovy tests are not annotated.
 - **Extension workflow (Jackson 2):** a new adapter suite runs every scenario of the shared
   domain-write catalog through its own resource mapper and asserts full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite (mandatory per
   Phase 2.18); Jackson-API-specific behavior (mix-ins, serializers, naming strategies, converter
   wiring) stays in adapter-local specs, documented there.
-- **Nullness:** Groovy sources are not annotated (ADR-009 applies to Java production packages).

@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (Phase 2.1 implements jackson3 allowlist and `core.internal` ban); 2026-08-10 (Phase 2.11 registers the jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (Phase 2.13 registers the test-fixtures allowlist for the shared domain-write fixtures)
+**Amended:** 2026-07-30 (Phase 2.1 implements jackson3 allowlist and `core.internal` ban); 2026-08-10 (Phase 2.11 registers the jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (Phase 2.13 registers the test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (Phase 2.27 replaces Groovy codec fixtures with Java and JSON-P)
 
 ## Context
 
@@ -29,15 +29,15 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
     `tools.jackson..`. Production sources must not depend on
     `io.github.kazemek.jsonapi.core.internal..` or `com.fasterxml.jackson..`.
   - `io.github.kazemek.jsonapi.testfixtures..` → `java..`, `org.jspecify.annotations..`,
-    `groovy..`, `org.codehaus.groovy..`, `io.github.kazemek.jsonapi.annotation..`,
+    `jakarta.json..`, `org.eclipse.parsson..`, `io.github.kazemek.jsonapi.annotation..`,
     `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`,
     `io.github.kazemek.jsonapi.jackson..`, other `io.github.kazemek.jsonapi.testfixtures..`
-    types, and `com.fasterxml.jackson.annotation..`. The `groovy..` /
-    `org.codehaus.groovy..` entries cover the module's compiled Groovy bytecode (`codec`
-    catalog). Production sources must not depend on `tools.jackson..`,
+    types, and `com.fasterxml.jackson.annotation..`. The `jakarta.json..` /
+    `org.eclipse.parsson..` entries cover the JSON-P loader for `negative-manifest.json`.
+    Production sources must not depend on `tools.jackson..`,
     `com.fasterxml.jackson.databind..`, a major-specific adapter package (`jackson2..`,
-    `jackson3..`), or `core.internal..`; this keeps the shared domain-write fixtures
-    major-neutral without a source-import scan.
+    `jackson3..`), `core.internal..`, `groovy..`, or `org.codehaus.groovy..`; this keeps the
+    shared fixtures major-neutral and confines Groovy to test sources.
 - Major-specific Jackson 2 allowlist (when registered):
   - `io.github.kazemek.jsonapi.jackson2..` → JDK, JSpecify, core public packages, annotations,
     module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's
