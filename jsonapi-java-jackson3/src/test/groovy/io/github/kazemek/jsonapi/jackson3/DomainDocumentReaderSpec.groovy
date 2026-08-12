@@ -31,8 +31,9 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.FlatStrictArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.InvalidResourceType
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixture
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
+import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -989,15 +990,15 @@ class DomainDocumentReaderSpec extends Specification {
 
   // Helpers
 
-  private final Path fixturesDir = Path.of(System.getProperty('jsonapi.fixtures.dir'))
+  private final Path fixturesDir = FixtureDirectory.jsonApiFixtures()
 
   private String fixtureText(String id) {
-    CodecFixture fixture = CodecFixtures.byId(id)
+    CodecScenario fixture = CodecScenarios.byId(id)
     Files.readString(fixturesDir.resolve(fixture.expectedPath), StandardCharsets.UTF_8)
   }
 
   private static JsonApiDomainDocumentReader fixtureReader(String id, Class<?>... targetClasses) {
-    CodecFixture fixture = CodecFixtures.byId(id)
+    CodecScenario fixture = CodecScenarios.byId(id)
     JsonApiJackson3.domainDocumentReader(
         JsonMapper.builder().build(),
         DocumentReadContext.of(fixture.context, PrimaryDataKind.RESOURCE),

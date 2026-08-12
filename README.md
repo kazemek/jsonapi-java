@@ -32,7 +32,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 | `jsonapi-java-annotations/`    | Dependency-free domain-mapping annotations                                                       |
 | `jsonapi-java-jackson3/`       | Jackson 3 document codec, domain-to-resource mapping, flat DTO reads, and typed domain envelopes |
 | `jsonapi-java-jackson-common/` | Jackson-major-neutral policy, diagnostic, context, and envelope contracts                       |
-| [`jsonapi-java-test-fixtures/`](jsonapi-java-test-fixtures/README.md) | Internal shared fixture builders and catalogs, including the shared domain-write catalog (not a published module) |
+| [`jsonapi-java-test-fixtures/`](jsonapi-java-test-fixtures/README.md) | Internal shared scenario catalogs and fixture builders, including the shared domain-write catalog (not a published module) |
 | `fixtures/jsonapi-1.1/`        | Version-neutral canonical JSON:API document fixtures for codec parity                            |
 | `build-logic/`                 | Shared Gradle convention plugins                                                                 |
 | `docs/`                        | Vision statement and architecture decision records                                               |

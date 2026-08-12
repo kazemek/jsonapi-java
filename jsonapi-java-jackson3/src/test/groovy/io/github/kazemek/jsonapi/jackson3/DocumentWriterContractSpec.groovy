@@ -7,7 +7,8 @@ import java.nio.file.Path
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
+import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
+import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -15,7 +16,7 @@ import spock.lang.Specification
 class DocumentWriterContractSpec extends Specification {
 
   @Shared
-  Path fixturesDir = Path.of(System.getProperty("jsonapi.fixtures.dir"))
+  Path fixturesDir = FixtureDirectory.jsonApiFixtures()
 
   @Shared
   JsonMapper mapper = JsonMapper.builder().build()
@@ -35,7 +36,7 @@ class DocumentWriterContractSpec extends Specification {
     new String(asBytes, StandardCharsets.UTF_8) == asString
 
     where:
-    fixture << CodecFixtures.writable()
+    fixture << CodecScenarios.writable()
   }
 
   def "emits exact UTF-8 for #fixture.id"() {
@@ -47,7 +48,7 @@ class DocumentWriterContractSpec extends Specification {
     writer.writeValueAsString(fixture.document) == expected
 
     where:
-    fixture << CodecFixtures.exactUtf8()
+    fixture << CodecScenarios.exactUtf8()
   }
 
   def "emits array-form hreflang for #fixture.id"() {
@@ -60,7 +61,7 @@ class DocumentWriterContractSpec extends Specification {
     !json.contains('"hreflang":"en"')
 
     where:
-    fixture << CodecFixtures.hreflangArray()
+    fixture << CodecScenarios.hreflangArray()
   }
 
   private JsonNode readFixtureJson(String relativePath) {

@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` main sources and all fixture consumers (jackson3 specs, test-fixtures catalog specs)  
 > **Dependencies:** Phases 2.12, 2.13, and 2.27  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -169,13 +169,13 @@ vocabulary work: its eight property-read sites live in exactly the files this mi
 
 ## Acceptance criteria
 
-- [ ] `Scenario` and `FixtureCatalog<T>` exist in `io.github.kazemek.jsonapi.testfixtures`; all
+- [x] `Scenario` and `FixtureCatalog<T>` exist in `io.github.kazemek.jsonapi.testfixtures`; all
       four catalogs expose the contract (public static `all()`, `byId(String)`, and
       `where(Predicate)` delegating to a private `FixtureCatalog` instance reachable via a public
       static `catalog()` accessor) and every entry has an `id()`; unknown `byId` ids fail with
       `IllegalArgumentException` carrying the shared message format, asserted verbatim by all
       three renamed catalog specs and by the facade spec for domain-write.
-- [ ] All renames are complete: no references to `CodecFixture`, `CodecFixtures`,
+- [x] All renames are complete: no references to `CodecFixture`, `CodecFixtures`,
       `NegativeCodecCase(s)`, `AmbiguousPrimaryDataCase(s)`, or the `…Case` builders remain in
       main sources, test sources, or the deliverable-5 documentation paths (test-fixtures module
       README, `docs/conformance.md`, `fixtures/jsonapi-1.1/README.md`, and the changed
@@ -188,18 +188,18 @@ vocabulary work: its eight property-read sites live in exactly the files this mi
       side is identity, not a cross-check — while the ambiguous catalog's notes are preserved
       as-is, legitimately diverging from `ambiguous-manifest.json`, which serves the spec's
       independent cross-check only).
-- [ ] `JsonApiFixtures` exposes the four typed catalog accessors and capability filtering works
+- [x] `JsonApiFixtures` exposes the four typed catalog accessors and capability filtering works
       via `where`.
-- [ ] `FixtureDirectory` centralizes both directory properties; main sources and specs read
+- [x] `FixtureDirectory` centralizes both directory properties; main sources and specs read
       `jsonapi.fixtures.dir` / `jsonapi.schema.fixtures.dir` only through `FixtureDirectory` — no
       other direct `System.getProperty` reads of those two properties remain; missing-property
       errors are tested.
-- [ ] All consumers are migrated (5 jackson3 specs, 3 catalog specs); `ResourceMapperSpec`'s
+- [x] All consumers are migrated (5 jackson3 specs, 3 catalog specs); `ResourceMapperSpec`'s
       operation dispatch and full-catalog coverage assertion are intact.
-- [ ] Main sources remain Java-only `@NullMarked`; ArchUnit and NullAway pass with no `groovy..`
+- [x] Main sources remain Java-only `@NullMarked`; ArchUnit and NullAway pass with no `groovy..`
       or `org.codehaus.groovy..` allowlist entries.
-- [ ] The canonical `module-docs` checklist passes for the changed test-fixtures package map,
+- [x] The canonical `module-docs` checklist passes for the changed test-fixtures package map,
       entry points, and the new root-package contract types.
-- [ ] `./gradlew clean build` passes; Spotless passes (`./gradlew spotlessApply` then
+- [x] `./gradlew clean build` passes; Spotless passes (`./gradlew spotlessApply` then
       `./gradlew spotlessCheck`); Sonar Quality Gate passes — if `SONAR_TOKEN` is unavailable,
       report Sonar blocked and that CI must still pass the gate.

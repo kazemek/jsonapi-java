@@ -19,10 +19,10 @@ symmetry.
 
 Model builders, capability metadata, and validation contexts live in the internal Gradle module
 `jsonapi-java-test-fixtures` (`io.github.kazemek.jsonapi.testfixtures.codec`), not in this tree.
-`CodecFixture` carries the capability metadata (write, read, schema kind, primary-data kind,
-exact-byte policy, canonical `hreflang`, and known draft-schema disagreement), `CodecFixtures`
-exposes capability selections, `AmbiguousPrimaryDataCases` holds the dual-success models, and
-`NegativeCodecCases` loads the manifest-backed negative corpus.
+`CodecScenario` carries the capability metadata (write, read, schema kind, primary-data kind,
+exact-byte policy, canonical `hreflang`, and known draft-schema disagreement), `CodecScenarios`
+exposes capability selections, `AmbiguousPrimaryDataScenarios` holds the dual-success models, and
+`NegativeCodecScenarios` loads the manifest-backed negative corpus.
 
 ## Capabilities
 
@@ -46,10 +46,10 @@ capability instead of maintaining independent hard-coded id lists:
 
 1. Add pretty expected JSON under `documents/`.
 2. Add a row to `manifest.json` (same order as the catalog list).
-3. Add a readable case class under
-   `jsonapi-java-test-fixtures/.../codec/cases/` that returns `CodecFixture.of(...)` with the
-   applicable capabilities.
-4. Register the case in `CodecFixtures` (explicit list; no classpath scanning).
+3. Add a scenario class under
+   `jsonapi-java-test-fixtures/.../codec/cases/` that returns `CodecScenario.of(...)` (or
+   `new CodecScenario(...)` when defaults do not apply) with the applicable capabilities.
+4. Register the scenario in `CodecScenarios` (explicit list; no classpath scanning).
 5. If exact member order matters, add a `.compact.json` sibling and set `assertExactUtf8` /
    `exactUtf8Path` on the fixture.
 6. If the document intentionally fails the pinned draft schema, record the disagreement in
@@ -66,10 +66,10 @@ must fail to read and their version-neutral expected diagnostics. Each case reco
 failure category, JSON Pointer, and core `ValidationRuleCode` — each only when present (codec-only
 failures such as `MALFORMED_JSON` have null pointer or rule code) — plus a `sourceLocation` flag
 for assertions that are parser-specific and must be tagged, not copied. The intentionally closed
-case set itself is additionally pinned by `NegativeCodecCasesCatalogSpec`, so accidental additions
+case set itself is additionally pinned by `NegativeCodecScenariosCatalogSpec`, so accidental additions
 or removals fail the integrity suite. Adapter tests map the category/rule-code strings onto their
 own enums and keep any exact source-location details adapter-local. Never add or remove a negative
-case id without updating the closed inventory in `NegativeCodecCasesCatalogSpec`.
+case id without updating the closed inventory in `NegativeCodecScenariosCatalogSpec`.
 
 ## Ambiguous primary data
 

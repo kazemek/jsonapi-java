@@ -136,7 +136,7 @@ milestone file.
 - [Phase 2.25 — Shared Sparse-Fieldset Write Test Fixtures](phase-2-25-shared-sparse-fieldset-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `SparseFieldsetSpec` — Not started
 - [Phase 2.26 — Shared Typed Envelope Read Test Fixtures](phase-2-26-shared-envelope-read-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `DomainDocumentReaderSpec` — Not started
 - [Phase 2.27 — Java Codec Fixture Contract](phase-2-27-java-codec-fixture-contract.md) — fixtures / `jsonapi-java-test-fixtures` / ADR-010 — Complete
-- [Phase 2.28 — Unified Scenario Retrieval](phase-2-28-unified-scenario-retrieval.md) — fixtures / `jsonapi-java-test-fixtures` / jackson3 specs — Not started
+- [Phase 2.28 — Unified Scenario Retrieval](phase-2-28-unified-scenario-retrieval.md) — fixtures / `jsonapi-java-test-fixtures` / jackson3 specs — Complete
 - [Phase 3.1 — Optional Query-Parameter Parser](phase-3-1-query-parameters.md) — `jsonapi-java-query` — Not started
 - [Phase 3.2 — Spring WebMVC Adapter](phase-3-2-spring-webmvc.md) — `jsonapi-java-spring-webmvc` — Not started
 - [Phase 3.3 — Spring WebMVC Flat DTO Binding](phase-3-3-spring-webmvc-dto-binding.md) — `jsonapi-java-spring-webmvc` — Not started
