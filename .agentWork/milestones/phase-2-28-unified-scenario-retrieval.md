@@ -51,14 +51,18 @@ vocabulary work: its eight property-read sites live in exactly the files this mi
   consumers. Migrated consumers (the 5 jackson3 specs and the 3 codec catalog specs, renamed with
   the vocabulary: `CodecScenariosCatalogSpec`, `NegativeCodecScenariosCatalogSpec`,
   `AmbiguousPrimaryDataScenariosCatalogSpec`) repoint to the renamed static catalogs — accessor
-  swaps only; the facade is exercised by the facade spec. Future catalogs may either delegate
-  through static shims (the shape chosen for the four existing catalogs, required to keep the
-  untouched static consumers working) or implement `FixtureCatalog` directly (the shape the
-  dependent fixture milestones 2.14/2.15/2.24–2.26 already plan); the facade registers either as
-  the `FixtureCatalog` view.
+  swaps only; the facade is exercised by the facade spec. The retrieval hierarchy is explicit:
+  `JsonApiFixtures` plus the `FixtureCatalog<T>` instances it exposes is the canonical retrieval
+  API; the concrete `*Scenarios` static methods are compatibility/delegation shims retained only
+  where existing consumers require them; future consumers and future catalogs (2.14, 2.15,
+  2.24–2.26) use `JsonApiFixtures`. Future catalogs follow the same pinned delegation surface
+  (public statics delegating to a private `FixtureCatalog` instance plus a `catalog()` accessor),
+  which the facade registers as the `FixtureCatalog` view — no catalog class declares
+  `implements FixtureCatalog`, since a class cannot combine instance interface methods with
+  same-signature statics.
 - `jsonapi.fixtures.dir` and `jsonapi.schema.fixtures.dir` are wired by the
   `jsonapi-java-library` plugin but currently read inline at 8 sites:
-  `NegativeCodecCases.groovy` (main), `CodecFixturesCatalogSpec`,
+  `NegativeCodecCases.java` (main), `CodecFixturesCatalogSpec`,
   `NegativeCodecCasesCatalogSpec`, `AmbiguousPrimaryDataCasesCatalogSpec`,
   `JsonApiDraftSchemaSpec` (schema dir), and `DocumentWriterContractSpec`,
   `DocumentReaderSpec`, `DomainDocumentReaderSpec`; a shared `FixtureDirectory` centralizes
@@ -83,7 +87,10 @@ vocabulary work: its eight property-read sites live in exactly the files this mi
   `Unknown codec scenario id:`, `Unknown negative-codec scenario id:`,
   `Unknown ambiguous-primary-data scenario id:`, and `Unknown domain-write scenario id:`
   (kebab-case catalog name minus the `Scenarios` suffix); the renamed catalog specs and the
-  facade spec assert these verbatim.
+  facade spec assert these verbatim. The generic `FixtureCatalog<T>` contract stays
+  message-agnostic (its `byId` throws; it does not know the label) — each catalog constructs its
+  private `FixtureCatalog` instance with the catalog's stable area label, used only for the
+  diagnostic.
 - Rename the codec entry types and catalogs to the `Scenario` vocabulary listed above, rename the
   26 `…Case` builder factory methods from `fixture()` to `scenario()` (no `fixture()` method
   survives; the corpus README's `CodecFixture.of(...)` workflow text is rewritten to the

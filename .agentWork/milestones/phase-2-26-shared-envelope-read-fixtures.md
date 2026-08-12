@@ -23,7 +23,8 @@ parity without forcing every codec fixture into DTO binding.
 - Phase 2.28 owns the `Scenario` / `FixtureCatalog` contract and the `JsonApiFixtures` facade; the
   catalog is `EnvelopeReadScenarios` in the fixed Java package
   `io.github.kazemek.jsonapi.testfixtures.enveloperead` under `src/main/java/` (`@NullMarked` per
-  ADR-009), implementing `FixtureCatalog<EnvelopeReadScenario>` and registered as
+  ADR-009), exposing the `FixtureCatalog<EnvelopeReadScenario>` contract through the Phase 2.28
+  pinned static delegation surface and registered as
   `JsonApiFixtures.envelopeRead()`. The catalog grows by addition with stable ids; adapter suites
   run the whole catalog and assert full coverage (`executedScenarioIds == catalogScenarioIds`) per
   the Phase 2.13 relaxed contract — no exclusion manifest. The closed shared test names below are
@@ -107,14 +108,22 @@ parity without forcing every codec fixture into DTO binding.
   `meta-only`, and `errors-document` fall back to `RESOURCE`), except the identifier pass-through
   scenarios (`single-identifier`, `identifier-collection`), which pin
   `DocumentReadContext.identifierDefaults()` since their codec fixtures are `RESOURCE_IDENTIFIER`
-  kind; binding-variant inputs pin either `DocumentReadContext.identifierDefaults()` (identifier
-  pass-through) or `DocumentReadContext.resourceDefaults()` (unregistered-primary scenario). The
+  kind; binding-variant inputs resolve to `DocumentReadContext.resourceDefaults()` by default
+  (the `SINGLE_RESOURCE`, `HETEROGENEOUS_COLLECTION`, `AT_MEMBER_DOCUMENT`, binder-failure,
+  root-level, and cyclic inputs all read this way per the spec evidence), with
+  `DocumentReadContext.identifierDefaults()` only for the identifier pass-through scenario;
+  `fromDocument`-entry inputs pin `DocumentReadContext.resourceDefaults()` (the spec's `newReader`
+  path). The rule resolves per input: mixed-input scenarios apply it to each input individually —
+  the `preserves jsonapi object, nullable links, and additional members` scenario derives the
+  codec-fixture context for its three codec inputs and `resourceDefaults()` for its
+  `AT_MEMBER_DOCUMENT` variant. The
   binding-variant documents are exhaustively enumerated with stable names — `SINGLE_RESOURCE`,
   `HETEROGENEOUS_COLLECTION`, `AT_MEMBER_DOCUMENT`, the unregistered-primary single and
   collection inputs, the three binder-failure inputs, the root-level-failure input, the
   cyclic-linkage input, and wire forms of the four programmatic `fromDocument` inputs (every
   non-codec wire input in the closed inventory receives a named variant) — and reside as
-  version-neutral documents under `fixtures/jsonapi-1.1/` (envelope-binding directory), covered
+  version-neutral documents under the exact path `fixtures/jsonapi-1.1/envelope-binding/`
+  (envelope-binding directory), covered
   by the same id-stability rule as the codec corpus, so catalog integrity has a concrete
   resolvability target and Phase 2.22 consumes the same document set. `fromDocument`-entry
   scenarios carry the version-neutral core `JsonApiDocument` value directly (the
@@ -122,11 +131,16 @@ parity without forcing every codec fixture into DTO binding.
   forms serving as resolvability and documentation targets: only the duplicate-identity wire form
   is validation-invalid (it cannot pass the validated public read path), while the other wire
   forms are valid and route through `fromDocument` for uniformity of the entry-point contract.
+  The duplicate-identity wire form is deliberately not registered in the Phase 2.12 negative
+  corpus — it serves the `fromDocument` entry-point contract here, not the codec failure
+  corpus.
 - Move the envelope-only binding targets the shared scenarios need — `FlatNode`, `FlatStrictArticle`,
   `FlatThrowingArticle`, `EmptyResourceType`, `InvalidResourceType` — from
   `jsonapi-java-jackson3.testmodel` into `jsonapi-java-test-fixtures` with the `enveloperead`
   package (Jackson-neutral, `@Nullable` review of moved members, jackson3 references repointed);
-  Phase 2.14's DTO move does not cover them. The named adapter-local cases stay in the adapter
+  Phase 2.14's DTO move does not cover them. This move supersedes Phase 2.14's stay-local
+  statement for `FlatStrictArticle` / `FlatThrowingArticle` (recorded there).
+  The named adapter-local cases stay in the adapter
   spec. The registration-diagnostics scenario additionally needs a missing-annotation target: add
   a dedicated plain record without `@JsonApiResource` (for example `UnannotatedBindingTarget`) in
   the `enveloperead` package, because the current missing-annotation target `FlatAuthor` stays
@@ -137,7 +151,12 @@ parity without forcing every codec fixture into DTO binding.
 - Add catalog integrity tests for unique ids, resolvable documents/variants, and the
   `FixtureCatalog` contract.
 - Use `module-docs` for the `jsonapi-java-test-fixtures` envelope-read package map and agent notes,
-  and update the `fixtures/jsonapi-1.1/README.md` layout for the new envelope-binding directory.
+  and update the `fixtures/jsonapi-1.1/README.md` layout for the new
+  `fixtures/jsonapi-1.1/envelope-binding/` directory. The milestone lands as two sequential
+  reviewable commits (the Phase 2.14 precedent), verified as one unit by the milestone review:
+  commit 1 = the envelope-binding corpus documents, the DTO moves plus repoints, and the
+  `UnannotatedBindingTarget` with a green build; commit 2 = the `EnvelopeReadScenarios` catalog,
+  the `DomainDocumentReaderSpec` refactor, and the docs/module-docs edits.
 
 ## Non-goals
 
@@ -165,7 +184,9 @@ parity without forcing every codec fixture into DTO binding.
 
 ## Acceptance criteria
 
-- [ ] The initial `EnvelopeReadScenarios` catalog implements `FixtureCatalog<EnvelopeReadScenario>`
+- [ ] The initial `EnvelopeReadScenarios` catalog exposes the
+      `FixtureCatalog<EnvelopeReadScenario>` contract through the Phase 2.28 pinned static
+      delegation surface
       (`enveloperead` package, `@NullMarked` with accurate `@Nullable` per ADR-009,
       `JsonApiFixtures.envelopeRead()` registered), covers the closed shared
       `DomainDocumentReaderSpec` test names, and references applicable codec scenario ids / named
@@ -179,8 +200,8 @@ parity without forcing every codec fixture into DTO binding.
       the no-injection boundary; the initial inventory is pinned to the closed shared test names
       above and catalog integrity rejects unresolvable expectations.
 - [ ] The canonical `module-docs` checklist passes for `jsonapi-java-test-fixtures` envelope-read
-      docs, and the `fixtures/jsonapi-1.1/README.md` layout documents the new envelope-binding
-      directory with its stable binding-variant names.
+      docs, and the `fixtures/jsonapi-1.1/README.md` layout documents the new
+      `fixtures/jsonapi-1.1/envelope-binding/` directory with its stable binding-variant names.
 - [ ] `./gradlew clean build` passes.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
 - [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI

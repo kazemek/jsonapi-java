@@ -50,14 +50,18 @@ for cross-major parity.
   the Phase 2.13 milestone file.
 - Absolute getter-read counts decompose into linkage reads plus traversal reads (for example
   `authorReads == 2` is one linkage read on the selected primary plus one traversal read); the
-  shared expectation is scoped to the traversal guarantee Phase 2.3 commits to (off-path
-  relationship getters are not read for traversal), while absolute counts remain adapter-suite
-  assertions in the Jackson 3 spec, since per ADR-004 each major's mapping is authoritative over
-  its own property-access patterns.
+  shared expectation is scoped to a major-neutral, binary assertion shape: the scenario input is
+  executed twice — once with the include path and once with an empty include-path baseline — and
+  the adapter asserts equal off-path counts across the two runs (`expectedTraversalDelta == 0`
+  for the off-path relationship, measured as count-with-include minus count-without-include), so
+  traversal adds zero reads. Absolute counts remain adapter-suite assertions in the Jackson 3
+  spec, since per ADR-004 each major's mapping is authoritative over its own property-access
+  patterns.
 - Phase 2.28 owns the `Scenario` / `FixtureCatalog` contract and the `JsonApiFixtures` facade; the
   catalog is `CompoundWriteScenarios` in the fixed Java package
   `io.github.kazemek.jsonapi.testfixtures.compoundwrite` under `src/main/java/` (`@NullMarked` per
-  ADR-009), implementing `FixtureCatalog<CompoundWriteScenario>` and registered as
+  ADR-009), exposing the `FixtureCatalog<CompoundWriteScenario>` contract through the Phase 2.28
+  pinned static delegation surface and registered as
   `JsonApiFixtures.compoundWrite()`. Adapter suites run the whole catalog and assert full coverage
   (`executedScenarioIds == catalogScenarioIds`) per the Phase 2.13 relaxed contract — no exclusion
   manifest.
@@ -67,17 +71,23 @@ for cross-major parity.
 
 - Add `CompoundWriteScenarios` (fixed `compoundwrite` package, `@NullMarked`) as an immutable
   compound-inclusion scenario catalog covering the initial inventory above with expected included
-  resources, order, and common diagnostics, implementing
-  `FixtureCatalog<CompoundWriteScenario>` with `all()`/`byId(String)` and registered as
+  resources, order, and common diagnostics, exposing
+  the `FixtureCatalog<CompoundWriteScenario>` contract through the Phase 2.28 pinned static
+  delegation surface (`all()`/`byId(String)`/`where(Predicate)` statics plus a `catalog()`
+  accessor) and registered as
   `JsonApiFixtures.compoundWrite()` on the Phase 2.28 facade. Expectation members that must
   represent absent `included` distinctly from an empty array are `@Nullable` with accurate
   decoration per ADR-009. Scenario inputs are supplier-based and re-created per execution
   (following the Phase 2.13 `DomainWriteInput` pattern), so the one-shot iterable scenario gets a
-  fresh iterable on every run. The concurrent-isolation scenario is a two-mapping variant carrying
+  fresh iterable on every run. Each `CompoundWriteScenario` pins its request side: the domain
+  input (supplier), the include paths, the common `IncludePolicy`/allowance configuration, and
+  the depth/count limits (`maxDepth`, `maxIncluded`), plus the off-path relationship name where
+  the traversal-delta assertion applies. The concurrent-isolation scenario is a two-mapping variant carrying
   two inputs (each with its serialization context and expected included list) executed concurrently
   against one mapper with an isolation assertion; the shared expectation carries the
-  traversal-scoped access guarantee (linkage-only reads on off-path relationships; zero additional
-  reads from traversal) for scenarios whose models observe access, while absolute getter-read
+  traversal-delta assertion (`expectedTraversalDelta == 0` for the off-path relationship, measured
+  by the adapter as count-with-include minus count-without-include over two runs of the input) for
+  scenarios whose models observe access, while absolute getter-read
   counts remain Jackson 3 suite-local assertions.
 - Move the Jackson-neutral graph builders the scenarios require into the fixed
   `io.github.kazemek.jsonapi.testfixtures.compoundwrite` package alongside the catalog (mirroring
@@ -99,7 +109,8 @@ for cross-major parity.
   completeness enumeration against external lists (no explicit exclusions).
 - Update test-fixtures documentation for compound-write scenarios via the `module-docs` skill
   (fixed `compoundwrite` package map, `CompoundWriteScenarios`/`CompoundWriteScenario` entry
-  points, `JsonApiFixtures.compoundWrite()` accessor, and agent notes).
+  points, `JsonApiFixtures.compoundWrite()` accessor, agent notes, and the root `README.md`
+  Project-structure row refresh naming the shared compound-write catalog).
 
 ## Non-goals
 
@@ -119,7 +130,10 @@ for cross-major parity.
 - Parameterize the initial inventory through Jackson 3, compare included resources, order,
   linkage, and diagnostics, and assert full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`); the Jackson 3 suite keeps its suite-local
-  round-trip serialization checks for the scenarios that currently perform them, and asserts the
+  round-trip serialization checks for the five scenarios that currently perform them (`includes
+  nested intermediates for comments.author`, `shared identity is included once`,
+  `self-reference primary is not re-emitted in included`, `cyclic graph with repeated segment
+  path terminates`, `multi-primary multi-path first-discovery order`), and asserts the
   absolute getter-read counts locally.
 - Catalog integrity rejects any scenario whose expectation components are incomplete or
   unresolvable.
@@ -127,8 +141,10 @@ for cross-major parity.
 ## Acceptance criteria
 
 - [ ] The closed shared `CompoundSerializationSpec` inventory (all 30 named tests above) is present
-      as the initial `CompoundWriteScenarios` catalog implementing
-      `FixtureCatalog<CompoundWriteScenario>` (`compoundwrite` package, `@NullMarked` with accurate
+      as the initial `CompoundWriteScenarios` catalog exposing the
+      `FixtureCatalog<CompoundWriteScenario>` contract through the Phase 2.28 pinned static
+      delegation surface (`all()`/`byId(String)`/`where(Predicate)` plus `catalog()`;
+      `compoundwrite` package, `@NullMarked` with accurate
       `@Nullable` on every null-bearing expectation member — explicitly the absent-`included`
       state distinct from a present-empty array — per ADR-009; `JsonApiFixtures.compoundWrite()`
       registered) without major-specific production imports; the four jackson-common contract
@@ -139,10 +155,10 @@ for cross-major parity.
 - [ ] Every catalog scenario's expectation encodes the included-resource order (first-discovery),
       the include-policy outcome, and the `MappingDiagnostic` code / `resourceClass` /
       `propertyPath` where the scenario fails; scenarios whose models observe access additionally
-      carry the traversal-scoped access guarantee (linkage-only reads on off-path relationships;
-      zero additional reads from traversal); the concurrent-isolation variant carries both
-      mappings and is executed concurrently by the Jackson 3 suite, which asserts the absolute
-      access counts and round-trip checks locally.
+      carry the traversal-delta assertion (`expectedTraversalDelta == 0`, measured by the adapter
+      over two runs with and without the include path); the concurrent-isolation variant carries
+      both mappings and is executed concurrently by the Jackson 3 suite, which asserts the
+      absolute access counts and round-trip checks locally.
 - [ ] The eight graph builders move together into `jsonapi-java-test-fixtures` (`PolymorphicArticle`
       with `BaseComment`), retain accurate `@Nullable` on their null-bearing members under the
       `@NullMarked` package per ADR-009, jackson3 references are repointed, and catalog integrity

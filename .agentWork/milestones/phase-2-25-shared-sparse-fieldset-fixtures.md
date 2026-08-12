@@ -16,7 +16,8 @@ parity.
 - Phase 2.28 owns the `Scenario` / `FixtureCatalog` contract and the `JsonApiFixtures` facade; the
   catalog is `SparseFieldsetScenarios` in the fixed Java package
   `io.github.kazemek.jsonapi.testfixtures.sparsefieldset` under `src/main/java/` (`@NullMarked` per
-  ADR-009), implementing `FixtureCatalog<SparseFieldsetScenario>` and registered as
+  ADR-009), exposing the `FixtureCatalog<SparseFieldsetScenario>` contract through the Phase 2.28
+  pinned static delegation surface and registered as
   `JsonApiFixtures.sparseFieldset()`. Adapter suites run the whole catalog and assert full coverage
   (`executedScenarioIds == catalogScenarioIds`) per the Phase 2.13 relaxed contract — no exclusion
   manifest.
@@ -56,8 +57,9 @@ parity.
 ## Deliverables
 
 - Add `SparseFieldsetScenarios` (fixed `sparsefieldset` package, `@NullMarked`) as an immutable
-  sparse-fieldset scenario catalog covering the initial inventory above, implementing
-  `FixtureCatalog<SparseFieldsetScenario>` with `all()`/`byId(String)` and registered as
+  sparse-fieldset scenario catalog covering the initial inventory above, exposing
+  the `FixtureCatalog<SparseFieldsetScenario>` contract through the Phase 2.28 pinned static
+  delegation surface (`all()`/`byId(String)` statics plus a `catalog()` accessor) and registered as
   `JsonApiFixtures.sparseFieldset()` on the Phase 2.28 facade. Each `SparseFieldsetScenario`
   implements the Phase 2.28 `Scenario` contract (stable `id()`, default `notes()`), and the
   catalog fulfills the full `FixtureCatalog` surface including `where(Predicate)`; unknown
@@ -76,7 +78,8 @@ parity.
   `FieldPolicy`), and a discriminated expected outcome — expected mapped document/resource states
   with the full-linkage exception flag, or a failure diagnostic carrying the `MappingDiagnostic`
   code together with `resourceClass`/`propertyPath` (both `@Nullable` for
-  `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`, where both are null per Phase 2.8) — restricted to
+  `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`, where both are null in the pinned Jackson 3 behavior — the
+  Phase 2.8 contract allows, but does not require, null there) — restricted to
   version-neutral core/common values; the plain
   three-argument success outcome without an exception flag (empty fieldset map, Phase 2.3
   equivalent) is a covered outcome state. The
@@ -115,7 +118,8 @@ parity.
   contract (no explicit exclusions).
 - Update test-fixtures documentation for fieldset-write scenarios via the `module-docs` skill
   (fixed `sparsefieldset` package map, `SparseFieldsetScenarios`/`SparseFieldsetScenario` entry
-  points, `JsonApiFixtures.sparseFieldset()` accessor, and agent notes).
+  points, `JsonApiFixtures.sparseFieldset()` accessor, agent notes, and the root `README.md`
+  Project-structure row refresh naming the shared sparse-fieldset catalog).
 
 ## Non-goals
 
@@ -143,8 +147,9 @@ parity.
 - [ ] The closed shared `SparseFieldsetSpec` inventory (all named tests above) is covered by the
       initial `SparseFieldsetScenarios` catalog — each named test either becomes a scenario or is
       explicitly split into a catalog scenario plus the pinned Jackson 3 suite-local assertion —
-      implementing
-      `FixtureCatalog<SparseFieldsetScenario>` (`sparsefieldset` package, `@NullMarked` with
+      exposing
+      the `FixtureCatalog<SparseFieldsetScenario>` contract through the Phase 2.28 pinned static
+      delegation surface (`sparsefieldset` package, `@NullMarked` with
       accurate `@Nullable` per ADR-009; `JsonApiFixtures.sparseFieldset()` registered) without
       major-specific production imports; `ArticleWithRenamedAuthor` and
       `AccessCountingFieldsetArticle` moved into `jsonapi-java-test-fixtures` with jackson3
