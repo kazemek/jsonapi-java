@@ -123,6 +123,51 @@ class DomainWriteScenariosCatalogSpec extends Specification {
     thrown(UnsupportedOperationException)
   }
 
+  def "scenario inputs are freshly constructed on each invocation"() {
+    expect:
+    DomainWriteScenarios.all().each { scenario ->
+      def input = scenario.input()
+      def first = input.supplier().get()
+      def second = input.supplier().get()
+      if (first == null) {
+        assert second == null
+      } else {
+        assert !first.is(second)
+      }
+    }
+  }
+
+  def "the mutable POJO model exposes its bean surface"() {
+    given:
+    def pojo = new SamplePojo()
+
+    when:
+    pojo.setId("p9")
+    pojo.setName("Bean")
+    pojo.setComments(List.of())
+
+    then:
+    pojo.getId() == "p9"
+    pojo.getName() == "Bean"
+    pojo.getComments() == List.of()
+  }
+
+  def "byId rejects unknown ids"() {
+    when:
+    DomainWriteScenarios.byId("no such scenario")
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
+  def "success outcomes reject empty or double values"() {
+    when:
+    new DomainWriteOutcome.Success(null, null)
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
   private static Set<String> expectedRelationshipNames(DomainWriteScenario scenario) {
     def outcome = scenario.outcome()
     if (!(outcome instanceof DomainWriteOutcome.Success)) {
