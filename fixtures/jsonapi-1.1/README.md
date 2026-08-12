@@ -46,7 +46,7 @@ capability instead of maintaining independent hard-coded id lists:
 
 1. Add pretty expected JSON under `documents/`.
 2. Add a row to `manifest.json` (same order as the catalog list).
-3. Add a readable scenario class under
+3. Add a scenario class under
    `jsonapi-java-test-fixtures/.../codec/cases/` that returns `CodecScenario.of(...)` (or
    `new CodecScenario(...)` when defaults do not apply) with the applicable capabilities.
 4. Register the scenario in `CodecScenarios` (explicit list; no classpath scanning).

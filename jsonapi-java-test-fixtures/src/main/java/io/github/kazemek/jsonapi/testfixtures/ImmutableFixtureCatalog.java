@@ -17,7 +17,10 @@ final class ImmutableFixtureCatalog<T extends Scenario> implements FixtureCatalo
     this.all = List.copyOf(Objects.requireNonNull(entries, "entries"));
     Map<String, T> byId = new LinkedHashMap<>();
     for (T entry : this.all) {
-      byId.put(entry.id(), entry);
+      String id = Objects.requireNonNull(entry.id(), "entry.id()");
+      if (byId.putIfAbsent(id, entry) != null) {
+        throw new IllegalArgumentException("Duplicate " + areaLabel + " scenario id: " + id);
+      }
     }
     this.index = Map.copyOf(byId);
   }
