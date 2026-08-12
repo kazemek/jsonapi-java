@@ -15,9 +15,13 @@ import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenario
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
+// @Stepwise pins the declared feature order so the coverage feature always runs after the
+// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
+@Stepwise
 class ResourceMapperSpec extends Specification {
 
   @Shared

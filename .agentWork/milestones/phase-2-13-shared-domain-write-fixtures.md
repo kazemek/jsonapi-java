@@ -45,9 +45,11 @@ without per-major copies.
   addition: adding a scenario is a one-step action that every adapter suite picks up automatically
   through `DomainWriteScenarios.all()`. This is a deliberate relaxation of an earlier closed
   contract design: global pins (fixed inventory, index-based matrix, literal-pinned exclusion
-  manifest) were removed because the catalog is a growing sample of the mapping surface, the
-  expected outcomes are derived from the Jackson 3 mapper under test (so contract-level rigidity
-  would give false confidence), and the friction would route growth into adapter-local specs.
+  manifest) were removed because the catalog is a growing sample of the mapping surface, its
+  expected outcomes are explicit `ResourceObject`/`JsonApiDocument` expectations (authored from
+  the Jackson 3 mapper's observed behavior rather than coupled to it, so contract-level rigidity
+  around them would give false confidence), and the friction would route growth into adapter-local
+  specs.
   The parity intent is preserved contractually instead: every adapter suite must run the whole
   catalog and assert `executedScenarioIds == catalogScenarioIds` (Phase 2.18 makes this mandatory
   for Jackson 2).

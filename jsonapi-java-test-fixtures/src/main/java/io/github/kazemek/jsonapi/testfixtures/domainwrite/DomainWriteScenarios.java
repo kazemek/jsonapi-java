@@ -35,7 +35,13 @@ public final class DomainWriteScenarios {
   private static final String TAGS = "tags";
 
   private static final Set<Tag> TAGS_SET =
-      new LinkedHashSet<>(List.of(new Tag("java"), new Tag("groovy")));
+      Collections.unmodifiableSet(new LinkedHashSet<>(List.of(new Tag("java"), new Tag("groovy"))));
+
+  private static final Links ENVELOPE_LINKS = Links.ofLinks(Collections.singletonMap("self", null));
+
+  private static final Meta ENVELOPE_META = Meta.of(Map.of("key", "value"));
+
+  private static final JsonApiObject ENVELOPE_JSONAPI = JsonApiObject.ofVersion("1.1");
 
   private static final List<DomainWriteScenario> SCENARIOS =
       List.of(
@@ -204,18 +210,15 @@ public final class DomainWriteScenarios {
               "toDocument with envelope passes links, meta, and jsonapi",
               DomainWriteOperation.TO_DOCUMENT_WITH_ENVELOPE,
               new DomainWriteInput.SingleInput(() -> new Article("1", "T", "B", List.of(), null)),
-              new DocumentEnvelope(
-                  Links.ofLinks(Collections.singletonMap("self", null)),
-                  Meta.of(Map.of("key", "value")),
-                  JsonApiObject.ofVersion("1.1")),
+              new DocumentEnvelope(ENVELOPE_LINKS, ENVELOPE_META, ENVELOPE_JSONAPI),
               DomainWriteOutcome.document(
                   new JsonApiDocument(
                       new DocumentData.SingleResource(
                           articleResource("1", "T", "B", List.of(), null)),
                       null,
-                      Meta.of(Map.of("key", "value")),
-                      JsonApiObject.ofVersion("1.1"),
-                      Links.ofLinks(Collections.singletonMap("self", null)),
+                      ENVELOPE_META,
+                      ENVELOPE_JSONAPI,
+                      ENVELOPE_LINKS,
                       null,
                       Map.of())),
               DomainWriteComparisonPolicy.ordered()),

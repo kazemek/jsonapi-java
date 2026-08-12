@@ -111,6 +111,18 @@ class DomainWriteScenariosCatalogSpec extends Specification {
     }
   }
 
+  def "the Set-based scenario input collection rejects mutation"() {
+    given:
+    def scenario = DomainWriteScenarios.byId("maps Set-based to-many relationship")
+    def article = (ArticleWithSet) ((DomainWriteInput.SingleInput) scenario.input()).supplier().get()
+
+    when:
+    article.tags().add(new Tag("kotlin"))
+
+    then:
+    thrown(UnsupportedOperationException)
+  }
+
   private static Set<String> expectedRelationshipNames(DomainWriteScenario scenario) {
     def outcome = scenario.outcome()
     if (!(outcome instanceof DomainWriteOutcome.Success)) {
@@ -142,7 +154,9 @@ class DomainWriteScenariosCatalogSpec extends Specification {
       return linkageIsCollection(data.resource(), relationshipName)
     }
     if (data instanceof DocumentData.ResourceCollection) {
-      return data.resources().any { linkageIsCollection(it, relationshipName) }
+      return data.resources()
+          .findAll { relationshipNames(it).contains(relationshipName) }
+          .every { linkageIsCollection(it, relationshipName) }
     }
     return false
   }
