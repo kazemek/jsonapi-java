@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `ResourceBinderSpec`  
 > **Dependencies:** Phases 2.9, 2.11, 2.13, 2.27, and 2.28  
-> **Status:** Not started
+> **Status:** In progress
 
 ## Goal
 

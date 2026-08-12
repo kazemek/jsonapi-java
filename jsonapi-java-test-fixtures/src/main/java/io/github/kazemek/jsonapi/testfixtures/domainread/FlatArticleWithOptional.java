@@ -1,12 +1,15 @@
-package io.github.kazemek.jsonapi.jackson3.testmodel;
+package io.github.kazemek.jsonapi.testfixtures.domainread;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 /** Flat read-side DTO with an Optional to-one ResourceIdentifier relationship. */
 @JsonApiResource(type = "articles")
 public record FlatArticleWithOptional(
-    @JsonApiId String id, String title, @JsonApiRelationship Optional<ResourceIdentifier> author) {}
+    @JsonApiId String id,
+    @Nullable String title,
+    @JsonApiRelationship @Nullable Optional<ResourceIdentifier> author) {}

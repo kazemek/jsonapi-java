@@ -22,9 +22,9 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.EmptyResourceType
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatLidArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatLidArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatNode
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatStrictArticle

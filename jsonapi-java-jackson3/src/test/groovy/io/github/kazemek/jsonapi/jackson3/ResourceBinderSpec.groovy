@@ -1,8 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
@@ -19,18 +16,25 @@ import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithArray
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithOptional
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithSet
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCommentArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCountedThing
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCreatorArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatDefaultedArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatInheritedBlog
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatIntIdArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatLidArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatMutableArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatPersonArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatRequiredThing
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThingWithIgnored
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThrowingCreatorThing
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.BlogWithJsonProperty
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticleWithArray
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticleWithOptional
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticleWithSet
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatCreatorArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatIntIdArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatLidArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
 import spock.lang.Specification
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
@@ -865,30 +869,13 @@ class ResourceBinderSpec extends Specification {
         new RelationshipData.IdentifierCollectionLinkage(ids.collect { ResourceIdentifier.of(type, it) }))
   }
 
-  // Local DTO shapes
-
-  @JsonApiResource(type = "articles")
-  static class FlatMutableArticle {
-    @JsonApiId String id
-    String title
-    @JsonApiRelationship ResourceIdentifier author
-
-    FlatMutableArticle() {}
-  }
+  // Adapter-local DTO shapes (Jackson-API-specific binder cases)
 
   @JsonApiResource(type = "words")
   static class FlatWords {
     @JsonApiId String id
     int longFieldName
     int otherValue
-  }
-
-  @JsonApiResource(type = "things")
-  static class FlatThingWithIgnored {
-    @JsonApiId String id
-    @JsonIgnore
-    @JsonApiAttribute(name = "secret") String confidential
-    String name
   }
 
   @JsonApiResource(type = "named")
@@ -918,93 +905,6 @@ class ResourceBinderSpec extends Specification {
     @JsonApiId String id
     @JsonDeserialize(using = UppercaseDeserializer)
     String title
-  }
-
-  @JsonApiResource(type = "blogs")
-  static class FlatInheritedBlog extends FlatBlogBase {
-    String description
-
-    FlatInheritedBlog() {}
-  }
-
-  static class FlatBlogBase {
-    @JsonApiId String id
-    String name
-
-    FlatBlogBase() {}
-  }
-
-  @JsonApiResource(type = "articles")
-  static class FlatPersonArticle {
-    @JsonApiId String id
-    @JsonApiRelationship Person author
-  }
-
-  @JsonApiResource(type = "articles")
-  static class FlatCommentArticle {
-    @JsonApiId String id
-    @JsonApiRelationship List<Comment> comments
-  }
-
-  @JsonApiResource(type = "things")
-  static class FlatRequiredThing {
-    private final String id
-    private final String required
-
-    @JsonCreator
-    FlatRequiredThing(
-    @JsonProperty("id") @JsonApiId String id,
-    @JsonProperty(value = "required", required = true) String required) {
-      this.id = id
-      this.required = required
-    }
-
-    String getId() {
-      return id
-    }
-
-    String getRequired() {
-      return required
-    }
-  }
-
-  @JsonApiResource(type = "things")
-  static class FlatCountedThing {
-    @JsonApiId String id
-    int count
-  }
-
-  @JsonApiResource(type = "things")
-  static class FlatThrowingCreatorThing {
-    private final String id
-    private final String title
-
-    @JsonCreator
-    FlatThrowingCreatorThing(
-    @JsonProperty("id") @JsonApiId String id, @JsonProperty("title") String title) {
-      if (title == "boom") {
-        throw new IllegalArgumentException("creator rejected value")
-      }
-      this.id = id
-      this.title = title
-    }
-
-    String getId() {
-      return id
-    }
-
-    String getTitle() {
-      return title
-    }
-  }
-
-  @JsonApiResource(type = "articles")
-  static class FlatDefaultedArticle {
-    @JsonApiId String id
-    String title = "default"
-    String body = "default"
-
-    FlatDefaultedArticle() {}
   }
 
   @JsonApiResource(type = "articles")
