@@ -14,11 +14,11 @@ import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappedDocument
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson3.testmodel.AccessCountingFieldsetArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.Article
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Article
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithRenamedAuthor
-import io.github.kazemek.jsonapi.jackson3.testmodel.BlogWithJsonProperty
-import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
-import io.github.kazemek.jsonapi.jackson3.testmodel.Person
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.BlogWithJsonProperty
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit

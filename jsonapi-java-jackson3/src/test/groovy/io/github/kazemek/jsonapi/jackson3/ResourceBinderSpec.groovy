@@ -19,8 +19,8 @@ import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson3.testmodel.BlogWithJsonProperty
-import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.BlogWithJsonProperty
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticleWithArray
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticleWithOptional
@@ -30,7 +30,7 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.FlatCreatorArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatIntIdArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatLidArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.Person
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
 import spock.lang.Specification
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext

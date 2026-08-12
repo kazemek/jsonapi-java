@@ -20,7 +20,7 @@ import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.EmptyResourceType
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
@@ -30,7 +30,7 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.FlatNode
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatStrictArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.InvalidResourceType
-import io.github.kazemek.jsonapi.jackson3.testmodel.Person
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixture
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecFixtures
 import java.io.ByteArrayInputStream

@@ -3,10 +3,12 @@ package io.github.kazemek.jsonapi.jackson3
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
-import io.github.kazemek.jsonapi.jackson3.testmodel.Person
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
+// Adapter-specific: identifier conversion is wired through each major's mapper factory
+// (IdentifierConverter overloads), so it is deliberately not shared in the domain-write catalog.
 class IdentifierConversionSpec extends Specification {
 
   def "custom IdentifierConverter replaces Object::toString"() {

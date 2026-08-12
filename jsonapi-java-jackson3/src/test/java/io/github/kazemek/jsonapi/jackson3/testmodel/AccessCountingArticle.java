@@ -3,6 +3,8 @@ package io.github.kazemek.jsonapi.jackson3.testmodel;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment;
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person;
 import java.util.List;
 
 /** Mutable article that counts relationship getter reads for traversal-scoped assertions. */

@@ -147,11 +147,11 @@ public final class JsonApiDomainDocument {
       errors = errors == null ? null : List.copyOf(errors);
       additionalMembers = copyAdditionalMembers(additionalMembers);
     }
-  }
 
-  private static Map<String, @Nullable Object> copyAdditionalMembers(
-      Map<String, @Nullable Object> members) {
-    return Collections.unmodifiableMap(
-        new LinkedHashMap<String, @Nullable Object>(Objects.requireNonNull(members, "members")));
+    private static Map<String, @Nullable Object> copyAdditionalMembers(
+        Map<String, @Nullable Object> members) {
+      return Collections.unmodifiableMap(
+          new LinkedHashMap<String, @Nullable Object>(Objects.requireNonNull(members, "members")));
+    }
   }
 }

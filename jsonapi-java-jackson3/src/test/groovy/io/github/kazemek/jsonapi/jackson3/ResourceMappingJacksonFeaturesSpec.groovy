@@ -15,7 +15,7 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithFormattedTitle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptional
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptionalId
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptionalRelationship
-import io.github.kazemek.jsonapi.jackson3.testmodel.Comment
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.CreatorBasedArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedBlog
 import io.github.kazemek.jsonapi.jackson3.testmodel.FormattedTitle
@@ -23,6 +23,8 @@ import spock.lang.Specification
 import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.json.JsonMapper
 
+// Adapter-specific: exercises the Jackson API surface (mix-ins, @JsonIgnore, naming strategies,
+// serializers, optional values), deliberately not shared in the domain-write catalog.
 class ResourceMappingJacksonFeaturesSpec extends Specification {
 
   @JsonApiResource(type = "things")
