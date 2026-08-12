@@ -26,8 +26,8 @@ class TestFixturesDependencyRulesSpec extends Specification {
         .resideInAnyPackage(
         "java..",
         "org.jspecify.annotations..",
-        "groovy..",
-        "org.codehaus.groovy..",
+        "jakarta.json..",
+        "org.eclipse.parsson..",
         "io.github.kazemek.jsonapi.annotation..",
         "io.github.kazemek.jsonapi.core.model..",
         "io.github.kazemek.jsonapi.core.validation..",
@@ -37,7 +37,7 @@ class TestFixturesDependencyRulesSpec extends Specification {
         .check(testFixturesClasses)
   }
 
-  def "test-fixtures production types never depend on Jackson databind, adapter majors, or core.internal"() {
+  def "test-fixtures production types never depend on Jackson databind, adapter majors, core.internal, or Groovy"() {
     expect:
     noClasses()
         .that()
@@ -49,7 +49,9 @@ class TestFixturesDependencyRulesSpec extends Specification {
         "com.fasterxml.jackson.databind..",
         "io.github.kazemek.jsonapi.jackson2..",
         "io.github.kazemek.jsonapi.jackson3..",
-        "io.github.kazemek.jsonapi.core.internal..")
+        "io.github.kazemek.jsonapi.core.internal..",
+        "groovy..",
+        "org.codehaus.groovy..")
         .check(testFixturesClasses)
   }
 }
