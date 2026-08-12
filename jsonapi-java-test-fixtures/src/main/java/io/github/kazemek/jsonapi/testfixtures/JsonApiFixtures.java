@@ -6,6 +6,8 @@ import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios;
 import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenario;
 import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenarios;
+import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenario;
+import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenario;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios;
 
@@ -32,5 +34,10 @@ public final class JsonApiFixtures {
 
   public static FixtureCatalog<DomainWriteScenario> domainWrite() {
     return DomainWriteScenarios.catalog();
+  }
+
+  /** Shared flat resource-to-DTO binding catalog. */
+  public static FixtureCatalog<DomainReadScenario> domainRead() {
+    return DomainReadScenarios.catalog();
   }
 }

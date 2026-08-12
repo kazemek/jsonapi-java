@@ -1,6 +1,7 @@
 /**
  * Version-neutral flat resource-to-DTO read fixture catalog: shared annotated DTO models plus
- * scenario expectations consumed by Jackson-major binder contract tests.
+ * {@link DomainReadScenario} / {@link DomainReadScenarios} consumed by Jackson-major binder
+ * contract tests.
  *
  * <p>Types in this package are major-neutral (see ADR-004 and ADR-010): they import only core,
  * annotations, Jackson common, JSpecify, and JDK types — never {@code tools.jackson..} or {@code

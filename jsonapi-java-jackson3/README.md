@@ -231,4 +231,6 @@ artifact; both majors share the neutral contracts of
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
   moved common-contract type is re-declared here (ADR-010).
 - **Tests:** Spock specs under `src/test/groovy/`; test domain types under
-  `src/test/java/io/github/kazemek/jsonapi/jackson3/testmodel/`.
+  `src/test/java/io/github/kazemek/jsonapi/jackson3/testmodel/`. Flat binder contract cases come
+  from `DomainReadScenarios`; `ResourceBinderSpec` asserts full-catalog coverage and keeps
+  Jackson-API-specific cases local.

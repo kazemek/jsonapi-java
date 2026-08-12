@@ -6,7 +6,6 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
@@ -16,26 +15,22 @@ import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.testfixtures.domainread.ConverterBehavior
+import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadExpectation
+import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadInput
+import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenario
+import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithArray
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithOptional
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithSet
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCommentArticle
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCountedThing
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCreatorArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatDefaultedArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatInheritedBlog
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatIntIdArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatLidArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatMutableArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatPersonArticle
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatRequiredThing
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThingWithIgnored
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThrowingCreatorThing
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.BlogWithJsonProperty
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Stepwise
+import spock.lang.Unroll
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
 import tools.jackson.databind.JavaType
@@ -45,81 +40,43 @@ import tools.jackson.databind.deser.std.StdDeserializer
 import tools.jackson.databind.exc.ValueInstantiationException
 import tools.jackson.databind.json.JsonMapper
 
+// Shared binder cases live in DomainReadScenarios. This spec runs every catalog entry and asserts
+// executedScenarioIds == catalogScenarioIds so a later Jackson 2 binder suite can do the same.
+// Adapter-local Jackson-API cases stay here (no shared manifest): custom deserializer, naming
+// strategy, mix-in, JavaType entry points, linkage mapper, Optional unwrapping, short-circuit,
+// cardinality-before-mapper, LINKAGE_MAPPING_FAILED, and mapper-returning-null.
+// @Stepwise pins the declared feature order so the coverage feature always runs after the
+// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
+@Stepwise
 class ResourceBinderSpec extends Specification {
 
-  def "binds record with id, attributes, and built-in ResourceIdentifier relationships"() {
+  @Shared
+  Set<String> executedScenarioIds = new LinkedHashSet<>()
+
+  @Unroll
+  def "binds #scenario.id from the shared catalog"() {
     given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource(
-        "articles", "1",
-        [title: "Hello", "body-text": "Content"],
-        [author: single("people", "p1"), comments: collection("comments", ["c1", "c2"])])
+    executedScenarioIds.add(scenario.id())
 
     when:
-    def article = binder.fromResource(resource, FlatArticle)
+    def result = null
+    def thrownException = null
+    try {
+      result = invoke(scenario)
+    } catch (Throwable t) {
+      thrownException = t
+    }
 
     then:
-    article.id() == "1"
-    article.title() == "Hello"
-    article.body() == "Content"
-    article.author() == ResourceIdentifier.of("people", "p1")
-    article.comments() == [
-      ResourceIdentifier.of("comments", "c1"),
-      ResourceIdentifier.of("comments", "c2")
-    ]
+    verifyOutcome(scenario, result, thrownException)
+
+    where:
+    scenario << DomainReadScenarios.all()
   }
 
-  def "binds mutable POJO"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", [title: "Hello"], [author: single("people", "p1")])
-
-    when:
-    def article = binder.fromResource(resource, FlatMutableArticle)
-
-    then:
-    article.id == "1"
-    article.title == "Hello"
-    article.author == ResourceIdentifier.of("people", "p1")
-  }
-
-  def "binds immutable creator-based POJO"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "42", [title: "Creator"], null)
-
-    when:
-    def article = binder.fromResource(resource, FlatCreatorArticle)
-
-    then:
-    article.id == "42"
-    article.title == "Creator"
-  }
-
-  def "binds inherited properties"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("blogs", "b1", [name: "My Blog", description: "A description"], null)
-
-    when:
-    def blog = binder.fromResource(resource, FlatInheritedBlog)
-
-    then:
-    blog.id == "b1"
-    blog.name == "My Blog"
-    blog.description == "A description"
-  }
-
-  def "binds @JsonProperty named attribute"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("blogs", "b1", ["blog_title": "My Blog"], null)
-
-    when:
-    def blog = binder.fromResource(resource, BlogWithJsonProperty)
-
-    then:
-    blog.title() == "My Blog"
+  def "covers every shared domain-read scenario exactly once"() {
+    expect:
+    executedScenarioIds == DomainReadScenarios.all()*.id as Set
   }
 
   def "naming strategy renames bound attribute keys"() {
@@ -136,19 +93,6 @@ class ResourceBinderSpec extends Specification {
     then:
     thing.longFieldName == 10
     thing.otherValue == 42
-  }
-
-  def "@JsonIgnore property is not bound"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("things", "1", [name: "visible", secret: "hidden"], null)
-
-    when:
-    def thing = binder.fromResource(resource, FlatThingWithIgnored)
-
-    then:
-    thing.name == "visible"
-    thing.confidential == null
   }
 
   def "mix-in attribute name is honored"() {
@@ -178,126 +122,6 @@ class ResourceBinderSpec extends Specification {
     thing.title == "HELLO"
   }
 
-  def "default identifier conversion binds non-String id via convertValue"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "42", [title: "T"], null)
-
-    when:
-    def article = binder.fromResource(resource, FlatIntIdArticle)
-
-    then:
-    article.id() == 42
-  }
-
-  def "custom IdentifierConverter parse inverts the wire form"() {
-    given:
-    def converter = new IdentifierConverter() {
-          @Override
-          String convert(Object idValue) {
-            return "prefix-" + idValue.toString()
-          }
-
-          @Override
-          Object parse(String wireIdentifier) {
-            return wireIdentifier - "prefix-"
-          }
-        }
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
-    def resource = resource("articles", "prefix-42", [title: "T"], null)
-
-    when:
-    def article = binder.fromResource(resource, FlatIntIdArticle)
-
-    then:
-    article.id() == 42
-  }
-  def "lid-only resource binds into identifier property"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = new ResourceObject("articles", null, "l1", Attributes.ofAttributes([title: "T"]), null, null, null, Map.of())
-
-    when:
-    def article = binder.fromResource(resource, FlatLidArticle)
-
-    then:
-    article.id() == "l1"
-    article.title() == "T"
-  }
-
-  def "resource without id or lid omits the identifier property"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = new ResourceObject("articles", null, null, Attributes.ofAttributes([title: "T"]), null, null, null, Map.of())
-
-    when:
-    def article = binder.fromResource(resource, FlatLidArticle)
-
-    then:
-    article.id() == null
-    article.title() == "T"
-  }
-
-  def "explicit-null attribute binds null and omitted attribute keeps its default"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", [title: null], null)
-
-    when:
-    def article = binder.fromResource(resource, FlatDefaultedArticle)
-
-    then:
-    article.title == null
-    article.body == "default"
-  }
-
-  def "unmapped resource attributes are ignored"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", [title: "T", unexpected: "ignored"], null)
-
-    when:
-    def article = binder.fromResource(resource, FlatArticle)
-
-    then:
-    article.title() == "T"
-    article.body() == null
-  }
-
-  def "fromResources binds homogeneous collection in order"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resources = [
-      resource("articles", "1", [title: "One"], null),
-      resource("articles", "2", [title: "Two"], null)
-    ]
-
-    when:
-    def articles = binder.fromResources(resources, FlatArticle)
-
-    then:
-    articles.size() == 2
-    articles*.id() == ["1", "2"]
-    articles*.title() == ["One", "Two"]
-  }
-
-  def "fromResources validates every element type"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resources = [
-      resource("articles", "1", null, null),
-      resource("people", "p1", null, null)
-    ]
-
-    when:
-    binder.fromResources(resources, FlatArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.RESOURCE_TYPE_MISMATCH
-    ex.propertyPath() == "/type"
-  }
-
   def "JavaType entry points bind resource and collection"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
@@ -316,208 +140,6 @@ class ResourceBinderSpec extends Specification {
     (article as FlatArticle).title() == "T"
     articles.size() == 2
   }
-
-  // Relationship matrix: to-one ResourceIdentifier
-
-  def "omitted to-one relationship key is not bound"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-
-    when:
-    def article = binder.fromResource(resource("articles", "1", null, [comments: collection("comments", ["c1"])]), FlatArticle)
-
-    then:
-    article.author() == null
-  }
-
-  def "links-or-meta-only to-one relationship is not bound"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: Relationship.metaOnly(Meta.of([k: "v"]))])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticle)
-
-    then:
-    article.author() == null
-  }
-
-  def "NullLinkage on to-one binds null"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: Relationship.withData(RelationshipData.NullLinkage.INSTANCE)])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticle)
-
-    then:
-    article.author() == null
-  }
-
-  def "collection linkage on to-one is a cardinality mismatch"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: collection("people", ["p1", "p2"])])
-
-    when:
-    binder.fromResource(resource, FlatArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH
-    ex.propertyPath() == "/relationships/author/data"
-  }
-
-  // Relationship matrix: to-many ResourceIdentifier
-
-  def "empty collection linkage on to-many binds empty collection"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: Relationship.withData(RelationshipData.IdentifierCollectionLinkage.empty())])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticle)
-
-    then:
-    article.comments() == []
-  }
-
-  def "empty collection linkage on to-many binds empty Set"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [tags: Relationship.withData(RelationshipData.IdentifierCollectionLinkage.empty())])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticleWithSet)
-
-    then:
-    article.tags() == [] as Set
-  }
-
-  def "empty collection linkage on to-many binds empty array"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: Relationship.withData(RelationshipData.IdentifierCollectionLinkage.empty())])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticleWithArray)
-
-    then:
-    article.comments() == [] as ResourceIdentifier[]
-  }
-
-  def "non-empty collection linkage on to-many binds List"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: collection("comments", ["c1", "c2"])])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticle)
-
-    then:
-    article.comments() == [
-      ResourceIdentifier.of("comments", "c1"),
-      ResourceIdentifier.of("comments", "c2")
-    ]
-  }
-
-  def "non-empty collection linkage on to-many binds Set"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [tags: collection("tags", ["t1", "t2"])])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticleWithSet)
-
-    then:
-    article.tags() == [
-      ResourceIdentifier.of("tags", "t1"),
-      ResourceIdentifier.of("tags", "t2")
-    ] as Set
-  }
-
-  def "non-empty collection linkage on to-many binds array"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: collection("comments", ["c1", "c2"])])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticleWithArray)
-
-    then:
-    article.comments() == [
-      ResourceIdentifier.of("comments", "c1"),
-      ResourceIdentifier.of("comments", "c2")
-    ] as ResourceIdentifier[]
-  }
-
-  def "NullLinkage on to-many is a cardinality mismatch"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: Relationship.withData(RelationshipData.NullLinkage.INSTANCE)])
-
-    when:
-    binder.fromResource(resource, FlatArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH
-    ex.propertyPath() == "/relationships/comments/data"
-  }
-
-  def "single linkage on to-many is a cardinality mismatch"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: single("comments", "c1")])
-
-    when:
-    binder.fromResource(resource, FlatArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH
-  }
-
-  def "empty collection linkage on to-one is a cardinality mismatch"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: Relationship.withData(RelationshipData.IdentifierCollectionLinkage.empty())])
-
-    when:
-    binder.fromResource(resource, FlatArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH
-  }
-
-  // Relationship matrix: Optional to-one
-
-  def "NullLinkage on Optional to-one binds empty Optional"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: Relationship.withData(RelationshipData.NullLinkage.INSTANCE)])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticleWithOptional)
-
-    then:
-    article.author() == Optional.empty()
-  }
-
-  def "SingleLinkage on Optional to-one binds present Optional"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: single("people", "p1")])
-
-    when:
-    def article = binder.fromResource(resource, FlatArticleWithOptional)
-
-    then:
-    article.author() == Optional.of(ResourceIdentifier.of("people", "p1"))
-  }
-
-  // Custom linkage mappers
 
   def "registered linkage mapper binds to-one single linkage and to-many collection"() {
     given:
@@ -660,54 +282,58 @@ class ResourceBinderSpec extends Specification {
     article.author() == null
   }
 
-  // Negative diagnostics
-
-  def "resource type mismatch is RESOURCE_TYPE_MISMATCH at /type"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("people", "p1", null, null)
-
-    when:
-    binder.fromResource(resource, FlatArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.RESOURCE_TYPE_MISMATCH
-    ex.propertyPath() == "/type"
-    ex.resourceClass() == FlatArticle
+  private Object invoke(DomainReadScenario scenario) {
+    def binder = binderFor(scenario.converterBehavior())
+    def input = scenario.input()
+    if (input instanceof DomainReadInput.SingleResource) {
+      return binder.fromResource(input.resource(), scenario.targetType())
+    }
+    if (input instanceof DomainReadInput.ResourceCollection) {
+      return binder.fromResources(input.resources(), scenario.targetType())
+    }
+    if (input instanceof DomainReadInput.IncludedIsolation) {
+      def reader = JsonApiJackson3.reader(
+          JsonMapper.builder().build(), DocumentReadContext.resourceDefaults())
+      def first = binder.fromResource(primaryResource(reader, input.primaryJson()), scenario.targetType())
+      def second = binder.fromResource(
+          primaryResource(reader, input.swappedIncludedJson()), scenario.targetType())
+      return [first, second]
+    }
+    throw new IllegalArgumentException("Unknown input variant: " + input)
   }
 
-  def "unregistered to-one relationship target is UNSUPPORTED_RELATIONSHIP_TARGET"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [author: single("people", "p1")])
-
-    when:
-    binder.fromResource(resource, FlatPersonArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET
-    ex.propertyPath() == "/relationships/author/data"
+  private static JsonApiResourceBinder binderFor(ConverterBehavior behavior) {
+    def mapper = JsonMapper.builder().build()
+    switch (behavior) {
+      case ConverterBehavior.DEFAULT_CONVERT_VALUE:
+        return JsonApiJackson3.resourceBinder(mapper)
+      case ConverterBehavior.CUSTOM_PARSE_INVERSION:
+        return JsonApiJackson3.resourceBinder(mapper, invertingConverter())
+      case ConverterBehavior.PARSE_THROWING:
+        return JsonApiJackson3.resourceBinder(mapper, throwingConverter())
+      case ConverterBehavior.PARSE_RETURNING_NULL:
+        return JsonApiJackson3.resourceBinder(mapper, nullParseConverter())
+      default:
+        throw new IllegalArgumentException("Unknown converter behavior: " + behavior)
+    }
   }
 
-  def "unregistered to-many relationship target is UNSUPPORTED_RELATIONSHIP_TARGET"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "1", null, [comments: collection("comments", ["c1"])])
+  private static IdentifierConverter invertingConverter() {
+    return new IdentifierConverter() {
+          @Override
+          String convert(Object idValue) {
+            return "prefix-" + idValue.toString()
+          }
 
-    when:
-    binder.fromResource(resource, FlatCommentArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET
-    ex.propertyPath() == "/relationships/comments/data"
+          @Override
+          Object parse(String wireIdentifier) {
+            return wireIdentifier - "prefix-"
+          }
+        }
   }
 
-  def "identifier parse exception is IDENTIFIER_CONVERSION_FAILED at /id"() {
-    given:
-    def converter = new IdentifierConverter() {
+  private static IdentifierConverter throwingConverter() {
+    return new IdentifierConverter() {
           @Override
           String convert(Object idValue) {
             return idValue.toString()
@@ -718,21 +344,10 @@ class ResourceBinderSpec extends Specification {
             throw new IllegalArgumentException("bad id")
           }
         }
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
-    def resource = resource("articles", "42", null, null)
-
-    when:
-    binder.fromResource(resource, FlatIntIdArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
-    ex.propertyPath() == "/id"
   }
 
-  def "identifier parse returning null is IDENTIFIER_CONVERSION_FAILED"() {
-    given:
-    def converter = new IdentifierConverter() {
+  private static IdentifierConverter nullParseConverter() {
+    return new IdentifierConverter() {
           @Override
           String convert(Object idValue) {
             return idValue.toString()
@@ -743,105 +358,83 @@ class ResourceBinderSpec extends Specification {
             return null
           }
         }
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
-    def resource = resource("articles", "42", null, null)
-
-    when:
-    binder.fromResource(resource, FlatIntIdArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
-    ex.propertyPath() == "/id"
   }
 
-  def "identifier coercion failure is IDENTIFIER_CONVERSION_FAILED"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("articles", "not-a-number", null, null)
-
-    when:
-    binder.fromResource(resource, FlatIntIdArticle)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
-    ex.propertyPath() == "/id"
+  private static void verifyOutcome(
+      DomainReadScenario scenario, Object result, Throwable thrownException) {
+    def expectation = scenario.expectation()
+    if (expectation instanceof DomainReadExpectation.Failure) {
+      assert thrownException instanceof JsonApiMappingException
+      def ex = (JsonApiMappingException) thrownException
+      assert ex.diagnostic() == expectation.diagnostic()
+      if (expectation.propertyPath() != null) {
+        assert ex.propertyPath() == expectation.propertyPath()
+      }
+      if (expectation.resourceClass() != null) {
+        assert ex.resourceClass() == expectation.resourceClass()
+      }
+      assertAdapterLocalFailureDetails(scenario, ex)
+      return
+    }
+    assert thrownException == null
+    def expected = ((DomainReadExpectation.BoundValue) expectation).value()
+    if (scenario.input() instanceof DomainReadInput.IncludedIsolation) {
+      assert result instanceof List
+      assert ((List) result).size() == 2
+      assertBoundValue(expected, ((List) result)[0])
+      assertBoundValue(expected, ((List) result)[1])
+      return
+    }
+    assertBoundValue(expected, result)
   }
 
-  def "absent required creator property is MISSING_CREATOR_INPUT"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("things", "1", [title: "present"], null)
-
-    when:
-    binder.fromResource(resource, FlatRequiredThing)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
-    ex.propertyPath() == "/required"
+  private static void assertBoundValue(Object expected, Object actual) {
+    if (expected instanceof FlatArticleWithArray) {
+      def exp = (FlatArticleWithArray) expected
+      def act = (FlatArticleWithArray) actual
+      assert act.id() == exp.id()
+      assert act.title() == exp.title()
+      assert act.comments() == exp.comments()
+      return
+    }
+    if (expected instanceof List) {
+      assert actual instanceof List
+      def expectedList = (List) expected
+      def actualList = (List) actual
+      assert actualList.size() == expectedList.size()
+      expectedList.eachWithIndex { item, index ->
+        assertBoundValue(item, actualList[index])
+      }
+      return
+    }
+    assert actual == expected
   }
 
-  def "creator throwing during instantiation is MISSING_CREATOR_INPUT"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("things", "1", [title: "boom"], null)
-
-    when:
-    binder.fromResource(resource, FlatThrowingCreatorThing)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
-    ex.cause instanceof ValueInstantiationException
+  // Jackson-derived property-name paths and cause types stay adapter-local until Jackson 2 proves
+  // them portable. Dispatch uses target type, diagnostic, and input shape - never scenario id.
+  private static void assertAdapterLocalFailureDetails(
+      DomainReadScenario scenario, JsonApiMappingException ex) {
+    def expectation = (DomainReadExpectation.Failure) scenario.expectation()
+    def target = scenario.targetType()
+    if (expectation.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
+        && target == FlatRequiredThing) {
+      assert ex.propertyPath() == "/required"
+      return
+    }
+    if (expectation.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
+        && target == FlatThrowingCreatorThing) {
+      assert ex.cause instanceof ValueInstantiationException
+      // Observed Jackson 3 path: ValueInstantiationException has no named databind property.
+      assert ex.propertyPath() == "/"
+      return
+    }
+    if (expectation.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+        && target == FlatCountedThing) {
+      // Observed Jackson 3 databind path for both the nested-map coercion failure and the
+      // explicit-null-into-primitive failure.
+      assert ex.propertyPath() == "/count"
+    }
   }
-
-  def "attribute value that cannot coerce is UNSUPPORTED_ATTRIBUTE_VALUE"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("things", "1", [count: [nested: 1]], null)
-
-    when:
-    binder.fromResource(resource, FlatCountedThing)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    ex.propertyPath() == "/count"
-  }
-
-  def "explicit-null attribute into primitive property is UNSUPPORTED_ATTRIBUTE_VALUE"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resource("things", "1", [count: null], null)
-
-    when:
-    binder.fromResource(resource, FlatCountedThing)
-
-    then:
-    def ex = thrown(JsonApiMappingException)
-    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-  }
-
-  // Compound isolation
-
-  def "binder never sees document included resources"() {
-    given:
-    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def reader = JsonApiJackson3.reader(JsonMapper.builder().build(), DocumentReadContext.resourceDefaults())
-    def primary = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"},"relationships":{"author":{"data":{"type":"people","id":"p1"}}}},"included":[{"type":"people","id":"p1","attributes":{"name":"Alice"}}]}'
-    def swapped = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"},"relationships":{"author":{"data":{"type":"people","id":"p1"}}}},"included":[{"type":"people","id":"p1","attributes":{"name":"AliceChanged"}}]}'
-    def first = binder.fromResource(primaryResource(reader, primary), FlatArticle)
-    def second = binder.fromResource(primaryResource(reader, swapped), FlatArticle)
-
-    expect:
-    first == second
-    first.author() == ResourceIdentifier.of("people", "p1")
-    first.title() == "T"
-  }
-
-  // Fixtures
 
   private static ResourceObject primaryResource(JsonApiDocumentReader reader, String json) {
     def document = reader.readValue(json)
