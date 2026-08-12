@@ -1,7 +1,7 @@
 # Phase 2.15 — Jackson 3 Presence-Aware PATCH Binding
 
 > **Scope:** `jsonapi-java-jackson3`, `jsonapi-java-jackson-common`, and `jsonapi-java-test-fixtures`  
-> **Dependencies:** Phases 1.3, 2.4, 2.9, 2.11, and 2.14  
+> **Dependencies:** Phases 1.3, 2.4, 2.9, 2.11, 2.13, 2.14, and 2.28  
 > **Status:** Not started
 
 ## Goal
@@ -30,7 +30,14 @@ which annotated DTO properties the client requested to change.
   compose `JsonApiDomainDocumentReader` or typed envelope decoding into PATCH commands. Phase 2.10
   envelope work is not a dependency.
 - Phase 2.14 supplies shared flat-read DTOs reused by PATCH scenarios.
-- Closed shared PATCH scenario inventory (stable ids for Phase 2.23 reuse; Jackson-major-neutral
+- Phase 2.28 owns the `Scenario` / `FixtureCatalog` contract and the `JsonApiFixtures` facade;
+  shared PATCH entries implement `Scenario` in a fixed Java package
+  `io.github.kazemek.jsonapi.testfixtures.domainpatch` under `src/main/java/` (`@NullMarked` per
+  ADR-009), with `PatchScenarios` implementing `FixtureCatalog<PatchScenario>` registered as
+  `JsonApiFixtures.patch()`. The catalog grows by addition with stable ids; adapter suites run the
+  whole catalog and assert full coverage (`executedScenarioIds == catalogScenarioIds`) per the
+  Phase 2.13 relaxed contract — no closed-index manifest.
+- Initial shared PATCH scenario inventory (stable ids for Phase 2.23 reuse; Jackson-major-neutral
   wire documents + expected changes/diagnostics only):
   `patch-omitted-and-supplied-attributes`; `patch-explicit-null-attribute`;
   `patch-attribute-rename`; `patch-ignored-unmapped-omitted-from-changes`;
@@ -45,25 +52,33 @@ which annotated DTO properties the client requested to change.
   `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`; `patch-missing-relationship-data` →
   `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`;
   `patch-endpoint-identity-mismatch` → `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`.
-  Adapter-local exclusions by exact name (each major’s `*PatchBindingSpec` only):
+- Adapter-local cases by exact name stay in each major's `*PatchBindingSpec` only, documented
+  there with major-local harnesses and never enumerated in a shared manifest:
   `custom deserializer applies to attribute change`; `patch-custom-linkage-conversion`.
 - [ADR-004](../../docs/adr/004-jackson-integration.md) and [ADR-009](../../docs/adr/009-jspecify-nullness.md)
   constrain typed change values and null-bearing public APIs.
 - Conformance matrix edits (name both rows): Domain mapping “Presence-aware resource-update
   commands” → mark **supported** for Jackson 3 binding (Jackson 2 remains Phase 2.23). Phase 1.3
-  “Command application (PATCH binding)” → retitle/clarify as application of commands and mark
-  **out of scope** (applications apply; remove Phase 2.15 from that row’s notes so it cannot be
-  read as unfinished binding).
+  “Command application (PATCH binding)” → retitle to “Command application” and mark **out of
+  scope** with the note “Applications apply authorized update commands (Jackson 2 binding remains
+  deferred per Phase 2.23)”, so no row can be read as unfinished binding. The Domain mapping
+  section header's deferral note is reworded from “PATCH 2.15/2.23 and Jackson 2 parity —
+  deferred” to “Jackson 2 parity — deferred”: only the resolved PATCH part is dropped; the
+  section-level Jackson 2 deferral signal stays because Phases 2.16–2.23 are all not started.
 
 ## Deliverables
 
 - Add immutable `@NullMarked` public patch-command, property-change, and relationship-linkage
-  contracts in `io.github.kazemek.jsonapi.jackson` with explicit presence APIs and nullable values
-  only where JSON null is legal; keep Jackson 3 `JavaType`/mapper-bound entry points under
+  contracts in `io.github.kazemek.jsonapi.jackson`: `PatchCommand<T>` (typed update identity plus
+  ordered changes, presence-aware), `AttributeChange` / `RelationshipChange` (keyed by final
+  JSON:API name with explicit null/presence states), with explicit presence APIs and nullable
+  values only where JSON null is legal; keep Jackson 3 `JavaType`/mapper-bound entry points under
   `io.github.kazemek.jsonapi.jackson3`.
-- Add Jackson 3 patch reader entry points whose convenience pipeline is one
-  `JsonApiDocumentReader` validate-on-read (Phase 2.4) via `DocumentReadContext` with
-  `PrimaryDataKind.RESOURCE` and a factory-accepted `ValidationContext` forced to
+- Add Jackson 3 patch reader entry points: a `JsonApiJackson3.patchReader(JsonMapper, ...)`
+  factory (mirroring the existing reader/binder factory pattern) returning a named
+  `JsonApiPatchReader` with `readValue(...)`/`fromDocument(...)` overloads whose convenience
+  pipeline is one `JsonApiDocumentReader` validate-on-read (Phase 2.4) via `DocumentReadContext`
+  with `PrimaryDataKind.RESOURCE` and a factory-accepted `ValidationContext` forced to
   `DocumentUsage.UPDATE_REQUEST` (optional `EndpointIdentity` via `withExpectedEndpointIdentity`),
   then presence-aware binding of only supplied attributes and relationships. That read context is
   the sole aggregate-validation policy before bind—no second validate with defaults. Reuse Phase
@@ -75,10 +90,19 @@ which annotated DTO properties the client requested to change.
   identity is never emitted as an attribute or relationship change. Do not compose
   `JsonApiDomainDocumentReader` / typed envelope decoding into PATCH commands (ADR-012: commands
   are not full DTO envelopes).
-- Add shared PATCH scenarios to `jsonapi-java-test-fixtures` for exactly the closed inventory above
+- Add `PatchScenario` implementing `Scenario` (stable `id()`, default `notes()`) and
+  `PatchScenarios` implementing `FixtureCatalog<PatchScenario>` (both in the fixed package
+  `io.github.kazemek.jsonapi.testfixtures.domainpatch`, `@NullMarked`) to
+  `jsonapi-java-test-fixtures` for the initial shared inventory above
   (attribute/relationship presence, identity mismatches, and stable diagnostics) for Phase 2.23
-  reuse; keep the named adapter-local cases (`custom deserializer applies to attribute change`,
-  `patch-custom-linkage-conversion`) out of the shared catalog.
+  reuse, with `all()`/`byId(String)` and registered
+  as `JsonApiFixtures.patch()` on the Phase 2.28 facade; keep the named adapter-local cases
+  (`custom deserializer applies to attribute change`, `patch-custom-linkage-conversion`) out of
+  the shared catalog. Each `PatchScenario` carries: one stable id, one neutral wire document (or a
+  supplier of it), the target DTO `Class` (shared from `domainwrite`/`domainread`), and a
+  discriminated expectation — either the expected ordered attribute-then-relationship changes
+  (typed values from shared DTO property types with explicit null/presence states, keyed by final
+  JSON:API name) or an expected diagnostic code with its resource-relative pointer.
 - Use `module-docs` for the changed `jsonapi-java-jackson3`, `jsonapi-java-jackson-common`, and
   `jsonapi-java-test-fixtures` surfaces and apply the named conformance matrix edits above.
 
@@ -92,6 +116,8 @@ which annotated DTO properties the client requested to change.
 - Treating links, meta, extension/profile members, or included resources as patchable DTO fields.
 - JSON Merge Patch, JSON Patch, bulk updates, or atomic operations.
 - Command application / mutation of domain or persistence objects.
+- Closed catalog indexes or adapter-local exclusion manifests; `PatchScenarios` grows by addition
+  and adapter-local cases live in adapter test specs only.
 
 ## Implementation boundaries
 
@@ -140,8 +166,13 @@ which annotated DTO properties the client requested to change.
 
 ## Test strategy
 
-- Parameterize the closed shared PATCH scenario inventory through Jackson 3; also cover the named
-  adapter-local cases (`custom deserializer applies to attribute change`,
+- Add a `PatchScenariosCatalogSpec`-style integrity check in `jsonapi-java-test-fixtures` for the
+  `PatchScenarios` catalog: unique stable ids, `byId(String)` round-trip per entry, resolvable
+  expected changes/diagnostics, and the additive-growth posture (mirroring `DomainWriteScenarios`
+  / Phase 2.14 catalog invariants).
+- Parameterize the initial shared PATCH scenario inventory through Jackson 3, collect executed
+  scenario ids, and assert full-catalog coverage (`executedScenarioIds == catalogScenarioIds`);
+  also cover the named adapter-local cases (`custom deserializer applies to attribute change`,
   `patch-custom-linkage-conversion`) in Jackson 3 `*PatchBindingSpec` only.
 - Cover null/single/empty/non-empty relationship replacements and compound requests proving
   `included` never affects a change.
@@ -157,7 +188,8 @@ which annotated DTO properties the client requested to change.
 
 ## Acceptance criteria
 
-- [ ] Patch commands contain exactly the supplied mapped attribute and relationship changes keyed
+- [ ] Patch commands (`PatchCommand<T>` with `AttributeChange` / `RelationshipChange`) contain
+      exactly the supplied mapped attribute and relationship changes keyed
       by final JSON:API name, preserving explicit null, null linkage, empty collections, and
       attribute-then-relationship encounter order; typed identity is the DTO identifier property
       (Phase 2.9: `@JsonApiId` or logical `id`, then `IdentifierConverter.parse` and coercion),
@@ -166,15 +198,20 @@ which annotated DTO properties the client requested to change.
       or appear as changes; public patch APIs satisfy ADR-009 `@NullMarked` / `@Nullable` rules.
 - [ ] Pipeline is one `JsonApiDocumentReader` validate-on-read via `DocumentReadContext`
       (`PrimaryDataKind.RESOURCE` + factory-accepted `ValidationContext` forced to
-      `UPDATE_REQUEST`, optional `EndpointIdentity`) then presence-aware binding via Phase 2.9
+      `UPDATE_REQUEST`, optional `EndpointIdentity`) exposed through the named
+      `JsonApiJackson3.patchReader(...)` / `JsonApiPatchReader` entry points, then presence-aware
+      binding via Phase 2.9
       mapping definitions, relationship/identifier diagnostics, and newly introduced per-member
       attribute conversion (never a second defaults validate, never `JsonApiResourceBinder` /
       whole-DTO construction, never typed envelopes / `JsonApiDomainDocumentReader`, never
       `included`, never application mutation).
-- [ ] Exactly the closed shared PATCH scenario inventory is cataloged and consumed by Jackson 3
-      `*PatchBindingSpec`, and that Spec also covers the named adapter-local cases
-      (`custom deserializer applies to attribute change`, `patch-custom-linkage-conversion`) for
-      Phase 2.23 parity.
+- [ ] The initial shared PATCH scenario inventory is cataloged as `PatchScenarios` implementing
+      `FixtureCatalog<PatchScenario>` (fixed `domainpatch` package, `@NullMarked`) with
+      `JsonApiFixtures.patch()` registered and a passing `PatchScenariosCatalogSpec` (unique ids,
+      `byId` round-trip, resolvable expectations, additive posture), and is consumed with
+      full-catalog coverage by Jackson 3 `*PatchBindingSpec`; that Spec also covers the named
+      adapter-local cases (`custom deserializer applies to attribute change`,
+      `patch-custom-linkage-conversion`) for Phase 2.23 parity, with no shared exclusion manifest.
 - [ ] The canonical `module-docs` checklist passes for jackson3, jackson-common, and test-fixtures;
       Domain mapping “Presence-aware resource-update commands” is **supported** for Jackson 3; Phase
       1.3 “Command application (PATCH binding)” is retitled/clarified as application and marked
