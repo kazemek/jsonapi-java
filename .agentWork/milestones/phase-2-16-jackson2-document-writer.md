@@ -1,13 +1,14 @@
 # Phase 2.16 — Jackson 2 Document Writer
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 2.1, 2.5, 2.11, and 2.12  
+> **Dependencies:** Phases 2.1, 2.5, 2.11, 2.12, 2.27, and 2.28  
 > **Status:** Not started
 
 ## Goal
 
 Provide a Jackson 2 writer artifact with the same validated JSON:API document output contract as the
-completed Jackson 3 writer, consuming common contracts and shared codec fixtures.
+completed Jackson 3 writer, consuming common contracts and the shared codec scenarios through the
+Phase 2.28 unified Java retrieval surface.
 
 ## Research and constraints
 

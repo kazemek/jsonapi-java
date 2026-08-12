@@ -8,6 +8,14 @@
 > verified closed; the two S3398 findings on untouched jackson3 main sources were fixed and are
 > CLOSED/FIXED in the latest Sonar analysis (search-index reporting lagging at the time; treated
 > as down).
+>
+> **Note (2026-08-12):** Phase 2.24 supersedes the "helpers remain local" part of this contract for
+> `ConflictArticle`, `AccessCountingArticle`, `BaseComment`, and `ModeratedComment`, which move
+> into `jsonapi-java-test-fixtures` for the shared compound-write catalog.
+>
+> **Note (2026-08-12):** Phase 2.25 supersedes the "helpers remain local" part of this contract for
+> `ArticleWithRenamedAuthor` and `AccessCountingFieldsetArticle`, which move into
+> `jsonapi-java-test-fixtures` for the shared sparse-fieldset catalog.
 
 ## Goal
 

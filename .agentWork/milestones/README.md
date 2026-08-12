@@ -49,36 +49,44 @@ field remains the authoritative prerequisite set.
 24. **Phase 2.13 — shared domain-write fixtures:** owns the shared Java domain-write models,
     operation catalog, and the Jackson 3 write-suite migration; adapter suites must run the whole
     catalog (mandatory for Jackson 2 per Phase 2.18).
-25. **Phase 2.14 — shared domain-read fixtures:** follows Phase 2.13 and reuses its shared models
-    while extracting the flat DTO-binding catalog from `ResourceBinderSpec`.
-26. **Phase 2.15 — Jackson 3 PATCH binding:** composes document reading, Phase 1.3 update
-    validation, and presence-aware binding into commands and shared PATCH scenarios (not typed
-    envelopes).
+25. **Phase 2.27 — Java codec fixture contract** and **Phase 2.28 — unified scenario retrieval:**
+    the very next milestones after Phase 2.13. They convert the codec fixture branch to pure Java and
+    establish the `Scenario` / `FixtureCatalog` contract, the `JsonApiFixtures` facade, and the
+    centralized fixtures-directory resolution. Every later fixture milestone and the Jackson 2
+    parity track build on this unified Java surface, so nothing is built on the superseded
+    dual-language fixture design and changed later.
+26. **Phase 2.14 — shared domain-read fixtures:** follows Phase 2.13 and reuses its shared models
+    while extracting the flat DTO-binding catalog from `ResourceBinderSpec` onto the Phase 2.28
+    `Scenario` surface (relaxed additive contract, no exclusion manifests).
 27. **Phase 2.24 — shared compound write fixtures**, **Phase 2.25 — shared sparse-fieldset fixtures**,
     and **Phase 2.26 — shared envelope read fixtures:** extract the remaining domain-fixture catalogs
-    before their Jackson 2 consumers.
-28. **Phase 3.1 — query parser:** remains an independent optional artifact.
-29. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
+    on the Phase 2.28 surface, before any feature or parity work builds on them.
+28. **Phase 2.15 — Jackson 3 PATCH binding:** the first non-fixture feature milestone after the
+    fixture surface; composes document reading, Phase 1.3 update validation, and presence-aware
+    binding into commands and the shared `PatchScenarios` catalog (not typed envelopes).
+29. **Phase 3.1 — query parser:** remains an independent optional artifact.
+30. **Phase 3.2 — Spring WebMVC document transport:** integrates media negotiation, validated
     documents, query arguments, and safe errors.
-30. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO and
+31. **Phase 3.3 — Spring WebMVC flat DTO binding:** adds the primary Jackson 3/Spring DTO and
     typed-envelope experience.
-31. **Phase 3.4 — Spring WebMVC PATCH binding:** adds presence-aware PATCH command arguments on
+32. **Phase 3.4 — Spring WebMVC PATCH binding:** adds presence-aware PATCH command arguments on
     top of Phase 3.3.
-32. **Phase 3.5 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
+33. **Phase 3.5 — WebFlux evaluation:** begins after document and DTO-oriented WebMVC behavior is
     stable.
-33. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after common contracts and
-    codec fixtures, without an artificial Spring dependency.
-34. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
+34. **Phase 2.16 — Jackson 2 document writer:** starts the parity track after the unified Java
+    scenario surface (Phases 2.27–2.28 and 2.14–2.15, 2.24–2.26), without an artificial Spring
+    dependency.
+35. **Phase 2.17 — Jackson 2 document reader** and **Phase 2.18 — domain mapping:** may proceed in
     parallel after the Jackson 2 writer and their respective Jackson 3 / fixture contracts.
-35. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
+36. **Phase 2.19 — Jackson 2 compound serialization** and **Phase 2.21 — flat DTO reader:** build
     independently on stable mapping/read contracts and shared domain fixtures (2.19 needs 2.24;
     2.21 needs 2.14).
-36. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
+37. **Phase 2.20 — Jackson 2 sparse fieldsets** and **Phase 2.22 — typed domain envelope:** finish
     write-policy and read-envelope parity independently (2.20 needs 2.25; 2.22 needs 2.26).
-37. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity after the
+38. **Phase 2.23 — Jackson 2 PATCH binding:** completes presence-aware DTO parity after the
     Jackson 2 document reader (2.17) and flat DTO reader (2.21); does not depend on envelopes (2.22).
-38. **Phase 4.1 — conformance and hardening.**
-39. **Phase 4.2 — stable release.**
+39. **Phase 4.1 — conformance and hardening.**
+40. **Phase 4.2 — stable release.**
 
 ## Milestone index
 
@@ -127,6 +135,8 @@ milestone file.
 - [Phase 2.24 — Shared Compound Write Test Fixtures](phase-2-24-shared-compound-write-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `CompoundSerializationSpec` — Not started
 - [Phase 2.25 — Shared Sparse-Fieldset Write Test Fixtures](phase-2-25-shared-sparse-fieldset-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `SparseFieldsetSpec` — Not started
 - [Phase 2.26 — Shared Typed Envelope Read Test Fixtures](phase-2-26-shared-envelope-read-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `DomainDocumentReaderSpec` — Not started
+- [Phase 2.27 — Java Codec Fixture Contract](phase-2-27-java-codec-fixture-contract.md) — fixtures / `jsonapi-java-test-fixtures` / ADR-010 — Not started
+- [Phase 2.28 — Unified Scenario Retrieval](phase-2-28-unified-scenario-retrieval.md) — fixtures / `jsonapi-java-test-fixtures` / jackson3 specs — Not started
 - [Phase 3.1 — Optional Query-Parameter Parser](phase-3-1-query-parameters.md) — `jsonapi-java-query` — Not started
 - [Phase 3.2 — Spring WebMVC Adapter](phase-3-2-spring-webmvc.md) — `jsonapi-java-spring-webmvc` — Not started
 - [Phase 3.3 — Spring WebMVC Flat DTO Binding](phase-3-3-spring-webmvc-dto-binding.md) — `jsonapi-java-spring-webmvc` — Not started
