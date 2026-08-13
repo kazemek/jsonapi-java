@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `ResourceBinderSpec`  
 > **Dependencies:** Phases 2.9, 2.11, 2.13, 2.27, and 2.28  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -265,25 +265,25 @@ surface.
 
 ## Acceptance criteria
 
-- [ ] The initial `DomainReadScenarios` catalog contains exactly the closed shared
+- [x] The initial `DomainReadScenarios` catalog contains exactly the closed shared
       `ResourceBinderSpec` names above without major-specific production imports;
       `BlogWithJsonProperty`, `Comment`, and `Person` are imported from the Phase 2.13-owned
       `io.github.kazemek.jsonapi.testfixtures.domainwrite` package rather than duplicated; the ten
       adapter-local binder cases above remain in `ResourceBinderSpec` and appear in no shared
       catalog or manifest.
-- [ ] Jackson 3 `ResourceBinderSpec` consumes the catalog for those shared names and retains only
+- [x] Jackson 3 `ResourceBinderSpec` consumes the catalog for those shared names and retains only
       the named adapter-local cases locally; its Phase 2.13-repointed shared-model imports remain
       intact, `DomainDocumentReaderSpec` is import-only repointed onto the moved
       `FlatArticle`/`FlatLidArticle` with no `io.github.kazemek.jsonapi.jackson3.testmodel` import
       remaining for moved flat DTOs, the adapter spec documents its named adapter-local cases and
       the full-catalog coverage rule, Phase 2.13's write catalog is not edited by this refactor,
       and executed ids equal `DomainReadScenarios.all()*.id` exactly.
-- [ ] Shared expectations preserve missing/null/linkage cardinality and never read `included`;
+- [x] Shared expectations preserve missing/null/linkage cardinality and never read `included`;
       every `propertyPath`/`resourceClass` assertion `ResourceBinderSpec` makes today is
       preserved either in the shared expectations or as adapter-local supplementary assertions
       (none is dropped); new
       Java fixture packages are `@NullMarked` with accurate `@Nullable` per ADR-009.
-- [ ] `DomainReadScenario` implements `Scenario` and `DomainReadScenarios` follows the Phase 2.28
+- [x] `DomainReadScenario` implements `Scenario` and `DomainReadScenarios` follows the Phase 2.28
       pinned delegation surface (public static `all()`/`byId(String)`/`where(Predicate)` plus the
       `catalog()` accessor); the five converter scenarios carry the version-neutral
       converter-behavior discriminator that the adapter suite maps onto its converter
@@ -291,7 +291,7 @@ surface.
       is registered on the Phase 2.28 facade; catalog integrity validates unique ids and resolvable
       expectations. The canonical `module-docs` checklist passes for the fixed
       `io.github.kazemek.jsonapi.testfixtures.domainread` package and its entry points.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.
