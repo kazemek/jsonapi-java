@@ -95,7 +95,8 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
       def identityExpectation = scenario.expectation() instanceof SparseFieldsetExpectation.IdentityPreservation
       assert identityRequest == identityExpectation
       if (identityRequest) {
-        assert ((SparseFieldsetRequest.IdentityPreservation) scenario.request()).contexts().size() == 4
+        assert ((SparseFieldsetRequest.IdentityPreservation) scenario.request()).contexts().size() ==
+        SparseFieldsetRequest.IdentityPreservation.SHAPE_COUNT
       }
     }
   }
@@ -106,15 +107,15 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
 
     expect:
     def success = (SparseFieldsetExpectation.MappedSuccess) scenario.expectation()
-    success.zeroReads() != null
-    success.zeroReads().unreadAttributes() == ["body"] as Set
-    success.zeroReads().unreadRelationships() == ["comments"] as Set
+    assert success.zeroReads() != null
+    assert success.zeroReads().unreadAttributes() == ["body"] as Set
+    assert success.zeroReads().unreadRelationships() == ["comments"] as Set
   }
 
   def "collapsed duplicate fieldsets carry unique names"() {
     given:
     def scenario = SparseFieldsetScenarios.byId(
-        "defensive copy isolates fieldset map and duplicate names collapse")
+        "duplicate-free multi-field fieldset keeps title and author")
     def context = ((SparseFieldsetRequest.Single) scenario.request()).context()
 
     expect:

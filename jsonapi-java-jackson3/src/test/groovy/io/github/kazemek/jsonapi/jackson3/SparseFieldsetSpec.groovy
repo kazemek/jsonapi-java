@@ -101,7 +101,7 @@ class SparseFieldsetSpec extends Specification {
   def "duplicate fieldset names collapse to first-seen order"() {
     given:
     def scenario = SparseFieldsetScenarios.byId(
-        "defensive copy isolates fieldset map and duplicate names collapse")
+        "duplicate-free multi-field fieldset keeps title and author")
     def context = ((SparseFieldsetRequest.Single) scenario.request()).context()
 
     expect:
@@ -201,7 +201,7 @@ class SparseFieldsetSpec extends Specification {
   def "applyTo returns the same ValidationContext instance when the exception flag is false"() {
     given:
     def scenario = SparseFieldsetScenarios.byId(
-        "applyTo leaves base unchanged when exception flag is false")
+        "full field list keeps the unrestricted resource state")
     def request = (SparseFieldsetRequest.Single) scenario.request()
     def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
     def base = ValidationContext.defaults()
@@ -330,7 +330,10 @@ class SparseFieldsetSpec extends Specification {
     def request = scenario.request()
     if (success.zeroReads() != null && request instanceof SparseFieldsetRequest.Single) {
       // Catalog iteration already consumed a fresh instance; re-run to observe counters.
-      def counting = (AccessCountingFieldsetArticle) request.supplier().get()
+      def supplied = request.supplier().get()
+      assert supplied instanceof AccessCountingFieldsetArticle,
+      "zeroReads expectations require AccessCountingFieldsetArticle: " + supplied?.class
+      def counting = (AccessCountingFieldsetArticle) supplied
       mapper.toMappedDocument(counting, null, request.context())
       success.zeroReads().unreadAttributes().each { name ->
         assert readsFor(counting, name) == 0
@@ -355,6 +358,7 @@ class SparseFieldsetSpec extends Specification {
       return data.resource()
     }
     if (data instanceof DocumentData.ResourceCollection) {
+      assert data.resources().size() == 1
       return data.resources()[0]
     }
     throw new IllegalArgumentException("Unsupported primary data: " + data)

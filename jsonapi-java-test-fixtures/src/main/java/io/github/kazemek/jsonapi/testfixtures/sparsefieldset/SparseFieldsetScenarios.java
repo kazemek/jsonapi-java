@@ -219,7 +219,7 @@ public final class SparseFieldsetScenarios {
               fieldsets(Map.of("tags", List.of(NAME), ARTICLES, List.of(TITLE))),
               SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, true)),
           mappedDocument(
-              "defensive copy isolates fieldset map and duplicate names collapse",
+              "duplicate-free multi-field fieldset keeps title and author",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR))),
               SparseFieldsetExpectation.mapped(titleAndAuthorArticle(), null, true)),
@@ -267,7 +267,7 @@ public final class SparseFieldsetScenarios {
                   SparseFieldsetExpectation.mapped(
                       titleWithRelationshipsArticle(), List.of(unrestrictedPerson(dan())), false))),
           mappedDocument(
-              "applyTo leaves base unchanged when exception flag is false",
+              "full field list keeps the unrestricted resource state",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR, COMMENTS, BODY_TEXT))),
               SparseFieldsetExpectation.mapped(unrestrictedArticle(), null, false)));

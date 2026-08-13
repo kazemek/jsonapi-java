@@ -22,7 +22,7 @@ public sealed interface SparseFieldsetRequest
   record Single(Supplier<@Nullable Object> supplier, CompoundSerializationContext context)
       implements SparseFieldsetRequest {
     public Single {
-      Objects.requireNonNull(supplier, "supplier");
+      requireSupplier(supplier);
       Objects.requireNonNull(context, "context");
     }
   }
@@ -31,7 +31,7 @@ public sealed interface SparseFieldsetRequest
   record Collection(Supplier<Iterable<?>> supplier, CompoundSerializationContext context)
       implements SparseFieldsetRequest {
     public Collection {
-      Objects.requireNonNull(supplier, "supplier");
+      requireSupplier(supplier);
       Objects.requireNonNull(context, "context");
     }
   }
@@ -55,8 +55,9 @@ public sealed interface SparseFieldsetRequest
     public static final int SHAPE_COUNT = 4;
 
     public IdentityPreservation {
-      Objects.requireNonNull(supplier, "supplier");
+      requireSupplier(supplier);
       Objects.requireNonNull(contexts, "contexts");
+      contexts = List.copyOf(contexts);
       if (contexts.size() != SHAPE_COUNT) {
         throw new IllegalArgumentException(
             "Identity preservation requires "
@@ -64,7 +65,6 @@ public sealed interface SparseFieldsetRequest
                 + " fieldset shapes: "
                 + contexts.size());
       }
-      contexts = List.copyOf(contexts);
     }
   }
 
@@ -84,5 +84,9 @@ public sealed interface SparseFieldsetRequest
   static IdentityPreservation identityPreservation(
       Supplier<Object> supplier, List<CompoundSerializationContext> contexts) {
     return new IdentityPreservation(supplier, contexts);
+  }
+
+  private static <T> T requireSupplier(T supplier) {
+    return Objects.requireNonNull(supplier, "supplier");
   }
 }
