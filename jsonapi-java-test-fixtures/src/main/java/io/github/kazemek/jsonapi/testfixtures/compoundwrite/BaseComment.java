@@ -1,49 +1,50 @@
-package io.github.kazemek.jsonapi.jackson3.testmodel;
+package io.github.kazemek.jsonapi.testfixtures.compoundwrite;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person;
+import org.jspecify.annotations.Nullable;
 
 /** Declared comment owner type for polymorphic include-policy tests. */
 @JsonApiResource(type = "comments")
 public class BaseComment {
 
-  private String id;
-  private String body;
-  private Person author;
+  private @Nullable String id;
+  private @Nullable String body;
+  private @Nullable Person author;
 
   public BaseComment() {}
 
-  public BaseComment(String id, String body, Person author) {
+  public BaseComment(@Nullable String id, @Nullable String body, @Nullable Person author) {
     this.id = id;
     this.body = body;
     this.author = author;
   }
 
   @JsonApiId
-  public String getId() {
+  public @Nullable String getId() {
     return id;
   }
 
-  public void setId(String id) {
+  public void setId(@Nullable String id) {
     this.id = id;
   }
 
-  public String getBody() {
+  public @Nullable String getBody() {
     return body;
   }
 
-  public void setBody(String body) {
+  public void setBody(@Nullable String body) {
     this.body = body;
   }
 
   @JsonApiRelationship
-  public Person getAuthor() {
+  public @Nullable Person getAuthor() {
     return author;
   }
 
-  public void setAuthor(Person author) {
+  public void setAuthor(@Nullable Person author) {
     this.author = author;
   }
 }

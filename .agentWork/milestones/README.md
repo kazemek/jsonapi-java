@@ -135,7 +135,7 @@ milestone file.
 - [Phase 2.21 — Jackson 2 Flat DTO Reader](phase-2-21-jackson2-flat-dto-reader.md) — `jsonapi-java-jackson2` — Not started
 - [Phase 2.22 — Jackson 2 Typed Domain Envelope](phase-2-22-jackson2-domain-envelope.md) — `jsonapi-java-jackson2` — Not started
 - [Phase 2.23 — Jackson 2 Presence-Aware PATCH Binding](phase-2-23-jackson2-patch-binding.md) — `jsonapi-java-jackson2` — Not started
-- [Phase 2.24 — Shared Compound Write Test Fixtures](phase-2-24-shared-compound-write-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `CompoundSerializationSpec` — Not started
+- [Phase 2.24 — Shared Compound Write Test Fixtures](phase-2-24-shared-compound-write-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `CompoundSerializationSpec` — Complete
 - [Phase 2.25 — Shared Sparse-Fieldset Write Test Fixtures](phase-2-25-shared-sparse-fieldset-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `SparseFieldsetSpec` — Not started
 - [Phase 2.26 — Shared Typed Envelope Read Test Fixtures](phase-2-26-shared-envelope-read-fixtures.md) — `jsonapi-java-test-fixtures` / jackson3 `DomainDocumentReaderSpec` — Not started
 - [Phase 2.27 — Java Codec Fixture Contract](phase-2-27-java-codec-fixture-contract.md) — fixtures / `jsonapi-java-test-fixtures` / ADR-010 — Complete

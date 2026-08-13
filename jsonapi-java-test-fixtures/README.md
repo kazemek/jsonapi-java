@@ -13,6 +13,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | `io.github.kazemek.jsonapi.testfixtures.codec.cases`           | One scenario builder class per corpus entry (explicit list; no classpath scanning) |
 | `io.github.kazemek.jsonapi.testfixtures.domainwrite`           | Shared flat domain-to-resource write fixtures: annotated domain models plus the `DomainWriteScenarios` catalog and the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types |
 | `io.github.kazemek.jsonapi.testfixtures.domainread`            | Shared flat resource-to-DTO read fixtures: annotated DTO models plus the `DomainReadScenarios` catalog and the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types |
+| `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
 
 ## Minimal usage
 
@@ -30,6 +31,8 @@ JsonApiFixtures.domainWrite().all()
 JsonApiFixtures.domainWrite().byId("maps mutable POJO")
 JsonApiFixtures.domainRead().all()
 JsonApiFixtures.domainRead().byId("binds mutable POJO")
+JsonApiFixtures.compoundWrite().all()
+JsonApiFixtures.compoundWrite().byId("includes nested intermediates for comments.author")
 ```
 
 Test JVMs must have `jsonapi.fixtures.dir` pointing at `fixtures/jsonapi-1.1`; resolve both
@@ -39,10 +42,10 @@ them (together with `jsonapi.schema.fixtures.dir`) for every module.
 ## Non-goals
 
 This module does not add wire expectations, diagnostics, or corpora per Jackson major — those
-must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). Compound,
-sparse-fieldset, typed-envelope, and PATCH fixture catalogs belong to later fixture phases
-(2.15, 2.24–2.26); the flat write catalog is complete as of Phase 2.13 and the flat read catalog
-as of Phase 2.14.
+must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). Sparse-fieldset,
+typed-envelope, and PATCH fixture catalogs belong to later fixture phases (2.15, 2.25–2.26); the
+flat write catalog is complete as of Phase 2.13, the flat read catalog as of Phase 2.14, and the
+compound-write catalog as of Phase 2.24.
 
 ## Further reading
 
@@ -56,15 +59,16 @@ as of Phase 2.14.
 ## For contributors / agents
 
 - **Retrieval:** `JsonApiFixtures` plus the `FixtureCatalog` instances it exposes is the canonical
-  API. Future catalogs (2.15, 2.24–2.26) register a facade accessor and the same public
+  API. Future catalogs (2.15, 2.25–2.26) register a facade accessor and the same public
   static `all()` / `byId(String)` / `where(Predicate)` / `catalog()` delegation surface; they do
   not invent retrieval types. Existing suites may keep calling the `*Scenarios` shims.
 - **Stable ids and paths:** `CodecScenario` ids and expected JSON paths are stable across Jackson
   majors; never fork or rewrite expected wire documents for new terminology. `manifest.json`
   remains the ordered index and `CodecScenariosCatalogSpec` enforces the bijection.
   `DomainWriteScenarios` ids are stable and looked up via `byId(String)`; the catalog grows by
-  addition. `DomainReadScenarios` ids are likewise stable; binder suites dispatch on
-  `DomainReadInput` / `ConverterBehavior`, never on scenario ids.
+  addition.   `DomainReadScenarios` ids are likewise stable; binder suites dispatch on
+  `DomainReadInput` / `ConverterBehavior`, never on scenario ids. `CompoundWriteScenarios` ids are
+  stable; adapter suites dispatch on `CompoundWriteRequest`, never on scenario ids.
 - **Domain-write catalog:** `DomainWriteScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, exactly one
   operation/typed input/envelope state/discriminated outcome/comparison policy, complete expected
@@ -85,12 +89,22 @@ as of Phase 2.14.
   types stay in adapter-local supplementary assertions. Adapter-specific behavior (custom
   deserializers, naming strategies, mix-ins, `JavaType` entry points, linkage mappers) is
   documented in the adapter-local specs themselves, not enumerated in a manifest.
+- **Compound-write catalog:** `CompoundWriteScenariosCatalogSpec` enforces the local invariants that
+  hold for every entry regardless of catalog size: unique stable ids, exactly one request
+  variant/discriminated expectation, resolvable included identities or known diagnostics, and the
+  absent-`included` versus present-empty-array distinction. Adapter suites run the whole catalog
+  through their own mapper and assert full-catalog coverage
+  (`executedScenarioIds == catalogScenarioIds`). Canonical codec compound documents do not replace
+  these domain-graph traversal proofs. Adapter-specific behavior (absolute getter-read counts,
+  round-trip serialization) is documented in the adapter-local specs themselves, not enumerated
+  in a manifest.
 - **Capability selection:** Tests select by `FixtureCatalog.where` (and the retained
   `CodecScenarios` conveniences `writable`, `readable`, `schemaChecked`, `exactUtf8`,
   `hreflangArray`) instead of maintaining independent hard-coded id lists. Adapter write suites
   dispatch on the `DomainWriteOperation`/`DomainWriteInput` descriptor, never on scenario ids.
   Adapter binder suites dispatch on the `DomainReadInput`/`ConverterBehavior` descriptor, never
-  on scenario ids.
+  on scenario ids. Adapter compound-write suites dispatch on `CompoundWriteRequest`, never on
+  scenario ids.
 - **Directories:** Read `jsonapi.fixtures.dir` and `jsonapi.schema.fixtures.dir` only through
   `FixtureDirectory`.
 - **Negative corpus:** `NegativeCodecScenarios` loads `negative-manifest.json` with JSON-P (Jakarta
@@ -112,14 +126,20 @@ as of Phase 2.14.
   `FlatArticle.{title, body, author, comments}`, `FlatLidArticle.id`, and the mutable-field
   POJOs (`FlatMutableArticle`, `FlatDefaultedArticle`, `FlatThingWithIgnored`, and others) are
   `@Nullable` under the `@NullMarked` `domainread` package (ADR-009).
+- **Null-bearing compound-write models:** `LinkedArticle.related`, `DeepNode.child`,
+  `CyclicNode.child`, and `BaseComment.{id, body, author}` are `@Nullable` under the `@NullMarked`
+  `compoundwrite` package (ADR-009). `CompoundWriteExpectation.Success.included` is `@Nullable` so
+  absent `included` stays distinct from a present empty array.
 - **Nullness:** Production packages are `@NullMarked` (JSpecify). Use `@Nullable` for catalog
   members that are absent (`CodecScenario.primaryDataKind`, `schemaKind`, `schemaDisagreement`,
   `exactUtf8Path`; `NegativeCodecScenario.pointer`, `ruleCode`;
-  `DomainReadExpectation.Failure.propertyPath` / `resourceClass`). Groovy tests are not annotated.
+  `DomainReadExpectation.Failure.propertyPath` / `resourceClass`;
+  `CompoundWriteExpectation.Success.included` / `offPathRelationship` / `expectedTraversalDelta`;
+  `CompoundWriteExpectation.Failure.propertyPath` / `resourceClass`). Groovy tests are not annotated.
 - **Extension workflow (Jackson 2):** a new adapter suite runs every scenario of the shared
   domain-write catalog through its own resource mapper and asserts full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite (mandatory per
   Phase 2.18); the same full-catalog rule applies to the domain-read binder catalog (mandatory
-  per Phase 2.21). Jackson-API-specific behavior (mix-ins, serializers, naming strategies,
-  converter wiring, custom deserializers, linkage mappers) stays in adapter-local specs,
-  documented there.
+  per Phase 2.21) and the compound-write catalog (mandatory per Phase 2.19). Jackson-API-specific
+  behavior (mix-ins, serializers, naming strategies, converter wiring, custom deserializers,
+  linkage mappers) stays in adapter-local specs, documented there.

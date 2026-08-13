@@ -1,8 +1,9 @@
-package io.github.kazemek.jsonapi.jackson3.testmodel;
+package io.github.kazemek.jsonapi.testfixtures.compoundwrite;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+import org.jspecify.annotations.Nullable;
 
 /** Mutable node graph for cyclic inclusion traversal tests. */
 @JsonApiResource(type = "nodes")
@@ -10,7 +11,7 @@ public final class CyclicNode {
 
   private final String id;
   private final String label;
-  private CyclicNode child;
+  private @Nullable CyclicNode child;
 
   public CyclicNode(String id, String label) {
     this.id = id;
@@ -27,11 +28,11 @@ public final class CyclicNode {
   }
 
   @JsonApiRelationship
-  public CyclicNode getChild() {
+  public @Nullable CyclicNode getChild() {
     return child;
   }
 
-  public void setChild(CyclicNode child) {
+  public void setChild(@Nullable CyclicNode child) {
     this.child = child;
   }
 }

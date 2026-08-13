@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `CompoundSerializationSpec`  
 > **Dependencies:** Phases 2.3, 2.11, 2.13, and 2.28  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -140,7 +140,7 @@ for cross-major parity.
 
 ## Acceptance criteria
 
-- [ ] The closed shared `CompoundSerializationSpec` inventory (all 30 named tests above) is present
+- [x] The closed shared `CompoundSerializationSpec` inventory (all 30 named tests above) is present
       as the initial `CompoundWriteScenarios` catalog exposing the
       `FixtureCatalog<CompoundWriteScenario>` contract through the Phase 2.28 pinned static
       delegation surface (`all()`/`byId(String)`/`where(Predicate)` plus `catalog()`;
@@ -150,20 +150,20 @@ for cross-major parity.
       registered) without major-specific production imports; the four jackson-common contract
       tests stay in `JacksonCommonContractsSpec`; adapter-local is empty unless a
       Jackson-API-specific case is documented.
-- [ ] Jackson 3 `CompoundSerializationSpec` consumes the catalog for that set and asserts
+- [x] Jackson 3 `CompoundSerializationSpec` consumes the catalog for that set and asserts
       `executedScenarioIds == catalogScenarioIds`.
-- [ ] Every catalog scenario's expectation encodes the included-resource order (first-discovery),
+- [x] Every catalog scenario's expectation encodes the included-resource order (first-discovery),
       the include-policy outcome, and the `MappingDiagnostic` code / `resourceClass` /
       `propertyPath` where the scenario fails; scenarios whose models observe access additionally
       carry the traversal-delta assertion (`expectedTraversalDelta == 0`, measured by the adapter
       over two runs with and without the include path); the concurrent-isolation variant carries
       both mappings and is executed concurrently by the Jackson 3 suite, which asserts the
       absolute access counts and round-trip checks locally.
-- [ ] The eight graph builders move together into `jsonapi-java-test-fixtures` (`PolymorphicArticle`
+- [x] The eight graph builders move together into `jsonapi-java-test-fixtures` (`PolymorphicArticle`
       with `BaseComment`), retain accurate `@Nullable` on their null-bearing members under the
       `@NullMarked` package per ADR-009, jackson3 references are repointed, and catalog integrity
       and the canonical `module-docs` checklist cover compound-write scenarios.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.
