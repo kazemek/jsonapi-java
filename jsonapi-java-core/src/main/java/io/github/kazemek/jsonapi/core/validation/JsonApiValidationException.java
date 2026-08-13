@@ -1,9 +1,11 @@
 package io.github.kazemek.jsonapi.core.validation;
 
+import java.io.Serial;
+
 /** Validation failure carrying a stable rule code and JSON Pointer-like path. */
 public final class JsonApiValidationException extends RuntimeException {
 
-  private static final long serialVersionUID = 1L;
+  @Serial private static final long serialVersionUID = 1L;
 
   private final ValidationRuleCode ruleCode;
   private final String jsonPointer;

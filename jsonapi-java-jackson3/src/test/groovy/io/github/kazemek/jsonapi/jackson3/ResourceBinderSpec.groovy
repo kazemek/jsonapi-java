@@ -282,7 +282,7 @@ class ResourceBinderSpec extends Specification {
     article.author() == null
   }
 
-  private Object invoke(DomainReadScenario scenario) {
+  private static Object invoke(DomainReadScenario scenario) {
     def binder = binderFor(scenario.converterBehavior())
     def input = scenario.input()
     if (input instanceof DomainReadInput.SingleResource) {

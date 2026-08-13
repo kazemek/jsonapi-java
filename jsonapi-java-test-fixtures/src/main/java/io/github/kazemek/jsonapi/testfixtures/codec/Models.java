@@ -21,29 +21,29 @@ public final class Models {
   private Models() {}
 
   public static ResourceObject resource(String type, String id) {
-    return create(type, id, null, null, null, null, null, Map.of());
+    return new ResourceObject(type, id, null, null, null, null, null, Map.of());
   }
 
   public static ResourceObject resource(String type, String id, Attributes attributes) {
-    return create(type, id, null, attributes, null, null, null, Map.of());
+    return new ResourceObject(type, id, null, attributes, null, null, null, Map.of());
   }
 
   public static ResourceObject resource(String type, String id, Relationships relationships) {
-    return create(type, id, null, null, relationships, null, null, Map.of());
+    return new ResourceObject(type, id, null, null, relationships, null, null, Map.of());
   }
 
   public static ResourceObject resource(String type, String id, Links links) {
-    return create(type, id, null, null, null, links, null, Map.of());
+    return new ResourceObject(type, id, null, null, null, links, null, Map.of());
   }
 
   public static ResourceObject resource(
       String type, String id, Attributes attributes, Relationships relationships) {
-    return create(type, id, null, attributes, relationships, null, null, Map.of());
+    return new ResourceObject(type, id, null, attributes, relationships, null, null, Map.of());
   }
 
   public static ResourceObject resource(
       String type, String id, Attributes attributes, Map<String, Object> additionalMembers) {
-    return create(type, id, null, attributes, null, null, null, additionalMembers);
+    return new ResourceObject(type, id, null, attributes, null, null, null, additionalMembers);
   }
 
   public static ResourceObject resource(
@@ -53,19 +53,7 @@ public final class Models {
       Relationships relationships,
       Links links,
       Meta meta) {
-    return create(type, id, null, attributes, relationships, links, meta, Map.of());
-  }
-
-  public static ResourceObject resource(
-      String type,
-      String id,
-      String lid,
-      Attributes attributes,
-      Relationships relationships,
-      Links links,
-      Meta meta,
-      Map<String, Object> additionalMembers) {
-    return create(type, id, lid, attributes, relationships, links, meta, additionalMembers);
+    return new ResourceObject(type, id, null, attributes, relationships, links, meta, Map.of());
   }
 
   public static ResourceObject resourceWithLid(
@@ -116,18 +104,5 @@ public final class Models {
         LinksContext.TOP_LEVEL,
         Map.of(),
         null);
-  }
-
-  private static ResourceObject create(
-      String type,
-      String id,
-      @Nullable String lid,
-      @Nullable Attributes attributes,
-      @Nullable Relationships relationships,
-      @Nullable Links links,
-      @Nullable Meta meta,
-      Map<String, Object> additionalMembers) {
-    return new ResourceObject(
-        type, id, lid, attributes, relationships, links, meta, additionalMembers);
   }
 }

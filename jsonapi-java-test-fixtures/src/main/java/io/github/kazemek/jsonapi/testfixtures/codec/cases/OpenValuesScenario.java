@@ -29,10 +29,10 @@ public final class OpenValuesScenario {
     Map<String, @Nullable Object> attributes = new LinkedHashMap<>();
     attributes.put("nullable", null);
     attributes.put("nested", nested);
-    attributes.put("intValue", Integer.valueOf(42));
-    attributes.put("longValue", Long.valueOf(9007199254740991L));
-    attributes.put("floatValue", Float.valueOf(1.5f));
-    attributes.put("doubleValue", Double.valueOf(2.25d));
+    attributes.put("intValue", 42);
+    attributes.put("longValue", 9007199254740991L);
+    attributes.put("floatValue", 1.5f);
+    attributes.put("doubleValue", 2.25d);
     attributes.put("bigIntValue", new BigInteger("123456789012345678901234567890"));
     attributes.put("bigDecimalValue", new BigDecimal("1234567890.123456789"));
 

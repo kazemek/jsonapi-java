@@ -171,7 +171,7 @@ class JsonApiDraftSchemaSpec extends Specification {
         .collectEntries { def parts = it.tokenize(); [(parts[1]): parts[0]] }
   }
 
-  private String digest(byte[] bytes) {
+  private static String digest(byte[] bytes) {
     return MessageDigest.getInstance("SHA-256").digest(bytes).collect { String.format("%02x", it) }.join()
   }
 

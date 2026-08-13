@@ -40,7 +40,7 @@ public final class MemberOrderScenario {
     Map<String, Object> resourceMembers = new LinkedHashMap<>();
     resourceMembers.put("ext:flag", true);
     var article =
-        Models.resource(
+        new ResourceObject(
             "articles",
             "1",
             "temp-1",
