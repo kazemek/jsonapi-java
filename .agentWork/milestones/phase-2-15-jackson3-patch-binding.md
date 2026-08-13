@@ -63,27 +63,28 @@ which annotated DTO properties the client requested to change.
   `patch-wrong-primary-shape`; `patch-resource-type-mismatch`;
   `patch-identifier-conversion-failure`; `patch-attribute-conversion-failure`;
   `patch-unsupported-relationship-target`.
-  Shared validation diagnostics (Phase 1.3): `patch-wrong-primary-shape` →
+  Shared reader-validation diagnostics (Phase 1.3): `patch-wrong-primary-shape` →
   `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`; `patch-missing-relationship-data` →
   `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`;
-  `patch-endpoint-identity-mismatch` → `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`;
-  `patch-unsupported-relationship-target` → `UNSUPPORTED_RELATIONSHIP_TARGET` at
-  `/relationships/<name>/data` (Phase 2.9 resource-relative binder path; the patch reader does
-  not join `/data` onto binder failures);
+  `patch-endpoint-identity-mismatch` → `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`.
+  Shared binder diagnostics (Phase 2.9): `patch-unsupported-relationship-target` →
+  `UNSUPPORTED_RELATIONSHIP_TARGET` at `/relationships/<name>/data`;
   `patch-relationship-cardinality-mismatch` → `RELATIONSHIP_CARDINALITY_MISMATCH` at
-  `/relationships/<name>/data`.
+  `/relationships/<name>/data`. The patch reader does not join `/data` onto binder failures.
   Pointer-space convention: Phase 1.3 reader-validation diagnostics are document-relative
   (`/data`, `/data/relationships/...`, `/data/type`); binder-originated diagnostics keep Phase
   2.9 resource-relative pointers (`/id`, `/type`, `/` + logical property, `/relationships/<name>/data`).
 - Adapter-local cases by exact name stay in each major's `*PatchBindingSpec` only, documented
   there with major-local harnesses and never enumerated in a shared manifest:
-  `custom deserializer applies to attribute change`; `patch-custom-linkage-conversion`.
+  `custom deserializer applies to attribute change`; `patch-custom-linkage-conversion`;
+  `explicit null on Optional attribute stores value == null`; `fromDocument missing id`.
 - [ADR-004](../../docs/adr/004-jackson-integration.md) — per-member `convertValue` is how custom
   deserializers apply to attribute changes. [ADR-009](../../docs/adr/009-jspecify-nullness.md) —
   omitted vs explicit JSON `null` is list membership vs `@Nullable` change value; do not add a
   sealed attribute-null variant (core `Attributes` already uses `@Nullable` map values).
-  Relationship `NullLinkage` converts to Java `null` or empty `Optional` as Phase 2.9 would; the
-  change is still present in the command.
+  Explicit attribute JSON `null` is stored as `value == null` even when the mapped property is
+  `Optional` (do not keep `Optional.empty()`). Relationship `NullLinkage` converts to Java `null`
+  or empty `Optional` as Phase 2.9 would; the change is still present in the command.
 - Conformance matrix edits (name both rows): Domain mapping “Presence-aware resource-update
   commands” → mark **supported** for Jackson 3 binding with the pinned replacement note
   “Jackson 3 binding supported (Phase 2.15); Jackson 2 binding remains Phase 2.23”. Phase 1.3
@@ -143,14 +144,9 @@ which annotated DTO properties the client requested to change.
 
 ## Implementation boundaries
 
-- The milestone lands as two sequential reviewable commits (the Phase 2.14 precedent), verified
-  as one unit by the milestone review with the commit-1 checkpoint (green build) checked
-  explicitly: commit 1 = the neutral command contracts, the ADR-007 amendment, and the Jackson 3
-  patch-reader entry points with a green build (compilation plus existing module suites; commit 1
-  ships the new public API before its behavioral suites exist); commit 2 = the `PatchScenarios`
-  catalog, the Jackson 3 `*PatchBindingSpec` suites, and the docs/conformance edits. The two-commit
-  sequence is a deliberate, recorded size-gate decision: one coherent outcome, commit 1
-  independently buildable, the pair reviewed as one unit.
+- The milestone lands as one reviewable commit: the neutral command contracts, the ADR-007
+  amendment, the Jackson 3 patch-reader entry points, the `PatchScenarios` catalog, the Jackson 3
+  `*PatchBindingSpec` suites, and the docs/conformance edits.
 - **Factory matrix** (mirrors `resourceBinder` plus the writer's `ValidationContext` argument;
   each `JsonMapper` overload has a `JsonMapper.Builder` twin that `build()`s then delegates;
   builders are not given the JSON:API module):
@@ -163,9 +159,12 @@ which annotated DTO properties the client requested to change.
   including `expectedEndpointIdentity`, are preserved) and composes
   `DocumentReadContext.of(forced, PrimaryDataKind.RESOURCE)` as the sole aggregate-validation
   policy. Omitted converter/mappers default to `IdentifierConverter.defaults()` and `Map.of()`.
-  Derive the binder mapper via `JsonMapper.rebuild()`; never mutate the caller mapper. Construct
-  `JsonApiPatchReader` only from this factory (package-private constructor); it is safe for
-  concurrent use once created.
+  Snapshot the caller-supplied linkage-mapper map with `Map.copyOf` before storing it (matching
+  `DomainResourceBinder`) so later caller mutation cannot affect binding. Derive the binder mapper
+  via `JsonMapper.rebuild()`; never mutate the caller mapper. Construct `JsonApiPatchReader` only
+  from this factory (package-private constructor); it is safe for concurrent use once created.
+  Caller `IdentifierConverter` and `RelationshipLinkageMapper` implementations must themselves be
+  thread-safe if the reader is used concurrently.
 - **`JsonApiPatchReader` methods:** `readValue(String|byte[]|InputStream|JsonParser, Class<T>)`
   returns `PatchCommand<T>`; `readValue(…, JavaType)` returns `PatchCommand<?>` whose
   `resourceType()` is the JavaType's raw class. Close/ownership rules match
@@ -183,23 +182,30 @@ which annotated DTO properties the client requested to change.
   rejects null `resourceType`, `identity`, `changes`, or change elements.
   `PatchChange` is `sealed` and permits only `AttributeChange` and `RelationshipChange`.
   Each change carries `jsonapiName()` (the change key, including `@JsonApiAttribute` /
-  `@JsonApiRelationship` renames) and `logicalName()` (Jackson logical property name).
+  `@JsonApiRelationship` renames) and `logicalName()` (Jackson logical property name). Compact
+  constructors on `AttributeChange` and `RelationshipChange` reject null `jsonapiName` and
+  `logicalName`; `@Nullable value()` remains nullable. Immutability is shallow beyond the change
+  list: `List`/`Set` values are copied then wrapped unmodifiable (null elements preserved; do not
+  use `List.copyOf`); arrays are cloned. Do not deep-freeze arbitrary POJOs or Maps.
   `AttributeChange` / `RelationshipChange` hold `@Nullable Object value()`: the per-member
   converted property value (Optional wrapping and List/Set/array shapes included). Omitted
   members never appear. Explicit attribute JSON `null` is `value == null` on a present
-  `AttributeChange`. `NullLinkage` on to-one is `value == null` or empty `Optional` as Phase 2.9
-  would bind. Empty to-many is an empty collection of the mapped property type.
+  `AttributeChange`, including when the mapped property type is `Optional` (do not store
+  `Optional.empty()`). `NullLinkage` on to-one is `value == null` or empty `Optional` as Phase
+  2.9 would bind. Empty to-many is an empty collection of the mapped property type.
 - **Bind pipeline (fail-fast; no partial command):** resolve `ResourceMapping` via the Phase 2.9
   cache; `RESOURCE_TYPE_MISMATCH` at `/type` before identity or changes; convert identity; then
   attribute changes in `Attributes.attributes()` iteration order; then relationship changes in
-  `Relationships.relationships()` iteration order. Identity conversion follows Phase 2.9:
-  `@JsonApiId` or logical name `id`; `resource.hasId()` → parse + `convertValue` at `/id`; else
-  lid if present at `/lid`; if neither, `IDENTIFIER_CONVERSION_FAILED` at `/id`. Identity is
-  never emitted as a change. Unmapped or `@JsonIgnore` supplied names are omitted from the
-  change set (Phase 2.9 ignore-unmapped policy). Duplicate/colliding mapping definitions still
-  fail before a command escapes. Per-member attribute conversion is
-  `mapper.convertValue(rawValue, propertyJavaType)` including JSON `null` (so primitive-null
-  fails); failure emits `UNSUPPORTED_ATTRIBUTE_VALUE` at `/` + Jackson logical property name.
+  `Relationships.relationships()` iteration order. Identity conversion uses the resource `id`
+  only (PATCH identity; no `lid` fallback): `@JsonApiId` or logical name `id`;
+  `resource.hasId()` → parse + `convertValue` at `/id`; otherwise
+  `IDENTIFIER_CONVERSION_FAILED` at `/id`. Identity is never emitted as a change. Unmapped or
+  `@JsonIgnore` supplied names are omitted from the change set (Phase 2.9 ignore-unmapped
+  policy). Duplicate/colliding mapping definitions still fail before a command escapes.
+  Per-member attribute conversion is `mapper.convertValue(rawValue, propertyJavaType)` including
+  JSON `null` (so primitive-null fails); when the raw value is JSON `null`, store
+  `value == null` even if `convertValue` would return `Optional.empty()`. Failure emits
+  `UNSUPPORTED_ATTRIBUTE_VALUE` at `/` + Jackson logical property name.
   Relationship conversion reuses Phase 2.9 cardinality / built-in `ResourceIdentifier` /
   registered `RelationshipLinkageMapper` rules, then `convertValue`s the intermediate value to
   the property `JavaType` so empty to-many matches List vs Set vs array. Relationship
@@ -219,7 +225,8 @@ which annotated DTO properties the client requested to change.
   identifier converter (identifier failure is `FlatIntIdArticle` coercion, not a custom
   `parse`).
 - Jackson 3 `*PatchBindingSpec` must also cover the named adapter-local cases
-  (`custom deserializer applies to attribute change`, `patch-custom-linkage-conversion`) with
+  (`custom deserializer applies to attribute change`, `patch-custom-linkage-conversion`,
+  `explicit null on Optional attribute stores value == null`, `fromDocument missing id`) with
   major-local harnesses, plus `Builder` / `JavaType` / named `IdentifierConverter` /
   linkage-mapper factory overloads. Those cases are not shared fixtures.
 - Encounter order is total and deterministic as specified above. The application chooses whether
@@ -237,7 +244,8 @@ which annotated DTO properties the client requested to change.
   scenario ids, and assert full-catalog coverage (`executedScenarioIds == catalogScenarioIds`);
   also cover the named adapter-local cases in Jackson 3 `*PatchBindingSpec` only, exercising the
   `patchReader` factory's named `IdentifierConverter`, linkage-mapper, `Builder`, and `JavaType`
-  overloads.
+  overloads, plus `explicit null on Optional attribute stores value == null` and
+  `fromDocument missing id` (`IDENTIFIER_CONVERSION_FAILED` at `/id`).
 - Cover null/single/empty/non-empty relationship replacements and compound requests proving
   `included` never affects a change.
 - Verify wrong primary shape (`UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`), missing relationship
@@ -253,7 +261,13 @@ which annotated DTO properties the client requested to change.
   (`patch-wrong-primary-shape`, `patch-missing-relationship-data`,
   `patch-endpoint-identity-mismatch`) run through `readValue`; at least one success and one
   binder-diagnostic scenario run through `fromDocument` to prove the no-revalidation guarantee;
-  all remaining scenarios run through `readValue`. A facade-spec assertion covers
+  all remaining scenarios run through `readValue`. Adapter-local `PatchBindingSpec` also covers
+  the `fromDocument` illegal primary-data matrix (null document; absent / `NullData` /
+  collection / identifier `data()`) as `IllegalArgumentException`, and caller-owned
+  `InputStream` / `JsonParser` remaining open on success and failure (mirroring
+  `DomainDocumentReaderSpec`). `JacksonCommonContractsSpec` asserts compact-constructor rejection
+  of null `jsonapiName` / `logicalName` and that mutating `changes()` or a `List`/`Set`/array
+  change value cannot affect the command. A facade-spec assertion covers
   `JsonApiFixtures.patch()` view identity and the `where` shim, per the Phase 2.28 facade-spec
   pattern. Assert attribute-then-relationship encounter order, JSON:API-name change keys,
   accompanying logical names, and that typed identity is never listed among changes.
@@ -262,18 +276,24 @@ which annotated DTO properties the client requested to change.
 
 - [ ] Patch commands (`PatchCommand<T>` with sealed `AttributeChange` / `RelationshipChange`)
       contain exactly the supplied mapped attribute and relationship changes keyed by final
-      JSON:API name (and carrying Jackson `logicalName`), preserving explicit null, null
-      linkage, empty collections of the mapped property type, and attribute-then-relationship
-      encounter order; typed identity is the DTO identifier property (Phase 2.9: `@JsonApiId`
-      or logical `id`, then `IdentifierConverter.parse` and coercion), exposed separately and
-      never as a change. The neutral command contracts live in
+      JSON:API name (and carrying Jackson `logicalName`), preserving explicit null (including
+      Optional attributes as `value == null`, not `Optional.empty()`), null linkage, empty
+      collections of the mapped property type, and attribute-then-relationship encounter order;
+      typed identity is the DTO identifier property from resource `id` only (`@JsonApiId` or
+      logical `id`, then `IdentifierConverter.parse` and coercion; no `lid` fallback), exposed
+      separately and never as a change. Compact constructors reject null `jsonapiName` /
+      `logicalName`; `changes()` is unmodifiable; `List`/`Set`/array change values are
+      defensively copied. The neutral command contracts live in
       `io.github.kazemek.jsonapi.jackson` per the ADR-007 amendment recorded in deliverable 1.
 - [ ] Omitted DTO properties never invoke constructors/deserializers, acquire fabricated defaults,
-      or appear as changes; public patch APIs satisfy ADR-009 `@NullMarked` / `@Nullable` rules.
+      or appear as changes; public patch APIs satisfy ADR-009 `@NullMarked` / `@Nullable` rules
+      including runtime construction checks on command and change-record components.
 - [ ] Pipeline is one `JsonApiDocumentReader` validate-on-read via a factory-composed
       `DocumentReadContext` (`PrimaryDataKind.RESOURCE` + factory-accepted `ValidationContext`
       forced to `UPDATE_REQUEST`, optional `EndpointIdentity`) exposed through the named
-      `JsonApiJackson3.patchReader(...)` / `JsonApiPatchReader` entry points, then presence-aware
+      `JsonApiJackson3.patchReader(...)` / `JsonApiPatchReader` entry points (linkage-mapper map
+      snapshotted with `Map.copyOf`; caller-owned streams/parsers stay open; `fromDocument`
+      rejects null/absent/`NullData`/collection/identifier primary data), then presence-aware
       binding via Phase 2.9 mapping definitions, relationship/identifier diagnostics, and newly
       introduced per-member attribute conversion (never a second defaults validate, never
       `JsonApiResourceBinder` / whole-DTO construction, never typed envelopes /
@@ -284,7 +304,8 @@ which annotated DTO properties the client requested to change.
       registered and a passing `PatchScenariosCatalogSpec` (unique ids, `byId` round-trip,
       resolvable expectations, additive posture), and is consumed with full-catalog coverage by
       Jackson 3 `*PatchBindingSpec`; that Spec also covers the named adapter-local cases
-      (`custom deserializer applies to attribute change`, `patch-custom-linkage-conversion`)
+      (`custom deserializer applies to attribute change`, `patch-custom-linkage-conversion`,
+      `explicit null on Optional attribute stores value == null`, `fromDocument missing id`)
       for Phase 2.23 parity, with no shared exclusion manifest.
 - [ ] The canonical `module-docs` checklist passes for jackson3, jackson-common, and
       test-fixtures; Domain mapping “Presence-aware resource-update commands” is **supported**
