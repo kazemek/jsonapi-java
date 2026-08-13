@@ -25,9 +25,9 @@ contract boundary in the artifact. Never imply that unexamined files were review
 
 ## Workflow / docs N/A
 
-If the milestone does not change product types, modules, or wire semantics, evaluate **only**
-workflow placement (new skill vs existing skill vs `AGENTS.md`). Mark product-design coverage
-dimensions Not applicable. Do not invent JSON:API findings.
+If the milestone does not change product types, modules, or wire semantics, mark product-design
+coverage dimensions Not applicable. Evaluate workflow placement and workflow semantics, including
+orchestration, handoff, artifact, verdict, and lifecycle contracts. Do not invent JSON:API findings.
 
 ## Perform the review
 
@@ -116,8 +116,8 @@ Use this template. Replace the prior artifact on re-review. Report the artifact 
   - Evidence: <…>
 - [Pass | Fail | Partial | Not applicable] Hidden application policy
   - Evidence: <…>
-- [Pass | Fail | Partial | Not applicable] Workflow placement
-  - Evidence: <new skill vs existing skill vs AGENTS.md, or why N/A>
+- [Pass | Fail | Partial | Not applicable] Workflow placement / semantics
+  - Evidence: <placement and orchestration/handoff/artifact/verdict/lifecycle, or why N/A>
 
 ## Repo evidence inspected
 
