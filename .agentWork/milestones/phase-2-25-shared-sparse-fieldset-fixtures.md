@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `SparseFieldsetSpec`  
 > **Dependencies:** Phases 2.8, 2.11, 2.13, and 2.28  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -144,7 +144,7 @@ parity.
 
 ## Acceptance criteria
 
-- [ ] The closed shared `SparseFieldsetSpec` inventory (all named tests above) is covered by the
+- [x] The closed shared `SparseFieldsetSpec` inventory (all named tests above) is covered by the
       initial `SparseFieldsetScenarios` catalog — each named test either becomes a scenario or is
       explicitly split into a catalog scenario plus the pinned Jackson 3 suite-local assertion —
       exposing
@@ -155,13 +155,13 @@ parity.
       `AccessCountingFieldsetArticle` moved into `jsonapi-java-test-fixtures` with jackson3
       references repointed; adapter-local scenario content is empty unless a major-mapper-only
       case is documented (harness-level suite-local assertions remain).
-- [ ] Jackson 3 `SparseFieldsetSpec` consumes the catalog for that set and asserts
+- [x] Jackson 3 `SparseFieldsetSpec` consumes the catalog for that set and asserts
       `executedScenarioIds == catalogScenarioIds`.
-- [ ] Shared expectations prove pre-access filtering and actual-omission full-linkage behavior, and
+- [x] Shared expectations prove pre-access filtering and actual-omission full-linkage behavior, and
       failure outcomes carry the `MappingDiagnostic` code with `resourceClass`/`propertyPath`.
-- [ ] Catalog integrity covers the `FixtureCatalog` contract and the canonical `module-docs`
+- [x] Catalog integrity covers the `FixtureCatalog` contract and the canonical `module-docs`
       checklist passes for the `sparsefieldset` package and entry points.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.

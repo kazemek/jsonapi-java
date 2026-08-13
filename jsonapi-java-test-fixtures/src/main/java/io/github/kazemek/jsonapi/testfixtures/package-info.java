@@ -4,8 +4,8 @@
  *
  * <p>{@link JsonApiFixtures} plus the {@link FixtureCatalog} instances it exposes is the canonical
  * retrieval API for adapter suites and future catalogs. Concrete {@code *Scenarios} classes live in
- * {@code codec}, {@code domainwrite}, {@code domainread}, and {@code compoundwrite} and retain
- * static shims for existing consumers.
+ * {@code codec}, {@code domainwrite}, {@code domainread}, {@code compoundwrite}, and {@code
+ * sparsefieldset} and retain static shims for existing consumers.
  *
  * <p>Per ADR-009 this package is {@link org.jspecify.annotations.NullMarked}.
  */

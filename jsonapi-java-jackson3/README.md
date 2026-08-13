@@ -235,3 +235,6 @@ artifact; both majors share the neutral contracts of
   from `DomainReadScenarios`; `ResourceBinderSpec` asserts full-catalog coverage and keeps
   Jackson-API-specific cases local. Compound-inclusion contract cases come from
   `CompoundWriteScenarios`; `CompoundSerializationSpec` asserts full-catalog coverage.
+  Sparse-fieldset contract cases come from `SparseFieldsetScenarios`; `SparseFieldsetSpec`
+  asserts full-catalog coverage and keeps harness-level assertions (mutation isolation,
+  duplicate collapse, exact access counts, `applyTo`/writer validation) local.

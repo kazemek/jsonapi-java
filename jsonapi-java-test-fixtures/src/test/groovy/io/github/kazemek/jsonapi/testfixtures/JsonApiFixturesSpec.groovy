@@ -6,6 +6,7 @@ import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenarios
 import spock.lang.Specification
 
 class JsonApiFixturesSpec extends Specification {
@@ -18,6 +19,7 @@ class JsonApiFixturesSpec extends Specification {
     JsonApiFixtures.domainWrite().all() == DomainWriteScenarios.all()
     JsonApiFixtures.domainRead().all() == DomainReadScenarios.all()
     JsonApiFixtures.compoundWrite().all() == CompoundWriteScenarios.all()
+    JsonApiFixtures.sparseFieldset().all() == SparseFieldsetScenarios.all()
   }
 
   def "each accessor returns the same instance as the catalog catalog() accessor"() {
@@ -28,6 +30,7 @@ class JsonApiFixturesSpec extends Specification {
     JsonApiFixtures.domainWrite().is(DomainWriteScenarios.catalog())
     JsonApiFixtures.domainRead().is(DomainReadScenarios.catalog())
     JsonApiFixtures.compoundWrite().is(CompoundWriteScenarios.catalog())
+    JsonApiFixtures.sparseFieldset().is(SparseFieldsetScenarios.catalog())
   }
 
   def "every catalog where shim returns the full catalog for a matching predicate"() {
@@ -38,6 +41,7 @@ class JsonApiFixturesSpec extends Specification {
     DomainWriteScenarios.where({ true })*.id == DomainWriteScenarios.all()*.id
     DomainReadScenarios.where({ true })*.id == DomainReadScenarios.all()*.id
     CompoundWriteScenarios.where({ true })*.id == CompoundWriteScenarios.all()*.id
+    SparseFieldsetScenarios.where({ true })*.id == SparseFieldsetScenarios.all()*.id
   }
 
   def "capability filtering works through where"() {
@@ -58,6 +62,11 @@ class JsonApiFixturesSpec extends Specification {
   def "every compound-write entry satisfies the Scenario notes default contract"() {
     expect:
     CompoundWriteScenarios.all().every { it.notes() == it.id() }
+  }
+
+  def "every sparse-fieldset entry satisfies the Scenario notes default contract"() {
+    expect:
+    SparseFieldsetScenarios.all().every { it.notes() == it.id() }
   }
 
   def "domain-write unknown byId fails with the unified message"() {
@@ -85,5 +94,14 @@ class JsonApiFixturesSpec extends Specification {
     then:
     def ex = thrown(IllegalArgumentException)
     ex.message == "Unknown compound-write scenario id: no such scenario"
+  }
+
+  def "sparse-fieldset unknown byId fails with the unified message"() {
+    when:
+    SparseFieldsetScenarios.byId("no such scenario")
+
+    then:
+    def ex = thrown(IllegalArgumentException)
+    ex.message == "Unknown sparse-fieldset scenario id: no such scenario"
   }
 }
