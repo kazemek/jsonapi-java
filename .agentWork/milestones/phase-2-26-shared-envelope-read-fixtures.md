@@ -2,7 +2,7 @@
 
 > **Scope:** `jsonapi-java-test-fixtures` / jackson3 `DomainDocumentReaderSpec`  
 > **Dependencies:** Phases 2.10, 2.11, 2.12, 2.13, 2.14, 2.27, and 2.28  
-> **Status:** Not started
+> **Status:** Complete
 
 ## Goal
 
@@ -190,7 +190,7 @@ parity without forcing every codec fixture into DTO binding.
 
 ## Acceptance criteria
 
-- [ ] The initial `EnvelopeReadScenarios` catalog exposes the
+- [x] The initial `EnvelopeReadScenarios` catalog exposes the
       `FixtureCatalog<EnvelopeReadScenario>` contract through the Phase 2.28 pinned static
       delegation surface
       (`enveloperead` package, `@NullMarked` with accurate `@Nullable` per ADR-009,
@@ -200,15 +200,15 @@ parity without forcing every codec fixture into DTO binding.
       missing-annotation target move into `jsonapi-java-test-fixtures` with jackson3 references
       repointed, and the named adapter-local cases remain in the adapter spec with no shared
       manifest.
-- [ ] Jackson 3 `DomainDocumentReaderSpec` consumes the catalog for those shared names and asserts
+- [x] Jackson 3 `DomainDocumentReaderSpec` consumes the catalog for those shared names and asserts
       `executedScenarioIds == catalogScenarioIds`.
-- [ ] Shared expectations preserve registration, included order/identity, pointer composition, and
+- [x] Shared expectations preserve registration, included order/identity, pointer composition, and
       the no-injection boundary; the initial inventory is pinned to the closed shared test names
       above and catalog integrity rejects unresolvable expectations.
-- [ ] The canonical `module-docs` checklist passes for `jsonapi-java-test-fixtures` envelope-read
+- [x] The canonical `module-docs` checklist passes for `jsonapi-java-test-fixtures` envelope-read
       docs, and the `fixtures/jsonapi-1.1/README.md` layout documents the new
       `fixtures/jsonapi-1.1/envelope-binding/` directory with its stable binding-variant names.
-- [ ] `./gradlew clean build` passes.
-- [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
-- [ ] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
+- [x] `./gradlew clean build` passes.
+- [x] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).
+- [x] Sonar Quality Gate passes; if `SONAR_TOKEN` is unavailable, report Sonar blocked and that CI
       must still pass the gate.

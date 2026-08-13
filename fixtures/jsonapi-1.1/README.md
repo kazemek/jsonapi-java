@@ -16,13 +16,24 @@ symmetry.
 | `documents/*.json`             | Pretty-printed expected wire documents                                                        |
 | `documents/*.compact.json`     | Exact UTF-8 expectations for member-order cases                                               |
 | `negative/*.json`              | Read-only inputs for the negative corpus (malformed or context-invalid documents)             |
+| `envelope-binding/*.json`      | Named typed-envelope binding-variant documents (stable names; not codec corpus entries)       |
 
 Model builders, capability metadata, and validation contexts live in the internal Gradle module
 `jsonapi-java-test-fixtures` (`io.github.kazemek.jsonapi.testfixtures.codec`), not in this tree.
 `CodecScenario` carries the capability metadata (write, read, schema kind, primary-data kind,
 exact-byte policy, canonical `hreflang`, and known draft-schema disagreement), `CodecScenarios`
 exposes capability selections, `AmbiguousPrimaryDataScenarios` holds the dual-success models, and
-`NegativeCodecScenarios` loads the manifest-backed negative corpus.
+`NegativeCodecScenarios` loads the manifest-backed negative corpus. Typed-envelope binding variants
+live under `envelope-binding/` and are indexed by `EnvelopeBindingDocument` in
+`io.github.kazemek.jsonapi.testfixtures.enveloperead`; they are not codec corpus entries and must
+not be added to `manifest.json`. The duplicate-included-identities wire form is deliberately
+validation-invalid and is not part of the negative corpus — it serves the `fromDocument`
+entry-point contract. Stable file stems (enum names in `EnvelopeBindingDocument`) are
+`single-resource`, `heterogeneous-collection`, `at-member-document`,
+`unregistered-primary-single`, `unregistered-primary-collection`, `binder-failure-collection`,
+`binder-failure-single`, `binder-failure-included`, `root-level-failure`, `cyclic-linkage`,
+`shared-identity-id-and-lid`, `duplicate-included-identities`, `independent-envelopes-matching`,
+and `independent-envelopes-unrelated`.
 
 ## Capabilities
 

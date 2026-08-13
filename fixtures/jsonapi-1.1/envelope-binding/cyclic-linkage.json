@@ -1,0 +1,28 @@
+{
+  "data": {
+    "type": "nodes",
+    "id": "1",
+    "relationships": {
+      "parent": {
+        "data": {
+          "type": "nodes",
+          "id": "2"
+        }
+      }
+    }
+  },
+  "included": [
+    {
+      "type": "nodes",
+      "id": "2",
+      "relationships": {
+        "parent": {
+          "data": {
+            "type": "nodes",
+            "id": "1"
+          }
+        }
+      }
+    }
+  ]
+}
