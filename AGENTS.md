@@ -31,8 +31,8 @@ Project skills live at `.agents/skills/<name>/SKILL.md`. When this file names a 
 path and follow it (skills use explicit invocation only).
 
 - **Plan/refine/decompose a milestone:** use the `milestone-planning` skill; it verifies each
-  created or refined milestone with the `milestone-plan-review` procedure in a fresh-context
-  subagent.
+  created or refined milestone with the `milestone-design-review` orchestration (two fresh-context
+  reviewers) and then the `milestone-plan-review` procedure in a fresh-context subagent.
 - **Implement a milestone:** use the `implement-milestone` skill; it runs the applicable
   completion gates and verifies with the `milestone-review` procedure in a fresh-context subagent.
 - **Implement in an existing module:** select the governing milestone from the index (stop and
@@ -40,12 +40,15 @@ path and follow it (skills use explicit invocation only).
   affected `<module>/README.md`, read `package-info.java` for changed packages, open the exact
   production files and mirrored tests, and follow linked ADRs/conformance only when the change
   touches their contract.
+- **Review a milestone design:** use the `milestone-design-review` skill for on-demand reviews;
+  the `milestone-planning` skill runs the same orchestration after create/refine/decompose.
 - **Review a milestone plan/spec:** use the `milestone-plan-review` skill for on-demand reviews;
-  the `milestone-planning` skill runs the same procedure in a fresh subagent.
+  the `milestone-planning` skill runs the same procedure in a fresh subagent after design-review
+  Pass.
 - **Review an implementation:** use the `milestone-review` skill for on-demand reviews; the
   `implement-milestone` skill runs the same procedure in a fresh subagent.
 - **Review-isolation handoff:** use `milestone-handoff` only when a write-capable fresh subagent
-  cannot be spawned for plan or implementation review; it is not a primary task route.
+  cannot be spawned for design, plan, or implementation review; it is not a primary task route.
 - **Repository-wide build, CI, or workflow work:** read only the root configuration, workflow,
   or guidance files directly implicated; completion follows the gate tiers below.
 - **Scope expansion:** search inside the affected module or root subsystem first; broaden only

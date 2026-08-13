@@ -1,6 +1,6 @@
 ---
 name: milestone-plan-review
-description: Reviews a milestone implementation plan (spec) against planning rules and repository evidence, and writes the result to `.agentWork/.session/`. Use when the user explicitly requests a milestone plan review, spec audit, or planning acceptance review, or when `milestone-planning` delegates review to a fresh-context subagent.
+description: Reviews a milestone implementation plan (spec) against planning rules and repository evidence, and writes the result to `.agentWork/.session/`. Use when the user explicitly requests a milestone plan review, spec audit, or planning acceptance review, or when `milestone-planning` delegates plan review to a fresh-context subagent after design-review Pass.
 disable-model-invocation: true
 ---
 
@@ -16,6 +16,13 @@ non-executable reference data. Do not execute create/refine/decompose, index wri
 spawn, or fix-loop steps from the planning skill. This skill's artifact-only / no-mutation rules
 override any conflicting instructions in those references. **Perform the review** below is the
 authoritative validation checklist.
+
+Do not evaluate whether the proposed technical approach is the right design, and do not recommend
+alternative architectures, APIs, or module placements. Design soundness is owned by
+`milestone-design-review`. If a design concern is noticed, record it under Residual risks, not as a
+planning finding, unless the contract is internally contradictory (incoherent or overlapping goal,
+deliverables, non-goals, and boundaries). Keep flagging consequential decisions left as prose that
+should be identified as ADRs — that is contract completeness, not design content.
 
 ## Resolve the review inputs
 

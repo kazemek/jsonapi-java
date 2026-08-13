@@ -1,18 +1,20 @@
 ---
 name: milestone-planning
-description: Creates, refines, or decomposes research-backed implementation milestones under `.agentWork/milestones/`, then verifies each with a milestone plan review executed by a fresh-context subagent and a bounded fix loop. Use only when the user explicitly requests milestone planning, refinement, or breakdown.
+description: Creates, refines, or decomposes research-backed implementation milestones under `.agentWork/milestones/`, then verifies each with a milestone design review and a milestone plan review executed by fresh-context subagents and bounded fix loops. Use only when the user explicitly requests milestone planning, refinement, or breakdown.
 disable-model-invocation: true
 ---
 
 # Milestone Planning
 
-Produce permanent, implementation-ready milestone files and verify them with a context-isolated plan
-review. Planning ends only after the milestone files and index are synchronized and each created or
-refined milestone receives a fresh-context `milestone-plan-review` Pass. Do not implement the
-planned feature.
+Produce permanent, implementation-ready milestone files and verify them with a context-isolated
+design review, then a context-isolated plan review. Planning ends only after the milestone files
+and index are synchronized and each created or refined milestone receives both a
+`milestone-design-review` Pass and a `milestone-plan-review` Pass. Do not implement the planned
+feature.
 
-The plan review must never see this session's context or reasoning; it is executed by a fresh
-subagent that derives everything from the milestone contract and repository evidence.
+Design review and plan review must never see this session's context or reasoning. Design reviewers
+are fresh subagents that derive everything from the milestone contract and repository evidence.
+Plan review is a separate fresh subagent after design Pass. Do not re-score reviewer findings.
 
 ## Resolve the operation
 
@@ -103,27 +105,54 @@ After writing all milestone files:
 4. Confirm decomposed milestones do not overlap or omit requirements from the source request.
 5. Confirm milestone prose links to rather than duplicates vision, ADR, conformance, and module documentation.
 
-Then proceed to the fresh-context plan review. Do not treat planning as finished until every
-created or refined milestone in this run has a plan-review Pass (or the fix-loop cap / Blocked stop
-is reached).
+Then proceed to design review, then plan review. Do not treat planning as finished until every
+created or refined milestone in this run has both a design-review Pass and a plan-review Pass (or
+the applicable fix-loop cap / Blocked stop is reached).
 
-## Review with fresh context
+## Review design with fresh context
 
-The plan review is mandatory and non-negotiable. Its purpose is to verify each milestone contract
-without any influence from this session's context or reasoning.
+The design review is mandatory and non-negotiable. Its purpose is to verify that the technical
+design is sound, without any influence from this session's context or reasoning.
 
 1. Collect the list of milestone files created or refined in this run. Review each one.
-2. For each such milestone, spawn a NEW general-purpose subagent with write access (for example,
-   opencode `general` or the equivalent general subagent in the harness in use):
+2. For each such milestone, follow the **Orchestration** section of
+   `.agents/skills/milestone-design-review/SKILL.md` exactly. Do not duplicate spawn, prompt,
+   combination, or stub text here.
+3. Handle the official verdict from the pointer stub. Trust that string; do not re-score findings:
+   - **Pass:** proceed to plan review for that milestone.
+   - **Changes required:** fix the findings in the affected milestone file(s) and index, re-run
+     Synchronize and verify, then re-run Orchestration with NEW fresh subagents. Cap the loop at
+     two re-reviews; when the official verdict is still `Changes required`, stop and report the
+     remaining findings. Do not send prior-review summaries to the new subagents. Replace artifacts
+     rather than append.
+   - **Blocked:** stop and report. Do not run plan-review.
+4. An in-place edit of a file already under review does not reset that file's remaining
+   design-review cap. Renaming it does not start a new cap. If a design-review `Changes required`
+   fix splits into new milestone files, add those files to this run's design-review list; each is a
+   new contract with its own cap (same as files created before the first review). If that loop has
+   already stopped, or design review has already Passed, do not split as a continuation of this run;
+   a split then is a new `milestone-planning` invocation.
+
+## Review plan with fresh context
+
+The plan review is mandatory after design Pass and is non-negotiable. Its purpose is to verify each
+milestone contract without any influence from this session's context or reasoning. Do not start
+plan-review for a milestone until its design-review official verdict is Pass.
+
+1. For each milestone that has a design-review Pass, spawn a NEW general-purpose subagent with write
+   access (for example, opencode `general` or the equivalent general subagent in the harness in use):
    - fresh context: never resume or reuse a previous subagent session;
    - write capability: it must create the review artifact under `.agentWork/.session/`.
-3. Send the reviewer prompt below verbatim, filling only the placeholder. Do not add anything to
+2. Send the reviewer prompt below verbatim, filling only the placeholder. Do not add anything to
    it: no summaries, self-assessment, reasoning, planning narrative, or draft diffs.
-4. Never answer the reviewer's questions with planning narrative. When it asks for facts, direct it
+3. Never answer the reviewer's questions with planning narrative. When it asks for facts, direct it
    to repository evidence (files, the milestone contract, the milestone index).
-5. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
+4. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
    session: follow `.agents/skills/milestone-handoff/SKILL.md` with the milestone path and suggested
    skill `milestone-plan-review`, then print the one-liner it produces.
+
+Plan-review edits in this run must not restart design review. If the approach later changes, a new
+`milestone-planning` refine runs design review again.
 
 ### Reviewer prompt (send verbatim)
 
@@ -143,20 +172,22 @@ Procedure:
 3. Write the artifact, then report the artifact path and verdict.
 ```
 
-## Handle the verdict
+## Handle the plan-review verdict
 
-Overall planning Pass only when every created or refined milestone in this run receives Pass.
+Overall planning Pass only when every created or refined milestone in this run receives both a
+design-review Pass and a plan-review Pass.
 
-- **Pass (all):** report and finish.
+- **Pass (all remaining plan reviews):** report and finish.
 - **Changes required (any):** fix the findings in the affected milestone file(s) and index, re-run
-  Synchronize and verify, then re-review each affected milestone with a NEW fresh subagent. Cap the
-  loop at two re-reviews; when any verdict is still `Changes required`, stop and report the
-  remaining findings.
+  Synchronize and verify, then re-review each affected milestone with a NEW fresh plan-review
+  subagent. Cap the loop at two re-reviews; when any verdict is still `Changes required`, stop and
+  report the remaining findings. Do not restart design review.
 - **Blocked (any):** stop and report.
 
 ## Report
 
 Report to the user: the files created or refined, research that materially changed the scope, any
-decomposition rationale, the plan-review artifact path(s), the verdict(s), and residual risks. When
-this run decomposes into N milestones, expect N plan-review artifacts (and re-reviews for any that
-need changes).
+decomposition rationale, the design-review stub path(s) and official verdict(s), the plan-review
+artifact path(s) and verdict(s), and residual risks. When this run decomposes into N milestones,
+expect N design-review stubs and N plan-review artifacts (and re-reviews for any that need
+changes).
