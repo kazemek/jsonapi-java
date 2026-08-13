@@ -95,6 +95,12 @@ class DomainReadScenariosCatalogSpec extends Specification {
     }
   }
 
+  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
+    expect:
+    DomainReadScenarios.where({ true })*.id == DomainReadScenarios.all()*.id
+    DomainReadScenarios.where({ false }).isEmpty()
+  }
+
   def "byId rejects unknown ids"() {
     when:
     DomainReadScenarios.byId("no such scenario")

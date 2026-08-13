@@ -51,7 +51,7 @@ import tools.jackson.databind.json.JsonMapper
 class ResourceBinderSpec extends Specification {
 
   @Shared
-  Set<String> executedScenarioIds = new LinkedHashSet<>()
+  List<String> executedScenarioIds = []
 
   @Unroll
   def "binds #scenario.id from the shared catalog"() {
@@ -76,7 +76,7 @@ class ResourceBinderSpec extends Specification {
 
   def "covers every shared domain-read scenario exactly once"() {
     expect:
-    executedScenarioIds == DomainReadScenarios.all()*.id as Set
+    executedScenarioIds == DomainReadScenarios.all()*.id
   }
 
   def "naming strategy renames bound attribute keys"() {

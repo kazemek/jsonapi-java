@@ -56,9 +56,9 @@ public final class DomainReadScenarios {
                       attrs(TITLE, HELLO, "body-text", "Content"),
                       rels(
                           AUTHOR,
-                          single(PEOPLE, "p1"),
+                          toOne(PEOPLE, "p1"),
                           COMMENTS,
-                          collection(COMMENTS, List.of("c1", "c2"))))),
+                          toMany(COMMENTS, List.of("c1", "c2"))))),
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -73,7 +73,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "binds mutable POJO",
               DomainReadInput.single(
-                  resource(ARTICLES, "1", attrs(TITLE, HELLO), rels(AUTHOR, single(PEOPLE, "p1")))),
+                  resource(ARTICLES, "1", attrs(TITLE, HELLO), rels(AUTHOR, toOne(PEOPLE, "p1")))),
               FlatMutableArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -164,8 +164,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "omitted to-one relationship key is not bound",
               DomainReadInput.single(
-                  resource(
-                      ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, List.of("c1"))))),
+                  resource(ARTICLES, "1", null, rels(COMMENTS, toMany(COMMENTS, List.of("c1"))))),
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -196,8 +195,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "collection linkage on to-one is a cardinality mismatch",
               DomainReadInput.single(
-                  resource(
-                      ARTICLES, "1", null, rels(AUTHOR, collection(PEOPLE, List.of("p1", "p2"))))),
+                  resource(ARTICLES, "1", null, rels(AUTHOR, toMany(PEOPLE, List.of("p1", "p2"))))),
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
@@ -249,10 +247,7 @@ public final class DomainReadScenarios {
               "non-empty collection linkage on to-many binds List",
               DomainReadInput.single(
                   resource(
-                      ARTICLES,
-                      "1",
-                      null,
-                      rels(COMMENTS, collection(COMMENTS, List.of("c1", "c2"))))),
+                      ARTICLES, "1", null, rels(COMMENTS, toMany(COMMENTS, List.of("c1", "c2"))))),
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -267,8 +262,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "non-empty collection linkage on to-many binds Set",
               DomainReadInput.single(
-                  resource(
-                      ARTICLES, "1", null, rels("tags", collection("tags", List.of("t1", "t2"))))),
+                  resource(ARTICLES, "1", null, rels("tags", toMany("tags", List.of("t1", "t2"))))),
               FlatArticleWithSet.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -282,10 +276,7 @@ public final class DomainReadScenarios {
               "non-empty collection linkage on to-many binds array",
               DomainReadInput.single(
                   resource(
-                      ARTICLES,
-                      "1",
-                      null,
-                      rels(COMMENTS, collection(COMMENTS, List.of("c1", "c2"))))),
+                      ARTICLES, "1", null, rels(COMMENTS, toMany(COMMENTS, List.of("c1", "c2"))))),
               FlatArticleWithArray.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -311,7 +302,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "single linkage on to-many is a cardinality mismatch",
               DomainReadInput.single(
-                  resource(ARTICLES, "1", null, rels(COMMENTS, single(COMMENTS, "c1")))),
+                  resource(ARTICLES, "1", null, rels(COMMENTS, toOne(COMMENTS, "c1")))),
               FlatArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
@@ -346,7 +337,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "SingleLinkage on Optional to-one binds present Optional",
               DomainReadInput.single(
-                  resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1")))),
+                  resource(ARTICLES, "1", null, rels(AUTHOR, toOne(PEOPLE, "p1")))),
               FlatArticleWithOptional.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -362,7 +353,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "unregistered to-one relationship target is UNSUPPORTED_RELATIONSHIP_TARGET",
               DomainReadInput.single(
-                  resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1")))),
+                  resource(ARTICLES, "1", null, rels(AUTHOR, toOne(PEOPLE, "p1")))),
               FlatPersonArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
@@ -370,8 +361,7 @@ public final class DomainReadScenarios {
           new DomainReadScenario(
               "unregistered to-many relationship target is UNSUPPORTED_RELATIONSHIP_TARGET",
               DomainReadInput.single(
-                  resource(
-                      ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, List.of("c1"))))),
+                  resource(ARTICLES, "1", null, rels(COMMENTS, toMany(COMMENTS, List.of("c1"))))),
               FlatCommentArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
@@ -483,12 +473,12 @@ public final class DomainReadScenarios {
     return copy;
   }
 
-  private static Relationship single(String type, String id) {
+  private static Relationship toOne(String type, String id) {
     return Relationship.withData(
         new RelationshipData.SingleLinkage(ResourceIdentifier.of(type, id)));
   }
 
-  private static Relationship collection(String type, List<String> ids) {
+  private static Relationship toMany(String type, List<String> ids) {
     List<ResourceIdentifier> identifiers = new ArrayList<>(ids.size());
     for (String id : ids) {
       identifiers.add(ResourceIdentifier.of(type, id));
