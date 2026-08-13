@@ -27,40 +27,36 @@ class CompoundWriteScenariosCatalogSpec extends Specification {
     CompoundWriteScenarios.all().every { CompoundWriteScenarios.byId(it.id).is(it) }
   }
 
-  def "every scenario carries exactly one request variant and discriminated expectation"() {
+  def "catalog uses each request variant"() {
     expect:
-    CompoundWriteScenarios.all().every { scenario ->
-      assert scenario.request() instanceof CompoundWriteRequest.ContextFree ||
-      scenario.request() instanceof CompoundWriteRequest.Document ||
-      scenario.request() instanceof CompoundWriteRequest.Collection ||
-      scenario.request() instanceof CompoundWriteRequest.Concurrent
-      assert scenario.expectation() instanceof CompoundWriteExpectation.Success ||
-      scenario.expectation() instanceof CompoundWriteExpectation.Failure ||
-      scenario.expectation() instanceof CompoundWriteExpectation.ConcurrentIsolation
-      true
-    }
+    def requests = CompoundWriteScenarios.all()*.request()
+    assert requests.any { it instanceof CompoundWriteRequest.ContextFree }
+    assert requests.any { it instanceof CompoundWriteRequest.Document }
+    assert requests.any { it instanceof CompoundWriteRequest.Collection }
+    assert requests.any { it instanceof CompoundWriteRequest.Concurrent }
   }
 
-  def "success entries explicitly represent absent included versus present empty array"() {
+  def "success entries include both absent included and present empty array"() {
     expect:
-    CompoundWriteScenarios.all().each { scenario ->
-      def expectation = scenario.expectation()
-      if (expectation instanceof CompoundWriteExpectation.Success) {
-        assert expectation.included() == null || expectation.included() instanceof List
-      }
-      if (expectation instanceof CompoundWriteExpectation.ConcurrentIsolation) {
-        assert expectation.first().included() == null || expectation.first().included() instanceof List
-        assert expectation.second().included() == null || expectation.second().included() instanceof List
+    def successes = CompoundWriteScenarios.all()
+        .findAll { it.expectation() instanceof CompoundWriteExpectation.Success }
+        .collect { (CompoundWriteExpectation.Success) it.expectation() }
+    assert successes.any { it.included() == null }
+    assert successes.any { it.included() != null && it.included().isEmpty() }
+    successes.each { success ->
+      success.included()?.each { ref ->
+        assert !ref.type().isBlank()
+        assert !ref.id().isBlank()
       }
     }
   }
 
-  def "failure expectations carry a diagnostic and pin path and resource class including null"() {
+  def "failure expectations pin a non-blank property path when present"() {
     expect:
     CompoundWriteScenarios.all().each { scenario ->
       def expectation = scenario.expectation()
       if (expectation instanceof CompoundWriteExpectation.Failure) {
-        assert expectation.diagnostic() != null
+        assert expectation.propertyPath() == null || !expectation.propertyPath().isBlank()
       }
     }
   }
@@ -155,7 +151,7 @@ class CompoundWriteScenariosCatalogSpec extends Specification {
     thrown(IllegalArgumentException)
   }
 
-  def "scenario rejects concurrent request without isolation expectation"() {
+  def "scenario rejects an isolation expectation without a concurrent request"() {
     when:
     new CompoundWriteScenario(
         "bad",
@@ -163,6 +159,17 @@ class CompoundWriteScenariosCatalogSpec extends Specification {
         CompoundWriteExpectation.concurrentIsolation(
         CompoundWriteExpectation.omitted(),
         CompoundWriteExpectation.omitted()))
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
+  def "scenario rejects a concurrent request without an isolation expectation"() {
+    when:
+    new CompoundWriteScenario(
+        "bad",
+        CompoundWriteScenarios.byId("concurrent compound mappings isolate included sets").request(),
+        CompoundWriteExpectation.omitted())
 
     then:
     thrown(IllegalArgumentException)

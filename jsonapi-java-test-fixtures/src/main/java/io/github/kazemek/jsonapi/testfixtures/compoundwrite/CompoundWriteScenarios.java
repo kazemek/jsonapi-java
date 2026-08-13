@@ -51,7 +51,7 @@ public final class CompoundWriteScenarios {
               RelationshipAllowance.of(ARTICLES, COMMENTS),
               RelationshipAllowance.of(COMMENTS, AUTHOR)));
 
-  private static final IncludePolicy NESTED_COMMENTS_ONLY =
+  private static final IncludePolicy ARTICLES_OWNED_RELATIONSHIPS_ONLY =
       IncludePolicy.allowing(
           Set.of(
               RelationshipAllowance.of(ARTICLES, COMMENTS),
@@ -143,7 +143,7 @@ public final class CompoundWriteScenarios {
           document(
               "nested policy denies wrong owner type",
               CompoundWriteScenarios::article,
-              NESTED_COMMENTS_ONLY,
+              ARTICLES_OWNED_RELATIONSHIPS_ONLY,
               CompoundWriteExpectation.failure(
                   MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE, COMMENTS_AUTHOR, Comment.class),
               COMMENTS_AUTHOR),
@@ -238,6 +238,8 @@ public final class CompoundWriteScenarios {
               COMMENTS_AUTHOR),
           collection(
               "empty primary collection still enforces maxDepth",
+              // Fresh list per call: List.of() returns a shared empty instance and would
+              // break the per-invocation freshness invariant.
               () -> new ArrayList<>(),
               IncludePolicy.allowAll(),
               0,
