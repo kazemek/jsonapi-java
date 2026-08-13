@@ -18,7 +18,7 @@ class UpdateRequestValidationSpec extends Specification {
 
   def validator = new JsonApiDocumentValidator()
 
-  def updateContext() {
+  static def updateContext() {
     ValidationContext.defaults().withDocumentUsage(DocumentUsage.UPDATE_REQUEST)
   }
 
@@ -264,7 +264,7 @@ class UpdateRequestValidationSpec extends Specification {
         "articles", "1", null, Attributes.ofAttributes([title: null]), null, null, null, [:])
   }
 
-  def assertPreservedAttributes(ResourceObject resource, String attribute) {
+  static def assertPreservedAttributes(ResourceObject resource, String attribute) {
     if (attribute == "absent") {
       assert resource.attributes() == null
     } else if (attribute == "empty") {

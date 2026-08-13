@@ -468,9 +468,7 @@ public final class DomainReadScenarios {
 
   private static Map<String, @Nullable Relationship> copyRelationships(
       Map<String, Relationship> relationships) {
-    Map<String, @Nullable Relationship> copy = new LinkedHashMap<>();
-    copy.putAll(relationships);
-    return copy;
+    return new LinkedHashMap<>(relationships);
   }
 
   private static Relationship toOne(String type, String id) {

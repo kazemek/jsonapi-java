@@ -59,7 +59,7 @@ public final class SyntaxValidators {
     if (value == null || value.isEmpty()) {
       return false;
     }
-    int semicolon = indexOfUnquoted(value, ';', 0);
+    int semicolon = indexOfUnquotedSemicolon(value, 0);
     // RFC 7231: type "/" subtype *( OWS ";" OWS parameter ) — OWS only immediately before ';'.
     // Leading OWS and terminal OWS with no parameter are illegal.
     String typeSubtype = semicolon < 0 ? value : rstripHttpOws(value.substring(0, semicolon));
@@ -82,7 +82,7 @@ public final class SyntaxValidators {
   private static boolean areValidMediaTypeParameters(String value, int start) {
     int pos = start;
     while (true) {
-      int next = indexOfUnquoted(value, ';', pos);
+      int next = indexOfUnquotedSemicolon(value, pos);
       // Intermediate segments: OWS on both sides of ';'. Final parameter: leading OWS only.
       String parameter =
           next < 0 ? lstripHttpOws(value.substring(pos)) : stripHttpOws(value.substring(pos, next));
@@ -148,10 +148,10 @@ public final class SyntaxValidators {
       if (schemeEnd < 0) {
         return false;
       }
-      return parseHierQueryFragment(value, schemeEnd + 1, true);
+      return parseHierQueryFragment(value, schemeEnd + 1);
     }
     if (schemeEnd >= 0) {
-      return parseHierQueryFragment(value, schemeEnd + 1, true);
+      return parseHierQueryFragment(value, schemeEnd + 1);
     }
     return parseRelativeRef(value);
   }
@@ -210,7 +210,7 @@ public final class SyntaxValidators {
       if (ch == ':') {
         return -1;
       }
-      if (!isPchar(ch) && !consumePctEncoded(value, i)) {
+      if (!isPchar(ch) && isNotPctEncoded(value, i)) {
         return -1;
       }
       i += advancePcharOrPct(ch);
@@ -218,11 +218,11 @@ public final class SyntaxValidators {
     return i == 0 ? -1 : i;
   }
 
-  private static boolean parseHierQueryFragment(String value, int from, boolean allowAuthority) {
+  private static boolean parseHierQueryFragment(String value, int from) {
     if (from > value.length()) {
       return false;
     }
-    if (allowAuthority && from + 1 < value.length() && value.startsWith("//", from)) {
+    if (from + 1 < value.length() && value.startsWith("//", from)) {
       return parseAuthorityPathQueryFragment(value, from + 2);
     }
     if (from < value.length() && value.charAt(from) == '/') {
@@ -274,7 +274,7 @@ public final class SyntaxValidators {
     while (i < userinfo.length()) {
       char ch = userinfo.charAt(i);
       if (ch == '%') {
-        if (!consumePctEncoded(userinfo, i)) {
+        if (isNotPctEncoded(userinfo, i)) {
           return false;
         }
         i += 3;
@@ -327,7 +327,7 @@ public final class SyntaxValidators {
     while (i < host.length()) {
       char ch = host.charAt(i);
       if (ch == '%') {
-        if (!consumePctEncoded(host, i)) {
+        if (isNotPctEncoded(host, i)) {
           return false;
         }
         i += 3;
@@ -496,7 +496,7 @@ public final class SyntaxValidators {
           return false;
         }
         i++;
-      } else if (!isPchar(ch) && !consumePctEncoded(value, i)) {
+      } else if (!isPchar(ch) && isNotPctEncoded(value, i)) {
         return false;
       } else {
         sawSegment = true;
@@ -518,7 +518,7 @@ public final class SyntaxValidators {
       }
       if (ch == '/') {
         i++;
-      } else if (!isPchar(ch) && !consumePctEncoded(value, i)) {
+      } else if (!isPchar(ch) && isNotPctEncoded(value, i)) {
         return false;
       } else {
         i += advancePcharOrPct(ch);
@@ -563,7 +563,7 @@ public final class SyntaxValidators {
       if (terminator != '\0' && ch == terminator) {
         return i;
       }
-      if (!isQueryOrFragmentChar(ch) && !consumePctEncoded(value, i)) {
+      if (!isQueryOrFragmentChar(ch) && isNotPctEncoded(value, i)) {
         return -1;
       }
       i += advancePcharOrPct(ch);
@@ -575,11 +575,11 @@ public final class SyntaxValidators {
     return isPchar(ch) || ch == '/' || ch == '?';
   }
 
-  private static boolean consumePctEncoded(String value, int index) {
+  private static boolean isNotPctEncoded(String value, int index) {
     if (index + 2 >= value.length() || value.charAt(index) != '%') {
-      return false;
+      return true;
     }
-    return isHexDigit(value.charAt(index + 1)) && isHexDigit(value.charAt(index + 2));
+    return !(isHexDigit(value.charAt(index + 1)) && isHexDigit(value.charAt(index + 2)));
   }
 
   private static boolean isPchar(char ch) {
@@ -616,7 +616,7 @@ public final class SyntaxValidators {
     return isDigit(ch) || (ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f');
   }
 
-  private static int indexOfUnquoted(String value, char target, int from) {
+  private static int indexOfUnquotedSemicolon(String value, int from) {
     boolean inQuotes = false;
     boolean escaped = false;
     for (int i = from; i < value.length(); i++) {
@@ -631,7 +631,7 @@ public final class SyntaxValidators {
         }
       } else if (ch == '"') {
         inQuotes = true;
-      } else if (ch == target) {
+      } else if (ch == ';') {
         return i;
       }
     }

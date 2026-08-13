@@ -62,20 +62,20 @@ public final class MemberNames {
     if (length == 0) {
       return false;
     }
-    if (!isMemberEdge(name.charAt(0)) || !isMemberEdge(name.charAt(length - 1))) {
+    if (isNotMemberEdge(name.charAt(0)) || isNotMemberEdge(name.charAt(length - 1))) {
       return false;
     }
     for (int i = 1; i < length - 1; i++) {
       char c = name.charAt(i);
-      if (!isMemberEdge(c) && c != '-' && c != '_' && c != ' ') {
+      if (isNotMemberEdge(c) && c != '-' && c != '_' && c != ' ') {
         return false;
       }
     }
     return true;
   }
 
-  private static boolean isMemberEdge(char c) {
-    return isAlpha(c) || isDigit(c) || c > 0x7F;
+  private static boolean isNotMemberEdge(char c) {
+    return !isAlpha(c) && !isDigit(c) && c <= 0x7F;
   }
 
   private static boolean isAlpha(char c) {

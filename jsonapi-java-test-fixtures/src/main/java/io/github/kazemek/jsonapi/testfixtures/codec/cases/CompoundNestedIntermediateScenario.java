@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 public final class CompoundNestedIntermediateScenario {
 
   private static final String TYPE_ARTICLES = "articles";
+  private static final String TYPE_AUTHOR = "author";
   private static final String TYPE_COMMENTS = "comments";
   private static final String TYPE_PEOPLE = "people";
 
@@ -26,11 +27,11 @@ public final class CompoundNestedIntermediateScenario {
   public static CodecScenario scenario() {
     Map<String, @Nullable Relationship> articleRelationships = new LinkedHashMap<>();
     articleRelationships.put(
-        "author",
+        TYPE_AUTHOR,
         Relationship.withData(
             new RelationshipData.SingleLinkage(Models.identifier(TYPE_PEOPLE, "9"))));
     articleRelationships.put(
-        "comments",
+        TYPE_COMMENTS,
         Relationship.withData(
             new RelationshipData.IdentifierCollectionLinkage(
                 List.of(
@@ -41,7 +42,7 @@ public final class CompoundNestedIntermediateScenario {
 
     Map<String, @Nullable Relationship> comment5Relationships = new LinkedHashMap<>();
     comment5Relationships.put(
-        "author",
+        TYPE_AUTHOR,
         Relationship.withData(
             new RelationshipData.SingleLinkage(Models.identifier(TYPE_PEOPLE, "2"))));
     var comment5 =
@@ -56,7 +57,7 @@ public final class CompoundNestedIntermediateScenario {
 
     Map<String, @Nullable Relationship> comment12Relationships = new LinkedHashMap<>();
     comment12Relationships.put(
-        "author",
+        TYPE_AUTHOR,
         Relationship.withData(
             new RelationshipData.SingleLinkage(Models.identifier(TYPE_PEOPLE, "9"))));
     var comment12 =
