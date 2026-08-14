@@ -15,8 +15,12 @@ Never write `Complete`; after review Pass and finalization, delete the plan.
 1. Resolve exactly one user-supplied path or name under `.agentWork/plans/`; ask when several are
    plausible. Never infer the next task from plans, Outlook, source layout, or a reconstructed
    backlog. Linear is optional coordination and never required for a materialized plan.
-2. Accept `Not started`. For `In progress`, ask whether to continue the existing implementation or
-   start a new attempt. Reject every other status, including `Complete`.
+2. Accept `Not started`. For `In progress`, distinguish the requested outcome:
+   - Retry or continue the exact frozen contract: keep the plan and `In progress` status, do not
+     rewrite it, and allow a fresh implementation session.
+   - Change scope, approach, prerequisites, boundaries, or any contract term: stop this flow and
+     route the new work through `implementation-planning` as a follow-up; leave this plan unchanged.
+   Reject every other status, including `Complete`.
 3. Validate `Dependencies` as `None` or hard execution-order prerequisites represented by relative
    Markdown links. If any linked plan still exists, stop Blocked before changing status and do not
    offer an override. If a value is malformed or a linked target is absent, stop because the
@@ -31,12 +35,15 @@ the repository or deleted plans. Set status to `In progress`, unless already set
 only its deliverables within its non-goals and boundaries. Check acceptance criteria only when
 current evidence supports each claim. Use `module-docs` when its trigger applies.
 
-Collect the final path set mechanically from tracked branch/uncommitted changes (`git diff
---name-only` against the base) plus untracked paths (`git ls-files --others --exclude-standard`).
-Classify all paths and run only the applicable `AGENTS.md` gates, in its prescribed order. For
-module production/test source paths matching `jsonapi-java-*/src/**`, this means
-`spotless-format`, `./gradlew clean build`, then `sonar-quality-gate`; `build-logic/src/**` is build
-configuration rather than Sonar scope. Do not invent gates beyond the contract and final diff.
+Resolve `<base-ref>` from an explicitly supplied PR/change-set base when available. Otherwise use
+`base_ref="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)"`; if unavailable, stop and
+request the base rather than guessing. Then resolve `base="$(git merge-base HEAD "$base_ref")"`.
+Collect committed branch plus staged/unstaged tracked paths with `git diff --name-only "$base" --`
+and untracked paths with `git ls-files --others --exclude-standard`. Classify all paths and run only
+the applicable `AGENTS.md` gates, in its prescribed order. For module production/test source paths
+matching `jsonapi-java-*/src/**`, this means `spotless-format`, `./gradlew clean build`, then
+`sonar-quality-gate`; `build-logic/src/**` is build configuration rather than Sonar scope. Do not
+invent gates beyond the contract and final diff.
 
 An applicable Sonar gate is incomplete without both Quality Gate success and a separate
 authenticated Issues API result of zero unresolved new-code issues. CI runs analysis but does not
@@ -50,9 +57,9 @@ durable fact may exist only in the temporary plan.
 ## Review with fresh context
 
 The review is mandatory. Keep the plan through review. Determine the boundary mechanically from
-branch and uncommitted Git metadata without summarizing it. Derive `<plan basename>` from the filename without `.md`. Spawn a
-new general-purpose, write-capable subagent in a fresh session and send this prompt verbatim,
-replacing only `<plan path>` and `<plan basename>`:
+branch and uncommitted Git metadata without summarizing it. Derive `<plan basename>` from the
+filename without `.md`. Spawn a new general-purpose, write-capable subagent in a fresh session and
+send this prompt verbatim, replacing only `<plan path>` and `<plan basename>`:
 
 ```text
 You are the implementation reviewer for this repository. Your context was intentionally started

@@ -12,7 +12,9 @@ Instruction boundary: do not read [SKILL.md](SKILL.md), [reference.md](reference
 Use the plan and review-artifact paths from the task inputs. Read:
 
 - the target plan;
-- `AGENTS.md` only as needed to locate linked docs;
+- only directly implicated `AGENTS.md` sections: relevant architecture or completion constraints
+  for product/API plans; and routing, knowledge/lifecycle, review, or other governing workflow
+  sections for workflow-agent plans. Use those sections to locate linked documentation as needed;
 - `docs/vision.md` when the plan changes project direction, modules, or public product
   boundaries, or when the spec suggests a vision conflict;
 - relevant Outlook when the plan concerns unbuilt or revisable future direction (planning

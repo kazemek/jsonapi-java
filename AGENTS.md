@@ -24,6 +24,8 @@
 - `jsonapi-java-test-fixtures` is an internal, unpublished module. The version-neutral wire corpus
   is under `fixtures/jsonapi-1.1/`; pinned draft schemas are under
   `fixtures/jsonapi-schema/1.1-pr1603/`.
+- Before changing shared fixtures, catalogs, or corpora, read `jsonapi-java-test-fixtures/README.md`
+  and the affected documentation under `fixtures/`; those files own fixture-specific invariants.
 
 # Task Routing
 
@@ -95,19 +97,6 @@ Every durable fact has one canonical owner; other documents should link or provi
   plan files. Once work starts, freeze its scope; after gates, synchronization, and review Pass,
   reconcile references and delete the completed plan. Session reviews belong in the gitignored
   `.agentWork/.session/`.
-
-# Fixture Contracts
-
-- Tests receive `jsonapi.fixtures.dir` and `jsonapi.schema.fixtures.dir` from the library convention
-  plugin. Resolve both only through `FixtureDirectory`; do not hardcode repository paths.
-- Shared adapter suites consume complete capability-selected catalogs and assert catalog coverage.
-  Add version-neutral scenarios to the shared catalogs rather than making Jackson-major copies or
-  adapter-local ID lists.
-- `manifest.json` is an ordered bijection with codec scenarios. `envelope-binding/` documents are
-  not corpus entries. The negative corpus is closed; changing a case ID also requires updating
-  `NegativeCodecScenariosCatalogSpec`. Ambiguous-primary-data fixtures are valid dual-success cases.
-- Draft-schema validation is supplemental. Fixtures marked with a schema disagreement must keep
-  failing so an upstream schema change forces deliberate review.
 
 # Completion Gates
 
