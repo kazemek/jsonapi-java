@@ -4,6 +4,7 @@
 > **Package:** `io.github.kazemek.jsonapi.query`  
 > **Dependencies:** None beyond `java.base`  
 > **Status:** Not started
+> **Work item:** KAZ-26
 
 ## Goal
 

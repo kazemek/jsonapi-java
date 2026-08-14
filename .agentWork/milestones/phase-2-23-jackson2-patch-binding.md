@@ -1,8 +1,9 @@
 # Phase 2.23 — Jackson 2 Presence-Aware PATCH Binding
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 1.3, 2.11, 2.15, 2.17, and 2.21  
+> **Dependencies:** Phases 2.15, 2.17, and 2.21  
 > **Status:** Not started
+> **Work item:** KAZ-34
 
 ## Goal
 
@@ -11,7 +12,8 @@ reusing common command contracts and the shared scenarios established by Phase 2
 
 ## Research and constraints
 
-- [ADR-012](../../docs/adr/012-resource-patch-binding.md) and Phase 1.3 define update shape,
+- [ADR-012](../../docs/adr/012-resource-patch-binding.md) and `jsonapi-java-core`
+  `JsonApiDocumentValidator` (`DocumentUsage.UPDATE_REQUEST`) define update shape,
   identity, omitted/null semantics, and the application-owned mutation boundary.
 - Phase 2.15 defines the stable typed command/property/linkage contract in common packages and the
   shared PATCH fixture catalog; its pipeline is one `JsonApiDocumentReader` validate-on-read via
@@ -29,7 +31,7 @@ reusing common command contracts and the shared scenarios established by Phase 2
 ## Deliverables
 
 - Add Jackson 2 patch reader/command entry points using `com.fasterxml.jackson.databind.JavaType`
-  and the Phase 2.15/2.11 common command contracts, mirroring the Phase 2.15 validate-on-read then
+  and the Phase 2.15 common command contracts, mirroring the Phase 2.15 validate-on-read then
   bind pipeline (no typed envelopes).
 - Port supplied-only per-member attribute binding with explicit nullable changes and no fabricated
   omitted values; never call a whole-DTO binder/`convertValue` construction path.

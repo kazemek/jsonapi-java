@@ -1,13 +1,22 @@
 # Phase 3.2 — Spring WebMVC Adapter
 
 > **Module:** `jsonapi-java-spring-webmvc`  
-> **Dependencies:** Phases 2.1, 2.4, 2.5, and 3.1; a Jackson 3-based Spring Boot WebMVC line  
+> **Dependencies:** Phase 3.1  
 > **Status:** Not started
+> **Work item:** KAZ-29
 
 ## Goal
 
 Integrate validated core-document transport, JSON:API media-type negotiation, query parsing, and
-safe errors with Spring Boot WebMVC.
+safe errors with Spring Boot WebMVC on a Jackson 3-based line (`jsonapi-java-jackson3` document
+codec per [ADR-007](../../docs/adr/007-module-boundaries.md)).
+
+## Research and constraints
+
+- Document transport uses `jsonapi-java-jackson3` `JsonApiDocumentWriter` / `JsonApiDocumentReader`
+  (module README, [ADR-004](../../docs/adr/004-jackson-integration.md),
+  [ADR-006](../../docs/adr/006-read-boundary.md)). Schema cross-check evidence lives in
+  [docs/conformance.md](../../docs/conformance.md) and `JsonApiFixtures.codec()`.
 
 ## Deliverables
 

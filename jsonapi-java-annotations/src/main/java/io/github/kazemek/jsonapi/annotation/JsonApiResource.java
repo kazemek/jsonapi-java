@@ -10,11 +10,11 @@ import java.lang.annotation.Target;
  * Declares that a domain type maps to a JSON:API resource of the given {@link #type()}.
  *
  * <p>{@code type()} is required and has no default. Member-name grammar validation for the type
- * string is performed when Phase 2.2 builds a mapping definition, not by this annotation artifact.
+ * string is performed when a Jackson mapping definition is built, not by this annotation artifact.
  *
  * <p>{@code ElementType.TYPE} permits classes, records, interfaces, enums, and annotation types at
  * compile time. Supported domain shapes and diagnostics for unsupported placements are defined by
- * Phase 2.2.
+ * Jackson domain mapping.
  *
  * <p>This annotation is not {@link java.lang.annotation.Inherited}.
  */
@@ -26,7 +26,8 @@ public @interface JsonApiResource {
   /**
    * JSON:API resource type member value.
    *
-   * @return non-empty type string; emptiness and member-name grammar are validated in Phase 2.2
+   * @return non-empty type string; emptiness and member-name grammar are validated when a Jackson
+   *     mapping definition is built
    */
   String type();
 }

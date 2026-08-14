@@ -9,13 +9,13 @@ import java.lang.annotation.Target;
 /**
  * Marks the JSON:API resource identifier on a domain property.
  *
- * <p>An explicit {@code @JsonApiId}, or Phase 2.2's conventional logical property named {@code id},
- * supplies the identifier. Identifier properties cease to be default attributes. Annotations never
- * make Jackson-ignored properties visible; Phase 2.2 resolves visibility through Jackson's logical
- * property model and owns identifier conversion and conflict diagnostics.
+ * <p>An explicit {@code @JsonApiId}, or Jackson mapping's conventional logical property named
+ * {@code id}, supplies the identifier. Identifier properties cease to be default attributes.
+ * Annotations never make Jackson-ignored properties visible; Jackson mapping resolves visibility
+ * through Jackson's logical property model and owns identifier conversion and conflict diagnostics.
  *
  * <p>Targets include fields, methods, parameters, and record components so Java and Jackson can
- * expose the same logical property. Phase 2.2 collapses propagated occurrences into one logical
+ * expose the same logical property. Mapping collapses propagated occurrences into one logical
  * property rather than inventing field/getter precedence.
  *
  * <p>This annotation is not {@link java.lang.annotation.Inherited}.

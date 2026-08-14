@@ -1,8 +1,9 @@
 # Phase 2.19 — Jackson 2 Compound Serialization
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 2.3, 2.11, 2.18, and 2.24  
+> **Dependencies:** Phase 2.18  
 > **Status:** Not started
+> **Work item:** KAZ-35
 
 ## Goal
 
@@ -11,35 +12,38 @@ using common policy types and shared compound-write fixtures.
 
 ## Research and constraints
 
-- Phase 2.3 defines requested include paths, allow-list policy (owner JSON:API `resourceType`
+- jackson3 compound inclusion (`jsonapi-java-jackson3` README /
+  [ADR-005](../../docs/adr/005-domain-mapping-and-inclusion.md)) defines requested include paths,
+  allow-list policy (owner JSON:API `resourceType`
   matching), limits (including zero/negative semantics), traversal, output deduplication seeded
   with primary identities, visit-state separation, `ResourceObject.equals` conflict detection,
   deterministic order, validation precedence, once-materialized primary `Iterable` snapshot,
   factory- vs mapper-time `IncludePath` exceptions, per-call traversal state, and the mapping-only
   compound context.
-- Phase 2.11 places `CompoundSerializationContext`, `IncludePath`, `IncludePolicy`,
+- `jsonapi-java-jackson-common` places `CompoundSerializationContext`, `IncludePath`, `IncludePolicy`,
   `RelationshipAllowance`, and related diagnostics in the common package; Jackson 2 must consume
   those types rather than redefining them.
-- Phase 2.24 owns the shared compound-inclusion scenario catalog; Phase 2.18 supplies Jackson 2
-  mapping definitions that traversal must reuse without rescanning domain types.
+- `JsonApiFixtures.compoundWrite()` / `CompoundWriteScenarios` is the shared compound-inclusion
+  scenario catalog; Phase 2.18 supplies Jackson 2 mapping definitions that traversal must reuse
+  without rescanning domain types.
 - [ADR-005](../../docs/adr/005-domain-mapping-and-inclusion.md) — linkage never implies inclusion,
   and persistence/lazy-loading policy remains application-owned.
-- Mapper compound overloads follow Phase 2.3's three-argument shape only
+- Mapper compound overloads follow jackson3's three-argument shape only
   (`resource|iterable`, `@Nullable DocumentEnvelope`, `CompoundSerializationContext`).
 
 ## Deliverables
 
 - Wire Jackson 2 resource-mapper three-argument overloads to the common compound context and
-  Phase 2.18 mapping definitions with Phase 2.3 semantic parity (snapshot, access-vs-linkage,
+  Phase 2.18 mapping definitions with jackson3 semantic parity (snapshot, access-vs-linkage,
   output dedup vs visit-state separation, conflict checks, heterogeneous primary validation,
   deterministic order, and the five `MappingDiagnostic` codes with dotted `propertyPath`).
 - Port relationship traversal and path validation without rescanning domain types or depending on
   Jackson 3.
-- Consume the Phase 2.24 compound scenario catalog (and applicable codec fixtures for wire/schema
+- Consume the `CompoundWriteScenarios` catalog (and applicable codec fixtures for wire/schema
   parity) without major-specific copies.
 - Use `module-docs` to refresh Jackson 2 module docs/Javadoc and conformance notes for opt-in
   inclusion.
-- Spock `CompoundSerializationSpec` covering domain-graph parity with Phase 2.3, including the
+- Spock `CompoundSerializationSpec` covering domain-graph parity with jackson3 compound inclusion, including the
   one-shot primary `Iterable` case and traversal-scoped access counting.
 
 ## Non-goals
@@ -48,11 +52,11 @@ using common policy types and shared compound-write fixtures.
 - Implicit inclusion, ORM/lazy-loading integration, repositories, or authorization.
 - Jackson 2 flat DTO reads, envelopes, or PATCH binding.
 - Redefining common compound policy types under the `jackson2` package.
-- Two-argument context-only mapper overloads (same ambiguity constraint as Phase 2.3).
+- Two-argument context-only mapper overloads (same ambiguity constraint as jackson3).
 
 ## Implementation boundaries
 
-- Defaults request no included resources and retain finite safety limits (including Phase 2.3
+- Defaults request no included resources and retain finite safety limits (including jackson3
   zero/negative limit semantics).
 - Off-path relationships are not accessed for inclusion traversal; include policy is checked before
   traversal property access. Selected resources still emit full linkage.
@@ -62,7 +66,7 @@ using common policy types and shared compound-write fixtures.
 
 ## Test strategy
 
-- Parameterize Phase 2.24 compound scenarios (cyclic, shared, nested, empty, conflict, limit,
+- Parameterize `CompoundWriteScenarios` (cyclic, shared, nested, empty, conflict, limit,
   invalid-path, mixed-type, nested-policy, converging-path, concurrent-isolation, multi-failure,
   and access-counting) through Jackson 2.
 - Compare included resources, order, linkage, and stable common diagnostics across Jackson 2 and 3.
@@ -70,8 +74,8 @@ using common policy types and shared compound-write fixtures.
 
 ## Acceptance criteria
 
-- [ ] Jackson 2 three-argument mapper overloads consume common compound contracts and match Phase
-      2.3 included resources, intermediates, linkage, and first-encounter order for every applicable
+- [ ] Jackson 2 three-argument mapper overloads consume common compound contracts and match jackson3
+      included resources, intermediates, linkage, and first-encounter order for every applicable
       shared scenario.
 - [ ] Policy rejection, conflicts, cycles, depth/count limits, overlapping-path traversal, primary
       identity exclusion from `included`, and invalid paths have parity diagnostics, and off-path

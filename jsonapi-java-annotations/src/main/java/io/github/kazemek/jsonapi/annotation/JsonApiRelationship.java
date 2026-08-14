@@ -14,10 +14,10 @@ import java.lang.annotation.Target;
  * be default attributes. Annotations never make Jackson-ignored properties visible.
  *
  * <p>An empty {@link #name()} retains Jackson's logical property name; a non-empty override is
- * interpreted and validated only by Phase 2.2, which also owns cardinality, value-shape, and
+ * interpreted and validated only by Jackson mapping, which also owns cardinality, value-shape, and
  * logical-property conflict diagnostics.
  *
- * <p>Targets include fields, methods, parameters, and record components. Phase 2.2 collapses
+ * <p>Targets include fields, methods, parameters, and record components. Mapping collapses
  * propagated occurrences into one logical property.
  *
  * <p>This annotation is not {@link java.lang.annotation.Inherited}.

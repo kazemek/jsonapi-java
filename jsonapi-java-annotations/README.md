@@ -18,7 +18,7 @@ public record Article(
     @JsonApiRelationship String author) {}
 ```
 
-These annotations store metadata only. Jackson mapping, member-name validation, identifier conversion, and inclusion policy belong in later modules (Phase 2.2+).
+These annotations store metadata only. Jackson mapping, member-name validation, identifier conversion, and inclusion policy belong in [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md).
 
 ## Non-goals
 
@@ -26,7 +26,7 @@ This module does not provide Jackson codecs, document model types, inclusion/fet
 
 ## Further reading
 
-- [Conformance checklist](../docs/conformance.md) — Phase 1.2 annotation metadata
+- [Conformance checklist](../docs/conformance.md) — annotation metadata
 - [ADR-004 — Jackson introspection](../docs/adr/004-jackson-integration.md)
 - [ADR-005 — Linkage vs inclusion](../docs/adr/005-domain-mapping-and-inclusion.md)
 - [ADR-007 — Module boundaries](../docs/adr/007-module-boundaries.md)
@@ -38,7 +38,7 @@ This module does not provide Jackson codecs, document model types, inclusion/fet
 ## For contributors / agents
 
 - **Metadata only:** Annotations override JSON:API role or optional field name. They do not invent a second property model, request inclusion, or carry converters/persistence/query elements.
-- **Rename sentinel:** Empty `name()` means “keep Jackson's logical property name”; non-empty overrides are validated in Phase 2.2.
+- **Rename sentinel:** Empty `name()` means “keep Jackson's logical property name”; non-empty overrides are validated when a Jackson mapping definition is built.
 - **Nullness:** The production package is `@NullMarked` (JSpecify compile-only). Annotation `String` elements are non-null; the empty string is the rename sentinel. Groovy tests are not annotated.
 - **Architectural tests:** `AnnotationDependencyRulesSpec` (ArchUnit) enforces JDK + JSpecify + self type dependencies for production sources (ADR-010). Do not weaken the allowlist without updating the ADR.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package; Java fixtures under `src/test/java/` cover records and POJOs without Jackson.

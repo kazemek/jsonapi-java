@@ -1,8 +1,9 @@
 # Phase 2.22 — Jackson 2 Typed Domain Envelope
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 2.10, 2.11, 2.21, and 2.26  
+> **Dependencies:** Phase 2.21  
 > **Status:** Not started
+> **Work item:** KAZ-36
 
 ## Goal
 
@@ -11,12 +12,14 @@ common envelope values and shared envelope-read fixtures.
 
 ## Research and constraints
 
-- Phase 2.10 defines envelope primary states, document-member views, type registration, included
+- `JsonApiDomainDocumentReader` (`jsonapi-java-jackson3` README / [ADR-011](../../docs/adr/011-flat-dto-read-binding.md))
+  defines envelope primary states, document-member views, type registration, included
   identity/indexing, and graph-free behavior.
-- Phase 2.11 places Jackson-import-free envelope/domain-data contracts in the common package;
-  Phase 2.21 supplies Jackson 2 resource binding; Phase 2.17 remains the validated parser.
-- Phase 2.26 owns the shared typed-envelope scenario catalog that selects applicable codec
-  documents or named binding variants.
+- `jsonapi-java-jackson-common` places Jackson-import-free envelope/domain-data contracts in the
+  common package; Phase 2.21 supplies Jackson 2 resource binding; Phase 2.17 remains the validated
+  parser.
+- `JsonApiFixtures.envelopeRead()` / `EnvelopeReadScenarios` is the shared typed-envelope scenario
+  catalog that selects applicable codec documents or named binding variants.
 - [ADR-011](../../docs/adr/011-flat-dto-read-binding.md) — routine DTO signatures avoid core
   documents, unregistered included types fail, and included resources are never injected.
 - Public `JavaType`/mapper signatures stay major-specific while envelope values remain common.
@@ -24,11 +27,11 @@ common envelope values and shared envelope-read fixtures.
 ## Deliverables
 
 - Add Jackson 2 domain-document reader entry points that assemble common envelope/primary-data
-  values with the same conceptual states and nullness as Phase 2.10.
+  values with the same conceptual states and nullness as jackson3 `JsonApiDomainDocument`.
 - Port document-level links/meta/JSON:API/errors/additional-member views and typed metadata hooks.
 - Add Jackson 2 resource-type registration and independent ordered/identity-indexed included DTO
   binding.
-- Consume the Phase 2.26 envelope scenario catalog and compare complete shared values and
+- Consume the `EnvelopeReadScenarios` catalog and compare complete shared values and
   diagnostics across both Jackson majors.
 - Use `module-docs` to refresh Jackson 2 module docs/Javadoc and conformance examples for typed
   envelopes.
@@ -51,7 +54,7 @@ common envelope values and shared envelope-read fixtures.
 
 ## Test strategy
 
-- Parameterize Phase 2.26 data/error/meta-only/compound, heterogeneous included, explicit-null/
+- Parameterize `EnvelopeReadScenarios` data/error/meta-only/compound, heterogeneous included, explicit-null/
   absent, and registration scenarios.
 - Compare ordered included DTOs, identity lookup, document members, and stable errors across majors.
 
@@ -60,7 +63,7 @@ common envelope values and shared envelope-read fixtures.
 - [ ] Applicable shared fixtures produce equivalent typed envelope states and document-member views
       through both Jackson majors via common envelope contracts.
 - [ ] Included registration, order, identity lookup, unknown/conflict diagnostics, and no-injection
-      behavior match Phase 2.10.
+      behavior match jackson3 `JsonApiDomainDocumentReader`.
 - [ ] Caller ownership contracts hold with no Jackson 3/runtime dependency and no duplicated
       common envelope types.
 - [ ] The canonical `module-docs` checklist passes and conformance docs cover Jackson 2 envelopes;
