@@ -130,7 +130,9 @@ After writing all milestone files:
    milestone files.
 3. Reapply the execution-unit rule to each emitted milestone.
 4. Confirm decomposed milestones do not overlap or omit requirements from the source request.
-5. Confirm milestone prose links to rather than duplicates vision, ADR, conformance, Outlook, and module documentation.
+5. Confirm milestone prose links to rather than duplicates applicable canonical sources
+   (vision, ADR, conformance, Outlook, and module documentation). Omit Outlook unless the
+   work is unbuilt or revisable future direction.
 
 Then proceed to design review, then plan review. Do not treat planning as finished until every
 created or refined milestone in this run has both a design-review Pass and a plan-review Pass (or

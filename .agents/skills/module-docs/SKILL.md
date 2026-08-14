@@ -59,8 +59,9 @@ Skip when only internals or tests changed with no public-surface impact.
 - [ ] Entry-point Javadoc on the module’s primary public types
 - [ ] Root `README.md` lists the module
 - [ ] `AGENTS.md` retains the generic `<module>/README.md` discovery route
-- [ ] Vision, Outlook, ADR, conformance, build, CI, and root workflow prose is linked rather
-      than duplicated
+- [ ] Relevant Vision, Outlook, ADR, conformance, build, CI, and root workflow prose is linked
+      rather than duplicated; omit Outlook unless the module documents unbuilt or revisable
+      future direction
 - [ ] Final self-check confirms density and link-out behavior against the golden example
 
 ## Golden example

@@ -28,8 +28,8 @@ Use this template when writing the review artifact. Path and naming rules live i
 
 - [Pass | Fail | Partial | Not verified] Goal
   - Evidence: <paths, lines, or explanation>
-- [Pass | Fail | Partial | Not verified] Size gate
-  - Evidence: <deliverable/AC counts and outcome coherence>
+- [Pass | Fail | Partial | Not verified] Execution unit
+  - Evidence: <outcome coherence, one-context implementability/reviewability, and any genuine execution/review boundaries; numeric size heuristics are signals only>
 - [Pass | Fail | Partial | Not verified] Research and constraints
   - Evidence: <sources and implementation consequences>
 - [Pass | Fail | Partial | Not verified] Deliverables
