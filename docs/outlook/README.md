@@ -20,10 +20,12 @@ Every Outlook document must include:
 - **Uncertainty and open questions** — what is not yet decided.
 - **Revisit trigger** — what event would make this current, obsolete, or need a rewrite.
 
-When future direction becomes current engineering truth, move the durable facts to their Snapshot
-owner (module README, ADR, conformance, or vision) and **delete or rewrite** the Outlook so it
-does not keep superseded speculation in normal discovery. When direction is abandoned, delete
-the Outlook; do not retain it as a historical archive. Git remains forensic history.
+When future direction becomes current engineering truth, move durable engineering facts to their
+Snapshot owner (module README, package/API documentation, accepted ADR, conformance, or root
+registry as appropriate). If the change also alters stable product direction or principles, update
+Vision separately. Then **delete or rewrite** the Outlook so it does not keep superseded
+speculation in normal discovery. When direction is abandoned, delete the Outlook; do not retain
+it as a historical archive. Git remains forensic history.
 
 Conceptual breakdown in Outlook (for example Spring transport vs DTO vs PATCH vs WebFlux) does
 not by itself create child implementation plans.

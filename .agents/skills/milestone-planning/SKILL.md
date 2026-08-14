@@ -6,11 +6,17 @@ disable-model-invocation: true
 
 # Milestone Planning
 
-Produce permanent, implementation-ready milestone files and verify them with a context-isolated
-design review, then a context-isolated plan review. Planning ends only after the milestone files
-and index are synchronized and each created or refined milestone receives both a
-`milestone-design-review` Pass and a `milestone-plan-review` Pass. Do not implement the planned
-feature.
+Produce implementation-ready milestone files as execution contracts under the current
+migration-era machinery, then verify them with a context-isolated design review and a
+context-isolated plan review. These files are retained because the knowledge-model migration
+has not completed; they are not canonical long-term engineering knowledge. Durable knowledge
+belongs in its canonical owner: current engineering truth in Snapshot surfaces, stable product
+direction and principles in Vision, and architectural rationale, compliance state,
+public/module contracts, and workflow rules in their respective canonical owners. The intended
+steady state makes completed implementation plans disposable; this workflow does not delete
+them. Planning ends only after the milestone files and index are synchronized and each created
+or refined milestone receives both a `milestone-design-review` Pass and a
+`milestone-plan-review` Pass. Do not implement the planned feature.
 
 Design review and plan review must never see this session's context or reasoning. Design reviewers
 are fresh subagents that derive everything from the milestone contract and repository evidence.
@@ -31,22 +37,26 @@ Resolve the target phase and milestone unambiguously. Ask the user only when nam
 
 ## Explore before writing
 
-Read these repository sources in order:
+Snapshot-first is an authority rule: completed plans and Vision must never substitute for
+current-state discovery. It is not a requirement to read every Snapshot file before the
+milestone index. Read these sources as relevant:
 
-1. `AGENTS.md` (knowledge model and owner/reference rules), `docs/vision.md` (stable
-   product direction), and `.agentWork/milestones/README.md`.
-2. `docs/outlook/` only when the requested work is unbuilt or revisable future direction.
-   Outlook is planning input: it never overrides Snapshot, Vision, or accepted ADRs, and it
-   never satisfies dependencies.
-3. The target milestone when refining or decomposing. Read dependency or adjacent milestones only
-   when their contracts can constrain ordering, compatibility, or scope; use index metadata to
-   avoid opening unrelated milestones.
-4. `settings.gradle.kts` and each affected module's `README.md`.
-5. `package-info.java` for packages likely to change.
-6. Only ADRs and conformance sources linked by the vision, module README, target milestone, or directly implicated code.
-7. Narrow production and test files needed to validate feasibility and boundaries.
+1. `AGENTS.md` and enough of `.agentWork/milestones/README.md` (and the target milestone when
+   refining or decomposing) to identify the concrete work.
+2. Relevant current Snapshot evidence: `settings.gradle.kts` when build membership matters;
+   the affected module README; relevant `package-info.java` and Javadoc; implicated accepted
+   ADRs and `docs/conformance.md`; narrow current source and tests needed for feasibility or
+   constraints.
+3. `docs/vision.md` only when the work adds or changes modules, crosses public product
+   boundaries, changes stable product direction or principles, or exposes a potential Vision
+   conflict.
+4. Relevant Outlook only when planning unbuilt or revisable future direction. Outlook is
+   planning input: it never overrides Snapshot, Vision, or accepted ADRs, and it never
+   satisfies dependencies.
+5. Adjacent live plans only when their contracts constrain ordering, compatibility, or scope;
+   use index metadata to avoid opening unrelated milestones.
 
-Do not scan the whole repository first. Search for overlapping milestones, existing APIs, naming conventions, diagnostics, fixtures, and test patterns before proposing new concepts.
+Do not scan the whole repository first. Search for overlapping live plans, existing APIs, naming conventions, diagnostics, fixtures, and test patterns before proposing new concepts.
 
 Do not treat Linear as engineering truth. An optional work-item identifier on a plan is
 traceability metadata only. Do not copy Linear ticket prose into Research and constraints.

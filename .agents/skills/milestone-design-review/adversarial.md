@@ -14,20 +14,23 @@ title.
 Use the milestone path from the task inputs. Read:
 
 - the target milestone;
-- ADRs, completed sibling milestones, and module READMEs linked by the milestone or that already
-  specify how this kind of work is done;
+- accepted ADRs, module READMEs, package/API documentation, architecture rules, public types, and
+  specifications linked by the milestone or that already constrain this kind of work;
+- completed sibling milestones only when the live plan explicitly references one or historical
+  context is necessary;
 - additional records only when directly implicated by a candidate simpler alternative.
 
-Inspect code only to check whether an established pattern already exists. State the reviewed
-contract boundary in the artifact. Never imply that unexamined files were reviewed.
+Inspect current source and tests only to check an actual observable or architectural constraint,
+not an incidental implementation pattern. State the reviewed contract boundary in the artifact.
+Never imply that unexamined files were reviewed.
 
 ## Perform the review
 
 1. State a concrete simpler alternative that still meets the Goal, **or** explain why none survives
    the constraints. This section is required even on Pass.
 2. Look first for:
-   - an existing ADR, milestone, or module README that already specifies this kind of work, while
-     the milestone forks it;
+   - an existing accepted ADR, module/package/API contract, architecture rule, public type, or
+     specification that already specifies this kind of work, while the milestone forks it;
    - two approaches still present in the milestone text without a choice;
    - a new skill, type, or module that an existing skill, type, or module already covers.
 3. Assign each finding a severity (Critical / High / Medium / Low) for humans. Severity must **not**
@@ -38,9 +41,17 @@ contract boundary in the artifact. Never imply that unexamined files were review
 
 `Blocks: yes` only with a repository citation and one of:
 
-- an existing ADR, milestone, or module README named as the established way to do this, **and** the
+- a current canonical constraint named as the established way to do this — accepted ADR,
+  module/package/API contract, architecture rule, public type, or specification — **and** the
   simpler alternative still meets the Goal; or
+- current source or tests that encode an actual observable or architectural constraint, **and**
+  the simpler alternative still meets the Goal; or
 - the milestone text still presents two approaches without choosing (cite the competing passages).
+
+A completed milestone alone must never justify `Blocks: yes`. It may inform a finding, but
+blocking requires corroboration from a current canonical constraint above. An incidental
+implementation pattern in current source or tests is not architectural authority and must not
+block a cleaner future design.
 
 Uncited “could be simpler,” nicer API, or speculative YAGNI → `Blocks: no` (residual). If nothing
 blocks, the verdict is Pass even when a simpler alternative was described.

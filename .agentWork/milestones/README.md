@@ -162,7 +162,7 @@ module tests and `./gradlew clean build` passing.
 
 Use the explicitly invoked project `milestone-planning` skill to create, refine, or decompose
 milestones. It performs targeted exploration and relevant authoritative research, writes the
-permanent milestone files in this directory, updates both the dependency order and index, and then
+execution-contract milestone files in this directory, updates both the dependency order and index, and then
 runs `milestone-design-review` orchestration (two fresh-context reviewers, worst-wins combination)
 so the design review is not influenced by the planning session. After a design-review Pass, it runs
 the `milestone-plan-review` procedure in a fresh-context subagent. Each stage has its own fix loop
@@ -195,7 +195,8 @@ evidence; the review verifies them but never edits them.
 
 ## Milestone reviews
 
-Milestones are permanent delivery contracts. Three ephemeral review kinds write under
+Milestones are execution contracts retained during this migration; they are not current
+architecture after delivery. Three ephemeral review kinds write under
 `.agentWork/.session/` and are excluded from version control; each re-review overwrites the prior
 artifact for that milestone.
 

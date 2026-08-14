@@ -3,9 +3,9 @@
 **Status:** tentative. This is not an implementation plan and does not satisfy dependencies.
 
 Optional Spring integration is in-product ([Vision](../vision.md),
-[ADR-001](../adr/001-product-boundary.md), [ADR-007](../adr/007-module-boundaries.md)). Current
-capability is none: `jsonapi-java-spring-webmvc` is not in the build. Executable Spring work, if
-any, remains the existing milestone files under
+[ADR-001](../adr/001-product-boundary.md), [ADR-007](../adr/007-module-boundaries.md)). See the
+[root module registry](../../README.md) for current Spring adapter availability. Executable
+Spring work, if any, remains the existing milestone files under
 [`.agentWork/milestones/`](../../.agentWork/milestones/README.md).
 
 ## Direction
@@ -25,8 +25,8 @@ adapter does not mutate domain or persistence objects.
 
 **WebFlux** is a later **evaluation**, not a committed product surface. A reactive adapter would
 be a separate artifact. No WebFlux or reactive types belong in core, annotations, Jackson, query,
-or WebMVC modules. The first WebMVC adapter targets Jackson 3; Jackson 2 remains usable without
-Spring integration, and a Jackson 2 WebMVC adapter is not implied.
+or WebMVC modules. The first WebMVC direction assumes Jackson 3. Future Jackson 2 parity does
+not imply or require a Jackson 2 WebMVC adapter.
 
 Conceptual parts (transport, DTO binding, PATCH arguments, WebFlux evaluation) describe
 direction. They do not by themselves require separate execution plans.

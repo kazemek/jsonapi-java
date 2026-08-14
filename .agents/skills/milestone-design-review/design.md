@@ -15,6 +15,8 @@ Use the milestone path from the task inputs. Read:
 - `AGENTS.md` and `.agentWork/milestones/README.md` only as needed to locate linked docs;
 - `docs/vision.md` when the milestone changes project direction, modules, or public product
   boundaries, or when the spec suggests a vision conflict;
+- relevant Outlook when the milestone concerns unbuilt or revisable future direction (planning
+  context and future pressure only; never current truth or a dependency);
 - ADRs and conformance sections linked by the milestone or affected module documentation, plus
   additional records only when directly implicated;
 - affected module READMEs, `package-info.java`, and narrow production types when the milestone
@@ -58,6 +60,10 @@ orchestration, handoff, artifact, verdict, and lifecycle contracts. Do not inven
   type;
 - conflict kinds: wrong placement, wire-semantic collapse, illegal state representable, hidden
   application policy.
+
+Outlook must not justify `Blocks: yes`. Intentional divergence from Outlook that still satisfies
+Snapshot, Vision, accepted ADRs, specifications, and current repository evidence is not a
+design-review failure.
 
 Uncited taste or hypothetical nicer APIs → `Blocks: no` (residual). Implicit design (approach not
 stated) may `Blocks: yes` citing the empty or non-deciding Goal / Research / Boundaries passages.
