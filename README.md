@@ -10,7 +10,7 @@ compliant.
 
 ## Status
 
-**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, Phase 1.1 document model/validation in `jsonapi-java-core`, Phase 1.2 domain-mapping annotations in `jsonapi-java-annotations`, Phase 2.1/2.4 Jackson 3 document writer/reader, Phase 2.2 domain-to-resource mapping, Phase 2.3 compound inclusion, Phase 2.9 flat resource-to-DTO binding, Phase 2.10 typed domain envelopes, and Phase 2.11 Jackson-major-neutral contracts in `jsonapi-java-jackson-common` are in place. Later adapters and query parsing are not started.
+**Pre-alpha.** The Gradle build, CI pipeline, architecture decisions, `jsonapi-java-core` document model and validation, `jsonapi-java-annotations`, Jackson 3 document codec and domain mapping (compound inclusion, sparse fieldsets, flat DTO binding, typed envelopes), and Jackson-major-neutral contracts in `jsonapi-java-jackson-common` are in place. Query parsing and Spring adapters are not started.
 
 Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
@@ -42,14 +42,14 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 
 | Module                                                           | Status                                                                                                                                                                                  | Purpose                                                                    |
 |------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------|
-| [`jsonapi-java-core`](jsonapi-java-core/README.md)               | Available — Phase 1.1 complete                                                                                                                                                          | Dependency-free document model and validation                              |
-| [`jsonapi-java-annotations`](jsonapi-java-annotations/README.md) | Available — Phase 1.2 complete                                                                                                                                                          | Dependency-free domain-mapping role annotations                            |
-| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md)       | Available — Phases 2.1 (writer), 2.4 (reader), 2.2 (resource mapping), 2.3 (compound inclusion), 2.8 (sparse fieldsets), 2.9 (flat DTO binding), 2.10 (typed domain envelopes) complete | Jackson 3 document codec and annotated domain mapping; later PATCH binding |
-| [`jsonapi-java-jackson-common`](jsonapi-java-jackson-common/README.md) | Available — Phase 2.11 complete                                                                                                        | Jackson-major-neutral public contracts shared by both Jackson adapters     |
-| `jsonapi-java-jackson2`                                          | Planned — parity track not started                                                                                                                                                      | Separately compiled Jackson 2 parity artifact                              |
-| `jsonapi-java-query`                                             | Planned — Phase 3.1 not started                                                                                                                                                         | Optional query-parameter parsing                                           |
-| `jsonapi-java-spring-webmvc`                                     | Planned — Phases 3.2–3.4 not started                                                                                                                                                    | Jackson 3-based Spring WebMVC transport and DTO binding                    |
-| `jsonapi-java-spring-webflux`                                    | Future evaluation — Phase 3.5 not started                                                                                                                                               | Separately scoped reactive adapter candidate                               |
+| [`jsonapi-java-core`](jsonapi-java-core/README.md)               | Available | Dependency-free document model and validation                              |
+| [`jsonapi-java-annotations`](jsonapi-java-annotations/README.md) | Available | Dependency-free domain-mapping role annotations                            |
+| [`jsonapi-java-jackson3`](jsonapi-java-jackson3/README.md)       | Available | Jackson 3 document codec and annotated domain mapping; PATCH binding not started |
+| [`jsonapi-java-jackson-common`](jsonapi-java-jackson-common/README.md) | Available | Jackson-major-neutral public contracts shared by both Jackson adapters     |
+| `jsonapi-java-jackson2`                                          | Planned   | Separately compiled Jackson 2 parity artifact                              |
+| `jsonapi-java-query`                                             | Planned   | Optional query-parameter parsing                                           |
+| `jsonapi-java-spring-webmvc`                                     | Planned   | Jackson 3-based Spring WebMVC transport and DTO binding                    |
+| `jsonapi-java-spring-webflux`                                    | Future evaluation | Separately scoped reactive adapter candidate                               |
 
 Planned and future-evaluation modules have no usable entry point yet. Use each available module
 README for its package map, minimal usage, non-goals, and contributor/agent notes; the registry does

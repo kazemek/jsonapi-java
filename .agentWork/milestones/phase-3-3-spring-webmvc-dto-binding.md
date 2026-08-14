@@ -1,8 +1,9 @@
 # Phase 3.3 — Spring WebMVC Flat DTO Binding
 
 > **Module:** `jsonapi-java-spring-webmvc`  
-> **Dependencies:** Phases 2.8, 2.9, 2.10, 2.11, and 3.2  
+> **Dependencies:** Phase 3.2  
 > **Status:** Not started
+> **Work item:** KAZ-37
 
 ## Goal
 
@@ -18,11 +19,11 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
 - Phase 3.2 owns converter selection, media-type negotiation, core transport, query arguments, and
   safe error rendering. This milestone extends that adapter rather than registering a competing
   converter.
-- Phase 2.9 owns flat DTO binding, Phase 2.10 owns typed domain documents
-  (`JsonApiDomainDocument`) and `ResourceTypeRegistry`, Phase 2.3 owns inclusion context
-  (`CompoundSerializationContext` / `IncludePolicy`), Phase 2.8 extends that context with
-  sparse-fieldset policy and `MappedDocument` write coordination, and Phase 2.11 supplies common
-  contracts Spring consumes. Spring only transports explicit caller policy into those APIs.
+- `JsonApiResourceBinder` owns flat DTO binding, `JsonApiDomainDocument` /
+  `ResourceTypeRegistry` own typed domain documents, `CompoundSerializationContext` /
+  `IncludePolicy` own inclusion context, `FieldPolicy` / `MappedDocument` own sparse-fieldset
+  write coordination (`jsonapi-java-jackson3` README), and `jsonapi-java-jackson-common` supplies
+  the contracts Spring consumes. Spring only transports explicit caller policy into those APIs.
 - Activation types: request arguments are `JsonApiDomainDocument` only; return values are (a) a
   bare type or collection element type carrying `@JsonApiResource`, or (b) an explicit library
   Spring response wrapper that carries domain data plus `DocumentEnvelope` members and
@@ -30,8 +31,11 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   JSON:API media type. Plain POJO `application/json` handling stays Spring/Jackson-owned.
 - Included-type registry: applications provide a `ResourceTypeRegistry` Spring bean; auto-config
   does not invent a default registry of domain types.
-- Response writes: non-empty fieldsets use `toMappedDocument` / `toMappedResourceCollection` then
-  write with `mapped.applyTo(...)` (or post-2.11 common equivalents). Inclusion with an empty
+- Response writes: non-empty fieldsets use `toMappedDocument` / `toMappedResourceCollection`.
+  `mapped.applyTo(baseValidationContext)` produces the `ValidationContext` that carries the
+  sparse-fieldset full-linkage exception when needed; pass that context to
+  `JsonApiJackson3.writer(...)`. Serialize `mapped.document()` with the writer's `writeValue*`
+  methods. Inclusion with an empty
   fieldset map uses three-argument `toDocument` / `toResourceCollection`. Unrestricted responses
   without that context may use the non-mapped path.
 - Request arguments bind via `JsonApiDomainDocumentReader.fromDocument` on the already-validated
@@ -47,7 +51,7 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   bare annotated DTOs/collections and Spring response wrappers over `application/vnd.api+json`.
 - Add immutable `@NullMarked` Spring response wrappers/builders carrying domain data plus explicit
   links, metadata, JSON:API information, include policy, traversal limits, and sparse fieldsets into
-  the Phase 2 writer contracts (`@Nullable` only where absence is legal).
+  the jackson3 writer contracts (`@Nullable` only where absence is legal).
 - Add request binding that uses `JsonApiDomainDocumentReader.fromDocument` on the Phase
   3.2-validated document with an application-provided `ResourceTypeRegistry` bean, including
   independently registered/bound `included` DTOs and stable codec/mapping error rendering.
@@ -71,7 +75,7 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   (element) type carries `@JsonApiResource`, or an explicit library response wrapper—and only with
   the JSON:API media type. Arbitrary POJO returns never activate JSON:API handling. Plain POJO
   `application/json` handling remains Spring/Jackson-owned.
-- Input always follows Phase 3.2 decode/validation before Phase 2.10 domain-document binding.
+- Input always follows Phase 3.2 decode/validation before `JsonApiDomainDocumentReader` binding.
   Mapping failures use the registered safe JSON:API error policy without exposing application
   values or internals.
 - Response mapping uses caller-supplied immutable inclusion, fieldset, and traversal policy on
@@ -102,7 +106,8 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
       method signatures.
 - [ ] Included DTOs remain independently accessible via the application `ResourceTypeRegistry`
       bean and relationship fields remain linkage-only; when include/fieldset/traversal context is
-      supplied, that policy is honored (non-empty fieldsets via `MappedDocument.applyTo`; inclusion
+      supplied, that policy is honored (non-empty fieldsets via `mapped.applyTo(...)` for
+      validation context and `mapped.document()` for serialization; inclusion
       without fieldsets via three-argument `toDocument` / `toResourceCollection`); unrestricted
       non-mapped responses remain allowed when no such context is supplied.
 - [ ] New public WebMVC packages/types are `@NullMarked` with accurate `@Nullable` on

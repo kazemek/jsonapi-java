@@ -1,8 +1,9 @@
 # Phase 2.15 — Jackson 3 Presence-Aware PATCH Binding
 
 > **Scope:** `jsonapi-java-jackson3`, `jsonapi-java-jackson-common`, and `jsonapi-java-test-fixtures`  
-> **Dependencies:** Phases 1.3, 2.4, 2.9, 2.11, 2.13, 2.14, and 2.28  
+> **Dependencies:** None  
 > **Status:** Not started
+> **Work item:** KAZ-24
 
 ## Goal
 
@@ -14,44 +15,48 @@ which annotated DTO properties the client requested to change.
 - [JSON:API 1.1 updating resources](https://jsonapi.org/format/1.1/#crud-updating) and
   [ADR-012](../../docs/adr/012-resource-patch-binding.md) — omitted members retain current values;
   supplied relationships replace linkage; the result is not JSON Merge Patch; commands are not full
-  DTO envelopes. Core already enforces the update document shape (Phase 1.3); this milestone binds
-  only supplied mapped members.
-- Phase 1.3 validates single-resource shape, required identity, relationship `data`, and optional
-  endpoint/body identity before domain binding. Reader-validation failures stay
-  `JsonApiDocumentReadException` with `ValidationRuleCode` (document-relative pointers).
-- Phase 2.9 owns reverse Jackson mapping definitions, relationship/identifier conversion, and
+  DTO envelopes. Core already enforces the update document shape (`jsonapi-java-core` README /
+  `JsonApiDocumentValidator` with `DocumentUsage.UPDATE_REQUEST`;
+  [docs/conformance.md](../../docs/conformance.md) Resource update request validation); this
+  milestone binds only supplied mapped members.
+- `JsonApiDocumentValidator` validates single-resource shape, required identity, relationship
+  `data`, and optional endpoint/body identity before domain binding. Reader-validation failures
+  stay `JsonApiDocumentReadException` with `ValidationRuleCode` (document-relative pointers).
+- `JsonApiResourceBinder` and the jackson3 mapping cache (`jsonapi-java-jackson3` README) own
+  reverse Jackson mapping definitions, relationship/identifier conversion, and
   `MappingDiagnostic` codes. Attribute binding today constructs DTOs via whole-map `convertValue`;
   PATCH introduces per-member `JsonMapper.convertValue` to the mapped property `JavaType` inside a
   Jackson 3 patch binder. Do not call `JsonApiResourceBinder` or whole-DTO `convertValue`
   construction. Internal helpers may be shared with `DomainResourceBinder` (cardinality, built-in
   linkage, `RelationshipLinkageMapper`, identifier parse/coerce).
-- Phase 2.11 created `io.github.kazemek.jsonapi.jackson` but did not define PATCH command types.
+- `jsonapi-java-jackson-common` (`io.github.kazemek.jsonapi.jackson`) holds Jackson-import-free
+  policy, diagnostic, context, and envelope types but does not define PATCH command types.
   [ADR-007](../../docs/adr/007-module-boundaries.md) today assigns presence-aware PATCH commands to
-  `jsonapi-java-jackson3`; this milestone amends it (Phase 2.11 precedent) so Jackson-import-free
-  command types live in `jsonapi-java-jackson-common` and mapper-bound entry points stay in each
-  major adapter. [ADR-010](../../docs/adr/010-architectural-tests.md) allowlists are unchanged:
-  new common types stay in `io.github.kazemek.jsonapi.jackson`; `JsonApiPatchReader` stays in
-  `io.github.kazemek.jsonapi.jackson3`.
-- Document reading uses `JsonApiDocumentReader` (Phase 2.4) with a `DocumentReadContext` that
-  carries `PrimaryDataKind.RESOURCE` and a `ValidationContext` whose usage is forced to
-  `DocumentUsage.UPDATE_REQUEST` (optional `EndpointIdentity` preserved from the caller context).
-  That composed context is the sole aggregate-validation policy on the convenience path (one
-  validate-on-read, then bind). Do not accept a caller `DocumentReadContext` (it could carry the
-  wrong kind). Do not compose `JsonApiDomainDocumentReader` or typed envelopes. Phase 2.10 is not
-  a dependency.
-- Phase 2.14 supplies shared flat-read DTOs reused by PATCH scenarios (`FlatArticle`,
-  `FlatIntIdArticle`, `FlatCountedThing`, `FlatThingWithIgnored`, `FlatPersonArticle`). The
-  `domainpatch` package may add PATCH-specific DTOs only when that set cannot express an initial
-  inventory entry.
-- Phase 2.28 owns `Scenario` / `FixtureCatalog` and `JsonApiFixtures`; shared PATCH entries
-  implement `Scenario` in `io.github.kazemek.jsonapi.testfixtures.domainpatch` under
-  `src/main/java/` (`@NullMarked` per [ADR-009](../../docs/adr/009-jspecify-nullness.md)), with
-  `PatchScenarios` exposing `FixtureCatalog<PatchScenario>` through the Phase 2.28 pinned static
-  delegation surface (`all()` / `byId(String)` / `where(Predicate)` / `catalog()`), registered as
-  `JsonApiFixtures.patch()`. Construct the catalog with `FixtureCatalog.of("patch", …)` so unknown
-  ids fail as `Unknown patch scenario id: <id>`. The catalog grows by addition with stable ids;
-  adapter suites run the whole catalog and assert `executedScenarioIds == catalogScenarioIds` per
-  the Phase 2.13 relaxed contract — no closed-index manifest.
+  `jsonapi-java-jackson3`; this milestone amends it (jackson-common move policy) so
+  Jackson-import-free command types live in `jsonapi-java-jackson-common` and mapper-bound entry
+  points stay in each major adapter. [ADR-010](../../docs/adr/010-architectural-tests.md)
+  allowlists are unchanged: new common types stay in `io.github.kazemek.jsonapi.jackson`;
+  `JsonApiPatchReader` stays in `io.github.kazemek.jsonapi.jackson3`.
+- Document reading uses `JsonApiDocumentReader` (`jsonapi-java-jackson3` README) with a
+  `DocumentReadContext` that carries `PrimaryDataKind.RESOURCE` and a `ValidationContext` whose
+  usage is forced to `DocumentUsage.UPDATE_REQUEST` (optional `EndpointIdentity` preserved from the
+  caller context). That composed context is the sole aggregate-validation policy on the convenience
+  path (one validate-on-read, then bind). Do not accept a caller `DocumentReadContext` (it could
+  carry the wrong kind). Do not compose `JsonApiDomainDocumentReader` or typed envelopes.
+- Shared flat-read DTOs in `jsonapi-java-test-fixtures` `domainread` (`FlatArticle`,
+  `FlatIntIdArticle`, `FlatCountedThing`, `FlatThingWithIgnored`, `FlatPersonArticle`) are reused
+  by PATCH scenarios. The `domainpatch` package may add PATCH-specific DTOs only when that set
+  cannot express an initial inventory entry.
+- `jsonapi-java-test-fixtures` README / `JsonApiFixtures` owns `Scenario` / `FixtureCatalog`;
+  shared PATCH entries implement `Scenario` in
+  `io.github.kazemek.jsonapi.testfixtures.domainpatch` under `src/main/java/` (`@NullMarked` per
+  [ADR-009](../../docs/adr/009-jspecify-nullness.md)), with `PatchScenarios` exposing
+  `FixtureCatalog<PatchScenario>` through the pinned static delegation surface (`all()` /
+  `byId(String)` / `where(Predicate)` / `catalog()`), registered as `JsonApiFixtures.patch()`.
+  Construct the catalog with `FixtureCatalog.of("patch", …)` so unknown ids fail as
+  `Unknown patch scenario id: <id>`. The catalog grows by addition with stable ids; adapter suites
+  run the whole catalog and assert `executedScenarioIds == catalogScenarioIds` per the
+  test-fixtures domain-catalog contract — no closed-index manifest.
 - Initial shared PATCH scenario inventory (stable ids for Phase 2.23 reuse; Jackson-major-neutral
   JSON documents + expected changes/diagnostics only):
   `patch-omitted-and-supplied-attributes`; `patch-explicit-null-attribute`;
@@ -63,17 +68,19 @@ which annotated DTO properties the client requested to change.
   `patch-wrong-primary-shape`; `patch-resource-type-mismatch`;
   `patch-identifier-conversion-failure`; `patch-attribute-conversion-failure`;
   `patch-unsupported-relationship-target`.
-  Shared reader-validation diagnostics (Phase 1.3): `patch-wrong-primary-shape` →
+  Shared reader-validation diagnostics (`JsonApiDocumentValidator` /
+  `ValidationRuleCode`): `patch-wrong-primary-shape` →
   `UPDATE_REQUIRES_SINGLE_RESOURCE` at `/data`; `patch-missing-relationship-data` →
   `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`;
   `patch-endpoint-identity-mismatch` → `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`.
-  Shared binder diagnostics (Phase 2.9): `patch-unsupported-relationship-target` →
+  Shared binder diagnostics (`JsonApiResourceBinder` / `MappingDiagnostic`):
+  `patch-unsupported-relationship-target` →
   `UNSUPPORTED_RELATIONSHIP_TARGET` at `/relationships/<name>/data`;
   `patch-relationship-cardinality-mismatch` → `RELATIONSHIP_CARDINALITY_MISMATCH` at
   `/relationships/<name>/data`. The patch reader does not join `/data` onto binder failures.
-  Pointer-space convention: Phase 1.3 reader-validation diagnostics are document-relative
-  (`/data`, `/data/relationships/...`, `/data/type`); binder-originated diagnostics keep Phase
-  2.9 resource-relative pointers (`/id`, `/type`, `/` + logical property, `/relationships/<name>/data`).
+  Pointer-space convention: core reader-validation diagnostics are document-relative
+  (`/data`, `/data/relationships/...`, `/data/type`); binder-originated diagnostics keep
+  jackson3 resource-relative pointers (`/id`, `/type`, `/` + logical property, `/relationships/<name>/data`).
 - Adapter-local cases by exact name stay in each major's `*PatchBindingSpec` only, documented
   there with major-local harnesses and never enumerated in a shared manifest:
   `custom deserializer applies to attribute change`; `patch-custom-linkage-conversion`;
@@ -84,17 +91,17 @@ which annotated DTO properties the client requested to change.
   sealed attribute-null variant (core `Attributes` already uses `@Nullable` map values).
   Explicit attribute JSON `null` is stored as `value == null` even when the mapped property is
   `Optional` (do not keep `Optional.empty()`). Relationship `NullLinkage` converts to Java `null`
-  or empty `Optional` as Phase 2.9 would; the change is still present in the command.
+  or empty `Optional` as `JsonApiResourceBinder` would; the change is still present in the command.
 - Conformance matrix edits (name both rows): Domain mapping “Presence-aware resource-update
   commands” → mark **supported** for Jackson 3 binding with the pinned replacement note
-  “Jackson 3 binding supported (Phase 2.15); Jackson 2 binding remains Phase 2.23”. Phase 1.3
-  “Command application (PATCH binding)” → retitle to “Command application” and mark **out of
-  scope** with the single exact note “Applications apply authorized update commands; Jackson 2
-  binding remains Phase 2.23”. The Domain mapping section header is reworded from “PATCH 2.15/2.23
-  and Jackson 2 parity — deferred” to “Jackson 2 parity — deferred”, and its supported-phases list
-  gains Phase 2.15 (“Phases 2.2–2.3, 2.8–2.10, 2.15 — supported; Jackson 2 parity — deferred”).
-  The conformance intro's provenance paragraph gains a Phase 2.15 clause (the Phase 1.3 / 2.9–2.12
-  precedent).
+  “Jackson 3 binding supported; Jackson 2 binding remains deferred”. Resource
+  update request validation “Command application (PATCH binding)” → retitle to “Command
+  application” and mark **out of scope** with the single exact note “Applications apply authorized
+  update commands; Jackson 2 binding remains deferred”. The Domain mapping section header is
+  reworded from “supported; PATCH binding and Jackson 2 parity — deferred” to “supported; Jackson
+  2 parity — deferred”. The [docs/conformance.md](../../docs/conformance.md) intro
+  current-capability paragraph records that Jackson 3 PATCH binding is supported and Jackson 2
+  remains deferred, without phase provenance.
 
 ## Deliverables
 
@@ -103,27 +110,27 @@ which annotated DTO properties the client requested to change.
   `AttributeChange` and `RelationshipChange`. Record the placement with an ADR-007 amendment:
   Jackson-import-free command contracts live in `jsonapi-java-jackson-common`; mapper-bound
   entry points live in each major adapter. Amend the ADR-007 `jsonapi-java-jackson-common` bullet
-  to include presence-aware update-command values (Phase 2.15), and change the jackson3 bullet
+  to include presence-aware update-command values, and change the jackson3 bullet
   from owning “presence-aware PATCH commands” to owning the PATCH reader entry points that
   produce those common commands. Do not add a new `MappingDiagnostic` constant.
 - Add Jackson 3 patch reader entry points: `JsonApiJackson3.patchReader` overloads (exact matrix
   in Implementation boundaries) returning `JsonApiPatchReader` with `readValue` / `fromDocument`
   `Class` and `JavaType` overloads. Convenience `readValue` is one `JsonApiDocumentReader`
   validate-on-read then presence-aware bind of only supplied mapped attributes and relationships.
-  Reuse Phase 2.9 mapping definitions and relationship/identifier conversion; introduce
+  Reuse jackson3 `ResourceMapping` definitions and relationship/identifier conversion; introduce
   per-member typed attribute conversion. Never call `JsonApiResourceBinder` or whole-DTO
   construction; never synthesize omitted changes; never read `included`; never compose
   `JsonApiDomainDocumentReader`.
 - Add `PatchScenario` implementing `Scenario` and `PatchScenarios` exposing
-  `FixtureCatalog<PatchScenario>` through the Phase 2.28 pinned static delegation surface (fixed
+  `FixtureCatalog<PatchScenario>` through the pinned `JsonApiFixtures` static delegation surface (fixed
   `domainpatch` package, `@NullMarked`) for the initial shared inventory, registered as
   `JsonApiFixtures.patch()`. Keep the named adapter-local cases out of the shared catalog.
   Payload shape is pinned in Implementation boundaries.
 - Use `module-docs` for the changed `jsonapi-java-jackson3`, `jsonapi-java-jackson-common`, and
-  `jsonapi-java-test-fixtures` surfaces; apply the named conformance matrix edits above; update
-  `docs/vision.md`'s jackson3 module line (presence-aware PATCH binding is available as of Phase
-  2.15) and its jackson-common module line (contract categories gain presence-aware update
-  commands).
+  `jsonapi-java-test-fixtures` surfaces; apply the named conformance matrix edits above.
+  Current availability belongs in those Snapshot surfaces and `docs/conformance.md`. Do not
+  update `docs/vision.md` unless this work changes the stable product boundary or a design
+  principle; otherwise no Vision change is required.
 
 ## Non-goals
 
@@ -172,8 +179,9 @@ which annotated DTO properties the client requested to change.
   and parsers stay open). `fromDocument(JsonApiDocument, Class<T>|JavaType)` binds without
   re-validation. `fromDocument` requires non-null document whose `data()` is
   `DocumentData.SingleResource`; any other primary-data state (including absent/`NullData`/
-  collections/identifiers) throws `IllegalArgumentException` (caller skipped Phase 1.3). Callers
-  of `fromDocument` carry the Phase 1.3 update-usage validation responsibility.
+  collections/identifiers) throws `IllegalArgumentException` (caller skipped
+  `DocumentUsage.UPDATE_REQUEST` validation). Callers of `fromDocument` carry the core
+  update-usage validation responsibility.
 - **Command types** (Jackson-import-free records in `io.github.kazemek.jsonapi.jackson`):
   `PatchCommand<T>(Class<T> resourceType, Object identity, List<PatchChange> changes)` —
   `T` is the annotated DTO type; `identity` is the converted DTO identifier property value
@@ -191,25 +199,25 @@ which annotated DTO properties the client requested to change.
   converted property value (Optional wrapping and List/Set/array shapes included). Omitted
   members never appear. Explicit attribute JSON `null` is `value == null` on a present
   `AttributeChange`, including when the mapped property type is `Optional` (do not store
-  `Optional.empty()`). `NullLinkage` on to-one is `value == null` or empty `Optional` as Phase
-  2.9 would bind. Empty to-many is an empty collection of the mapped property type.
-- **Bind pipeline (fail-fast; no partial command):** resolve `ResourceMapping` via the Phase 2.9
-  cache; `RESOURCE_TYPE_MISMATCH` at `/type` before identity or changes; convert identity; then
+  `Optional.empty()`). `NullLinkage` on to-one is `value == null` or empty `Optional` as
+  `JsonApiResourceBinder` would bind. Empty to-many is an empty collection of the mapped property type.
+- **Bind pipeline (fail-fast; no partial command):** resolve `ResourceMapping` via the jackson3
+  mapping cache; `RESOURCE_TYPE_MISMATCH` at `/type` before identity or changes; convert identity; then
   attribute changes in `Attributes.attributes()` iteration order; then relationship changes in
   `Relationships.relationships()` iteration order. Identity conversion uses the resource `id`
   only (PATCH identity; no `lid` fallback): `@JsonApiId` or logical name `id`;
   `resource.hasId()` → parse + `convertValue` at `/id`; otherwise
   `IDENTIFIER_CONVERSION_FAILED` at `/id`. Identity is never emitted as a change. Unmapped or
-  `@JsonIgnore` supplied names are omitted from the change set (Phase 2.9 ignore-unmapped
+  `@JsonIgnore` supplied names are omitted from the change set (jackson3 binder ignore-unmapped
   policy). Duplicate/colliding mapping definitions still fail before a command escapes.
   Per-member attribute conversion is `mapper.convertValue(rawValue, propertyJavaType)` including
   JSON `null` (so primitive-null fails); when the raw value is JSON `null`, store
   `value == null` even if `convertValue` would return `Optional.empty()`. Failure emits
   `UNSUPPORTED_ATTRIBUTE_VALUE` at `/` + Jackson logical property name.
-  Relationship conversion reuses Phase 2.9 cardinality / built-in `ResourceIdentifier` /
+  Relationship conversion reuses jackson3 binder cardinality / built-in `ResourceIdentifier` /
   registered `RelationshipLinkageMapper` rules, then `convertValue`s the intermediate value to
   the property `JavaType` so empty to-many matches List vs Set vs array. Relationship
-  conversion/cardinality/unsupported-target diagnostics keep Phase 2.9 paths
+  conversion/cardinality/unsupported-target diagnostics keep jackson3 binder paths
   (`/relationships/<jsonapiName>/data`). Bind failures throw `JsonApiMappingException` with
   resource-relative pointers and are never wrapped into `JsonApiDocumentReadException` or
   prefixed with `/data`. Codec/aggregate failures on `readValue` stay
@@ -268,8 +276,8 @@ which annotated DTO properties the client requested to change.
   `DomainDocumentReaderSpec`). `JacksonCommonContractsSpec` asserts compact-constructor rejection
   of null `jsonapiName` / `logicalName` and that mutating `changes()` or a `List`/`Set`/array
   change value cannot affect the command. A facade-spec assertion covers
-  `JsonApiFixtures.patch()` view identity and the `where` shim, per the Phase 2.28 facade-spec
-  pattern. Assert attribute-then-relationship encounter order, JSON:API-name change keys,
+  `JsonApiFixtures.patch()` view identity and the `where` shim, per the `JsonApiFixtures`
+  facade-spec pattern. Assert attribute-then-relationship encounter order, JSON:API-name change keys,
   accompanying logical names, and that typed identity is never listed among changes.
 
 ## Acceptance criteria
@@ -294,12 +302,12 @@ which annotated DTO properties the client requested to change.
       `JsonApiJackson3.patchReader(...)` / `JsonApiPatchReader` entry points (linkage-mapper map
       snapshotted with `Map.copyOf`; caller-owned streams/parsers stay open; `fromDocument`
       rejects null/absent/`NullData`/collection/identifier primary data), then presence-aware
-      binding via Phase 2.9 mapping definitions, relationship/identifier diagnostics, and newly
+      binding via jackson3 `ResourceMapping` definitions, relationship/identifier diagnostics, and newly
       introduced per-member attribute conversion (never a second defaults validate, never
       `JsonApiResourceBinder` / whole-DTO construction, never typed envelopes /
       `JsonApiDomainDocumentReader`, never `included`, never application mutation).
 - [ ] The initial shared PATCH scenario inventory is cataloged as `PatchScenarios` exposing the
-      `FixtureCatalog<PatchScenario>` contract through the Phase 2.28 pinned static delegation
+      `FixtureCatalog<PatchScenario>` contract through the pinned `JsonApiFixtures` static delegation
       surface (fixed `domainpatch` package, `@NullMarked`) with `JsonApiFixtures.patch()`
       registered and a passing `PatchScenariosCatalogSpec` (unique ids, `byId` round-trip,
       resolvable expectations, additive posture), and is consumed with full-catalog coverage by
@@ -309,15 +317,14 @@ which annotated DTO properties the client requested to change.
       for Phase 2.23 parity, with no shared exclusion manifest.
 - [ ] The canonical `module-docs` checklist passes for jackson3, jackson-common, and
       test-fixtures; Domain mapping “Presence-aware resource-update commands” is **supported**
-      for Jackson 3 with the pinned note “Jackson 3 binding supported (Phase 2.15); Jackson 2
-      binding remains Phase 2.23”; Phase 1.3 “Command application (PATCH binding)” is retitled
-      to “Command application”, marked **out of scope**, and carries the single exact note
-      “Applications apply authorized update commands; Jackson 2 binding remains Phase 2.23”;
-      the Domain mapping section header is reworded to “Jackson 2 parity — deferred” with Phase
-      2.15 added to its supported-phases list; the conformance intro gains a Phase 2.15
-      provenance clause; and the `docs/vision.md` jackson3 and jackson-common module lines
-      reflect that presence-aware PATCH binding is available as of Phase 2.15 and that the
-      jackson-common contract categories include presence-aware update commands.
+      for Jackson 3 with the pinned note “Jackson 3 binding supported; Jackson 2
+      binding remains deferred”; Resource update request validation “Command application (PATCH
+      binding)” is retitled to “Command application”, marked **out of scope**, and carries the
+      single exact note “Applications apply authorized update commands; Jackson 2 binding remains
+      deferred”; the Domain mapping section header is reworded to “supported; Jackson 2 parity —
+      deferred”; the conformance intro records that Jackson 3 PATCH binding is supported and
+      Jackson 2 remains deferred, without phase provenance; and no `docs/vision.md` change is
+      required unless the stable product boundary or a design principle changed.
 - [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*PatchBindingSpec'` and `./gradlew clean
       build` pass.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).

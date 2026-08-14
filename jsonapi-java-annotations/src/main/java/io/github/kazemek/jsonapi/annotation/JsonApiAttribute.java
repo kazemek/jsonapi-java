@@ -11,13 +11,13 @@ import java.lang.annotation.Target;
  *
  * <p>Jackson remains authoritative for logical property discovery, visibility, names, values, and
  * serialization. An empty {@link #name()} retains Jackson's logical property name; a non-empty
- * override is interpreted and validated (including member-name grammar) only by Phase 2.2.
+ * override is interpreted and validated (including member-name grammar) only by Jackson mapping.
  *
  * <p>Annotations never make Jackson-ignored properties visible. Identifier and relationship roles
  * cease to be default attributes; remaining Jackson-visible properties become attributes by default
  * after those roles are applied (ADR-004).
  *
- * <p>Targets include fields, methods, parameters, and record components. Phase 2.2 collapses
+ * <p>Targets include fields, methods, parameters, and record components. Mapping collapses
  * propagated occurrences into one logical property.
  *
  * <p>This annotation is not {@link java.lang.annotation.Inherited}.

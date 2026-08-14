@@ -2,20 +2,18 @@
 
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
-This checklist is seeded by Phase 1.1 (`jsonapi-java-core`), Phase 1.2
-(`jsonapi-java-annotations`), Phase 1.3 (`jsonapi-java-core` update validation), Phase 1.5
-(`jsonapi-java-core` error `source.pointer` RFC 6901 syntax), Phase 2.1
-(`jsonapi-java-jackson3` document writer), Phase 2.2 (`jsonapi-java-jackson3` domain-to-resource
-write mapping), Phase 2.4 (`jsonapi-java-jackson3` document reader), and cross-checked by
-Phase 2.5 against pinned JSON:API 1.1 draft schemas. Flat resource-to-DTO binding (Phase 2.9)
-binds validated resource objects without reading `included`; typed domain envelopes (Phase 2.10)
-bind primary and included resources through an explicit type registry without graph hydration or
-PATCH commands. Codec and mapping policy, diagnostics, contexts, and domain envelope values are
-Jackson-major-neutral contracts in `jsonapi-java-jackson-common` (Phase 2.11); the capability-tagged
-document corpus, closed negative corpus, and dual-success ambiguous primary-data cases under
-`fixtures/jsonapi-1.1/` are the shared codec contract for every Jackson major (Phase 2.12).
+Current capability: `jsonapi-java-core` owns the document model, aggregate validation, update-request
+shape, error `source.pointer` syntax, and reserved link names. `jsonapi-java-annotations` owns
+metadata-only domain-mapping annotations. `jsonapi-java-jackson3` owns the Jackson 3 document
+writer/reader, domain-to-resource mapping, compound inclusion, sparse fieldsets, flat DTO binding,
+and typed domain envelopes. `jsonapi-java-jackson-common` owns Jackson-major-neutral policy,
+diagnostics, contexts, and envelope values. Writer output is cross-checked against pinned JSON:API
+1.1 draft schemas as supplemental evidence only. The capability-tagged document corpus, closed
+negative corpus, and dual-success ambiguous primary-data cases under `fixtures/jsonapi-1.1/` are
+the shared codec contract for every Jackson major. Presence-aware PATCH binding, query parsing, and
+Spring adapters remain deferred.
 
-## Document structure (Phase 1.1 — supported)
+## Document structure (supported)
 
 | Rule                                                                        | Status       | Notes                                                                                                                                                                                                                                                                                        |
 |-----------------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -65,7 +63,7 @@ document corpus, closed negative corpus, and dual-success ambiguous primary-data
 | Defensive collection copies                                                 | supported    | Model types and `ValidationContext`                                                                                                                                                                                                                                                          |
 | URI-reference syntax                                                        | supported    | ASCII RFC 3986; structured authority; empty string allowed; raw non-ASCII rejected                                                                                                                                                                                                           |
 
-## Resource update request validation (Phase 1.3 — supported)
+## Resource update request validation (supported)
 
 | Rule                                                                                                            | Status       | Notes                                                                                        |
 |-----------------------------------------------------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------|
@@ -76,10 +74,10 @@ document corpus, closed negative corpus, and dual-success ambiguous primary-data
 | Omitted/present-empty attribute and relationship wrappers; explicit-null attribute values preserved             | supported    | Absent vs `Attributes.empty()` vs explicit null values; no normalization                     |
 | Optional expected endpoint identity comparison                                                                  | supported    | `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`; supplied via `ValidationContext` |
 | Update rules scoped to the primary resource                                                                     | supported    | `included` resources keep response semantics; full linkage still enforced                    |
-| Command application (PATCH binding)                                                                             | deferred     | Phases 2.15 and 2.23; adapters bind, applications apply                                      |
+| Command application (PATCH binding)                                                                             | deferred     | Adapters bind; applications apply. Jackson 3 and Jackson 2 PATCH plans remain unfinished     |
 | HTTP/route identity derivation and mutation                                                                     | out of scope | Application-owned; core compares only a supplied expected identity                           |
 
-## Annotation metadata (Phase 1.2 — supported)
+## Annotation metadata (supported)
 
 | Rule                                                         | Status    | Notes                                                                 |
 |--------------------------------------------------------------|-----------|-----------------------------------------------------------------------|
@@ -88,7 +86,7 @@ document corpus, closed negative corpus, and dual-success ambiguous primary-data
 | `@JsonApiAttribute(name)` optional attribute rename          | supported | Empty `name()` retains Jackson's logical property name                |
 | `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
 
-## Codec / wire format (Phases 2.1 and 2.4 — supported)
+## Codec / wire format (supported)
 
 | Rule                                             | Status    | Notes                                                                                                 |
 |--------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------|
@@ -97,10 +95,10 @@ document corpus, closed negative corpus, and dual-success ambiguous primary-data
 | Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` capability-selected catalog (`CodecScenario` metadata); stable ids and paths    |
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind`                          |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location                              |
-| Shared read-only negative corpus                 | supported | `negative-manifest.json`: closed Phase 2.4 failure inventory with version-neutral expectations        |
+| Shared read-only negative corpus                 | supported | `negative-manifest.json`: closed reader-failure inventory with version-neutral expectations          |
 | Ambiguous primary data requires explicit kind    | supported | Shared dual-success object/empty-array cases decode under both `PrimaryDataKind` values               |
 
-## Draft-schema cross-check (Phase 2.5 — supplemental)
+## Draft-schema cross-check (supplemental)
 
 Writer-generated fixture bytes are cross-checked against the JSON:API 1.1 **draft-PR schemas**
 pinned under `fixtures/jsonapi-schema/1.1-pr1603/` (PR
@@ -125,21 +123,21 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (Phases 2.2–2.3, 2.8–2.10 — supported; PATCH 2.15/2.23 and Jackson 2 parity — deferred)
+## Domain mapping (supported; PATCH binding and Jackson 2 parity — deferred)
 
 | Rule                                                    | Status       | Notes                                                                                                                                                                                                                          |
 |---------------------------------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Jackson-visible domain-to-resource mapping (write-side) | supported    | Phase 2.2; produce ResourceObject from annotated types                                                                                                                                                                         |
-| Compound inclusion (explicit context / IncludePolicy)   | supported    | Phase 2.3; opt-in paths and policy only — no automatic graph traversal                                                                                                                                                         |
-| Sparse fieldsets on write                               | supported    | Phase 2.8; `CompoundSerializationContext` fieldsets + `FieldPolicy`; `MappedDocument` / `applyTo` for full-linkage exception; HTTP `fields[TYPE]` parsing and caller authorization remain application/adapter responsibilities |
-| Flat resource-to-DTO binding                            | supported    | Phase 2.9; validated document first; linkage only — never reads `included`                                                                                                                                                     |
-| Typed domain document envelopes                         | supported    | Phase 2.10; `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                                                                                                                                                 |
-| Independent typed binding of `included` resources       | supported    | Phase 2.10; wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                |
-| Presence-aware resource-update commands                 | deferred     | Core update validation supported (Phase 1.3); command binding deferred to Phases 2.15 and 2.23                                                                                                                                 |
+| Jackson-visible domain-to-resource mapping (write-side) | supported    | Produce ResourceObject from annotated types                                                                                                                                                                                    |
+| Compound inclusion (explicit context / IncludePolicy)   | supported    | Opt-in paths and policy only — no automatic graph traversal                                                                                                                                                                    |
+| Sparse fieldsets on write                               | supported    | `CompoundSerializationContext` fieldsets + `FieldPolicy`; `MappedDocument` / `applyTo` for full-linkage exception; HTTP `fields[TYPE]` parsing and caller authorization remain application/adapter responsibilities            |
+| Flat resource-to-DTO binding                            | supported    | Validated document first; linkage only — never reads `included`                                                                                                                                                                |
+| Typed domain document envelopes                         | supported    | `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                                                                                                                                                             |
+| Independent typed binding of `included` resources       | supported    | Wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                            |
+| Presence-aware resource-update commands                 | deferred     | Core update validation is supported; Jackson 3 and Jackson 2 command binding remain unfinished                                                                                                                                 |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                                                                                                                                                  |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                                                                                                                                                  |
 
-## Query parameters (Phase 3.1 — delegated)
+## Query parameters (delegated)
 
 | Rule                                                  | Status    |
 |-------------------------------------------------------|-----------|
@@ -149,8 +147,8 @@ documents.
 
 | Rule                                            | Status       | Notes                   |
 |-------------------------------------------------|--------------|-------------------------|
-| Spring-annotated DTO and typed-envelope binding | deferred     | Phase 3.3               |
-| Spring presence-aware PATCH command binding     | deferred     | Phase 3.4               |
+| Spring-annotated DTO and typed-envelope binding | deferred     | Spring WebMVC DTO plan  |
+| Spring presence-aware PATCH command binding     | deferred     | Spring WebMVC PATCH plan |
 | Endpoint availability and operation semantics   | out of scope | Application-owned       |
 | HTTP status selection                           | out of scope | Except adapter behavior |
 | Content negotiation beyond adapter              | out of scope | Application-owned       |

@@ -1,8 +1,9 @@
 # Phase 3.5 — WebFlux Adapter Evaluation
 
 > **Candidate module:** `jsonapi-java-spring-webflux`  
-> **Dependencies:** Stable Phases 3.2, 3.3, and 3.4 behavior  
+> **Dependencies:** Phases 3.2, 3.3, and 3.4  
 > **Status:** Not started
+> **Work item:** KAZ-39
 
 ## Goal
 

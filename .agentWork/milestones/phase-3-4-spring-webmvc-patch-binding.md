@@ -1,8 +1,9 @@
 # Phase 3.4 — Spring WebMVC Presence-Aware PATCH Binding
 
 > **Module:** `jsonapi-java-spring-webmvc`  
-> **Dependencies:** Phases 2.11, 2.15, 3.2, and 3.3  
+> **Dependencies:** Phases 2.15, 3.2, and 3.3  
 > **Status:** Not started
+> **Work item:** KAZ-38
 
 ## Goal
 
@@ -16,7 +17,8 @@ full DTOs or applying mutations in the adapter.
 - [ADR-009](../../docs/adr/009-jspecify-nullness.md) — public argument contracts and the
   `EndpointIdentityResolver` SPI are `@NullMarked` with accurate `@Nullable` where absence or JSON
   null is legal.
-- Phase 2.11 owns the Jackson-import-free common package/module. Phase 2.15 owns PATCH command
+- `jsonapi-java-jackson-common` owns the Jackson-import-free common package/module. Phase 2.15 owns
+  PATCH command
   semantics, public command contracts (in that common package), and the factory-accepted
   `ValidationContext` / optional `EndpointIdentity` validate-on-read bind shape. Phase 3.2 owns
   media-type, transport, and safe-error infrastructure this path uses—not a separate
@@ -64,7 +66,7 @@ full DTOs or applying mutations in the adapter.
   `withExpectedEndpointIdentity` → one validate-on-read then presence-aware bind. Phase 3.2
   supplies media-type/transport/error infrastructure only.
 - Absent `EndpointIdentityResolver` bean or null resolve result ⇒ comparison off; mismatch uses
-  Phase 1.3 `ENDPOINT_IDENTITY_MISMATCH` before controller invocation.
+  `ENDPOINT_IDENTITY_MISMATCH` before controller invocation.
 - Framework wrappers depend on Jackson 3 / common contracts only; no Spring dependency leaks into
   core or Jackson modules.
 

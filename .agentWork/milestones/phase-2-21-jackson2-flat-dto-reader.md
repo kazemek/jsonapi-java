@@ -1,8 +1,9 @@
 # Phase 2.21 — Jackson 2 Flat DTO Reader
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 2.9, 2.11, 2.14, 2.17, and 2.18  
+> **Dependencies:** Phases 2.17 and 2.18  
 > **Status:** Not started
+> **Work item:** KAZ-33
 
 ## Goal
 
@@ -11,12 +12,13 @@ common contracts and shared domain-read fixtures.
 
 ## Research and constraints
 
-- Phase 2.9 defines flat binding, linkage-only relationships, target/cardinality rules, and mapping
+- `JsonApiResourceBinder` (`jsonapi-java-jackson3` README / [ADR-011](../../docs/adr/011-flat-dto-read-binding.md))
+  defines flat binding, linkage-only relationships, target/cardinality rules, and mapping
   diagnostics.
 - Phase 2.17 supplies validated Jackson 2 document reads; Phase 2.18 supplies Jackson 2 mapping
   definitions and identifier conversion.
-- Phase 2.11 supplies common diagnostics and identifier conversion; Phase 2.14 owns the shared
-  flat-binding scenario catalog.
+- `jsonapi-java-jackson-common` supplies common diagnostics and identifier conversion;
+  `JsonApiFixtures.domainRead()` / `DomainReadScenarios` is the shared flat-binding scenario catalog.
 - [ADR-011](../../docs/adr/011-flat-dto-read-binding.md) — included resources never populate DTO
   relationships and document validation always precedes binding.
 - Jackson 2 creators/deserializers may differ in source API but must honor equivalent caller
@@ -30,7 +32,7 @@ common contracts and shared domain-read fixtures.
   definitions.
 - Port scalar/collection relationship identifier conversion and explicit custom linkage mappers
   without included-resource resolution.
-- Consume the Phase 2.14 flat-binding catalog; keep major-specific deserializer cases adapter-local.
+- Consume the `DomainReadScenarios` catalog; keep major-specific deserializer cases adapter-local.
 - Use `module-docs` to refresh Jackson 2 module docs/Javadoc and conformance entries for flat DTO
   reads.
 
@@ -52,15 +54,17 @@ common contracts and shared domain-read fixtures.
 
 ## Test strategy
 
-- Parameterize Phase 2.14 flat-binding scenarios (records/POJOs, creators, naming, identifiers,
-  linkage, and negative diagnostics) across both majors.
+- Execute every scenario from the live `DomainReadScenarios` catalog, collect executed scenario
+  IDs, and assert `executedScenarioIds == catalogScenarioIds` so newly added scenarios cannot
+  silently escape the suite.
 - Retain adapter-local Jackson 2 cases for major-specific deserializers and mapper isolation.
 - Prove changing included resources does not change primary DTOs or relationship fields.
 
 ## Acceptance criteria
 
-- [ ] Every applicable Phase 2.14 supported resource shape binds to semantically equivalent DTO
-      values through Jackson 2 and Jackson 3.
+- [ ] The Jackson 2 binder suite executes every live `DomainReadScenarios` scenario and asserts
+      `executedScenarioIds == catalogScenarioIds`; every supported resource shape binds to
+      semantically equivalent DTO values through Jackson 2 and Jackson 3.
 - [ ] Relationship linkage and mapping failures retain parity categories/paths, and `included` is
       never read.
 - [ ] Caller mapper behavior is preserved and no Jackson 3/runtime or sibling-internal dependency

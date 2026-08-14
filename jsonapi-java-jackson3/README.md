@@ -127,7 +127,7 @@ injected into relationship properties; identifier primary data passes through as
 `ResourceIdentifier` values. `domainDocumentReader` derives the binder mapper exactly like
 `resourceBinder`; `fromDocument(JsonApiDocument)` binds an already-validated document without
 re-parsing. The envelope is a public low-level domain-binding result, not a required application
-controller/service abstraction: framework integrations (Phase 3.3) may unwrap its primary payload
+controller/service abstraction: a Spring adapter may unwrap its primary payload
 into the application's declared DTO type, so applications can consume typed DTOs without depending
 on `JsonApiDomainDocument` (the envelope stays available for document metadata, `included`, or
 explicit representation-state access).
@@ -144,9 +144,9 @@ and binders introspect types for resource metadata but do not register a Jackson
 ## Non-goals
 
 HTTP `fields[TYPE]` parsing and field authorization beyond the explicit `FieldPolicy` allow-list
-remain application/adapter responsibilities (Phase 3.1 / 3.3). Domain graph hydration and
-persistence lookup remain out of scope. PATCH command binding remains deferred to Phases 2.15 and
-  2.23 (typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
+remain application/adapter responsibilities. Domain graph hydration and
+persistence lookup remain out of scope. PATCH command binding remains deferred
+(typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
 artifact; both majors share the neutral contracts of
 [jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
 
@@ -185,7 +185,7 @@ artifact; both majors share the neutral contracts of
   shapes) directly, and any other target class needs a registered `RelationshipLinkageMapper`.
   Bind failures throw `JsonApiMappingException`, never `JsonApiDocumentReadException`.
 - **Typed domain envelope:** `JsonApiDomainDocumentReader` composes the document reader with the
-  Phase 2.9 binder. Primary and included resources bind only through the `ResourceTypeRegistry`
+  flat DTO binder. Primary and included resources bind only through the `ResourceTypeRegistry`
   (keyed by `@JsonApiResource.type()` on the registered raw class; annotation lookup only);
   unregistered types fail with `UNREGISTERED_RESOURCE_TYPE` at the document pointer
   (`/data`, `/data/n`, `/included/n`), duplicate type registrations fail at `build()` with

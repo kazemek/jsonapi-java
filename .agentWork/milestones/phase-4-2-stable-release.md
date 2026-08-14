@@ -1,8 +1,9 @@
 # Phase 4.2 — Stable Release
 
 > **Scope:** Publication and compatibility  
-> **Dependencies:** Phase 4.1 and a verified namespace  
+> **Dependencies:** Phase 4.1  
 > **Status:** Not started
+> **Work item:** KAZ-31
 
 ## Goal
 
@@ -10,7 +11,8 @@ Publish a reviewable stable release with explicit compatibility and support poli
 
 ## Deliverables
 
-- Maven Central publication under the verified namespace with source, Javadoc, checksums,
+- Maven Central publication under the verified namespace ([ADR-008](../../docs/adr/008-public-namespace.md))
+  with source, Javadoc, checksums,
   signatures, license, SCM, and developer metadata.
 - Semantic versioning, public API compatibility, upgrade, and deprecation policies.
 - A JPMS/automatic-module-name decision plus supported Java, Jackson 2, Jackson 3, and Spring

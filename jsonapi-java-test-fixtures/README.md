@@ -49,9 +49,8 @@ them (together with `jsonapi.schema.fixtures.dir`) for every module.
 
 This module does not add wire expectations, diagnostics, or corpora per Jackson major — those
 must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). PATCH fixture
-catalogs belong to a later fixture phase (2.15); the flat write catalog is complete as of Phase
-2.13, the flat read catalog as of Phase 2.14, the compound-write catalog as of Phase 2.24, the
-sparse-fieldset catalog as of Phase 2.25, and the typed-envelope catalog as of Phase 2.26.
+catalogs are not present yet; the flat write, flat read, compound-write, sparse-fieldset, and
+typed-envelope catalogs are in this module.
 
 ## Further reading
 
@@ -65,7 +64,7 @@ sparse-fieldset catalog as of Phase 2.25, and the typed-envelope catalog as of P
 ## For contributors / agents
 
 - **Retrieval:** `JsonApiFixtures` plus the `FixtureCatalog` instances it exposes is the canonical
-  API. Future catalogs (2.15) register a facade accessor and the same public
+  API. Future catalogs register a facade accessor and the same public
   static `all()` / `byId(String)` / `where(Predicate)` / `catalog()` delegation surface; they do
   not invent retrieval types. Existing suites may keep calling the `*Scenarios` shims.
 - **Stable ids and paths:** `CodecScenario` ids and expected JSON paths are stable across Jackson
@@ -184,9 +183,8 @@ sparse-fieldset catalog as of Phase 2.25, and the typed-envelope catalog as of P
   `EnvelopeReadVariant.RegistryAttempt.propertyPath`). Groovy tests are not annotated.
 - **Extension workflow (Jackson 2):** a new adapter suite runs every scenario of the shared
   domain-write catalog through its own resource mapper and asserts full-catalog coverage
-  (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite (mandatory per
-  Phase 2.18); the same full-catalog rule applies to the domain-read binder catalog (mandatory
-  per Phase 2.21), the compound-write catalog (mandatory per Phase 2.19), the sparse-fieldset
-  catalog (mandatory per Phase 2.20), and the typed-envelope catalog (mandatory per Phase 2.22).
+  (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite; the same
+  full-catalog rule applies to the domain-read binder catalog, the compound-write catalog, the
+  sparse-fieldset catalog, and the typed-envelope catalog.
   Jackson-API-specific behavior (mix-ins, serializers, naming strategies, converter wiring, custom
   deserializers, linkage mappers) stays in adapter-local specs, documented there.

@@ -1,28 +1,30 @@
 # Phase 2.16 — Jackson 2 Document Writer
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 2.1, 2.5, 2.11, 2.12, 2.27, and 2.28  
+> **Dependencies:** None  
 > **Status:** Not started
+> **Work item:** KAZ-27
 
 ## Goal
 
-Provide a Jackson 2 writer artifact with the same validated JSON:API document output contract as the
-completed Jackson 3 writer, consuming common contracts and the shared codec scenarios through the
-Phase 2.28 unified Java retrieval surface.
+Provide a Jackson 2 writer artifact with the same validated JSON:API document output contract as
+`jsonapi-java-jackson3` `JsonApiDocumentWriter` (module README), consuming
+`jsonapi-java-jackson-common` contracts and the shared codec scenarios through `JsonApiFixtures`.
 
 ## Research and constraints
 
-- Phase 2.1 and ADR-007 reserve separately compiled `jsonapi-java-jackson2` and
-  `jsonapi-java-jackson3` artifacts; Phase 2.11 adds `jsonapi-java-jackson-common` for
-  Jackson-import-free policy and diagnostic types.
+- [ADR-007](../../docs/adr/007-module-boundaries.md) reserves separately compiled
+  `jsonapi-java-jackson2` and `jsonapi-java-jackson3` artifacts;
+  `jsonapi-java-jackson-common` holds Jackson-import-free policy and diagnostic types.
 - [Jackson releases](https://github.com/FasterXML/jackson/wiki/Jackson-Releases) — this milestone
   supports the Jackson `2.22.x` line, tested at BOM `2.22.1`; no earlier historical-minor claim is
   made until Phase 4. The Gradle task is `:jsonapi-java-jackson2:jackson2CompatibilityTest`.
 - [Jackson 3 migration guide](https://github.com/FasterXML/jackson/blob/main/jackson3/MIGRATING_TO_JACKSON_3.md)
   — Jackson 2 uses `com.fasterxml.jackson.*` while Jackson 3 uses `tools.jackson.*`; coexistence
   requires separately compiled handlers, not runtime major detection.
-- Phase 2.12 capability-tagged fixtures and Phase 2.5 schema classifications are the parity
-  contract; do not fork wire policy or expected JSON for the older Jackson API.
+- `JsonApiFixtures.codec()` capability-tagged fixtures and [docs/conformance.md](../../docs/conformance.md)
+  schema classifications are the parity contract; do not fork wire policy or expected JSON for the
+  older Jackson API.
 - [ADR-009](../../docs/adr/009-jspecify-nullness.md) — new public `jackson2` packages are
   `@NullMarked` with accurate `@Nullable` on absence-preserving and optional values.
 - [ADR-010](../../docs/adr/010-architectural-tests.md) — production code may depend on common
@@ -38,8 +40,8 @@ Phase 2.28 unified Java retrieval surface.
 - Port streaming serializers without a runtime dependency on `jsonapi-java-jackson3`; derive a
   configured copy/builder from caller Jackson 2 configuration so writer setup does not mutate the
   caller's mapper.
-- Consume the Phase 2.12 writer/schema capability catalogs to prove byte-policy and semantic parity
-  with Jackson 3, including supplemental draft-schema cases.
+- Consume the `JsonApiFixtures.codec()` writer/schema capability catalogs to prove byte-policy and
+  semantic parity with Jackson 3, including supplemental draft-schema cases.
 - Use `module-docs` for the new artifact and update the root module registry and conformance notes
   to identify both major-specific writer implementations.
 
@@ -61,13 +63,13 @@ Phase 2.28 unified Java retrieval surface.
   come from the common module.
 - Keep canonical ordering, absence/null/empty rules, flattened wrappers, nullable links, array-form
   `hreflang`, validation-before-output, and caller-configuration isolation unchanged.
-- Tests select Phase 2.12 fixtures by capability; expected wire fixtures must not be copied into
-  divergent major-specific variants.
+- Tests select `JsonApiFixtures.codec()` fixtures by capability; expected wire fixtures must not be
+  copied into divergent major-specific variants.
 
 ## Test strategy
 
-- Run the Phase 2.12 writer capability matrix through Jackson 2 and compare canonical output and
-  parsed semantics with the shared expected resources.
+- Run the `JsonApiFixtures.codec()` writer capability matrix through Jackson 2 and compare canonical
+  output and parsed semantics with the shared expected resources.
 - Add coexistence and dependency tests proving Jackson 2 and Jackson 3 packages can be present while
   each artifact only uses its own major's APIs plus common contracts.
 - Run `:jsonapi-java-jackson2:jackson2CompatibilityTest` against Jackson `2.22.x` / BOM `2.22.1`.
@@ -78,7 +80,7 @@ Phase 2.28 unified Java retrieval surface.
       for neutral types, and has no production/runtime dependency on Jackson 3, the Jackson 3
       artifact, or `core.internal`.
 - [ ] The shared writer/schema contract produces the same canonical JSON and validation failures
-      through Jackson 2 and Jackson 3 for every applicable Phase 2.12 fixture.
+      through Jackson 2 and Jackson 3 for every applicable `JsonApiFixtures.codec()` fixture.
 - [ ] Writer configuration preserves caller mapper isolation: using the JSON:API writer does not
       alter ordinary serialization through the caller's original Jackson 2 mapper.
 - [ ] New public `jackson2` packages are `@NullMarked` with accurate `@Nullable` (ADR-009); the

@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (Phase 2.1 implements jackson3 allowlist and `core.internal` ban); 2026-08-10 (Phase 2.11 registers the jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (Phase 2.13 registers the test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (Phase 2.27 replaces Groovy codec fixtures with Java and JSON-P)
+**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P)
 
 ## Context
 
@@ -42,7 +42,7 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
   - `io.github.kazemek.jsonapi.jackson2..` → JDK, JSpecify, core public packages, annotations,
     module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's
     internals. Must not depend on `core.internal`.
-- Query and Spring milestones record their exact framework package allowlists when those modules
+- Query and Spring modules record their exact framework package allowlists when those modules
   are registered. Spring may use public core, annotation, Jackson 3, and query contracts; no lower
   layer may acquire Spring types.
 - Gradle continues to own artifact selection and publication; ArchUnit owns package/type coupling that Gradle cannot express.
@@ -57,4 +57,5 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 
 - `./gradlew clean build` fails when a guarded module's production code gains an illegal type dependency.
 - Agents and contributors treat ArchUnit failures as boundary violations, not tests to delete or weaken without an ADR change.
-- Additional architectural rules (cross-module `internal` bans, layer DAGs) land in follow-up milestones alongside the modules they protect.
+- Additional architectural rules (cross-module `internal` bans, layer DAGs) land alongside the
+  modules they protect.

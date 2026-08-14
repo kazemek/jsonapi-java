@@ -1,8 +1,9 @@
 # Phase 2.18 — Jackson 2 Domain-to-Resource Mapping
 
 > **Module:** `jsonapi-java-jackson2`  
-> **Dependencies:** Phases 2.2, 2.11, 2.13, and 2.16  
+> **Dependencies:** Phase 2.16  
 > **Status:** Not started
+> **Work item:** KAZ-25
 
 ## Goal
 
@@ -11,11 +12,13 @@ using common diagnostics and shared domain-write fixtures.
 
 ## Research and constraints
 
-- Phase 2.2 is the semantic contract for logical-property roles, identifiers, linkage, diagnostics,
+- `JsonApiResourceMapper` (`jsonapi-java-jackson3` README / [ADR-005](../../docs/adr/005-domain-mapping-and-inclusion.md))
+  is the semantic contract for logical-property roles, identifiers, linkage, diagnostics,
   and caller mapper isolation; this milestone changes Jackson APIs, not mapping policy.
-- Phase 2.11 supplies common `IdentifierConverter`, `MappingDiagnostic`, and related Jackson-free
-  contracts; Phase 2.16 establishes the Jackson 2 baseline.
-- Phase 2.13 owns the shared domain-write scenario catalog for flat mapping parity.
+- `jsonapi-java-jackson-common` supplies `IdentifierConverter`, `MappingDiagnostic`, and related
+  Jackson-free contracts; Phase 2.16 establishes the Jackson 2 baseline.
+- `JsonApiFixtures.domainWrite()` / `DomainWriteScenarios` is the shared domain-write scenario
+  catalog for flat mapping parity.
 - [ADR-004](../../docs/adr/004-jackson-integration.md) — use Jackson 2 `BeanDescription`,
   `JavaType`, creators, names, ignores, mix-ins, serializers, and configured modules.
 - [ADR-009](../../docs/adr/009-jspecify-nullness.md) — public packages are `@NullMarked`; nullable
@@ -27,7 +30,7 @@ using common diagnostics and shared domain-write fixtures.
 ## Deliverables
 
 - Add Jackson 2 immutable mapping definitions/cache with the same role/name/conflict policy as
-  Phase 2.2.
+  jackson3 `JsonApiResourceMapper`.
 - Add explicit mapper (and document-assembly) entry points under
   `io.github.kazemek.jsonapi.jackson2`, derived from caller configuration without mutating the
   caller mapper and consuming common diagnostics; wire emission uses the Phase 2.16 writer.
@@ -36,7 +39,7 @@ using common diagnostics and shared domain-write fixtures.
   Jackson 3 negative-diagnostic surface (missing/unsupported identifiers, duplicate roles,
   member-name collisions, invalid resource types, unsupported relationship collection values,
   converter failures) through the common `MappingDiagnostic` categories in adapter-local tests.
-- Run every scenario of the shared Phase 2.13 `DomainWriteScenarios` catalog through the Jackson 2
+- Run every scenario of the shared `DomainWriteScenarios` catalog through the Jackson 2
   mapper and assert full-catalog coverage (`executedScenarioIds == catalogScenarioIds`), mirroring
   Jackson 3's `ResourceMapperSpec`, to compare produced core resources and stable mapping
   categories across majors; keep major-specific serializer/mix-in cases adapter-local, documented
@@ -56,12 +59,12 @@ using common diagnostics and shared domain-write fixtures.
   `jsonapi-java-jackson3`, or `core.internal` production dependency is permitted.
 - Public concepts and diagnostics mirror Jackson 3 via the common package, while unavoidable
   Jackson-major source API differences remain internal.
-- Shared Phase 2.13 scenarios and expected resources are consumed directly; no divergent Jackson 2
+- Shared `DomainWriteScenarios` and expected resources are consumed directly; no divergent Jackson 2
   fixture copies.
 
 ## Test strategy
 
-- Parameterize the Phase 2.13 flat-mapping scenarios (records/POJOs, naming, identifiers,
+- Parameterize the `DomainWriteScenarios` flat-mapping scenarios (records/POJOs, naming, identifiers,
   linkage, document/envelope wrapping, and the null-input rejection) across both majors, and
   assert full-catalog coverage: the Jackson 2 write suite records executed scenario ids and
   requires `executedScenarioIds == catalogScenarioIds` against the live catalog. Ignores,
@@ -75,9 +78,10 @@ using common diagnostics and shared domain-write fixtures.
 
 ## Acceptance criteria
 
-- [ ] The Jackson 2 write suite runs every scenario of the shared Phase 2.13 domain-write catalog
+- [ ] The Jackson 2 write suite runs every scenario of the shared `DomainWriteScenarios` catalog
       through its own mapper, and its coverage assertion requires `executedScenarioIds ==
-      catalogScenarioIds`; Jackson 2 mapping produces core resources equivalent to Phase 2.2 for
+      catalogScenarioIds`; Jackson 2 mapping produces core resources equivalent to jackson3
+      `JsonApiResourceMapper` for
       each shared scenario, and its adapter-local negative cases raise the same common
       `MappingDiagnostic` categories as Jackson 3 (duplicate roles, member-name collisions,
       invalid resource types, missing/unsupported identifiers, unsupported relationship

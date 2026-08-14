@@ -1,8 +1,9 @@
 # Phase 4.1 — Conformance and Hardening
 
 > **Scope:** All implemented modules  
-> **Dependencies:** Phases 1.1–3.4  
+> **Dependencies:** Phases 2.15, 2.16–2.23, and 3.1–3.4  
 > **Status:** Not started
+> **Work item:** KAZ-30
 
 ## Goal
 
