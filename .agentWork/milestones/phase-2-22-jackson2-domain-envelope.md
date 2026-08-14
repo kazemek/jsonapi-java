@@ -54,14 +54,18 @@ common envelope values and shared envelope-read fixtures.
 
 ## Test strategy
 
-- Parameterize `EnvelopeReadScenarios` data/error/meta-only/compound, heterogeneous included, explicit-null/
-  absent, and registration scenarios.
+- Execute every scenario from the live `EnvelopeReadScenarios` catalog, collect executed scenario
+  IDs, and assert `executedScenarioIds == catalogScenarioIds` so newly added scenarios cannot
+  silently escape the suite.
 - Compare ordered included DTOs, identity lookup, document members, and stable errors across majors.
+- Preserve adapter-local major-specific test cases separately from the shared catalog.
 
 ## Acceptance criteria
 
-- [ ] Applicable shared fixtures produce equivalent typed envelope states and document-member views
-      through both Jackson majors via common envelope contracts.
+- [ ] The Jackson 2 envelope suite executes every live `EnvelopeReadScenarios` scenario and asserts
+      `executedScenarioIds == catalogScenarioIds`; shared fixtures produce equivalent typed
+      envelope states and document-member views through both Jackson majors via common envelope
+      contracts.
 - [ ] Included registration, order, identity lookup, unknown/conflict diagnostics, and no-injection
       behavior match jackson3 `JsonApiDomainDocumentReader`.
 - [ ] Caller ownership contracts hold with no Jackson 3/runtime dependency and no duplicated

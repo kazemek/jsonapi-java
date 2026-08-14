@@ -94,14 +94,14 @@ which annotated DTO properties the client requested to change.
   or empty `Optional` as `JsonApiResourceBinder` would; the change is still present in the command.
 - Conformance matrix edits (name both rows): Domain mapping “Presence-aware resource-update
   commands” → mark **supported** for Jackson 3 binding with the pinned replacement note
-  “Jackson 3 binding supported (Phase 2.15); Jackson 2 binding remains Phase 2.23”. Resource
+  “Jackson 3 binding supported; Jackson 2 binding remains deferred”. Resource
   update request validation “Command application (PATCH binding)” → retitle to “Command
   application” and mark **out of scope** with the single exact note “Applications apply authorized
-  update commands; Jackson 2 binding remains Phase 2.23”. The Domain mapping section header is
+  update commands; Jackson 2 binding remains deferred”. The Domain mapping section header is
   reworded from “supported; PATCH binding and Jackson 2 parity — deferred” to “supported; Jackson
   2 parity — deferred”. The [docs/conformance.md](../../docs/conformance.md) intro
-  current-capability paragraph gains a Phase 2.15 clause (jackson3 PATCH binding supported;
-  Jackson 2 remains Phase 2.23).
+  current-capability paragraph records that Jackson 3 PATCH binding is supported and Jackson 2
+  remains deferred, without phase provenance.
 
 ## Deliverables
 
@@ -110,7 +110,7 @@ which annotated DTO properties the client requested to change.
   `AttributeChange` and `RelationshipChange`. Record the placement with an ADR-007 amendment:
   Jackson-import-free command contracts live in `jsonapi-java-jackson-common`; mapper-bound
   entry points live in each major adapter. Amend the ADR-007 `jsonapi-java-jackson-common` bullet
-  to include presence-aware update-command values (Phase 2.15), and change the jackson3 bullet
+  to include presence-aware update-command values, and change the jackson3 bullet
   from owning “presence-aware PATCH commands” to owning the PATCH reader entry points that
   produce those common commands. Do not add a new `MappingDiagnostic` constant.
 - Add Jackson 3 patch reader entry points: `JsonApiJackson3.patchReader` overloads (exact matrix
@@ -127,10 +127,10 @@ which annotated DTO properties the client requested to change.
   `JsonApiFixtures.patch()`. Keep the named adapter-local cases out of the shared catalog.
   Payload shape is pinned in Implementation boundaries.
 - Use `module-docs` for the changed `jsonapi-java-jackson3`, `jsonapi-java-jackson-common`, and
-  `jsonapi-java-test-fixtures` surfaces; apply the named conformance matrix edits above; update
-  `docs/vision.md`'s jackson3 module line (presence-aware PATCH binding is available as of Phase
-  2.15) and its jackson-common module line (contract categories gain presence-aware update
-  commands).
+  `jsonapi-java-test-fixtures` surfaces; apply the named conformance matrix edits above.
+  Current availability belongs in those Snapshot surfaces and `docs/conformance.md`. Do not
+  update `docs/vision.md` unless this work changes the stable product boundary or a design
+  principle; otherwise no Vision change is required.
 
 ## Non-goals
 
@@ -317,15 +317,14 @@ which annotated DTO properties the client requested to change.
       for Phase 2.23 parity, with no shared exclusion manifest.
 - [ ] The canonical `module-docs` checklist passes for jackson3, jackson-common, and
       test-fixtures; Domain mapping “Presence-aware resource-update commands” is **supported**
-      for Jackson 3 with the pinned note “Jackson 3 binding supported (Phase 2.15); Jackson 2
-      binding remains Phase 2.23”; Resource update request validation “Command application (PATCH
+      for Jackson 3 with the pinned note “Jackson 3 binding supported; Jackson 2
+      binding remains deferred”; Resource update request validation “Command application (PATCH
       binding)” is retitled to “Command application”, marked **out of scope**, and carries the
       single exact note “Applications apply authorized update commands; Jackson 2 binding remains
-      Phase 2.23”; the Domain mapping section header is reworded to “supported; Jackson 2 parity —
-      deferred”; the conformance intro gains a Phase 2.15 current-capability clause; and the
-      `docs/vision.md` jackson3 and jackson-common module lines
-      reflect that presence-aware PATCH binding is available as of Phase 2.15 and that the
-      jackson-common contract categories include presence-aware update commands.
+      deferred”; the Domain mapping section header is reworded to “supported; Jackson 2 parity —
+      deferred”; the conformance intro records that Jackson 3 PATCH binding is supported and
+      Jackson 2 remains deferred, without phase provenance; and no `docs/vision.md` change is
+      required unless the stable product boundary or a design principle changed.
 - [ ] `./gradlew :jsonapi-java-jackson3:test --tests '*PatchBindingSpec'` and `./gradlew clean
       build` pass.
 - [ ] Spotless passes (`./gradlew spotlessApply` then `./gradlew spotlessCheck`).

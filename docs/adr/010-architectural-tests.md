@@ -43,7 +43,6 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
     module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's
     internals. Must not depend on `core.internal`.
 - Query and Spring modules record their exact framework package allowlists when those modules
-  exist.
   are registered. Spring may use public core, annotation, Jackson 3, and query contracts; no lower
   layer may acquire Spring types.
 - Gradle continues to own artifact selection and publication; ArchUnit owns package/type coupling that Gradle cannot express.

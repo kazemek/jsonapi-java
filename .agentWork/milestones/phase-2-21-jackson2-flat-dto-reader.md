@@ -54,15 +54,17 @@ common contracts and shared domain-read fixtures.
 
 ## Test strategy
 
-- Parameterize `DomainReadScenarios` (records/POJOs, creators, naming, identifiers,
-  linkage, and negative diagnostics) across both majors.
+- Execute every scenario from the live `DomainReadScenarios` catalog, collect executed scenario
+  IDs, and assert `executedScenarioIds == catalogScenarioIds` so newly added scenarios cannot
+  silently escape the suite.
 - Retain adapter-local Jackson 2 cases for major-specific deserializers and mapper isolation.
 - Prove changing included resources does not change primary DTOs or relationship fields.
 
 ## Acceptance criteria
 
-- [ ] Every applicable `DomainReadScenarios` supported resource shape binds to semantically equivalent DTO
-      values through Jackson 2 and Jackson 3.
+- [ ] The Jackson 2 binder suite executes every live `DomainReadScenarios` scenario and asserts
+      `executedScenarioIds == catalogScenarioIds`; every supported resource shape binds to
+      semantically equivalent DTO values through Jackson 2 and Jackson 3.
 - [ ] Relationship linkage and mapping failures retain parity categories/paths, and `included` is
       never read.
 - [ ] Caller mapper behavior is preserved and no Jackson 3/runtime or sibling-internal dependency

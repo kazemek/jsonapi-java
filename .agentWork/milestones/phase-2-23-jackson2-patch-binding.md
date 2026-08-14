@@ -26,7 +26,7 @@ reusing common command contracts and the shared scenarios established by Phase 2
 - Jackson major differences may alter implementation APIs but not requested-change presence,
   encounter order, conversion, or diagnostics.
 - Conformance: Domain mapping “Presence-aware resource-update commands” → mark **supported** for
-  Jackson 2 binding (Jackson 3 already Phase 2.15); keep command application out of scope.
+  Jackson 2 binding (Jackson 3 already supported); keep command application out of scope.
 
 ## Deliverables
 

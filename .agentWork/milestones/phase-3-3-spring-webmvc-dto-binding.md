@@ -31,8 +31,11 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
   JSON:API media type. Plain POJO `application/json` handling stays Spring/Jackson-owned.
 - Included-type registry: applications provide a `ResourceTypeRegistry` Spring bean; auto-config
   does not invent a default registry of domain types.
-- Response writes: non-empty fieldsets use `toMappedDocument` / `toMappedResourceCollection` then
-  write with `mapped.applyTo(...)` (or jackson-common `MappedDocument` equivalents). Inclusion with an empty
+- Response writes: non-empty fieldsets use `toMappedDocument` / `toMappedResourceCollection`.
+  `mapped.applyTo(baseValidationContext)` produces the `ValidationContext` that carries the
+  sparse-fieldset full-linkage exception when needed; pass that context to
+  `JsonApiJackson3.writer(...)`. Serialize `mapped.document()` with the writer's `writeValue*`
+  methods. Inclusion with an empty
   fieldset map uses three-argument `toDocument` / `toResourceCollection`. Unrestricted responses
   without that context may use the non-mapped path.
 - Request arguments bind via `JsonApiDomainDocumentReader.fromDocument` on the already-validated
@@ -103,7 +106,8 @@ annotated domain DTOs (or Spring response wrappers) without directly handling co
       method signatures.
 - [ ] Included DTOs remain independently accessible via the application `ResourceTypeRegistry`
       bean and relationship fields remain linkage-only; when include/fieldset/traversal context is
-      supplied, that policy is honored (non-empty fieldsets via `MappedDocument.applyTo`; inclusion
+      supplied, that policy is honored (non-empty fieldsets via `mapped.applyTo(...)` for
+      validation context and `mapped.document()` for serialization; inclusion
       without fieldsets via three-argument `toDocument` / `toResourceCollection`); unrestricted
       non-mapped responses remain allowed when no such context is supplied.
 - [ ] New public WebMVC packages/types are `@NullMarked` with accurate `@Nullable` on

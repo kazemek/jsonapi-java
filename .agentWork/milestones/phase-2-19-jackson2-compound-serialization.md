@@ -66,17 +66,18 @@ using common policy types and shared compound-write fixtures.
 
 ## Test strategy
 
-- Parameterize `CompoundWriteScenarios` (cyclic, shared, nested, empty, conflict, limit,
-  invalid-path, mixed-type, nested-policy, converging-path, concurrent-isolation, multi-failure,
-  and access-counting) through Jackson 2.
+- Execute every scenario from the live `CompoundWriteScenarios` catalog through Jackson 2,
+  collect executed scenario IDs, and assert `executedScenarioIds == catalogScenarioIds` so newly
+  added scenarios cannot silently escape the suite.
 - Compare included resources, order, linkage, and stable common diagnostics across Jackson 2 and 3.
 - Shared codec fixtures prove wire/schema parity; they do not replace domain-graph traversal tests.
+- Preserve adapter-local major-specific test cases separately from the shared catalog.
 
 ## Acceptance criteria
 
-- [ ] Jackson 2 three-argument mapper overloads consume common compound contracts and match jackson3
-      included resources, intermediates, linkage, and first-encounter order for every applicable
-      shared scenario.
+- [ ] Jackson 2 three-argument mapper overloads consume common compound contracts, execute every
+      live `CompoundWriteScenarios` scenario, and assert `executedScenarioIds == catalogScenarioIds`;
+      they match jackson3 included resources, intermediates, linkage, and first-encounter order.
 - [ ] Policy rejection, conflicts, cycles, depth/count limits, overlapping-path traversal, primary
       identity exclusion from `included`, and invalid paths have parity diagnostics, and off-path
       relationships are not accessed for inclusion traversal.

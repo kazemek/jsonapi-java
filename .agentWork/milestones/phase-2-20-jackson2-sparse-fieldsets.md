@@ -52,15 +52,18 @@ semantics, using common field policies and shared fieldset-write fixtures.
 
 ## Test strategy
 
-- Parameterize `SparseFieldsetScenarios` unrestricted, empty, renamed, per-type, attribute-only,
-  relationship-only, primary, and included fieldset scenarios.
+- Execute every scenario from the live `SparseFieldsetScenarios` catalog, collect executed
+  scenario IDs, and assert `executedScenarioIds == catalogScenarioIds` so newly added scenarios
+  cannot silently escape the suite.
 - Compare output and diagnostics across majors and use access-counting relationships to prove
   filtered properties are not read.
+- Preserve adapter-local major-specific test cases separately from the shared catalog.
 
 ## Acceptance criteria
 
 - [ ] Jackson 2 fieldsets use final mapped names and match jackson3 output for primary and included
-      resources while preserving identity for every applicable shared scenario.
+      resources while preserving identity; the suite executes every live `SparseFieldsetScenarios`
+      scenario and asserts `executedScenarioIds == catalogScenarioIds`.
 - [ ] Excluded relationships are neither accessed nor traversed, and full-linkage exceptions are
       enabled only for actual fieldset omission.
 - [ ] Unknown/disallowed names have parity diagnostics; no Jackson 3/runtime dependency exists; and
