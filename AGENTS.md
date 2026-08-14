@@ -181,7 +181,10 @@ reviewed execution contract. There is no `plans/README.md` backlog or historical
   the `implementation-planning` skill are heuristics, not an automatic split.
 
 After gates pass, Snapshot/Outlook synchronization, and a fresh `implementation-review` Pass,
-`implement-plan` reconciles dependent live plans, updates the linked Linear item (or reports
+`implement-plan` reconciles dependent live plans (mechanical reference cleanup directly;
+semantic changes to `Not started` dependents only via `implementation-planning` plus design- and
+plan-review; never rewrite `In progress` dependents — retain the completing plan when blocked),
+mechanically verifies zero surviving references, updates the linked Linear item (or reports
 unsync), then **deletes** the completed plan. Ephemeral reviews live under `.agentWork/.session/`
 (gitignored).
 

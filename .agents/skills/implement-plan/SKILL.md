@@ -151,7 +151,7 @@ implementation + gates
 → Snapshot / Outlook sync
 → fresh implementation review
 → review Pass
-→ reconcile dependent live plans
+→ reconcile dependent live plans (mechanical vs semantic)
 → mechanically verify no remaining live refs
 → update Linear OR report unsync
 → delete completed plan
@@ -160,10 +160,28 @@ implementation + gates
 The first four steps are already done when this section runs. Then:
 
 1. Reconcile dependent live plans under `.agentWork/plans/` so no live `Dependencies` header or
-   in-body reference points at this plan. Retarget or remove those references; durable facts belong
-   in Snapshot or Outlook, not in a soon-to-be-deleted contract.
-2. Mechanically verify no remaining live references to this plan (filename, title, or relative
-   link) under `.agentWork/plans/`.
+   in-body reference points at this completing plan. Distinguish:
+
+   - **Mechanical reconciliation** — may happen directly during finalization when it only removes
+     or updates references made obsolete by the completed dependency **without** changing the
+     dependent plan’s implementation semantics. Example: plan B depends on A; A completed → remove
+     the now-satisfied dependency/reference to A from B (`None` if no other deps remain). Durable
+     facts belong in Snapshot or Outlook, not in a soon-to-be-deleted contract.
+   - **Semantic reconciliation** — if fixing the reference would change the dependent’s actual
+     execution contract, approach, prerequisites, scope, assumptions, boundaries, or intended
+     implementation:
+     - `Not started` dependent: do **not** rewrite it directly inside `implement-plan`. Route it
+       through `implementation-planning` refinement and require the existing fresh
+       `implementation-design-review` → `implementation-plan-review` pipeline (bounded loops) to
+       Pass. Keep this completing plan present until that refinement succeeds. This is **not** a
+       new review stage.
+     - `In progress` dependent: do **not** modify the fixed contract. Stop finalization, retain
+       this completing plan, and report the blocked reconciliation.
+
+   If semantic refinement/review fails or an `In progress` dependent blocks reconciliation, stop
+   before deletion and keep this plan file.
+2. After all dependent reconciliation is valid, mechanically verify no remaining live references
+   to this plan (filename, title, or relative link) under `.agentWork/plans/`.
 3. Update the linked Linear work item with a concise outcome and coordination status, **or**
    explicitly report that Linear synchronization is unavailable. Linear unavailability must not
    fail a correct implementation or preserve engineering knowledge in the plan, but must never be
@@ -174,5 +192,6 @@ The first four steps are already done when this section runs. Then:
 ## Report
 
 Report to the user: the changed files, verification commands run and their outcomes, the review
-artifact path, the verdict, Snapshot/Outlook sync result, dependent-plan reconciliation, Linear
-update or explicit unsync, whether the plan file was deleted, and residual risks.
+artifact path, the verdict, Snapshot/Outlook sync result, dependent-plan reconciliation
+(mechanical vs semantic / blocked), Linear update or explicit unsync, whether the plan file was
+deleted, and residual risks.
