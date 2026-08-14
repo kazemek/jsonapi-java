@@ -390,9 +390,7 @@ class DomainDocumentReaderSpec extends Specification {
         assert ex instanceof JsonApiMappingException
         assert ex.diagnostic() == attempt.diagnostic()
         assert ex.resourceClass() == attempt.resourceClass()
-        if (attempt.propertyPath() != null) {
-          assert ex.propertyPath() == attempt.propertyPath()
-        }
+        assert ex.propertyPath() == attempt.propertyPath()
       }
       return
     }
