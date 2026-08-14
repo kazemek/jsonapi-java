@@ -12,6 +12,8 @@ import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenario;
 import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenario;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios;
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenario;
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenarios;
 
 /**
  * Canonical retrieval facade for the shared fixture catalogs. Adapter suites and future catalogs
@@ -46,5 +48,10 @@ public final class JsonApiFixtures {
   /** Shared compound-inclusion write catalog. */
   public static FixtureCatalog<CompoundWriteScenario> compoundWrite() {
     return CompoundWriteScenarios.catalog();
+  }
+
+  /** Shared sparse-fieldset write catalog. */
+  public static FixtureCatalog<SparseFieldsetScenario> sparseFieldset() {
+    return SparseFieldsetScenarios.catalog();
   }
 }

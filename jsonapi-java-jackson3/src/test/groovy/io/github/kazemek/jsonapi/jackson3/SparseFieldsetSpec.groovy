@@ -1,130 +1,156 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationship
+import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.FieldAllowance
 import io.github.kazemek.jsonapi.jackson.FieldPolicy
-import io.github.kazemek.jsonapi.jackson.IncludePath
-import io.github.kazemek.jsonapi.jackson.IncludePolicy
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappedDocument
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson3.testmodel.AccessCountingFieldsetArticle
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Article
-import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithRenamedAuthor
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.BlogWithJsonProperty
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.AccessCountingFieldsetArticle
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.FieldsetResourceState
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetExpectation
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetOperation
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetRequest
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenario
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenarios
+import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetSide
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Stepwise
+import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
+// Shared sparse-fieldset cases live in SparseFieldsetScenarios. This spec runs every catalog
+// entry and asserts executedScenarioIds == catalogScenarioIds so a later Jackson 2 suite can do
+// the same. Adapter-local scenario content remains empty unless a major-mapper-only case appears;
+// suite-local harness assertions (fieldset-map and FieldAllowance mutation isolation, duplicate
+// collapse, FIELDSETS_REQUIRE_MAPPED_DOCUMENT message composition, exact single-read counts, and
+// applyTo/writer-validation) stay here.
+// @Stepwise pins the declared feature order so the coverage feature always runs after the
+// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
+@Stepwise
 class SparseFieldsetSpec extends Specification {
 
-  def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+  @Shared
+  JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+
+  @Shared
   def jackson = JsonMapper.builder().build()
 
-  def dan = new Person("9", "Dan")
-  def ezra = new Person("2", "Ezra")
-  def comment5 = new Comment("5", "First!", ezra)
-  def comment12 = new Comment("12", "I like XML better", dan)
-  def article = new Article("1", "Title", "Body", [comment5, comment12], dan)
+  @Shared
+  Set<String> executedScenarioIds = new LinkedHashSet<>()
 
-  private static CompoundSerializationContext fieldsets(Map<String, List<String>> fields) {
-    return CompoundSerializationContext.defaults().withFieldsets(fields)
-  }
+  @Unroll
+  def "sparse fieldset #scenario.id from the shared catalog"() {
+    given:
+    executedScenarioIds.add(scenario.id())
 
-  private static CompoundSerializationContext includeAndFields(
-      List<String> paths, Map<String, List<String>> fields) {
-    return CompoundSerializationContext.defaults()
-        .withIncludePaths(paths.collect { IncludePath.of(it) })
-        .withIncludePolicy(IncludePolicy.allowAll())
-        .withFieldsets(fields)
-  }
-
-  def "unrestricted MappedDocument matches Phase 2.2 attributes and relationships"() {
     when:
-    def full = mapper.toDocument(article)
-    def mapped = mapper.toMappedDocument(article, null, CompoundSerializationContext.defaults())
+    def thrownException = null
+    def mapped = null
+    def document = null
+    try {
+      def result = execute(scenario)
+      if (result instanceof MappedDocument) {
+        mapped = result
+      } else {
+        document = result
+      }
+    } catch (Exception e) {
+      thrownException = e
+    }
 
     then:
-    !mapped.sparseFieldsetException()
-    mapped.document().data() == full.data()
-    mapped.document().included() == null
+    verify(scenario, mapped, document, thrownException)
+
+    where:
+    scenario << SparseFieldsetScenarios.all()
   }
 
-  def "three-argument toDocument with empty fieldset map remains Phase 2.3 equivalent"() {
+  def "covers every shared sparse-fieldset scenario exactly once"() {
+    expect:
+    executedScenarioIds == SparseFieldsetScenarios.all()*.id as Set
+  }
+
+  def "defensive copy isolates the caller's fieldset map after context construction"() {
     given:
+    def mutableFields = new ArrayList<>(["title", "title", "author"])
+    def mutableMap = new LinkedHashMap<String, List<String>>()
+    mutableMap.put("articles", mutableFields)
+    def context = CompoundSerializationContext.defaults().withFieldsets(mutableMap)
+
+    when:
+    mutableFields.add("body-text")
+    mutableMap.put("people", ["name"])
+
+    then:
+    context.fieldsets().get("articles") == ["title", "author"]
+    !context.fieldsets().containsKey("people")
+  }
+
+  def "duplicate fieldset names collapse to first-seen order"() {
+    given:
+    def scenario = SparseFieldsetScenarios.byId(
+        "duplicate-free multi-field fieldset keeps title and author")
+    def context = ((SparseFieldsetRequest.Single) scenario.request()).context()
+
+    expect:
+    context.fieldsets().get("articles") == ["title", "author"]
+  }
+
+  def "FieldAllowance caller set mutation does not enlarge the policy"() {
+    given:
+    def allowances = new HashSet<>([
+      FieldAllowance.of("articles", "title")
+    ])
+    def policy = FieldPolicy.allowing(allowances)
     def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([IncludePath.of("author")])
-        .withIncludePolicy(IncludePolicy.allowAll())
+        .withFieldsets([articles: ["title"]])
+        .withFieldPolicy(policy)
 
     when:
-    def doc = mapper.toDocument(article, null, context)
+    allowances.add(FieldAllowance.of("articles", "author"))
+    def mapped = mapper.toMappedDocument(
+        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.byId(
+        "FieldAllowance-satisfied fieldset succeeds").request()).supplier().get(),
+        null,
+        context)
 
     then:
-    doc.included()*.id() == ["9"]
-    (doc.data() as DocumentData.SingleResource).resource().relationships()
-        .relationships().containsKey("author")
-  }
+    mapped.document() != null
 
-  def "present empty list emits identity-only primary"() {
     when:
-    def mapped = mapper.toMappedDocument(article, null, fieldsets([articles: []]))
+    mapper.toMappedDocument(
+        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.byId(
+        "FieldAllowance denies a present field not in the allowance set").request()).supplier().get(),
+        null,
+        CompoundSerializationContext.defaults()
+        .withFieldsets([articles: ["author"]])
+        .withFieldPolicy(policy))
 
     then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.type() == "articles"
-    resource.id() == "1"
-    resource.attributes() == null
-    resource.relationships() == null
-    mapped.sparseFieldsetException()
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic() == MappingDiagnostic.DENIED_FIELDSET_FIELD
   }
 
-  def "present empty list emits identity-only included when that type appears"() {
+  def "toDocument FIELDSETS_REQUIRE_MAPPED_DOCUMENT message names the fieldset types"() {
     given:
-    def context = includeAndFields(["author"], [people: []])
+    def scenario = SparseFieldsetScenarios.byId(
+        "three-argument toDocument rejects non-empty fieldsets")
+    def request = (SparseFieldsetRequest.Single) scenario.request()
 
     when:
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
-    primary.attributes().attributes().containsKey("title")
-    primary.relationships().relationships().containsKey("author")
-    mapped.document().included().size() == 1
-    def included = mapped.document().included()[0]
-    included.type() == "people"
-    included.id() == "9"
-    included.attributes() == null
-    included.relationships() == null
-    !mapped.sparseFieldsetException()
-  }
-
-  def "present empty list with denyAll succeeds without DENIED_FIELDSET_FIELD"() {
-    given:
-    def context = fieldsets([articles: []]).withFieldPolicy(FieldPolicy.denyAll())
-
-    when:
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes() == null
-    resource.relationships() == null
-    mapped.sparseFieldsetException()
-  }
-
-  def "three-argument toDocument rejects non-empty fieldsets"() {
-    when:
-    mapper.toDocument(article, null, fieldsets([articles: ["title"]]))
+    mapper.toDocument(request.supplier().get(), null, request.context())
 
     then:
     def e = thrown(JsonApiMappingException)
@@ -132,119 +158,29 @@ class SparseFieldsetSpec extends Specification {
     e.message.contains("types: [articles]")
   }
 
-  def "three-argument toResourceCollection rejects non-empty fieldsets"() {
-    when:
-    mapper.toResourceCollection([article], null, fieldsets([articles: ["title"]]))
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT
-  }
-
-  def "attribute-only fieldset via toMappedDocument"() {
-    when:
-    def mapped = mapper.toMappedDocument(article, null, fieldsets([articles: ["title"]]))
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes().attributes().keySet() as List == ["title"]
-    resource.relationships() == null
-    mapped.sparseFieldsetException()
-  }
-
-  def "relationship-only fieldset via toMappedResourceCollection"() {
-    when:
-    def mapped = mapper.toMappedResourceCollection(
-        [article], null, fieldsets([articles: ["author"]]))
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.ResourceCollection).resources()[0]
-    resource.attributes() == null
-    resource.relationships().relationships().keySet() as List == ["author"]
-    mapped.sparseFieldsetException()
-  }
-
-  def "renamed JsonProperty fieldset names use final JSON:API names"() {
+  def "access counting exact single-read counts remain Jackson 3 suite-local"() {
     given:
-    def blog = new BlogWithJsonProperty("b1", "Hello")
+    def scenario = SparseFieldsetScenarios.byId(
+        "access counting proves linkage vs traversal split")
+    def request = (SparseFieldsetRequest.Single) scenario.request()
+    def counting = (AccessCountingFieldsetArticle) request.supplier().get()
 
     when:
-    def mapped = mapper.toMappedDocument(blog, null, fieldsets([blogs: ["blog_title"]]))
+    mapper.toMappedDocument(counting, null, request.context())
 
     then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes().attributes().get("blog_title") == "Hello"
+    counting.titleReads == 1
+    counting.authorReads == 1
+    counting.bodyReads == 0
+    counting.commentsReads == 0
   }
 
-  def "renamed JsonApiAttribute fieldset uses body-text"() {
-    when:
-    def mapped = mapper.toMappedDocument(article, null, fieldsets([articles: ["body-text"]]))
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes().attributes().get("body-text") == "Body"
-    !resource.attributes().attributes().containsKey("title")
-  }
-
-  def "renamed JsonApiRelationship fieldset uses written-by"() {
+  def "applyTo enables full-linkage exception for omitted relationships"() {
     given:
-    def renamed = new ArticleWithRenamedAuthor("1", "Title", dan)
-
-    when:
-    def mapped = mapper.toMappedDocument(
-        renamed, null, fieldsets([articles: ["written-by"]]))
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes() == null
-    resource.relationships().relationships().keySet() as List == ["written-by"]
-    def linkage = (RelationshipData.SingleLinkage) resource.relationships()
-        .relationships().get("written-by").data()
-    linkage.identifier().id() == "9"
-  }
-
-  def "unknown JsonApiRelationship rename fails against Java property name"() {
-    given:
-    def renamed = new ArticleWithRenamedAuthor("1", "Title", dan)
-
-    when:
-    mapper.toMappedDocument(renamed, null, fieldsets([articles: ["author"]]))
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.INVALID_FIELDSET_FIELD
-    e.propertyPath() == "author"
-  }
-
-  def "per-type fieldsets do not strip unrelated included types"() {
-    given:
-    def context = includeAndFields(["author"], [articles: ["title"]])
-
-    when:
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
-    primary.attributes().attributes().keySet() as List == ["title"]
-    primary.relationships() == null
-    mapped.document().included().size() == 1
-    mapped.document().included()[0].type() == "people"
-    mapped.document().included()[0].attributes().attributes().containsKey("name")
-    mapped.sparseFieldsetException()
-  }
-
-  def "include author with fields articles title omits linkage and sets exception"() {
-    given:
-    def context = includeAndFields(["author"], [articles: ["title"]])
-
-    when:
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
-    primary.relationships() == null
-    mapped.document().included()*.id() == ["9"]
-    mapped.sparseFieldsetException()
+    def scenario = SparseFieldsetScenarios.byId(
+        "include author with fields articles title omits linkage and sets exception")
+    def request = (SparseFieldsetRequest.Single) scenario.request()
+    def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
 
     when:
     JsonApiJackson3.writer(jackson, mapped.applyTo(ValidationContext.defaults()))
@@ -262,266 +198,221 @@ class SparseFieldsetSpec extends Specification {
     ex.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
   }
 
-  def "nested include comments.author with fields comments body"() {
+  def "applyTo returns the same ValidationContext instance when the exception flag is false"() {
     given:
-    def context = includeAndFields(["comments.author"], [comments: ["body"]])
+    def scenario = SparseFieldsetScenarios.byId(
+        "full field list keeps the unrestricted resource state")
+    def request = (SparseFieldsetRequest.Single) scenario.request()
+    def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
+    def base = ValidationContext.defaults()
 
-    when:
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    mapped.document().included()*.type() == [
-      "comments",
-      "comments",
-      "people",
-      "people"
-    ]
-    mapped.document().included().findAll { it.type() == "comments" }.every {
-      (it.attributes().attributes().keySet() as List) == ["body"] && it.relationships() == null
-    }
-    mapped.document().included().findAll { it.type() == "people" }.every {
-      it.attributes().attributes().containsKey("name")
-    }
-    mapped.sparseFieldsetException()
-  }
-
-  def "attribute-only omission with fully linked includes keeps exception false"() {
-    given:
-    def context = includeAndFields(
-        ["author"], [articles: ["title", "author", "comments"]])
-
-    when:
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
-    primary.attributes().attributes().keySet() as List == ["title"]
-    primary.relationships().relationships().keySet() as Set == ["author", "comments"] as Set
-    mapped.document().included()*.id() == ["9"]
-    !mapped.sparseFieldsetException()
-  }
-
-  def "access counting proves linkage vs traversal split"() {
-    given:
-    def counting = new AccessCountingFieldsetArticle(
-        "1", "Title", "Body", dan, [comment5])
-    def context = includeAndFields(["author"], [articles: ["title"]])
-
-    when:
-    def mapped = mapper.toMappedDocument(counting, null, context)
-
-    then:
-    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
-    primary.attributes().attributes().keySet() as List == ["title"]
-    primary.relationships() == null
-    mapped.document().included()*.id() == ["9"]
-    counting.titleReads == 1
-    counting.bodyReads == 0
-    counting.authorReads == 1
-    counting.commentsReads == 0
-  }
-
-  def "unknown fieldset field fails with INVALID_FIELDSET_FIELD"() {
-    when:
-    mapper.toMappedDocument(article, null, fieldsets([articles: ["nope"]]))
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.INVALID_FIELDSET_FIELD
-    e.resourceClass() == Article
-    e.propertyPath() == "nope"
-  }
-
-  def "denyAll rejects first present fieldset name"() {
-    given:
-    def context = fieldsets([articles: ["title", "author"]])
-    .withFieldPolicy(FieldPolicy.denyAll())
-
-    when:
-    mapper.toMappedDocument(article, null, context)
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.DENIED_FIELDSET_FIELD
-    e.resourceClass() == Article
-    e.propertyPath() == "title"
-  }
-
-  def "missing FieldAllowance denies with DENIED_FIELDSET_FIELD"() {
-    given:
-    def context = fieldsets([articles: ["title", "author"]])
-    .withFieldPolicy(FieldPolicy.allowing(Set.of(
-    FieldAllowance.of("articles", "title"))))
-
-    when:
-    mapper.toMappedDocument(article, null, context)
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.DENIED_FIELDSET_FIELD
-    e.propertyPath() == "author"
-  }
-
-  def "unmapped name wins over policy denial"() {
-    given:
-    def context = fieldsets([articles: ["nope", "title"]])
-    .withFieldPolicy(FieldPolicy.denyAll())
-
-    when:
-    mapper.toMappedDocument(article, null, context)
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.INVALID_FIELDSET_FIELD
-    e.propertyPath() == "nope"
-  }
-
-  def "unused fieldset type keys are ignored"() {
-    when:
-    def mapped = mapper.toMappedDocument(
-        article, null, fieldsets([tags: ["name"], articles: ["title"]]))
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes().attributes().keySet() as List == ["title"]
-  }
-
-  def "defensive copy isolates fieldset map and duplicate names collapse"() {
-    given:
-    def mutableFields = new ArrayList<>(["title", "title", "author"])
-    def mutableMap = new LinkedHashMap<String, List<String>>()
-    mutableMap.put("articles", mutableFields)
-    def context = fieldsets(mutableMap)
-
-    when:
-    mutableFields.add("body-text")
-    mutableMap.put("people", ["name"])
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    context.fieldsets().get("articles") == ["title", "author"]
-    !context.fieldsets().containsKey("people")
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes().attributes().keySet() as List == ["title"]
-    resource.relationships().relationships().keySet() as List == ["author"]
-  }
-
-  def "FieldAllowance set is defensively copied"() {
-    given:
-    def allowances = new HashSet<>([
-      FieldAllowance.of("articles", "title")
-    ])
-    def policy = FieldPolicy.allowing(allowances)
-    def context = fieldsets([articles: ["title"]]).withFieldPolicy(policy)
-
-    when:
-    allowances.add(FieldAllowance.of("articles", "author"))
-    def mapped = mapper.toMappedDocument(article, null, context)
-
-    then:
-    mapped.document() != null
-
-    when:
-    mapper.toMappedDocument(
-        article, null, fieldsets([articles: ["author"]]).withFieldPolicy(policy))
-
-    then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.DENIED_FIELDSET_FIELD
-  }
-
-  def "identity preserved under every fieldset shape"() {
     expect:
-    identityOnly(fieldsets([:]))
-    identityOnly(fieldsets([articles: []]))
-    identityOnly(fieldsets([articles: ["title"]]))
-    identityOnly(fieldsets([articles: ["author"]]))
+    !mapped.sparseFieldsetException()
+    mapped.applyTo(base).is(base)
   }
 
-  private void identityOnly(CompoundSerializationContext context) {
-    def mapped = mapper.toMappedDocument(article, null, context)
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    assert resource.type() == "articles"
-    assert resource.id() == "1"
+  private Object execute(SparseFieldsetScenario scenario) {
+    def request = scenario.request()
+    if (request instanceof SparseFieldsetRequest.Concurrent) {
+      executeConcurrent(
+          request, (SparseFieldsetExpectation.ConcurrentIsolation) scenario.expectation())
+      return null
+    }
+    if (request instanceof SparseFieldsetRequest.IdentityPreservation) {
+      executeIdentity(request, (SparseFieldsetExpectation.IdentityPreservation) scenario.expectation())
+      return null
+    }
+    return invoke(scenario.operation(), request)
   }
 
-  def "surviving fields keep mapping definition order"() {
-    when:
-    def mapped = mapper.toMappedDocument(
-        article, null, fieldsets([articles: [
-            "author",
-            "body-text",
-            "title"
-          ]]))
-
-    then:
-    def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-    resource.attributes().attributes().keySet() as List == ["title", "body-text"]
-    resource.relationships().relationships().keySet() as List == ["author"]
+  private Object invoke(SparseFieldsetOperation operation, SparseFieldsetRequest request) {
+    switch (operation) {
+      case SparseFieldsetOperation.TO_DOCUMENT:
+        def documentRequest = (SparseFieldsetRequest.Single) request
+        return mapper.toDocument(documentRequest.supplier().get(), null, documentRequest.context())
+      case SparseFieldsetOperation.TO_RESOURCE_COLLECTION:
+        def collectionRequest = (SparseFieldsetRequest.Collection) request
+        return mapper.toResourceCollection(
+            collectionRequest.supplier().get(), null, collectionRequest.context())
+      case SparseFieldsetOperation.TO_MAPPED_DOCUMENT:
+        def mappedDocumentRequest = (SparseFieldsetRequest.Single) request
+        return mapper.toMappedDocument(
+            mappedDocumentRequest.supplier().get(), null, mappedDocumentRequest.context())
+      case SparseFieldsetOperation.TO_MAPPED_RESOURCE_COLLECTION:
+        def mappedCollectionRequest = (SparseFieldsetRequest.Collection) request
+        return mapper.toMappedResourceCollection(
+            mappedCollectionRequest.supplier().get(), null, mappedCollectionRequest.context())
+      default:
+        throw new IllegalArgumentException("Unknown operation: " + operation)
+    }
   }
 
-  def "concurrent fieldset mappings isolate documents and exception flags"() {
-    given:
-    def omitting = includeAndFields(["author"], [articles: ["title"]])
-    def linked = includeAndFields(
-        ["author"], [articles: ["title", "author", "comments"]])
+  private void executeIdentity(
+      SparseFieldsetRequest.IdentityPreservation request,
+      SparseFieldsetExpectation.IdentityPreservation expectation) {
+    request.contexts().each { context ->
+      def mapped = mapper.toMappedDocument(request.supplier().get(), null, context)
+      def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
+      assert resource.type() == expectation.type()
+      assert resource.id() == expectation.id()
+    }
+  }
+
+  private void executeConcurrent(
+      SparseFieldsetRequest.Concurrent request,
+      SparseFieldsetExpectation.ConcurrentIsolation isolation) {
     def pool = Executors.newFixedThreadPool(2)
     def start = new CountDownLatch(1)
     def done = new CountDownLatch(2)
     def omitResult = new AtomicReference<MappedDocument>()
     def linkResult = new AtomicReference<MappedDocument>()
     def error = new AtomicReference<Throwable>()
-
-    pool.submit {
-      try {
-        start.await()
-        omitResult.set(mapper.toMappedDocument(article, null, omitting))
-      } catch (Throwable t) {
-        error.compareAndSet(null, t)
-      } finally {
-        done.countDown()
-      }
+    try {
+      pool.submit(concurrentTask(request.first(), omitResult, start, done, error) as Runnable)
+      pool.submit(concurrentTask(request.second(), linkResult, start, done, error) as Runnable)
+      start.countDown()
+      assert done.await(10, TimeUnit.SECONDS)
+      assert error.get() == null
+      verifyMapped(isolation.first(), omitResult.get())
+      verifyMapped(isolation.second(), linkResult.get())
+    } finally {
+      pool.shutdownNow()
     }
-    pool.submit {
-      try {
-        start.await()
-        linkResult.set(mapper.toMappedDocument(article, null, linked))
-      } catch (Throwable t) {
-        error.compareAndSet(null, t)
-      } finally {
-        done.countDown()
-      }
-    }
-
-    when:
-    start.countDown()
-    def completed = done.await(10, TimeUnit.SECONDS)
-    pool.shutdown()
-
-    then:
-    completed
-    error.get() == null
-    omitResult.get().sparseFieldsetException()
-    !linkResult.get().sparseFieldsetException()
-    (omitResult.get().document().data() as DocumentData.SingleResource).resource()
-        .relationships() == null
-    (linkResult.get().document().data() as DocumentData.SingleResource).resource()
-        .relationships().relationships().containsKey("author")
   }
 
-  def "applyTo leaves base unchanged when exception flag is false"() {
-    given:
-    def mapped = mapper.toMappedDocument(
-        article, null, fieldsets([articles: [
-            "title",
-            "author",
-            "comments",
-            "body-text"
-          ]]))
-    def base = ValidationContext.defaults()
+  private Closure concurrentTask(
+      SparseFieldsetSide side,
+      AtomicReference<MappedDocument> result,
+      CountDownLatch start,
+      CountDownLatch done,
+      AtomicReference<Throwable> error) {
+    return {
+      try {
+        start.await()
+        result.set(mapper.toMappedDocument(side.supplier().get(), null, side.context()))
+      } catch (Throwable t) {
+        error.compareAndSet(null, t)
+      } finally {
+        done.countDown()
+      }
+    }
+  }
 
-    expect:
-    !mapped.sparseFieldsetException()
-    mapped.applyTo(base).is(base)
+  private void verify(
+      SparseFieldsetScenario scenario,
+      MappedDocument mapped,
+      def document,
+      Throwable thrownException) {
+    def expectation = scenario.expectation()
+    if (expectation instanceof SparseFieldsetExpectation.Failure) {
+      assert thrownException instanceof JsonApiMappingException
+      def ex = (JsonApiMappingException) thrownException
+      assert ex.diagnostic() == expectation.diagnostic()
+      assert ex.propertyPath() == expectation.propertyPath()
+      assert ex.resourceClass() == expectation.resourceClass()
+      return
+    }
+    if (expectation instanceof SparseFieldsetExpectation.ConcurrentIsolation
+        || expectation instanceof SparseFieldsetExpectation.IdentityPreservation) {
+      assert thrownException == null
+      return
+    }
+    assert thrownException == null
+    if (expectation instanceof SparseFieldsetExpectation.UnmappedSuccess) {
+      assert document != null
+      def resource = primaryResource(document.data())
+      assertResource(expectation.primary(), resource)
+      assertIncluded(document.included(), expectation.included())
+      return
+    }
+    def success = (SparseFieldsetExpectation.MappedSuccess) expectation
+    verifyMapped(success, mapped)
+    def request = scenario.request()
+    if (success.zeroReads() != null && request instanceof SparseFieldsetRequest.Single) {
+      // Catalog iteration already consumed a fresh instance; re-run to observe counters.
+      def supplied = request.supplier().get()
+      assert supplied instanceof AccessCountingFieldsetArticle,
+      "zeroReads expectations require AccessCountingFieldsetArticle: " + supplied?.class
+      def counting = (AccessCountingFieldsetArticle) supplied
+      mapper.toMappedDocument(counting, null, request.context())
+      success.zeroReads().unreadAttributes().each { name ->
+        assert readsFor(counting, name) == 0
+      }
+      success.zeroReads().unreadRelationships().each { name ->
+        assert readsFor(counting, name) == 0
+      }
+    }
+  }
+
+  private static void verifyMapped(
+      SparseFieldsetExpectation.MappedSuccess success, MappedDocument mapped) {
+    assert mapped != null
+    assert mapped.sparseFieldsetException() == success.sparseFieldsetException()
+    def resource = primaryResource(mapped.document().data())
+    assertResource(success.primary(), resource)
+    assertIncluded(mapped.document().included(), success.included())
+  }
+
+  private static ResourceObject primaryResource(def data) {
+    if (data instanceof DocumentData.SingleResource) {
+      return data.resource()
+    }
+    if (data instanceof DocumentData.ResourceCollection) {
+      assert data.resources().size() == 1
+      return data.resources()[0]
+    }
+    throw new IllegalArgumentException("Unsupported primary data: " + data)
+  }
+
+  private static void assertResource(FieldsetResourceState expected, ResourceObject actual) {
+    assert actual.type() == expected.type()
+    assert actual.id() == expected.id()
+    if (expected.attributeNames() == null) {
+      assert actual.attributes() == null
+    } else {
+      assert actual.attributes() != null
+      assert actual.attributes().attributes().keySet() as List == expected.attributeNames()
+      expected.attributeValues().each { name, value ->
+        assert actual.attributes().attributes().get(name) == value
+      }
+    }
+    if (expected.relationshipNames() == null) {
+      assert actual.relationships() == null
+    } else {
+      assert actual.relationships() != null
+      assert actual.relationships().relationships().keySet() as List == expected.relationshipNames()
+      expected.relationshipLinkage().each { name, data ->
+        Relationship relationship = actual.relationships().relationships().get(name)
+        assert relationship.data() == data
+      }
+    }
+  }
+
+  private static void assertIncluded(
+      List<ResourceObject> actual, List<FieldsetResourceState> expected) {
+    if (expected == null) {
+      assert actual == null
+      return
+    }
+    assert actual != null
+    assert actual.size() == expected.size()
+    expected.eachWithIndex { FieldsetResourceState state, int i ->
+      assertResource(state, actual[i])
+    }
+  }
+
+  private static int readsFor(AccessCountingFieldsetArticle counting, String field) {
+    switch (field) {
+      case "title":
+        return counting.titleReads
+      case "body":
+        return counting.bodyReads
+      case "author":
+        return counting.authorReads
+      case "comments":
+        return counting.commentsReads
+      default:
+        throw new IllegalArgumentException("Unknown access-count field: " + field)
+    }
   }
 }
