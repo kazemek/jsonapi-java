@@ -1,0 +1,26 @@
+{
+  "data": {
+    "type": "articles",
+    "id": "1",
+    "attributes": {
+      "title": "JSON:API paints my bikeshed!",
+      "body-text": "Content"
+    },
+    "relationships": {
+      "author": {
+        "data": {
+          "type": "people",
+          "id": "p1"
+        }
+      },
+      "comments": {
+        "data": [
+          {
+            "type": "comments",
+            "id": "c1"
+          }
+        ]
+      }
+    }
+  }
+}

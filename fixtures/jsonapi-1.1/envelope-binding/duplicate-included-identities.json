@@ -1,0 +1,22 @@
+{
+  "data": {
+    "type": "articles",
+    "id": "1"
+  },
+  "included": [
+    {
+      "type": "people",
+      "id": "9",
+      "attributes": {
+        "name": "Dan"
+      }
+    },
+    {
+      "type": "people",
+      "id": "9",
+      "attributes": {
+        "name": "Other"
+      }
+    }
+  ]
+}

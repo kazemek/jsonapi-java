@@ -12,6 +12,8 @@ import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenario;
 import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenario;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios;
+import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadScenario;
+import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadScenarios;
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenario;
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenarios;
 
@@ -53,5 +55,10 @@ public final class JsonApiFixtures {
   /** Shared sparse-fieldset write catalog. */
   public static FixtureCatalog<SparseFieldsetScenario> sparseFieldset() {
     return SparseFieldsetScenarios.catalog();
+  }
+
+  /** Shared typed-envelope read catalog. */
+  public static FixtureCatalog<EnvelopeReadScenario> envelopeRead() {
+    return EnvelopeReadScenarios.catalog();
   }
 }

@@ -237,4 +237,8 @@ artifact; both majors share the neutral contracts of
   `CompoundWriteScenarios`; `CompoundSerializationSpec` asserts full-catalog coverage.
   Sparse-fieldset contract cases come from `SparseFieldsetScenarios`; `SparseFieldsetSpec`
   asserts full-catalog coverage and keeps harness-level assertions (mutation isolation,
-  duplicate collapse, exact access counts, `applyTo`/writer validation) local.
+  duplicate collapse, exact access counts, `applyTo`/writer validation) local. Typed
+  envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
+  full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
+  registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
+  malformed input, validation failures).

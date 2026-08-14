@@ -1,0 +1,18 @@
+{
+  "data": [
+    {
+      "type": "articles",
+      "id": "1",
+      "relationships": {
+        "author": {
+          "data": [
+            {
+              "type": "people",
+              "id": "p1"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

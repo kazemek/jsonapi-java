@@ -1,0 +1,9 @@
+{
+  "data": {
+    "type": "throwing-articles",
+    "id": "1",
+    "attributes": {
+      "title": "boom"
+    }
+  }
+}

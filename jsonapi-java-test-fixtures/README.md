@@ -15,6 +15,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | `io.github.kazemek.jsonapi.testfixtures.domainread`            | Shared flat resource-to-DTO read fixtures: annotated DTO models plus the `DomainReadScenarios` catalog and the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
 | `io.github.kazemek.jsonapi.testfixtures.sparsefieldset`        | Shared sparse-fieldset write fixtures: annotated models plus the `SparseFieldsetScenarios` catalog and the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
+| `io.github.kazemek.jsonapi.testfixtures.enveloperead`          | Shared typed-envelope read fixtures: envelope-only binding targets plus the `EnvelopeReadScenarios` catalog and the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
 
 ## Minimal usage
 
@@ -36,6 +37,8 @@ JsonApiFixtures.compoundWrite().all()
 JsonApiFixtures.compoundWrite().byId("includes nested intermediates for comments.author")
 JsonApiFixtures.sparseFieldset().all()
 JsonApiFixtures.sparseFieldset().byId("attribute-only fieldset via toMappedDocument")
+JsonApiFixtures.envelopeRead().all()
+JsonApiFixtures.envelopeRead().byId("binds a single-resource document into a flat DTO envelope")
 ```
 
 Test JVMs must have `jsonapi.fixtures.dir` pointing at `fixtures/jsonapi-1.1`; resolve both
@@ -45,10 +48,10 @@ them (together with `jsonapi.schema.fixtures.dir`) for every module.
 ## Non-goals
 
 This module does not add wire expectations, diagnostics, or corpora per Jackson major — those
-must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). Typed-envelope
-and PATCH fixture catalogs belong to later fixture phases (2.15, 2.26); the flat write catalog is
-complete as of Phase 2.13, the flat read catalog as of Phase 2.14, the compound-write catalog as
-of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
+must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). PATCH fixture
+catalogs belong to a later fixture phase (2.15); the flat write catalog is complete as of Phase
+2.13, the flat read catalog as of Phase 2.14, the compound-write catalog as of Phase 2.24, the
+sparse-fieldset catalog as of Phase 2.25, and the typed-envelope catalog as of Phase 2.26.
 
 ## Further reading
 
@@ -62,7 +65,7 @@ of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
 ## For contributors / agents
 
 - **Retrieval:** `JsonApiFixtures` plus the `FixtureCatalog` instances it exposes is the canonical
-  API. Future catalogs (2.15, 2.26) register a facade accessor and the same public
+  API. Future catalogs (2.15) register a facade accessor and the same public
   static `all()` / `byId(String)` / `where(Predicate)` / `catalog()` delegation surface; they do
   not invent retrieval types. Existing suites may keep calling the `*Scenarios` shims.
 - **Stable ids and paths:** `CodecScenario` ids and expected JSON paths are stable across Jackson
@@ -74,6 +77,8 @@ of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
   stable; adapter suites dispatch on `CompoundWriteRequest`, never on scenario ids.
   `SparseFieldsetScenarios` ids are stable; adapter suites dispatch on
   `SparseFieldsetOperation` / `SparseFieldsetRequest`, never on scenario ids.
+  `EnvelopeReadScenarios` ids are stable; adapter suites dispatch on `EnvelopeReadVariant` /
+  `EnvelopeReadExpectation`, never on scenario ids.
 - **Domain-write catalog:** `DomainWriteScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, exactly one
   operation/typed input/envelope state/discriminated outcome/comparison policy, complete expected
@@ -111,6 +116,18 @@ of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
   (`executedScenarioIds == catalogScenarioIds`). Exact single-read access counts, fieldset-map
   and `FieldAllowance` mutation isolation, duplicate-name collapse, and `applyTo`/writer
   validation stay in adapter-local specs, not enumerated in a manifest.
+- **Envelope-read catalog:** `EnvelopeReadScenariosCatalogSpec` enforces the local invariants that
+  hold for every entry regardless of catalog size: unique stable ids, resolvable codec scenario ids
+  and named `envelope-binding/` documents, the per-variant field invariants (document-binding
+  variants require `entryPoint` and `readerContext`; registry variants omit both), and either
+  complete envelope values (including absent versus present-empty `included`) or a known mapping
+  diagnostic joined to the document pointer. Adapter suites run the whole catalog through their
+  own domain document reader and assert full-catalog coverage
+  (`executedScenarioIds == catalogScenarioIds`). Included resources bind independently and are
+  never injected into relationships (ADR-011). Adapter-specific behavior (`metaAs`, `JavaType`
+  registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
+  malformed input, validation failures) is documented in the adapter-local specs themselves, not
+  enumerated in a manifest.
 - **Capability selection:** Tests select by `FixtureCatalog.where` (and the retained
   `CodecScenarios` conveniences `writable`, `readable`, `schemaChecked`, `exactUtf8`,
   `hreflangArray`) instead of maintaining independent hard-coded id lists. Adapter write suites
@@ -118,7 +135,8 @@ of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
   Adapter binder suites dispatch on the `DomainReadInput`/`ConverterBehavior` descriptor, never
   on scenario ids. Adapter compound-write suites dispatch on `CompoundWriteRequest`, never on
   scenario ids. Adapter sparse-fieldset suites dispatch on
-  `SparseFieldsetOperation`/`SparseFieldsetRequest`, never on scenario ids.
+  `SparseFieldsetOperation`/`SparseFieldsetRequest`, never on scenario ids. Adapter envelope-read
+  suites dispatch on `EnvelopeReadVariant` / `EnvelopeReadExpectation`, never on scenario ids.
 - **Directories:** Read `jsonapi.fixtures.dir` and `jsonapi.schema.fixtures.dir` only through
   `FixtureDirectory`.
 - **Negative corpus:** `NegativeCodecScenarios` loads `negative-manifest.json` with JSON-P (Jakarta
@@ -147,6 +165,10 @@ of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
 - **Null-bearing sparse-fieldset expectations:** absent attributes/relationships, absent
   `included`, and `FIELDSETS_REQUIRE_MAPPED_DOCUMENT` `resourceClass`/`propertyPath` are
   `@Nullable` under the `@NullMarked` `sparsefieldset` package (ADR-009).
+- **Null-bearing envelope-read models:** `FlatNode.parent` and `FlatThrowingArticle.title` are
+  `@Nullable` under the `@NullMarked` `enveloperead` package (ADR-009).
+  `EnvelopeReadExpectation.BoundEnvelope` uses Java `null` for absent envelope members and a
+  non-null empty `IncludedExpectation` for present-empty `included`.
 - **Nullness:** Production packages are `@NullMarked` (JSpecify). Use `@Nullable` for catalog
   members that are absent (`CodecScenario.primaryDataKind`, `schemaKind`, `schemaDisagreement`,
   `exactUtf8Path`; `NegativeCodecScenario.pointer`, `ruleCode`;
@@ -156,12 +178,15 @@ of Phase 2.24, and the sparse-fieldset catalog as of Phase 2.25.
   `SparseFieldsetExpectation.MappedSuccess.included` / `zeroReads`;
   `SparseFieldsetExpectation.UnmappedSuccess.included`;
   `SparseFieldsetExpectation.Failure.propertyPath` / `resourceClass`;
-  `FieldsetResourceState.id` / `attributeNames` / `relationshipNames`). Groovy tests are not annotated.
+  `FieldsetResourceState.id` / `attributeNames` / `relationshipNames`;
+  `EnvelopeReadExpectation.BoundEnvelope` members that are absent (`data`, `included`, `errors`,
+  `jsonapi`, `links`, `meta`); `EnvelopeReadExpectation.Failure.propertyPath` / `resourceClass`;
+  `EnvelopeReadVariant.RegistryAttempt.propertyPath`). Groovy tests are not annotated.
 - **Extension workflow (Jackson 2):** a new adapter suite runs every scenario of the shared
   domain-write catalog through its own resource mapper and asserts full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite (mandatory per
   Phase 2.18); the same full-catalog rule applies to the domain-read binder catalog (mandatory
-  per Phase 2.21), the compound-write catalog (mandatory per Phase 2.19), and the sparse-fieldset
-  catalog (mandatory per Phase 2.20). Jackson-API-specific behavior (mix-ins, serializers, naming
-  strategies, converter wiring, custom deserializers, linkage mappers) stays in adapter-local
-  specs, documented there.
+  per Phase 2.21), the compound-write catalog (mandatory per Phase 2.19), the sparse-fieldset
+  catalog (mandatory per Phase 2.20), and the typed-envelope catalog (mandatory per Phase 2.22).
+  Jackson-API-specific behavior (mix-ins, serializers, naming strategies, converter wiring, custom
+  deserializers, linkage mappers) stays in adapter-local specs, documented there.
