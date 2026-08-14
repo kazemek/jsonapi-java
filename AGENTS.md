@@ -98,6 +98,9 @@ Every durable fact has one canonical owner; other documents should link or provi
   plan files. Once work starts, freeze its scope; after gates, synchronization, and review Pass,
   reconcile references and delete the completed plan. Session reviews belong in the gitignored
   `.agentWork/.session/`.
+- A live plan means work-in-progress. A PR for that work may be open while its plan is live, but it
+  is ready for final review/merge only after the completed plan is deleted and that deletion is
+  pushed. Never leave a post-approval cleanup commit.
 
 # Completion Gates
 

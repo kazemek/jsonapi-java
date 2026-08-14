@@ -31,7 +31,9 @@ Use the external work tracker for normal work discovery when available, but only
 coordination metadata. Without it, act only on a user-supplied outcome or explicitly
 selected/materialized plan and report coordination as unsynchronized. Never infer backlog order from
 plans, Outlook, source layout, Git history, or a reconstructed backlog; never put work-item IDs in
-plan identity.
+plan identity. When a plan is materialized with a linked external work item, synchronize the item's
+plan reference when the tracker is configured/available; otherwise report coordination as
+unsynchronized.
 
 ## Build the contract
 

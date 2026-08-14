@@ -2,7 +2,7 @@
 
 > **Scope:** repository-wide
 > **Dependencies:** None
-> **Status:** Not started
+> **Status:** In progress
 > **Work item:** KAZ-74
 
 ## Goal
@@ -22,13 +22,16 @@ Linear mechanics in a gitignored, on-demand local skill outside the repository c
   item", "do not treat Linear as truth") that is really tracker-agnostic.
 - `.agentWork/plans/*.md` — 16 files carry `> Work item: KAZ-XX` optional-traceability lines; these
   stay (changing backlog priorities/relations is a non-goal).
-- This harness discovers project `.agents/skills/*/SKILL.md` and routes via each skill's
-  `description`, so a gitignored `.agents/skills/linear-coordination/SKILL.md` needs no ambient
-  routing hint. `.gitignore` does not currently ignore that path.
+- The current OpenCode harness discovers project `.agents/skills/*/SKILL.md` and routes via each
+  skill's `description`; discovery has only been verified in this one harness, so no ambient routing
+  hint is added and multi-harness routing remains unverified. `.gitignore` did not ignore that path.
 
 ## Deliverables
 
 - Tracker-agnostic wording in `AGENTS.md` and the committed workflow skills listed above.
+- Minimal tracker-agnostic lifecycle synchronization hooks in the committed workflow
+  (`implementation-planning` and `implement-plan`) for plan materialization, implementation start,
+  review start, and finalization.
 - A `.gitignore` entry for `.agents/skills/linear-coordination/`.
 - A gitignored `.agents/skills/linear-coordination/SKILL.md` carrying the full maintainer Linear
   operating policy and a routing `description` (next-work discovery, future-work capture, backlog
@@ -57,9 +60,16 @@ Linear mechanics in a gitignored, on-demand local skill outside the repository c
 
 ## Acceptance criteria
 
-- [ ] `rg -n 'Linear|KAZ-'` across committed files returns only the 16 plan `Work item:` lines.
+- [ ] `git grep -nE 'Linear|KAZ-' -- AGENTS.md .agents/skills/` returns no matches (the temporary
+      plan under `.agentWork/plans/` is out of scope while live and is deleted at finalization).
 - [ ] No committed `AGENTS.md` or skill requires or assumes Linear where a generic tracker suffices.
+- [ ] Committed workflow expresses only tracker-agnostic lifecycle hooks (materialization,
+      implementation start, review start, finalization) with no Linear status/project/label/priority
+      names or API/MCP mechanics.
 - [ ] `.gitignore` ignores `.agents/skills/linear-coordination/` (verified with `git check-ignore`).
-- [ ] The gitignored local skill is discovered by the harness and carries the required routing
-      triggers.
+- [ ] Local skill is discovered by the current OpenCode harness (evidence recorded); broader
+      multi-harness routing verification remains pending.
+- [ ] Fresh `implementation-review` passes against this plan.
 - [ ] Applicable completion gates from `AGENTS.md` pass (docs/planning + workflow tiers; no build).
+- [ ] Completed plan is deleted (`git rm`) and the deletion pushed before the PR is presented as
+      ready for final review.
