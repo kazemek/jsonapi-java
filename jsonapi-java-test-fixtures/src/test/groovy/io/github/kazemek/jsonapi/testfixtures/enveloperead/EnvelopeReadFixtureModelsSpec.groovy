@@ -40,6 +40,6 @@ class EnvelopeReadFixtureModelsSpec extends Specification {
     expect:
     new EmptyResourceType() != null
     new InvalidResourceType() != null
-    new UnannotatedBindingTarget().missingResourceAnnotation()
+    new UnannotatedBindingTarget() != null
   }
 }

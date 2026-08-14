@@ -115,5 +115,7 @@ Classify the final diff; tiers combine when multiple scopes are touched.
 - Source changes are incomplete without the Sonar skill's Quality Gate wait and Issues API result of
   zero unresolved new-code issues. If `SONAR_TOKEN` is unavailable, report the blocker; work remains
   incomplete until CI passes and an authenticated Issues API check separately returns zero.
-- CI runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on `main` pushes and PRs.
-  Failed-run details are in the `gradle-reports` artifact and the Unit tests check.
+- CI runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on `main` pushes and PRs,
+  then `.agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh --list --require-zero`
+  so a green Quality Gate alone cannot merge new smells. Failed-run details are in the
+  `gradle-reports` artifact and the Unit tests check.

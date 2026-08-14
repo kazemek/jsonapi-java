@@ -1,10 +1,5 @@
 package io.github.kazemek.jsonapi.testfixtures.enveloperead;
 
 /** Registry-rejection fixture: a plain record with no {@code @JsonApiResource} annotation. */
-public record UnannotatedBindingTarget() {
-
-  /** Marker so this fixture type is not an empty record. */
-  public boolean missingResourceAnnotation() {
-    return true;
-  }
-}
+@SuppressWarnings("java:S2094") // intentional empty type-token for registry rejection
+public record UnannotatedBindingTarget() {}
