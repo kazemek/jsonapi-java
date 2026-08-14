@@ -51,9 +51,12 @@ should be identified as ADRs — that is contract completeness, not design conte
 1. Map the milestone goal, deliverables, non-goals, dependencies, implementation boundaries, test
    strategy, and each acceptance criterion to planning-quality evidence.
 2. Look first for:
-   - size-gate violations: more than one coherent outcome, more than five deliverables, more than
-     eight acceptance criteria (including applicable repository completion gates), or scope that
-     cannot fit one focused coding-agent task and reviewable commit;
+   - execution-unit violations: more than one coherent outcome that cannot be implemented and
+     reviewed in one context, or a plan that should have been split only when a genuine
+     execution/review boundary in the `milestone-planning` skill applies. Numeric bounds of five
+     deliverables and eight acceptance criteria are heuristics, not automatic High findings;
+   - a Snapshot/Vision conflict that the plan depends on but does not surface (do not treat
+     whichever text looks newer as a resolution);
    - incoherent or overlapping goal, deliverables, non-goals, and boundaries;
    - weak research and constraints: assumptions without implementable consequences, large pasted
      sources, unflagged vision conflicts, or consequential decisions settled in prose that should
@@ -74,8 +77,9 @@ should be identified as ADRs — that is contract completeness, not design conte
    - duplication of vision, ADR, conformance, or module-docs checklist prose instead of links.
 3. Assign each actionable finding a severity:
    - **Critical:** fundamentally invalidates the plan or makes it unsafe to implement as written.
-   - **High:** major planning-contract violation (size gate, lifecycle, missing gates, vision/ADR
-     conflict) that would derail implementation or review.
+   - **High:** major planning-contract violation (execution-unit / unjustified split, lifecycle,
+     missing gates, unsurfaced Snapshot/Vision or vision/ADR conflict) that would derail
+     implementation or review.
    - **Medium:** real clarity, testability, or boundary gap with bounded impact.
    - **Low:** minor issue worth fixing; omit optional style preferences.
 4. Give every finding:

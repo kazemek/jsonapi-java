@@ -42,7 +42,9 @@ Skip when only internals or tests changed with no public-surface impact.
 5. Ensure focused Javadoc on public entry points only (construction vs validation, wire-state distinctions)—not every type.
 6. Ensure the root `README.md` lists and links the module. Keep `AGENTS.md` generic: it routes
    through `<module>/README.md` and must not accumulate one link per module.
-7. Do **not** duplicate `docs/vision.md`, full ADR bodies, or `docs/conformance.md` into the module README—link out.
+7. Do **not** duplicate `docs/vision.md`, `docs/outlook/`, full ADR bodies, or
+   `docs/conformance.md` into the module README—link out. Do not copy Outlook future direction
+   into an available module's README.
 8. Re-read the golden example and compare section order, density, link-out behavior, agent notes,
    and package roles before reporting completion.
 9. Report paths created or updated.
@@ -57,7 +59,9 @@ Skip when only internals or tests changed with no public-surface impact.
 - [ ] Entry-point Javadoc on the module’s primary public types
 - [ ] Root `README.md` lists the module
 - [ ] `AGENTS.md` retains the generic `<module>/README.md` discovery route
-- [ ] Vision, ADR, conformance, build, CI, and root workflow prose is linked rather than duplicated
+- [ ] Relevant Vision, Outlook, ADR, conformance, build, CI, and root workflow prose is linked
+      rather than duplicated; omit Outlook unless the module documents unbuilt or revisable
+      future direction
 - [ ] Final self-check confirms density and link-out behavior against the golden example
 
 ## Golden example

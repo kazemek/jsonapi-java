@@ -20,7 +20,8 @@ everything from the milestone contract and repository evidence.
    - `In progress` — ask whether to continue the existing implementation or start a new attempt.
 3. Check dependencies: when the milestone lists dependencies that are not `Complete`, warn the user
    and ask before proceeding; the milestone index explicitly allows some tracks to proceed in
-   parallel.
+   parallel. Outlook and Linear never satisfy listed Dependencies. Linear is never required to
+   implement or review this already-materialized plan.
 
 ## Read context
 
@@ -31,6 +32,8 @@ Follow the task-scoped discovery route for implementation in `AGENTS.md`:
 - affected module READMEs and package documentation;
 - `docs/vision.md` only when the milestone changes project direction, modules, or public product
   boundaries;
+- `docs/outlook/` only when the work is about unbuilt or revisable future direction; Outlook is
+  never current truth and never satisfies dependencies;
 - ADRs and conformance sections linked by the milestone or affected module documentation.
 
 Do not scan the whole repository.

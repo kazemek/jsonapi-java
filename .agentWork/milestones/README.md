@@ -1,6 +1,12 @@
 # Implementation Milestones
 
-Milestones are planned, testable increments. They may change until implementation starts; after completion they are retained as documentation of the delivered contract.
+Milestones are planned, testable execution contracts. They may change until implementation
+starts. A knowledge-model migration is in progress (see `AGENTS.md`): this directory remains the
+live plan store and status vocabulary is unchanged (`Not started`, `In progress`, `Complete`).
+Completed files are retained for now as delivered contracts; they are **not** the Snapshot.
+Current capability lives in module READMEs, accepted ADRs, `docs/conformance.md`, and the root
+module registry. Tentative future direction lives in `docs/outlook/`. Do not add Outlook as a
+milestone status.
 
 ## Planned execution order
 
@@ -156,7 +162,7 @@ module tests and `./gradlew clean build` passing.
 
 Use the explicitly invoked project `milestone-planning` skill to create, refine, or decompose
 milestones. It performs targeted exploration and relevant authoritative research, writes the
-permanent milestone files in this directory, updates both the dependency order and index, and then
+execution-contract milestone files in this directory, updates both the dependency order and index, and then
 runs `milestone-design-review` orchestration (two fresh-context reviewers, worst-wins combination)
 so the design review is not influenced by the planning session. After a design-review Pass, it runs
 the `milestone-plan-review` procedure in a fresh-context subagent. Each stage has its own fix loop
@@ -164,11 +170,11 @@ capped at two re-reviews. Plan-review edits do not restart design review in the 
 is complete only after both a design-review Pass and a plan-review Pass for each created or refined
 milestone.
 
-An implementable milestone must fit one focused coding-agent task and reviewable commit. It
-normally contains one principal capability in one primary module or layer, at most five
-deliverables, and at most eight acceptance criteria. Independent capabilities, modules,
-architectural decisions, or verification surfaces are separate milestones with explicit
-dependencies.
+An implementable milestone should be the largest coherent unit that can still be implemented and
+independently reviewed in one context. Numeric deliverable and acceptance-criteria bounds in the
+`milestone-planning` skill are heuristics, not an automatic split. Conceptual decomposition does
+not by itself create child implementation plans; split only for a genuine execution/review
+boundary (see the `milestone-planning` skill).
 
 A `Not started` milestone may be refined or decomposed. Once implementation starts, the milestone
 is a fixed delivery contract; changed or additional scope belongs in a follow-up milestone.
@@ -189,7 +195,8 @@ evidence; the review verifies them but never edits them.
 
 ## Milestone reviews
 
-Milestones are permanent delivery contracts. Three ephemeral review kinds write under
+Milestones are execution contracts retained during this migration; they are not current
+architecture after delivery. Three ephemeral review kinds write under
 `.agentWork/.session/` and are excluded from version control; each re-review overwrites the prior
 artifact for that milestone.
 
