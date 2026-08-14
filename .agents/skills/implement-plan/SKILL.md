@@ -21,11 +21,18 @@ On review Pass, do not write `Complete`. Run post-review finalization, then dele
    - `Not started` — proceed.
    - `In progress` — ask whether to continue the existing implementation or start a new attempt.
    - Any other value, including `Complete`, is invalid. Stop and report; do not implement.
-3. Check dependencies: listed `Dependencies` must be relative Markdown links to other live plan
-   files, or `None`. When a listed dependency file still exists, warn the user and ask before
-   proceeding; some tracks may proceed in parallel. A listed dependency whose file is missing is a
-   stale reference — warn and ask. Outlook and Linear never satisfy listed Dependencies. Linear is
-   never required to implement or review this already-materialized plan.
+3. Check dependencies: listed `Dependencies` are hard execution-order prerequisites — relative
+   Markdown links to other live plan files, or `None`.
+   - `Dependencies: None` — proceed.
+   - For every relative Markdown-linked dependency whose target file still exists under
+     `.agentWork/plans/`: implementation is **BLOCKED**. Report the unresolved dependency. Do not
+     set the target plan to `In progress`. Do not offer to override the dependency interactively.
+   - If a listed dependency path does not exist: the plan contract is stale/invalid. Stop, report
+     the stale reference, and require the plan to be refined through `implementation-planning`.
+   - Outlook and Linear never satisfy listed Dependencies. If two plans should run in parallel,
+     refine the still-`Not started` plan through `implementation-planning` and remove the edge;
+     `implement-plan` must not reinterpret or override a reviewed execution contract. Linear is
+     never required to implement or review this already-materialized plan.
 
 Without Linear, implement only an explicitly selected or already-materialized repository plan.
 Never infer the next project task from `.agentWork/plans/`.

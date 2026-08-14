@@ -99,8 +99,13 @@ status. Successful implementation deletes the plan after finalization; do not wr
 - A `Not started` plan may be refined in place, or replaced by smaller implementation plans when a
   genuine execution/review boundary requires decomposition.
 - After replacement plans are created and each has a design-review Pass and a plan-review Pass,
-  delete the superseded original. Do not retain it as an umbrella or index. Broader
-  portfolio/grouping belongs in Linear; tentative future direction belongs in Outlook.
+  reconcile incoming references from other live plans **before** deleting the superseded original
+  (see Decompose oversized work in [reference.md](reference.md)). Updating a `Not started`
+  dependent is a refine of that plan and must use the existing mandatory design-review →
+  plan-review pipeline (bounded loops) — not a new review stage. Never silently rewrite an
+  `In progress` dependent; if deletion would require that, stop and keep the original. Do not
+  retain the superseded original as an umbrella or index. Broader portfolio/grouping belongs in
+  Linear; tentative future direction belongs in Outlook.
 - Once implementation has started (`In progress`), treat the plan as a fixed delivery contract.
   Status, commits, code changes, or user context may establish that implementation started.
 - Never rewrite an implementation-started plan to describe new work. Create a follow-up plan with
@@ -150,8 +155,10 @@ template in [reference.md](reference.md).
 
 After writing all plan files:
 
-1. Confirm every `Dependencies` header is relative Markdown links to surviving live plan files, or
-   `None`. Never Linear IDs, Outlook, deleted plans, bare titles, or bare path stems alone.
+1. Confirm every `Dependencies` header is hard execution-order prerequisites: relative Markdown
+   links to surviving live plan files, or `None`. Never Linear IDs, Outlook, deleted plans, bare
+   titles, or bare path stems alone. Parallel-safe work must have no dependency edge between those
+   plans.
 2. Confirm each plan has a Work item identifier or an explicit unsynchronized-coordination note.
 3. Confirm filenames, titles, and dependencies use descriptive plan identity — no phase-number
    identity.
@@ -165,7 +172,8 @@ After writing all plan files:
 Then proceed to design review, then plan review. Do not treat planning as finished until every
 created or refined plan in this run has both a design-review Pass and a plan-review Pass (or the
 applicable fix-loop cap / Blocked stop is reached). After a decompose replacement set has both
-Passes, delete the superseded original.
+Passes, run the incoming-reference reconciliation and dependent re-review sequence in
+[reference.md](reference.md) before deleting the superseded original.
 
 ## Review design with fresh context
 
@@ -236,12 +244,15 @@ Overall planning Pass only when every created or refined plan in this run receiv
 design-review Pass and a plan-review Pass.
 
 - **Pass (all remaining plan reviews):** if this run replaced a `Not started` original with smaller
-  plans, delete that superseded original. Report and finish.
+  plans, run the decomposition finalization sequence in [reference.md](reference.md)
+  (incoming-reference reconciliation → re-review refined `Not started` dependents → mechanical
+  verify → delete). On `In progress` dependent blocker, review Blocked, or exhausted fix loop,
+  stop and keep the original. Report and finish.
 - **Changes required (any):** fix the findings in the affected plan file(s), re-run Verify, then
   re-review each affected plan with a NEW fresh plan-review subagent. Cap the loop at two
   re-reviews; when any verdict is still `Changes required`, stop and report the remaining findings.
   Do not restart design review. Do not delete a superseded original until every replacement has
-  Passed.
+  Passed and decomposition finalization succeeds.
 - **Blocked (any):** stop and report. Do not delete a superseded original.
 
 ## Report

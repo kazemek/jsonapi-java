@@ -167,13 +167,15 @@ reviewed execution contract. There is no `plans/README.md` backlog or historical
 - Status values are only `Not started` and `In progress`. There is no persistent `Complete` state.
 - A `Not started` plan may be refined in place or replaced by smaller plans when a genuine
   execution/review boundary requires decomposition. After replacement plans are created and
-  successfully design-reviewed and plan-reviewed, delete the superseded original; do not retain
-  it as an umbrella or index. Broader portfolio grouping belongs in Linear; tentative future
-  direction belongs in Outlook.
+  successfully design-reviewed and plan-reviewed, reconcile incoming references from other live
+  plans (re-review any refined `Not started` dependents; never silently rewrite `In progress`
+  dependents), then delete the superseded original; do not retain it as an umbrella or index.
+  Broader portfolio grouping belongs in Linear; tentative future direction belongs in Outlook.
 - Once implementation starts, the plan is a fixed delivery contract; new scope goes into a
   follow-up plan. `implement-plan` sets `Status` to `In progress` on start.
-- `Dependencies` list other unfinished plans as relative Markdown links, or `None`. Never Linear
-  IDs, Outlook, or deleted plans.
+- `Dependencies` are hard execution-order prerequisites: relative Markdown links to other
+  unfinished plans, or `None`. A linked live plan file blocks `implement-plan`. Never Linear IDs,
+  Outlook, or deleted plans.
 - Prefer the **largest coherent execution unit** that can still be reliably implemented and
   independently reviewed in one context. Numeric deliverable and acceptance-criteria bounds in
   the `implementation-planning` skill are heuristics, not an automatic split.

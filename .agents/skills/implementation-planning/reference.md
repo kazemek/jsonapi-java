@@ -55,8 +55,10 @@ Create or update files under `.agentWork/plans/` using this shape. Do not create
 
 `Status` is only `Not started` or `In progress`. Never write `Complete`.
 
-`Dependencies` is relative Markdown links to other live plan files, or `None`. Never Linear IDs,
-Outlook, deleted plans, bare titles, or bare path stems alone.
+`Dependencies` are hard execution-order prerequisites: relative Markdown links to other live plan
+files, or `None`. A linked live plan file blocks `implement-plan`; parallel-safe work must have no
+dependency edge between those plans (`None` or omit the link). Never Linear IDs, Outlook, deleted
+plans, bare titles, or bare path stems alone.
 
 Example:
 
@@ -100,12 +102,29 @@ Numeric deliverable and acceptance-criteria bounds are heuristics, not an automa
    separate implementation/review context or module landing.
 2. Give each increment its own plan file, goal, boundaries, tests, and acceptance criteria.
 3. Preserve real dependencies as relative Markdown links among surviving live plans; allow
-   independent increments to remain parallel. Outlook never appears as a dependency.
+   independent increments to remain parallel (no dependency edge between parallel-safe plans).
+   Outlook never appears as a dependency.
 4. Put shared decisions or foundations in the earliest plan that needs them. Create a separate
    prerequisite only when it has independent acceptance evidence.
-5. Replace a not-started oversized plan with implementable files. After every replacement has a
-   design-review Pass and a plan-review Pass, delete the superseded original. Do not leave an
-   umbrella document presented as an implementable plan.
+5. Replace a not-started oversized plan with implementable files. Do not leave an umbrella
+   document presented as an implementable plan. After replacements exist, finalize deletion of the
+   superseded original in this exact order:
+   1. Replacement plans created.
+   2. Replacement plans pass `implementation-design-review` + `implementation-plan-review`.
+   3. Find incoming references to the superseded original across surviving `.agentWork/plans/*.md`
+      (`Dependencies` links and meaningful in-body references by filename, link, or relevant title).
+   4. If any affected dependent is `In progress`, stop and keep the original (no silent rewrite of
+      a fixed contract).
+   5. Update affected `Not started` dependents: retarget real prerequisites to the appropriate
+      replacement(s), or remove the reference if it is no longer a prerequisite; never substitute
+      Outlook, Linear, or historical prose.
+   6. Run fresh `implementation-design-review` + `implementation-plan-review` on **each modified
+      dependent**, using the existing bounded fix loops. This is the normal refine-review
+      requirement applied to plans changed during reconciliation — **not** a new review stage.
+   7. If any of those reviews is Blocked or exhausts its loop, stop and keep the original.
+   8. Mechanically verify zero surviving references to the superseded original (filename, link, or
+      relevant title).
+   9. Only then delete the superseded original.
 6. Use descriptive filenames. Ask before choosing among materially different naming schemes.
 
 Explain the split briefly in the resulting plans through goals, dependencies, and non-goals

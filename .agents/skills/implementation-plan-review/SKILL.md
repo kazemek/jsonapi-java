@@ -75,10 +75,15 @@ plans as engineering proof.
      agent-relevant invariants — reference the skill; do not copy its checklist into the review;
    - lifecycle violations: rewriting an `In progress` plan instead of a follow-up; a `Complete`
      status (invalid; repository states are only `Not started` and `In progress`); a superseded
-     original retained as an umbrella after reviewed replacements exist; checked acceptance
-     criteria used as planning evidence;
-   - invalid `Dependencies`: not relative Markdown links to surviving live plan files, or `None`;
-     Linear IDs, Outlook, deleted plans, bare titles, or bare path stems alone;
+     original retained as an umbrella after reviewed replacements exist; a superseded original
+     **deleted** while other live plans still reference it by filename, link, or relevant title;
+     checked acceptance criteria used as planning evidence. Do **not** fail replacement plans
+     merely because other live plans still reference the superseded original during the
+     intermediate decomposition state while that original file still exists (reconciliation may
+     not have finished yet);
+   - invalid `Dependencies`: not hard execution-order prerequisites expressed as relative Markdown
+     links to surviving live plan files, or `None`; soft/optional/parallel-override dependency
+     wording; Linear IDs, Outlook, deleted plans, bare titles, or bare path stems alone;
    - phase-number identity in filenames, titles, or dependencies;
    - a `plans/README.md` or other plans-directory backlog/index;
    - duplication of vision, ADR, conformance, or module-docs checklist prose instead of links.
