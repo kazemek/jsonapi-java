@@ -9,9 +9,9 @@ by meaningful future product area when the content warrants it. Do not add specu
 files, and do not put implementation-ready contracts, type names, or acceptance criteria in
 Outlook.
 
-Do not treat Outlook as an implementation plan. Live executable work remains under
-[`.agentWork/milestones/`](../../.agentWork/milestones/README.md) until later migration steps
-change that store. Outlook never overrides Snapshot, Vision, or accepted ADRs.
+Do not treat Outlook as an implementation plan. Live executable work, if any, remains under
+[`.agentWork/plans/`](../../.agentWork/plans/) as temporary implementation contracts. Outlook
+never overrides Snapshot, Vision, or accepted ADRs.
 
 ## Maintenance
 
@@ -49,7 +49,7 @@ a stable release; whether every Jackson 3 mapping/PATCH capability lands in lock
 **Revisit trigger:** when a Jackson 2 artifact is registered in the build and its module README
 exists; rewrite or delete this section so current capability lives on that Snapshot surface.
 
-Live executable Jackson 2 plans, if any, remain the existing milestone files.
+Live executable Jackson 2 plans, if any, remain under `.agentWork/plans/`.
 
 ## Query-parameter parser
 

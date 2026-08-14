@@ -36,7 +36,7 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 | `fixtures/jsonapi-1.1/`        | Version-neutral canonical JSON:API document fixtures for codec parity                            |
 | `build-logic/`                 | Shared Gradle convention plugins                                                                 |
 | `docs/`                        | Vision, Outlook, conformance, and architecture decision records                                  |
-| `.agentWork/milestones/`       | Live execution plans (knowledge-model migration in progress)                                     |
+| `.agentWork/plans/`            | Temporary live implementation plans (unfinished work only)                                       |
 
 ## Module registry
 
@@ -65,8 +65,8 @@ not duplicate those module-specific contracts.
 - [Outlook](docs/outlook/README.md) — tentative, revisable future direction
 - [Conformance checklist](docs/conformance.md) — current JSON:API 1.1 feature status
 - [Architecture decision records](docs/adr/README.md)
-- [Implementation milestones](.agentWork/milestones/README.md) — live execution plans (migration in progress)
-- [Agent workflow](AGENTS.md) — knowledge model, discovery, and completion gates
+- [Agent workflow](AGENTS.md) — knowledge model, discovery, plan lifecycle, and completion gates
+- Live implementation plans (when present) live under `.agentWork/plans/` — temporary execution contracts only
 
 ## License
 

@@ -49,4 +49,4 @@ application of the command.
 - Endpoint adapters can reject body/URL identity mismatches before application logic.
 - Applications must deliberately translate an accepted command into domain mutations.
 - Supporting direct object mutation or additional patchable member classes would require a later
-  decision and milestone.
+  decision and implementation plan.
