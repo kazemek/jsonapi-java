@@ -5,13 +5,13 @@ that still meets the Goal, or state explicitly that no simpler alternative survi
 with why. Do not implement the planned feature or score execution-unit or size-gate rules, AC
 phrasing, or completion-gate lists.
 
-Instruction boundary: do not read [SKILL.md](SKILL.md), [design.md](design.md), or the other
-reviewer's artifact. Do not repeat a placement / API / wire-semantics checklist under a different
-title.
+Instruction boundary: do not read [SKILL.md](SKILL.md), [reference.md](reference.md),
+[design.md](design.md), or the other reviewer's artifact. Do not repeat a placement / API /
+wire-semantics checklist under a different title.
 
 ## Resolve inputs
 
-Use the plan path from the task inputs. Read:
+Use the plan and review-artifact paths from the task inputs. Read:
 
 - the target plan;
 - accepted ADRs, module READMEs, package/API documentation, architecture rules, public types, and
@@ -66,13 +66,8 @@ blocks, the verdict is Pass even when a simpler alternative was described.
 
 ## Write the artifact
 
-Create `.agentWork/.session/` if needed, then create or completely replace:
-
-```text
-.agentWork/.session/implementation-design-review-adversarial-<plan-basename>.md
-```
-
-Use this template. Replace the prior artifact on re-review. Report the artifact path and verdict.
+Create `.agentWork/.session/` if needed, then create or completely replace the exact review-artifact
+path supplied in the task inputs. Use this template and report the artifact path and verdict.
 
 ```markdown
 # Adversarial Review: <plan title>

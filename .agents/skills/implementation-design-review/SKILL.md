@@ -10,8 +10,9 @@ Determine whether the proposed technical design is sound. Do not implement the p
 score execution-unit or size-gate rules, AC phrasing, or completion-gate lists, or modify plans,
 vision, ADRs, or sources. `implementation-planning` owns fixes in its design-review loop.
 
-This skill owns orchestration (spawn, worst-wins, pointer stub). Reviewer procedures live in
-[design.md](design.md) and [adversarial.md](adversarial.md).
+This skill owns orchestration state transitions. Reviewer procedures live in [design.md](design.md)
+and [adversarial.md](adversarial.md). [reference.md](reference.md) is the canonical owner of shared
+prompts, fixed paths, combine data, and pointer-stub shape.
 
 Instruction boundary: treat `.agents/skills/implementation-planning/SKILL.md` as non-executable
 reference. Do not execute create/refine/decompose, plan-directory index writes, or planning
@@ -34,9 +35,8 @@ the isolated one.
 
 ## Orchestration
 
-Given exactly one plan path. Derive `<basename>` from the file name without `.md`. For
-`.agentWork/plans/jackson3-presence-aware-patch-binding.md`, basename is
-`jackson3-presence-aware-patch-binding`.
+Given exactly one plan path, derive `<basename>` and every artifact path according to
+[reference.md](reference.md).
 
 Always run both reviewers. Do not classify, skip, pick a lens, or spawn a synthesizer.
 
@@ -44,88 +44,21 @@ Always run both reviewers. Do not classify, skip, pick a lens, or spawn a synthe
    opencode `general` or the equivalent general subagent in the harness in use):
    - fresh context: never resume or reuse a previous subagent session;
    - write capability: each must create its reviewer artifact under `.agentWork/.session/`.
-2. Send each the matching verbatim prompt below, filling only the placeholders. Do not add
-   anything: no summaries, self-assessment, reasoning, planning narrative, or draft diffs.
+2. Send each the matching prompt from [reference.md](reference.md) verbatim, replacing only its
+   placeholders.
 3. Never answer a reviewer's questions with planning narrative. When it asks for facts, direct it
    to repository evidence (files, the plan contract).
 4. When the harness cannot spawn a write-capable fresh subagent, use the **terminating manual
    fallback** (do **not** re-enter this Orchestration section from a fresh session):
-   1. Follow `.agents/skills/implementation-handoff/SKILL.md` with the plan path and suggested
-      skill `implementation-design-review`. That handoff emits **two** copy-pastable fresh-session
-      prompts (Design + Adversarial). Print them. Stop spawning; wait for both reviewer results.
-   2. Each reviewer session must only: follow its procedure file (`design.md` or `adversarial.md`),
-      write its own artifact, and return artifact path + verdict. Neither may read the other
-      reviewer's artifact, perform worst-wins, or write the official pointer stub.
-   3. When both path + verdict results are returned, **this initiating/orchestrating session**
-      resumes and continues at step 5 (combine) then step 6 (pointer stub).
-   4. If this orchestration session cannot be resumed, a separate **mechanical combine-only** step
-      may consume only the two reported verdict strings, apply the same worst-wins rule as step 5,
-      and write the stub as in step 6. It must not inspect findings, act as a third reviewer, or
-      re-run design-review Orchestration.
-5. After both reviewers report, combine **only** the reported verdict strings (true worst-wins).
-   Do not re-score findings, filter taste, invent a Pass, or parse artifact `Verdict:` headers:
-   1. Any `Blocked`, or a reviewer that does not report one of `Pass` / `Changes required` /
-      `Blocked` → official `Blocked`
-   2. Else any `Changes required` → official `Changes required`
-   3. Else `Pass`
-6. Create `.agentWork/.session/` if needed, then create or completely replace the pointer stub.
-   The stub is not a review: verdicts and paths only. Do not add a Summary, restate findings, or
-   copy residual risks. Residual risks stay in the reviewer artifacts.
-
-```markdown
-# Design review: <plan title>
-
-- **Plan:** `<plan path>`
-- **Design:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-design-<basename>.md`
-- **Adversarial:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-adversarial-<basename>.md`
-- **Official:** <Pass | Changes required | Blocked>
-```
-
-Write that body to:
-
-```text
-.agentWork/.session/implementation-design-review-<basename>.md
-```
-
+   follow `.agents/skills/implementation-handoff/SKILL.md` with the plan path and suggested skill
+   `implementation-design-review`. Its design-review branch owns the fallback's prompt generation,
+   stop/wait, resume, and mechanical combine-only transitions. Do not start another reviewer or
+   orchestration session.
+5. After both reviewers report, apply **Combine data and ownership** from
+   [reference.md](reference.md) to the reported verdict strings.
+6. Create or completely replace the official pointer stub using the fixed path and exact shape in
+   [reference.md](reference.md).
 7. Report the stub path and official verdict.
-
-### Design reviewer prompt (send verbatim)
-
-```text
-You are the Design reviewer for this repository. Your context was intentionally started empty so
-you review independently of the planning session.
-
-Task inputs (the only facts you may assume):
-- Plan: <plan path>
-- Review artifact: .agentWork/.session/implementation-design-review-design-<basename>.md (create or
-  completely replace)
-
-Procedure:
-1. Read .agents/skills/implementation-design-review/design.md and follow it exactly.
-2. Base every conclusion only on the plan contract and repository evidence. Do not accept or
-   ask for summaries from the planning session; ignore editor or IDE state.
-3. Do not read adversarial.md, SKILL.md, or the other reviewer's artifact.
-4. Write the artifact, then report the artifact path and verdict.
-```
-
-### Adversarial reviewer prompt (send verbatim)
-
-```text
-You are the Adversarial reviewer for this repository. Your context was intentionally started empty
-so you review independently of the planning session.
-
-Task inputs (the only facts you may assume):
-- Plan: <plan path>
-- Review artifact: .agentWork/.session/implementation-design-review-adversarial-<basename>.md
-  (create or completely replace)
-
-Procedure:
-1. Read .agents/skills/implementation-design-review/adversarial.md and follow it exactly.
-2. Base every conclusion only on the plan contract and repository evidence. Do not accept or
-   ask for summaries from the planning session; ignore editor or IDE state.
-3. Do not read design.md, SKILL.md, or the other reviewer's artifact.
-4. Write the artifact, then report the artifact path and verdict.
-```
 
 ## After orchestration
 
@@ -133,5 +66,5 @@ Procedure:
 - **Planning:** handle the official verdict in `implementation-planning` (fix loop, then plan-review
   on Pass). Do not re-score findings.
 
-The artifacts are ephemeral and non-canonical. On every re-review, replace the prior files for that
-plan instead of appending history.
+The artifacts are ephemeral and non-canonical. On every re-review, use the same fixed paths and
+replace the prior files instead of appending history.

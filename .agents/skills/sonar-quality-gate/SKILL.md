@@ -1,6 +1,6 @@
 ---
 name: sonar-quality-gate
-description: Runs SonarCloud analysis with Quality Gate wait and verifies zero unresolved new-code issues via the Issues API. Use before declaring production/test source (`**/src/**`) work complete, or when the user asks to run Sonar, check the Quality Gate, or verify SonarCloud status. Skip for docs-only, workflow-only, and build-config-only changes.
+description: Runs SonarCloud analysis with Quality Gate wait and verifies zero unresolved new-code issues via the Issues API. Use before declaring module production/test source (`jsonapi-java-*/src/**`) work complete, or when the user asks to run Sonar, check the Quality Gate, or verify SonarCloud status. Skip for docs-only, workflow-only, and build-config-only changes.
 disable-model-invocation: true
 ---
 
@@ -22,9 +22,10 @@ script below. Changing SonarCloud Quality Gate conditions needs an explicit user
 ## Prerequisites
 
 1. Confirm `./gradlew clean build` already passes for the change under review.
-2. Confirm the change touches production or test sources (`**/src/**`). Sonar analyzes new code,
-   so docs-only, workflow-only, and build-config-only changes are not analyzed: skip this skill and
-   do not report Sonar as a completion blocker for them.
+2. For automatic completion gating, confirm the change touches module production or test sources
+   (`jsonapi-java-*/src/**`). Skip docs-only, workflow-only, and build-config-only changes, including
+   `build-logic/src/**`, and do not report Sonar as their completion blocker. An explicit user
+   request to run or inspect Sonar still invokes this skill.
 3. Confirm `SONAR_TOKEN` is available in the environment (or can be provided by the user).
    - If the token is missing: do **not** claim the task is complete. Report that Sonar is blocked,
      that CI must still pass Sonar analysis, and ask for a token if a local check is required.
@@ -48,7 +49,7 @@ with `SONAR_TOKEN` set. `sonar.qualitygate.wait=true` is configured in the root 
      from the scanner output, then fix the issues or escalate to the user.
    - **Exit 0:** Quality Gate passed. **Continue to step 3** — do not stop here.
 
-3. Confirm zero new-code issues via the Issues API script (required):
+3. Separately confirm zero new-code issues via the Issues API script (required):
 
 ```bash
 .agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh
@@ -60,9 +61,10 @@ Scope the query with environment variables (do not put the token on argv):
    - **Default branch (main) analysis**: omit both; without an identity the API reports the
      project's default-branch new-code period.
 
-The script fails closed on HTTP errors, malformed JSON, missing or non-numeric `total`, missing
-`SONAR_TOKEN`/`jq`/`curl`, or network failures. The token is read via curl config stdin, never from
-the argument list. On success it prints `total` on stdout.
+The script owns API authentication, pagination/query mechanics, and fail-closed validation for HTTP
+or network errors, malformed JSON, missing or non-numeric `total`, and missing
+`SONAR_TOKEN`/`jq`/`curl`. It reads the token without placing it on the argument list and prints a
+validated numeric `total` on success.
 
 Interpret the result:
    - **Non-zero exit:** Do **not** declare completion and do **not** treat the result as zero
@@ -78,6 +80,8 @@ Project key / organization: `kazemek_jsonapi-java` / `kazemek` (see root `build.
 
 - Do not attach `sonar` to `build`/`check`. Developers who only build and test locally do not need
   `SONAR_TOKEN`.
+- Current CI runs the scanner and waits for the Quality Gate, but does not run the Issues API
+  script. CI success alone therefore does not satisfy the separate authenticated zero-issue check.
 - Prefer fixing smells over suppressions. Use suppressions only when the user explicitly agrees.
 - Missing blame / SCM warnings can affect new-code detection; still fix any issues the API returns
   for `inNewCodePeriod=true`.

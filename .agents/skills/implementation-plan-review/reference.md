@@ -26,32 +26,19 @@ Use this template when writing the review artifact. Path and naming rules live i
 
 ## Contract coverage
 
-- [Pass | Fail | Partial | Not verified] Goal
-  - Evidence: <paths, lines, or explanation>
-- [Pass | Fail | Partial | Not verified] Execution unit
-  - Evidence: <outcome coherence, one-context implementability/reviewability, and any genuine execution/review boundaries; numeric size heuristics are signals only>
-- [Pass | Fail | Partial | Not verified] Research and constraints
-  - Evidence: <sources and implementation consequences>
-- [Pass | Fail | Partial | Not verified] Deliverables
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Non-goals
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Implementation boundaries
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Test strategy
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Acceptance criteria
-  - Evidence: <…>
-- [Pass | Fail | Partial | Not verified] Dependencies
-  - Evidence: <relative Markdown links to surviving live plans, or None>
-- [Pass | Fail | Partial | Not verified] Lifecycle
-  - Evidence: <Not started | In progress; no Complete; no persistent superseded umbrella
-    original; a superseded original MAY remain temporarily during the documented decomposition
-    reconciliation window while incoming references and refined dependent reviews are resolved,
-    MUST be deleted after successful reconciliation; deleting while surviving references remain
-    is invalid>
-- [Pass | Fail | Partial | Not applicable] Nullness / `module-docs` hooks
-  - Evidence: <why required or why not applicable>
+| Dimension | Result | Evidence |
+|-----------|--------|----------|
+| Goal | Pass \| Fail \| Partial \| Not verified | <paths, lines, or explanation> |
+| Execution unit | Pass \| Fail \| Partial \| Not verified | <one-context implementation/review and genuine boundaries; size is only a signal> |
+| Research and constraints | Pass \| Fail \| Partial \| Not verified | <sources and implementation consequences> |
+| Deliverables | Pass \| Fail \| Partial \| Not verified | <evidence> |
+| Non-goals | Pass \| Fail \| Partial \| Not verified | <evidence> |
+| Implementation boundaries | Pass \| Fail \| Partial \| Not verified | <evidence> |
+| Test strategy | Pass \| Fail \| Partial \| Not verified | <evidence> |
+| Acceptance criteria | Pass \| Fail \| Partial \| Not verified | <evidence> |
+| Dependencies | Pass \| Fail \| Partial \| Not verified | <evidence> |
+| Lifecycle and identity | Pass \| Fail \| Partial \| Not verified | <`Not started`/`In progress`; no `Complete` or persistent umbrella; temporary reconciliation window respected; no deletion while references survive> |
+| Nullness / `module-docs` hooks | Pass \| Fail \| Partial \| Not applicable | <why required or not applicable> |
 
 ## Repo evidence inspected
 

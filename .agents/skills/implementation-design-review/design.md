@@ -4,12 +4,12 @@ Review whether the plan's technical design is sound: placement, public API, and 
 semantics as this repository specifies them. Do not implement the planned feature, invent a simpler
 alternative, or score execution-unit or size-gate rules, AC phrasing, or completion-gate lists.
 
-Instruction boundary: do not read [SKILL.md](SKILL.md), [adversarial.md](adversarial.md), or the
-other reviewer's artifact.
+Instruction boundary: do not read [SKILL.md](SKILL.md), [reference.md](reference.md),
+[adversarial.md](adversarial.md), or the other reviewer's artifact.
 
 ## Resolve inputs
 
-Use the plan path from the task inputs. Read:
+Use the plan and review-artifact paths from the task inputs. Read:
 
 - the target plan;
 - `AGENTS.md` only as needed to locate linked docs;
@@ -80,13 +80,8 @@ stated) may `Blocks: yes` citing the empty or non-deciding Goal / Research / Bou
 
 ## Write the artifact
 
-Create `.agentWork/.session/` if needed, then create or completely replace:
-
-```text
-.agentWork/.session/implementation-design-review-design-<plan-basename>.md
-```
-
-Use this template. Replace the prior artifact on re-review. Report the artifact path and verdict.
+Create `.agentWork/.session/` if needed, then create or completely replace the exact review-artifact
+path supplied in the task inputs. Use this template and report the artifact path and verdict.
 
 ```markdown
 # Design Review: <plan title>

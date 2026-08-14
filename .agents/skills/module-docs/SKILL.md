@@ -6,7 +6,8 @@ disable-model-invocation: true
 
 # Module Docs
 
-Keep thin dual-audience documentation for a Gradle submodule. Follow the pattern established by `jsonapi-java-core`. Do not invent a second style.
+Keep thin dual-audience documentation for a Gradle submodule. Follow the `jsonapi-java-core`
+golden example; do not invent a second style.
 
 ## When to run
 
@@ -18,7 +19,7 @@ Use this skill when:
 
 Skip when only internals or tests changed with no public-surface impact.
 
-## Workflow
+## Checklist
 
 1. Resolve the target module directory (e.g. `jsonapi-java-core`).
 2. Read existing `<module>/README.md` and `package-info.java` files; extend them in place.
@@ -28,10 +29,11 @@ Skip when only internals or tests changed with no public-surface impact.
    - **Minimal usage** (always present: short code sample when an entry point exists; otherwise a
      concise note that no usable entry point exists yet)
    - **Non-goals** (link ADR-007 / vision; do not restate the product boundary at length)
-   - **Further reading** (only relevant conformance, ADR, and root-agent links; titles or short
-     labels must make their relevance clear)
+   - **Further reading** (only relevant canonical links, such as Vision, conformance, ADR,
+     build/CI, and root-agent sources; titles or short labels must make their relevance clear)
    - **For contributors / agents** (module-specific invariants only: local vs aggregate rules,
-     diagnostics, tests, extension policy, etc.; do not repeat root build, CI, or planning workflow)
+     diagnostics, tests, extension policy, etc.; include ADR-009 nullness bullets for Java
+     production packages; do not repeat root build, CI, or planning workflow)
 4. Ensure `package-info.java` exists for every production package.
    Every production `package-info.java` must be `@NullMarked` (`org.jspecify.annotations`) and briefly
    state absence (`@Nullable`) versus wire-null (sealed types) when the package holds document model
@@ -39,30 +41,16 @@ Skip when only internals or tests changed with no public-surface impact.
    Keep package documentation role-focused: describe its responsibility, public or internal
    boundary, and the contract needed before opening its types. Link to policy sources instead of
    copying them.
-5. Ensure focused Javadoc on public entry points only (construction vs validation, wire-state distinctions)—not every type.
+5. Ensure focused Javadoc on public entry points only, including construction versus validation and
+   wire-state distinctions where relevant; do not document every type.
 6. Ensure the root `README.md` lists and links the module. Keep `AGENTS.md` generic: it routes
    through `<module>/README.md` and must not accumulate one link per module.
-7. Do **not** duplicate `docs/vision.md`, `docs/outlook/`, full ADR bodies, or
-   `docs/conformance.md` into the module README—link out. Do not copy Outlook future direction
-   into an available module's README.
-8. Re-read the golden example and compare section order, density, link-out behavior, agent notes,
-   and package roles before reporting completion.
-9. Report paths created or updated.
-
-## Checklist
-
-- [ ] `<module>/README.md` follows the golden section order, keeps each section compact, and always
-      includes **Minimal usage** (code sample or explicit no-entry-point note)
-- [ ] Agents subsection includes nullness bullets when the module has Java production packages (ADR-009)
-- [ ] Agents subsection contains module-only invariants, not root build/CI/planning instructions
-- [ ] `package-info.java` for every production package, each `@NullMarked` and role-focused
-- [ ] Entry-point Javadoc on the module’s primary public types
-- [ ] Root `README.md` lists the module
-- [ ] `AGENTS.md` retains the generic `<module>/README.md` discovery route
-- [ ] Relevant Vision, Outlook, ADR, conformance, build, CI, and root workflow prose is linked
-      rather than duplicated; omit Outlook unless the module documents unbuilt or revisable
-      future direction
-- [ ] Final self-check confirms density and link-out behavior against the golden example
+7. Link to relevant Vision, ADR, conformance, build, CI, and root-workflow sources rather than
+   duplicating their prose. Include an Outlook link only when documenting unbuilt or revisable
+   future direction; never copy its prose into an available module's current-capability README.
+8. Re-read the golden example and verify section order, compact density, minimal usage, package
+   roles, nullness, entry-point Javadoc, root registration, link-out behavior, and agent notes.
+9. Report every path created or updated.
 
 ## Golden example
 

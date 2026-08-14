@@ -6,109 +6,53 @@ disable-model-invocation: true
 
 # Implement Plan
 
-Implement exactly one plan contract and verify it with a context-isolated review. The review
-must never see this session's context or reasoning; it is executed by a fresh subagent that derives
-everything from the plan contract and repository evidence.
-
-On review Pass, do not write `Complete`. Run post-review finalization, then delete the plan file.
+Implement exactly one selected plan and verify it in a context-isolated review. `AGENTS.md` owns
+repository authority, lifecycle, canonical synchronization, and completion-gate classification.
+Never write `Complete`; after review Pass and finalization, delete the plan.
 
 ## Resolve the plan
 
-1. Identify exactly one target file under `.agentWork/plans/` from a path or plan name supplied by
-   the user. Ask the user to choose when several plans are plausible. Do not infer the next task
-   from `.agentWork/plans/`, Outlook, source layout, or a reconstructed backlog.
-2. Check the plan `Status`:
-   - `Not started` — proceed.
-   - `In progress` — ask whether to continue the existing implementation or start a new attempt.
-   - Any other value, including `Complete`, is invalid. Stop and report; do not implement.
-3. Check dependencies: listed `Dependencies` are hard execution-order prerequisites — relative
-   Markdown links to other live plan files, or `None`.
-   - `Dependencies: None` — proceed.
-   - For every relative Markdown-linked dependency whose target file still exists under
-     `.agentWork/plans/`: implementation is **BLOCKED**. Report the unresolved dependency. Do not
-     set the target plan to `In progress`. Do not offer to override the dependency interactively.
-   - If a listed dependency path does not exist: the plan contract is stale/invalid. Stop, report
-     the stale reference, and require the plan to be refined through `implementation-planning`.
-   - Outlook and Linear never satisfy listed Dependencies. If two plans should run in parallel,
-     refine the still-`Not started` plan through `implementation-planning` and remove the edge;
-     `implement-plan` must not reinterpret or override a reviewed execution contract. Linear is
-     never required to implement or review this already-materialized plan.
+1. Resolve exactly one user-supplied path or name under `.agentWork/plans/`; ask when several are
+   plausible. Never infer the next task from plans, Outlook, source layout, or a reconstructed
+   backlog. Linear is optional coordination and never required for a materialized plan.
+2. Accept `Not started`. For `In progress`, ask whether to continue the existing implementation or
+   start a new attempt. Reject every other status, including `Complete`.
+3. Validate `Dependencies` as `None` or hard execution-order prerequisites represented by relative
+   Markdown links. If any linked plan still exists, stop Blocked before changing status and do not
+   offer an override. If a value is malformed or a linked target is absent, stop because the
+   contract is stale/invalid and require `implementation-planning` refinement. Linear and Outlook
+   never satisfy a dependency; parallel execution requires refining a `Not started` plan to remove
+   the edge, not reinterpreting it here.
 
-Without Linear, implement only an explicitly selected or already-materialized repository plan.
-Never infer the next project task from `.agentWork/plans/`.
+## Implement and verify
 
-## Read context
+Read the plan, then follow the task-scoped discovery and authority rules in `AGENTS.md`; do not scan
+the repository or deleted plans. Set status to `In progress`, unless already set, then implement
+only its deliverables within its non-goals and boundaries. Check acceptance criteria only when
+current evidence supports each claim. Use `module-docs` when its trigger applies.
 
-Follow the task-scoped discovery route for implementation in `AGENTS.md`:
+Collect the final path set mechanically from tracked branch/uncommitted changes (`git diff
+--name-only` against the base) plus untracked paths (`git ls-files --others --exclude-standard`).
+Classify all paths and run only the applicable `AGENTS.md` gates, in its prescribed order. For
+module production/test source paths matching `jsonapi-java-*/src/**`, this means
+`spotless-format`, `./gradlew clean build`, then `sonar-quality-gate`; `build-logic/src/**` is build
+configuration rather than Sonar scope. Do not invent gates beyond the contract and final diff.
 
-- the target plan;
-- `AGENTS.md`;
-- affected module READMEs and package documentation;
-- `docs/vision.md` only when the plan changes project direction, modules, or public product
-  boundaries;
-- `docs/outlook/` only when the work is about unbuilt or revisable future direction; Outlook is
-  never current truth and never satisfies dependencies;
-- ADRs and conformance sections linked by the plan or affected module documentation.
+An applicable Sonar gate is incomplete without both Quality Gate success and a separate
+authenticated Issues API result of zero unresolved new-code issues. CI runs analysis but does not
+perform that API check. Without `SONAR_TOKEN`, retain `In progress`: completion requires CI to pass
+and the authenticated API check to run separately.
 
-Do not scan the whole repository. Do not search historical or deleted plans for current
-engineering truth.
-
-## Implement
-
-1. Set the plan `Status` to `In progress` in the plan file unless it already is. Never write
-   `Complete`.
-2. Deliver the plan's deliverables within its non-goals and implementation boundaries. Do not
-   add work outside the contract.
-3. Mark acceptance criteria `[x]` only when implementation evidence exists at that point. These are
-   claims the review verifies; never leave checkbox state to the reviewer, and never let the
-   reviewer edit it.
-4. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
-   agent-relevant invariants), follow the `module-docs` skill; reference it rather than duplicating
-   its checklist.
-5. Classify the change scope from the diff and run only the applicable completion gates per the
-   change-scope gate tiers in `AGENTS.md`. Collect the path set mechanically: tracked changes via
-   `git diff --name-only` against the base plus untracked files via `git ls-files --others
-   --exclude-standard` (untracked files would otherwise be absent from classification until staged
-   or committed):
-   - docs-only and workflow-only changes need no build, Spotless, or Sonar;
-   - build-configuration changes need `./gradlew clean build` (plus Spotless when Spotless-covered
-     files or the formatter configuration changed);
-   - production/test source changes need the full gates:
-     - `spotless-format` skill: `./gradlew spotlessApply` then `./gradlew spotlessCheck` — run it
-       before the build so the build's own `spotlessCheck` passes on the first run;
-     - `./gradlew clean build` passes;
-     - `sonar-quality-gate` skill: without `SONAR_TOKEN`, Sonar is blocked and must not count as a
-       completed gate for source-scope work; keep `Status` `In progress` until CI confirms the
-       Quality Gate and zero new-code issues via the Issues API.
-   Never require a gate the plan's acceptance criteria or the change scope does not demand.
-6. Synchronize canonical documentation before review:
-   - update affected Snapshot surfaces, or record that no documentation change is required because
-     current knowledge remains accurate;
-   - update, reduce, or delete relevant Outlook when the implementation changed future assumptions.
-   The plan must not be the only place a newly durable current or future fact exists.
+Before review, synchronize affected Snapshot surfaces or record why they remain accurate, and
+update, reduce, or delete relevant Outlook when implementation changed future assumptions. No
+durable fact may exist only in the temporary plan.
 
 ## Review with fresh context
 
-The review is mandatory and non-negotiable. Its purpose is to verify the implementation without any
-influence from this session's context or reasoning. Keep the plan file on disk through the review
-so the reviewer can compare contract vs delivery.
-
-1. Determine the change-set boundary mechanically from git metadata (branch changes and uncommitted
-   changes). Do not summarize or interpret it; the reviewer derives it itself.
-2. Spawn a NEW general-purpose subagent with write access (for example, opencode `general` or the
-   equivalent general subagent in the harness in use):
-   - fresh context: never resume or reuse a previous subagent session;
-   - write capability: it must create the review artifact under `.agentWork/.session/`.
-3. Send the reviewer prompt below verbatim, filling only the placeholder. Do not add anything
-   to it: no summaries, self-assessment, reasoning, implementation narrative, commit messages, or
-   diff content.
-4. Never answer the reviewer's questions with implementation narrative. When it asks for facts,
-   direct it to repository evidence (files, git history, the plan contract).
-5. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
-   session: follow `.agents/skills/implementation-handoff/SKILL.md` with the plan path and suggested
-   skill `implementation-review`, then print the one-liner it produces.
-
-### Reviewer prompt (send verbatim)
+The review is mandatory. Keep the plan through review. Determine the boundary mechanically from
+branch and uncommitted Git metadata without summarizing it. Derive `<plan basename>` from the filename without `.md`. Spawn a
+new general-purpose, write-capable subagent in a fresh session and send this prompt verbatim,
+replacing only `<plan path>` and `<plan basename>`:
 
 ```text
 You are the implementation reviewer for this repository. Your context was intentionally started
@@ -127,71 +71,43 @@ Procedure:
 4. Write the artifact, then report the artifact path and verdict.
 ```
 
+Do not provide implementation narrative, summaries, reasoning, self-assessment, commit messages,
+or diff content; direct factual questions to repository evidence. If a fresh write-capable subagent
+cannot run, follow `.agents/skills/implementation-handoff/SKILL.md` for the plan and
+`implementation-review`, print its one-liner, and stop for the fresh-session result.
+
 ## Handle the verdict
 
-- **Pass:** when all applicable completion gates pass, run **Finalization after Pass** below. A
-  gate that is inapplicable to the change scope (for example Sonar for docs-only or workflow-only
-  work) does not block finalization. If an applicable gate is blocked or unverified — for example
-  Sonar without `SONAR_TOKEN` — keep `Status` `In progress`, do not delete the plan, and report the
-  remaining gate as the completion blocker.
-- **Changes required:** fix the findings, re-run all applicable completion gates on the post-fix
-  state (per the change-scope tiers: `clean build`, Spotless, Sonar), re-synchronize Snapshot and
-  relevant Outlook as needed, then re-run the review with a NEW fresh subagent. Cap the loop
-  at two re-reviews; when the verdict is still `Changes required`, stop and report the remaining
-  findings. Keep `Status` `In progress` until a review passes on the post-fix state. Do not delete
-  the plan.
-- **Blocked:** stop and report; keep `Status` `In progress`. Do not delete the plan.
+- `Pass`: finalize only if every applicable gate is verified. An inapplicable gate does not block;
+  a blocked/unverified applicable gate retains `In progress` and the plan.
+- `Changes required`: fix findings, reclassify the post-fix diff, rerun all applicable gates in
+  order, resynchronize Snapshot/Outlook, and review with a new fresh subagent. Allow at most two
+  re-reviews; if changes remain after the second, stop with `In progress` and retain the plan.
+- `Blocked`: stop with `In progress` and retain the plan.
 
-## Finalization after Pass
+Replace the fixed review artifact on every re-review; never reuse a reviewer session.
 
-Do this only after a review Pass. Do not write `Complete`. Order:
+## Finalize after Pass
 
-```text
-implementation + gates
-→ Snapshot / Outlook sync
-→ fresh implementation review
-→ review Pass
-→ reconcile dependent live plans (mechanical vs semantic)
-→ mechanically verify no remaining live refs
-→ update Linear OR report unsync
-→ delete completed plan
-```
+Only after implementation, gates, canonical sync, fresh review, and review `Pass`, proceed in this
+exact order:
 
-The first four steps are already done when this section runs. Then:
-
-1. Reconcile dependent live plans under `.agentWork/plans/` so no live `Dependencies` header or
-   in-body reference points at this completing plan. Distinguish:
-
-   - **Mechanical reconciliation** — may happen directly during finalization when it only removes
-     or updates references made obsolete by the completed dependency **without** changing the
-     dependent plan’s implementation semantics. Example: plan B depends on A; A completed → remove
-     the now-satisfied dependency/reference to A from B (`None` if no other deps remain). Durable
-     facts belong in Snapshot or Outlook, not in a soon-to-be-deleted contract.
-   - **Semantic reconciliation** — if fixing the reference would change the dependent’s actual
-     execution contract, approach, prerequisites, scope, assumptions, boundaries, or intended
-     implementation:
-     - `Not started` dependent: do **not** rewrite it directly inside `implement-plan`. Route it
-       through `implementation-planning` refinement and require the existing fresh
-       `implementation-design-review` → `implementation-plan-review` pipeline (bounded loops) to
-       Pass. Keep this completing plan present until that refinement succeeds. This is **not** a
-       new review stage.
-     - `In progress` dependent: do **not** modify the fixed contract. Stop finalization, retain
-       this completing plan, and report the blocked reconciliation.
-
-   If semantic refinement/review fails or an `In progress` dependent blocks reconciliation, stop
-   before deletion and keep this plan file.
-2. After all dependent reconciliation is valid, mechanically verify no remaining live references
-   to this plan (filename, title, or relative link) under `.agentWork/plans/`.
-3. Update the linked Linear work item with a concise outcome and coordination status, **or**
-   explicitly report that Linear synchronization is unavailable. Linear unavailability must not
-   fail a correct implementation or preserve engineering knowledge in the plan, but must never be
-   silently ignored. No engineering correctness gate requires Linear.
-4. Delete the plan file (`git rm` the path under `.agentWork/plans/`). Do not leave a `Complete`
-   stub. Do not create `.agentWork/plans/README.md`.
+1. Find every dependency or meaningful in-body reference to the completing plan under
+   `.agentWork/plans/`.
+2. Reconcile purely mechanical references directly when completion merely makes them obsolete,
+   such as removing a satisfied dependency and writing `None` when no dependencies remain.
+3. For semantic changes to a dependent's approach, prerequisites, scope, assumptions, boundaries,
+   or intended implementation, do not edit directly. Route a `Not started` dependent through
+   `implementation-planning` refinement and its bounded fresh design-review then plan-review
+   pipeline while retaining this plan. Never modify an `In progress` dependent; stop finalization
+   and retain this plan. Also stop if semantic refinement or review fails.
+4. Mechanically verify zero live references by filename, title, or relative link.
+5. Update the linked Linear item with concise outcome/coordination status, or explicitly report
+   unsynchronized. Linear unavailability is not an engineering gate.
+6. Delete the completed plan with `git rm`; leave no `Complete` stub or plans index.
 
 ## Report
 
-Report to the user: the changed files, verification commands run and their outcomes, the review
-artifact path, the verdict, Snapshot/Outlook sync result, dependent-plan reconciliation
-(mechanical vs semantic / blocked), Linear update or explicit unsync, whether the plan file was
-deleted, and residual risks.
+Report changed paths; verification commands and outcomes; review artifact and verdict;
+Snapshot/Outlook sync; mechanical, semantic, or blocked dependent reconciliation; Linear update or
+explicit unsync; plan deletion status; and residual risks.

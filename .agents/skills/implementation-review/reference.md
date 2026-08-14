@@ -26,18 +26,17 @@ Use this template when writing the review artifact. Path and naming rules live i
 
 ## Plan coverage
 
-- [Pass | Fail | Partial | Not verified] <goal, deliverable, non-goal, dependency, or acceptance criterion>
-  - Evidence: <paths, lines, tests, or explanation>
-- [Pass | Fail | Partial | Not applicable] `module-docs` checklist
-  - Evidence: <public-surface trigger and relevant documentation paths, or why it did not apply>
-- [Pass | Fail | Partial | Not applicable] Snapshot sync
-  - Evidence: <updated canonical surfaces, or why no documentation change is required>
-- [Pass | Fail | Partial | Not applicable] Outlook sync
-  - Evidence: <updated/reduced/deleted Outlook, or why Outlook was not implicated>
-- [Pass | Fail | Partial | Not verified] Disposability
-  - Evidence: <no durable current/future fact exists only in the plan>
-- [Pass | Fail | Partial | Not verified] Canonical ownership
-  - Evidence: <each new durable fact has one canonical repository owner>
+| Dimension | Result | Evidence |
+|-----------|--------|----------|
+| <goal, deliverable, non-goal, dependency, or acceptance criterion> | Pass \| Fail \| Partial \| Not verified | <paths, lines, tests, or explanation> |
+| Nullness | Pass \| Fail \| Partial \| Not applicable | <contract and annotation evidence> |
+| `module-docs` | Pass \| Fail \| Partial \| Not applicable | <trigger and documentation paths, or why not applicable> |
+| Snapshot sync | Pass \| Fail \| Partial \| Not applicable | <updated canonical surfaces, or why no change is required> |
+| Outlook sync | Pass \| Fail \| Partial \| Not applicable | <updated/reduced/deleted Outlook, or why not implicated> |
+| Disposability | Pass \| Fail \| Partial \| Not verified | <no durable fact exists only in the plan> |
+| Canonical ownership | Pass \| Fail \| Partial \| Not verified | <one canonical owner for each new durable fact> |
+
+<Repeat the first row for the goal, every deliverable, non-goal, dependency, and acceptance criterion.>
 
 ## Verification
 

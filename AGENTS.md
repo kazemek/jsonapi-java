@@ -1,232 +1,130 @@
-# Build & Test
+# Build And Verification
 
-Requires JDK 21 (enforced via Gradle toolchain).
+- Install JDK 21 locally; the Gradle toolchain requires it, and no resolver is configured to
+  download it. Use the committed wrapper.
+- Primary token-free verification: `./gradlew clean build`. It compiles, runs Spock/JUnit and
+  ArchUnit tests, produces JaCoCo reports, and runs `spotlessCheck` through `check`.
+- Run one spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
+  `./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
+- Dependency verification is checksum-enforced by `gradle/verification-metadata.xml`. After a
+  dependency change or verification failure, run
+  `./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`; never disable
+  verification globally.
+- Spotless 8.5.1 is intentionally capped in `gradle/libs.versions.toml` and `renovate.json` because
+  8.6+ breaks Greclipse input fingerprinting on cold CI.
 
-`./gradlew clean build` is the token-free primary local verification (compile, tests, ArchUnit).
-It is not a discovery step. Before declaring implementation complete, classify the change scope
-from the diff and apply only the matching **Completion gates** (see below); docs-only and
-workflow-only changes do not require a build.
+# Repository Shape
 
-Run a single Spock spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
-`./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
+- `settings.gradle.kts` is the only source of truth for present modules; the root README also lists
+  planned modules, which have no usable entry points. Read the affected module README before code.
+- Sources are under `<module>/src/main/`; Spock specs are under `src/test/groovy/`, with some Java
+  test fixtures under `src/test/java/`.
+- `build-logic/` owns shared Java/test/nullness/coverage and Spotless configuration. Dependency
+  versions are in `gradle/libs.versions.toml`; there is no code-generation step.
+- `jsonapi-java-test-fixtures` is an internal, unpublished module. The version-neutral wire corpus
+  is under `fixtures/jsonapi-1.1/`; pinned draft schemas are under
+  `fixtures/jsonapi-schema/1.1-pr1603/`.
 
-Dependency verification is enabled via `gradle/verification-metadata.xml`. After adding or
-changing dependencies (or when CI fails verification), regenerate checksums with
-`./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`
-(Renovate PRs do this as well). Never disable verification globally; trusted-by-pattern entries
-already cover IDE/Gradle metadata while build dependencies stay checksum-verified.
+# Task Routing
 
-# Project structure
+Choose the narrowest affected module or root subsystem first. Expand only for callers,
+dependencies, public API effects, or repository-wide configuration.
 
-Multi-module Gradle build (Kotlin DSL); `settings.gradle.kts` is the source of truth for current
-submodules. Production sources live under `<module>/src/main/`; tests are Groovy + Spock under
-`<module>/src/test/groovy/` mirroring the main package structure. `fixtures/jsonapi-1.1/` holds
-canonical version-neutral document fixtures that Jackson codec tests share across majors.
+Project skills live at `.agents/skills/<name>/SKILL.md` and require explicit invocation. Use:
 
-# Task-scoped discovery
+| Task | Skill |
+|------|-------|
+| Create, refine, or decompose a plan | `implementation-planning` |
+| Implement a plan under `.agentWork/plans/` | `implement-plan` |
+| Review design, plan/spec, or implementation | `implementation-design-review`, `implementation-plan-review`, or `implementation-review` |
+| Produce a review handoff when a fresh write-capable reviewer cannot run | `implementation-handoff` |
+| Add a module or change public packages, entry points, validate/read flows, or non-goals | `module-docs` |
+| Format Spotless-covered files | `spotless-format` |
+| Complete production/test source work | `sonar-quality-gate` |
 
-Choose the narrowest applicable route. Do **not** scan the whole repository first.
+- For work in an existing module, use its governing live plan when one exists. If no plan covers
+  requested implementation work, stop and propose a focused plan. Read `settings.gradle.kts`, the
+  module README, changed-package `package-info.java`, exact sources and mirrored tests, then only
+  directly relevant ADRs or conformance sections.
+- Read `docs/vision.md` only for new modules, product-boundary changes, or stable direction. Read
+  `docs/outlook/` only for tentative future work; Outlook is not current truth or a dependency.
 
-Project skills live at `.agents/skills/<name>/SKILL.md`. When this file names a skill, read that
-path and follow it (skills use explicit invocation only).
+# Architecture Constraints
 
-- **Plan/refine/decompose an implementation plan:** use the `implementation-planning` skill; it
-  verifies each created or refined plan with the `implementation-design-review` orchestration (two
-  fresh-context reviewers) and then the `implementation-plan-review` procedure in a fresh-context
-  subagent. Work is selected from Linear when available, or from an explicit user request.
-- **Implement a plan:** use the `implement-plan` skill; it runs the applicable completion gates,
-  synchronizes Snapshot/Outlook, verifies with the `implementation-review` procedure in a
-  fresh-context subagent, then finalizes and deletes the plan on Pass.
-- **Implement in an existing module:** select the governing live plan under `.agentWork/plans/`
-  when one covers the work (stop and propose a focused plan if none does), read
-  `settings.gradle.kts` and the affected `<module>/README.md`, read `package-info.java` for
-  changed packages, open the exact production files and mirrored tests, and follow linked
-  ADRs/conformance only when the change touches their contract. That Snapshot set is current
-  engineering truth for the module.
-- **Review a plan design:** use the `implementation-design-review` skill for on-demand reviews;
-  the `implementation-planning` skill runs the same orchestration after create/refine/decompose.
-- **Review a plan/spec:** use the `implementation-plan-review` skill for on-demand reviews; the
-  `implementation-planning` skill runs the same procedure in a fresh subagent after design-review
-  Pass.
-- **Review an implementation:** use the `implementation-review` skill for on-demand reviews; the
-  `implement-plan` skill runs the same procedure in a fresh subagent.
-- **Review-isolation handoff:** use `implementation-handoff` only when a write-capable fresh
-  subagent cannot be spawned for design, plan, or implementation review; it is not a primary task
-  route.
-- **Repository-wide build, CI, or workflow work:** read only the root configuration, workflow,
-  or guidance files directly implicated; completion follows the gate tiers below.
-- **Scope expansion:** search inside the affected module or root subsystem first; broaden only
-  for direct callers, dependencies, public API impact, or repository-wide configuration.
-- **New submodule or changed public surface:** use the `module-docs` skill.
-- **Snapshot first:** current capability, inventory, and architecture live in existing surfaces
-  (module README, `package-info.java`, Javadoc, tests, accepted ADRs, `docs/conformance.md`,
-  the root README registry, and `settings.gradle.kts`). Do not reconstruct them from Linear,
-  completed plans, Outlook, or Git history.
-- Read `docs/vision.md` when adding a module, crossing public product boundaries, or changing
-  stable product direction or principles; otherwise module documentation suffices.
-- Read `docs/outlook/` only when the work is about unbuilt or revisable future direction.
-  Outlook is never current truth and never satisfies dependencies.
-- Do not treat Linear as engineering truth. Linear is never required to understand current
-  engineering truth or to implement or review an explicitly selected, already-materialized
-  repository implementation plan. Linear may still be used for backlog discovery, prioritization,
-  coordination status, broad work dependencies, and completed-work history.
+- This library represents and validates JSON:API documents. Persistence, endpoints, authorization,
+  and query execution remain application policy; do not hide policy in mapping or adapter defaults.
+- `jsonapi-java-core` has no functional third-party runtime dependencies; compile-only JSpecify is
+  allowed. Optional integrations belong in separate modules.
+- `jsonapi-java-jackson-common` must remain free of Jackson-major imports
+  (`tools.jackson.*` and `com.fasterxml.jackson.*`) despite its name.
+- Preserve wire-visible distinctions: absent, explicit JSON `null`, and present-empty are different
+  states. Explicit null data/linkage uses sealed model variants, not bare Java null.
+- Production Java packages are JSpecify `@NullMarked`; NullAway checks `compileJava` only. ArchUnit
+  enforces module dependency allowlists. Do not weaken those rules without updating
+  `docs/adr/010-architectural-tests.md`.
 
-# Stable project boundaries
+# Knowledge And Plans
 
-- The library represents and validates JSON:API documents; applications retain persistence,
-  endpoint, authorization, and query-execution policy.
-- `jsonapi-java-core` has no functional third-party runtime dependencies; a compile-only JSpecify
-  annotation jar is allowed (see ADR-009). Optional integrations belong in separate modules.
-- Preserve wire-visible states such as absent versus explicit JSON `null`.
-- Keep application policy explicit rather than hiding it in traversal, mapping, or adapter defaults.
+Every durable fact has one canonical owner; other documents should link or provide only navigation.
 
-# Build logic
-
-Shared build configuration lives in `build-logic/` as precompiled script plugins:
-`jsonapi-java-library` owns library, test, coverage, toolchain, and static-analysis defaults;
-`jsonapi-java-spotless` owns repository formatting. Dependencies and versions are declared in the
-Version Catalog `gradle/libs.versions.toml`.
-
-New submodules need `include("...")` in `settings.gradle.kts`, the `jsonapi-java-library` plugin,
-and the `module-docs` skill for dual-audience documentation and root registry updates.
-
-# CI
-
-GitHub Actions runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on push to
-`main` and on PRs. SonarCloud Quality Gate wait is enabled, but free-tier gates do not enforce
-zero new issues; completion of source-scope changes still requires the `sonar-quality-gate`
-skill's Issues API check (`resolved=false` + `inNewCodePeriod=true` → `total == 0`). Local
-`./gradlew clean build` remains token-free.
-
-CI uploads a `gradle-reports` artifact (dependency-verification, test HTML, JaCoCo, and test-results)
-for failure diagnosis, and publishes a Unit tests check from JUnit XML.
-
-# Planning
-
-## Knowledge model
-
-Every durable engineering fact has **one canonical repository owner**. Ownership is not the same
-as executable evidence: Javadoc owns the public API contract; tests prove behavior. Other
-documentation may link to the owner or summarize only the minimum local context needed for
-navigation; it must not silently become competing canonical prose.
-
-| Kind | Owner |
-|------|--------|
+| Fact | Canonical owner |
+|------|-----------------|
 | Current module capability and usage | `<module>/README.md` |
 | Human-readable module inventory | root `README.md` |
 | Actual build membership | `settings.gradle.kts` |
-| Package-local responsibility and invariant | `package-info.java` |
+| Package responsibility and invariants | `package-info.java` |
 | Public API contract and semantics | Javadoc |
 | Behavioral proof | tests |
 | Cross-cutting architecture and rationale | accepted ADR under `docs/adr/` |
 | JSON:API compliance state | `docs/conformance.md` |
 | Workflow and agent routing | this file and `.agents/skills/` |
-| Stable product direction and principles | `docs/vision.md` |
-| Tentative, revisable future direction | `docs/outlook/` |
-| Temporary live execution contract | `.agentWork/plans/` (unfinished plans only; no index or archive) |
-| Work coordination, backlog, prioritization, status, dependencies, compact history | Linear |
-| Forensic change history | Git |
+| Stable product direction | `docs/vision.md` |
+| Tentative future direction | `docs/outlook/` |
+| Temporary execution contract | unfinished plans under `.agentWork/plans/` |
+| Backlog, prioritization, and coordination | Linear |
+| Forensic history | Git |
 
-**Conflict rules:** Snapshot and Vision are separate authoritative concerns; neither derives from
-the other, and they must remain coherent.
+- Snapshot (current repository evidence) and Vision are separate authorities. Surface conflicts;
+  never change implementation merely to make it match Vision. Outlook overrides neither authority
+  nor accepted ADRs.
+- Linear is coordination and optional traceability, not engineering truth or a correctness gate.
+  Never use Linear IDs or Outlook as plan dependencies. When Linear is unavailable, never infer the
+  next task from live plans, Outlook, source layout, or a reconstructed backlog.
+- Plans exist only while unfinished; do not create a plan index or archive. Status is only
+  `Not started` or `In progress`. Dependencies are `None` or relative Markdown links to unfinished
+  plan files. Once work starts, freeze its scope; after gates, synchronization, and review Pass,
+  reconcile references and delete the completed plan. Session reviews belong in the gitignored
+  `.agentWork/.session/`.
 
-- For **what exists now**, current repository evidence (Snapshot) describes current state.
-- Vision constrains **intended** product direction.
-- A Snapshot/Vision conflict is a documentation or design inconsistency to resolve explicitly.
-  Do **not** silently modify current implementation merely to make it match Vision. Planning that
-  materially depends on the conflict must surface and resolve it rather than choosing whichever
-  text appears newer.
-- Outlook never overrides Snapshot, Vision, or accepted ADRs, and **never satisfies
-  dependencies**.
-- A Linear issue is not an implementation plan. Linear is never required to understand current
-  engineering truth or to implement or review an explicitly selected, already-materialized
-  repository implementation plan.
-- Completed implementation plans are deleted after review Pass and finalization; they are not
-  current architecture. Git is forensic; current truth must not require git archaeology.
+# Fixture Contracts
 
-**Central invariant:** Plans describe change. Snapshot describes state. Outlook describes
-possible future direction. Linear coordinates work. Git preserves forensic history.
+- Tests receive `jsonapi.fixtures.dir` and `jsonapi.schema.fixtures.dir` from the library convention
+  plugin. Resolve both only through `FixtureDirectory`; do not hardcode repository paths.
+- Shared adapter suites consume complete capability-selected catalogs and assert catalog coverage.
+  Add version-neutral scenarios to the shared catalogs rather than making Jackson-major copies or
+  adapter-local ID lists.
+- `manifest.json` is an ordered bijection with codec scenarios. `envelope-binding/` documents are
+  not corpus entries. The negative corpus is closed; changing a case ID also requires updating
+  `NegativeCodecScenariosCatalogSpec`. Ambiguous-primary-data fixtures are valid dual-success cases.
+- Draft-schema validation is supplemental. Fixtures marked with a schema disagreement must keep
+  failing so an upstream schema change forces deliberate review.
 
-**Linear boundary:** a live plan may record an optional work-item identifier (for example
-`KAZ-19`) as traceability metadata only. Filenames, paths, architecture semantics, and workflow
-correctness must not structurally depend on a Linear workspace or key. Do not copy Linear ticket
-prose into a plan as engineering truth. No Linear connector or API is a correctness gate for
-understanding Snapshot or for implementing or reviewing a materialized repository plan.
+# Completion Gates
 
-When Linear is available, normal backlog discovery and prioritization come from Linear. When
-Linear is unavailable, an explicitly selected or materialized repository plan remains fully
-implementable and reviewable, and an explicit user request may still be planned; report
-synchronization failure and do **not** infer the next task from `.agentWork/plans/`, Outlook,
-source layout, or a reconstructed repository backlog. Do not create a permanent plans index.
+Classify the final diff; tiers combine when multiple scopes are touched.
 
-## Plan lifecycle
+| Changed paths | Required gates |
+|---------------|----------------|
+| Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`) | Review links, consistency, and section order; no build |
+| Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`) | No local gate; CI validates workflow behavior |
+| Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; also Spotless if a covered file/config changed |
+| Module production/test sources (`jsonapi-java-*/src/**`) | `spotless-format` -> `./gradlew clean build` -> `sonar-quality-gate` |
+| Other/unclassified paths, including `fixtures/**` | Classify explicitly; otherwise use the full source tier |
 
-Repository implementation plans live under `.agentWork/plans/` only while concrete work needs a
-reviewed execution contract. There is no `plans/README.md` backlog or historical archive.
-
-- Status values are only `Not started` and `In progress`. There is no persistent `Complete` state.
-- A `Not started` plan may be refined in place or replaced by smaller plans when a genuine
-  execution/review boundary requires decomposition. After replacement plans are created and
-  successfully design-reviewed and plan-reviewed, reconcile incoming references from other live
-  plans (re-review any refined `Not started` dependents; never silently rewrite `In progress`
-  dependents), then delete the superseded original; do not retain it as an umbrella or index.
-  Broader portfolio grouping belongs in Linear; tentative future direction belongs in Outlook.
-- Once implementation starts, the plan is a fixed delivery contract; new scope goes into a
-  follow-up plan. `implement-plan` sets `Status` to `In progress` on start.
-- `Dependencies` are hard execution-order prerequisites: relative Markdown links to other
-  unfinished plans, or `None`. A linked live plan file blocks `implement-plan`. Never Linear IDs,
-  Outlook, or deleted plans.
-- Prefer the **largest coherent execution unit** that can still be reliably implemented and
-  independently reviewed in one context. Numeric deliverable and acceptance-criteria bounds in
-  the `implementation-planning` skill are heuristics, not an automatic split.
-
-After gates pass, Snapshot/Outlook synchronization, and a fresh `implementation-review` Pass,
-`implement-plan` reconciles dependent live plans (mechanical reference cleanup directly;
-semantic changes to `Not started` dependents only via `implementation-planning` plus design- and
-plan-review; never rewrite `In progress` dependents — retain the completing plan when blocked),
-mechanically verifies zero surviving references, updates the linked Linear item (or reports
-unsync), then **deletes** the completed plan. Ephemeral reviews live under `.agentWork/.session/`
-(gitignored).
-
-## Completion gates
-
-Before declaring implementation complete, classify the change scope from the diff and apply the
-highest applicable tier. Tiers combine: a change touching files from several tiers requires the
-union of their gates.
-
-| Change scope (touched files)                                                        | Required gates                                                                                        |
-|-------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`, READMEs)                 | None — review the docs themselves (links, consistency, section order)                                 |
-| Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`)       | None locally — CI validates the workflow itself                                                       |
-| Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; Spotless when a Spotless-covered file or the formatter configuration changed |
-| Production/test sources (`**/src/**`)                                               | Full: `spotless-format` → `clean build` → `sonar-quality-gate`                                        |
-| Other/unclassified paths (e.g. `fixtures/**`, `LICENSE`, `opencode.jsonc`)          | Classify explicitly; otherwise apply the full source tier                                             |
-
-Gate details:
-
-1. If public module surface changed (packages, entry points, validate/read flows, non-goals, or
-   agent-relevant invariants), use the `module-docs` skill. Skip it for internal-only or test-only
-   changes.
-2. Ensure `./gradlew clean build` passes when the change touches production/test sources or build
-   configuration. Skip it for docs-only or workflow-only changes.
-3. Use `spotless-format` (`./gradlew spotlessApply` then `./gradlew spotlessCheck`) only when the
-   change touches Spotless-covered files (`.java`, `.groovy`, `.kt`, `.gradle.kts`) or the
-   formatter configuration. Run it before `clean build`: `build` already executes `spotlessCheck`
-   via `check`, so applying formatting first lets the build pass on the first run instead of
-   failing and requiring a re-run.
-4. Use `sonar-quality-gate` only when the change touches production/test sources; Sonar analyzes
-   new code, so it adds nothing for docs, workflow, or build-config-only changes. Without
-   `SONAR_TOKEN`, report Sonar blocked for source-scope changes and keep them uncompleted until CI
-   Sonar analysis succeeds and new-code issues are confirmed empty via the Issues API.
-
-# Conventions
-
-* **Verified namespace:** Maven group `io.github.kazemek`; Java base package `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
-* **Module orientation:** Every present module documents its package map, usage (code sample or
-  explicit no-entry-point note), non-goals, and agent notes in `<module>/README.md`; the root README
-  is the module registry.
-* **Nullness:** JSpecify `@NullMarked` packages and `@Nullable` for absence/null-preserving values (see [`docs/adr/009-jspecify-nullness.md`](docs/adr/009-jspecify-nullness.md) and module agent notes). NullAway enforces this on Java `main` sources.
-* **Architectural tests:** ArchUnit enforces production type-dependency allowlists per library module (see [`docs/adr/010-architectural-tests.md`](docs/adr/010-architectural-tests.md)). Do not weaken allowlists without updating the ADR; add rules when adding modules.
-* **Java 21 features:** records, sealed interfaces, pattern matching, text blocks
-* **Testing:** Spock specs under `src/test/groovy/` mirroring the main package structure
-* **Session artifacts:** `.agentWork/.session/` is gitignored — review and handoff artifacts can live there without polluting git
+- For covered `.java`, `.groovy`, `.kt`, or `.gradle.kts` changes, run `./gradlew spotlessApply`
+  then `./gradlew spotlessCheck` before the build.
+- Source changes are incomplete without the Sonar skill's Quality Gate wait and Issues API result of
+  zero unresolved new-code issues. If `SONAR_TOKEN` is unavailable, report the blocker; work remains
+  incomplete until CI passes and an authenticated Issues API check separately returns zero.
+- CI runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on `main` pushes and PRs.
+  Failed-run details are in the `gradle-reports` artifact and the Unit tests check.

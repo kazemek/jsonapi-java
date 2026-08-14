@@ -40,6 +40,6 @@ unless the user makes an explicit formatting request.
 
 ## Notes
 
-- Do not attach `spotlessCheck` to `build`/`check` unless the user asks.
-- Spotless is configured by the root-only `jsonapi-java-spotless` convention plugin.
+- Preserve the existing wiring: the root-only `jsonapi-java-spotless` convention plugin attaches
+  `spotlessCheck` to `check`. Do not remove, duplicate, or otherwise change that wiring.
 - Greclipse settings for Groovy/Spock live in `config/spotless/greclipse.properties`.

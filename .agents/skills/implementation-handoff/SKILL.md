@@ -19,33 +19,15 @@ Require both of:
 
 Ask the user when either input is missing or ambiguous.
 
-Derive `<basename>` from the plan file name without `.md`. For
-`.agentWork/plans/jackson3-presence-aware-patch-binding.md`, basename is
-`jackson3-presence-aware-patch-binding`.
-
-Derived artifact paths (do not accept a free-form override):
-
-- `implementation-design-review` (official pointer stub, written by the **orchestrating** session
-  after both reviewers report — not by either reviewer session):
-  `.agentWork/.session/implementation-design-review-<basename>.md`
-- Design reviewer artifact:
-  `.agentWork/.session/implementation-design-review-design-<basename>.md`
-- Adversarial reviewer artifact:
-  `.agentWork/.session/implementation-design-review-adversarial-<basename>.md`
-- `implementation-plan-review` → `.agentWork/.session/implementation-plan-review-<basename>.md`
-- `implementation-review` → `.agentWork/.session/implementation-review-<basename>.md`
+Derive `<basename>` and all artifact paths from the canonical
+[design-review reference](../implementation-design-review/reference.md). Do not accept free-form
+path overrides.
 
 ## Write the handoff
 
-1. Create `.agentWork/.session/` if needed, then create or completely replace:
-
-```text
-.agentWork/.session/implementation-handoff-<review-kind>-<basename>.md
-```
-
-Use `design-review`, `plan-review`, or `implementation-review` as `<review-kind>`. For
-`.agentWork/plans/jackson3-presence-aware-patch-binding.md` and an implementation review, write
-`.agentWork/.session/implementation-handoff-implementation-review-jackson3-presence-aware-patch-binding.md`.
+1. Create `.agentWork/.session/` if needed, then create or completely replace the fixed handoff path
+   for the selected review kind in the
+   [design-review reference](../implementation-design-review/reference.md).
 
 2. Fill the body for the suggested skill (below). Do **not** include planning or implementation
    narrative, diffs, self-assessment, or secrets.
@@ -54,89 +36,48 @@ Use `design-review`, `plan-review`, or `implementation-review` as `<review-kind>
 
 ### When suggested skill is `implementation-design-review`
 
-This is the **terminating manual fallback**. Do **not** tell any fresh session to read
-`implementation-design-review/SKILL.md` or re-run Orchestration (that recurses when spawning is
-still unavailable).
-
-`design.md` and `adversarial.md` are reviewer **procedure files**, not invokable skills.
-
-Write this handoff body (fill `<plan path>` and `<basename>`):
+This is the **terminating manual fallback**. Write this handoff body, filling `<plan path>`,
+`<basename>`, and all paths from the
+[design-review reference](../implementation-design-review/reference.md). Embed both reviewer prompt
+blocks from that reference verbatim after replacing only their placeholders.
 
 ~~~~markdown
 # Implementation design-review handoff (manual fallback)
 
 - **Plan:** `<plan path>`
-- **Official stub (orchestrator only):** `.agentWork/.session/implementation-design-review-<basename>.md`
-- **Design artifact:** `.agentWork/.session/implementation-design-review-design-<basename>.md`
-- **Adversarial artifact:** `.agentWork/.session/implementation-design-review-adversarial-<basename>.md`
+- **Official stub (orchestrator only):** `<official pointer-stub path from reference.md>`
+- **Design artifact:** `<Design reviewer artifact path from reference.md>`
+- **Adversarial artifact:** `<Adversarial reviewer artifact path from reference.md>`
 
 ## Ownership
 
-1. Run two independent fresh sessions using the prompts below (Design, then Adversarial, or in
-   either order). Each session only reviews, writes **its own** artifact, and returns artifact
-   path + verdict.
-2. Neither reviewer session may read the other reviewer's artifact, perform worst-wins combine,
-   or write the official pointer stub.
-3. After both path + verdict results return, the **initiating/orchestrating session** resumes,
-   combines only the two reported verdict strings (worst-wins), and writes the official stub.
-4. If that orchestration session cannot be resumed, a separate mechanical combine-only step may
-   consume only the two reported verdict strings and write the stub — it must not inspect
-   findings, act as a third reviewer, or re-run design-review Orchestration.
-
-### Worst-wins (orchestrator / mechanical combine-only only)
-
-1. Any `Blocked`, or a missing/invalid verdict (not exactly `Pass` / `Changes required` /
-   `Blocked`) → official `Blocked`
-2. Else any `Changes required` → official `Changes required`
-3. Else → `Pass`
+1. Run the two prompts below in independent fresh, write-capable sessions, in either order or in
+   parallel. Each reviewer follows only its prompt, writes its own artifact, and returns artifact
+   path + verdict. Do not ask either session to read
+   `.agents/skills/implementation-design-review/SKILL.md`; that would recurse into orchestration.
+   Neither reviewer may read the other artifact, combine verdicts, or write the official stub.
+2. After both results return, resume the initiating/orchestrating session. It applies **Combine data
+   and ownership** from `.agents/skills/implementation-design-review/reference.md` and writes the
+   official stub using that reference's exact shape.
+3. If the initiating session cannot be resumed, use only the mechanical combine-only fallback
+   permitted by that reference. Do not start another reviewer or orchestration session.
 
 ## Design reviewer prompt (copy into a fresh session)
 
-```text
-You are the Design reviewer for this repository. Your context was intentionally started empty so
-you review independently of the planning session.
-
-Task inputs (the only facts you may assume):
-- Plan: <plan path>
-- Review artifact: .agentWork/.session/implementation-design-review-design-<basename>.md (create or
-  completely replace)
-
-Procedure:
-1. Read .agents/skills/implementation-design-review/design.md and follow it exactly.
-2. Base every conclusion only on the plan contract and repository evidence. Do not accept or
-   ask for summaries from the planning session; ignore editor or IDE state.
-3. Do not read adversarial.md, SKILL.md, or the other reviewer's artifact.
-4. Do not perform worst-wins combine. Do not write the official pointer stub.
-5. Write the artifact, then report the artifact path and verdict.
-```
+<the filled Design prompt from `.agents/skills/implementation-design-review/reference.md`, verbatim>
 
 ## Adversarial reviewer prompt (copy into a fresh session)
 
-```text
-You are the Adversarial reviewer for this repository. Your context was intentionally started empty
-so you review independently of the planning session.
-
-Task inputs (the only facts you may assume):
-- Plan: <plan path>
-- Review artifact: .agentWork/.session/implementation-design-review-adversarial-<basename>.md
-  (create or completely replace)
-
-Procedure:
-1. Read .agents/skills/implementation-design-review/adversarial.md and follow it exactly.
-2. Base every conclusion only on the plan contract and repository evidence. Do not accept or
-   ask for summaries from the planning session; ignore editor or IDE state.
-3. Do not read design.md, SKILL.md, or the other reviewer's artifact.
-4. Do not perform worst-wins combine. Do not write the official pointer stub.
-5. Write the artifact, then report the artifact path and verdict.
-```
+<the filled Adversarial prompt from `.agents/skills/implementation-design-review/reference.md`, verbatim>
 ~~~~
 
 Print both prompts (with `<plan path>` and `<basename>` filled). Do not print a one-liner that
-invokes `implementation-design-review` as a skill.
+invokes `implementation-design-review` as a skill. Stop spawning and wait for both reviewer results.
 
 ### When suggested skill is `implementation-plan-review` or `implementation-review`
 
-Write this body shape (fill **Review artifact** with the derived path):
+Write this body shape (fill **Review artifact** with the fixed path from the
+[design-review reference](../implementation-design-review/reference.md)):
 
 ```markdown
 # Implementation review handoff
