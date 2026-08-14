@@ -45,7 +45,11 @@ Use this template when writing the review artifact. Path and naming rules live i
 - [Pass | Fail | Partial | Not verified] Dependencies
   - Evidence: <relative Markdown links to surviving live plans, or None>
 - [Pass | Fail | Partial | Not verified] Lifecycle
-  - Evidence: <Not started | In progress; no Complete; no umbrella original>
+  - Evidence: <Not started | In progress; no Complete; no persistent superseded umbrella
+    original; a superseded original MAY remain temporarily during the documented decomposition
+    reconciliation window while incoming references and refined dependent reviews are resolved,
+    MUST be deleted after successful reconciliation; deleting while surviving references remain
+    is invalid>
 - [Pass | Fail | Partial | Not applicable] Nullness / `module-docs` hooks
   - Evidence: <why required or why not applicable>
 

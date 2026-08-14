@@ -48,10 +48,20 @@ Always run both reviewers. Do not classify, skip, pick a lens, or spawn a synthe
    anything: no summaries, self-assessment, reasoning, planning narrative, or draft diffs.
 3. Never answer a reviewer's questions with planning narrative. When it asks for facts, direct it
    to repository evidence (files, the plan contract).
-4. When the harness cannot spawn a write-capable fresh subagent, fall back to a manual fresh
-   session: follow `.agents/skills/implementation-handoff/SKILL.md` with the plan path and suggested
-   skill `implementation-design-review`, then print the one-liner it produces. Stop this
-   orchestration until that session completes.
+4. When the harness cannot spawn a write-capable fresh subagent, use the **terminating manual
+   fallback** (do **not** re-enter this Orchestration section from a fresh session):
+   1. Follow `.agents/skills/implementation-handoff/SKILL.md` with the plan path and suggested
+      skill `implementation-design-review`. That handoff emits **two** copy-pastable fresh-session
+      prompts (Design + Adversarial). Print them. Stop spawning; wait for both reviewer results.
+   2. Each reviewer session must only: follow its procedure file (`design.md` or `adversarial.md`),
+      write its own artifact, and return artifact path + verdict. Neither may read the other
+      reviewer's artifact, perform worst-wins, or write the official pointer stub.
+   3. When both path + verdict results are returned, **this initiating/orchestrating session**
+      resumes and continues at step 5 (combine) then step 6 (pointer stub).
+   4. If this orchestration session cannot be resumed, a separate **mechanical combine-only** step
+      may consume only the two reported verdict strings, apply the same worst-wins rule as step 5,
+      and write the stub as in step 6. It must not inspect findings, act as a third reviewer, or
+      re-run design-review Orchestration.
 5. After both reviewers report, combine **only** the reported verdict strings (true worst-wins).
    Do not re-score findings, filter taste, invent a Pass, or parse artifact `Verdict:` headers:
    1. Any `Blocked`, or a reviewer that does not report one of `Pass` / `Changes required` /
