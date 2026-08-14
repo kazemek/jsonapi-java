@@ -33,7 +33,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PULL_REQUEST: ${{ github.event.pull_request.number }}
-        run: .agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh --list --require-zero
+        run: .agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh --list
       - name: Upload build reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -9,25 +9,26 @@
 #            Omit both for default-branch (main) analysis.
 #
 # Usage:
-#   ./check-new-code-issues.sh                    # print total; exit 0 if total is a valid number
-#   ./check-new-code-issues.sh --list             # also list issue key + message lines (all pages)
-#   ./check-new-code-issues.sh --require-zero     # exit 1 when total != 0
-#   ./check-new-code-issues.sh --list --require-zero
+#   ./check-new-code-issues.sh                 # fail closed: exit 1 when total != 0 (lists on failure)
+#   ./check-new-code-issues.sh --list          # always list issue key + message lines
+#   ./check-new-code-issues.sh --require-zero  # accepted alias; zero is already the default
+#   ./check-new-code-issues.sh --allow-nonzero # print total only; exit 0 if total is a valid number
 #
 # Exit codes:
-#   0 — HTTP/JSON ok and .total is a non-negative number (and zero when --require-zero)
-#   non-zero — missing deps/token, HTTP error, malformed response, or non-zero total with --require-zero
+#   0 — HTTP/JSON ok and unresolved new-code total is 0 (or any valid total with --allow-nonzero)
+#   non-zero — missing deps/token, HTTP error, malformed response, or unresolved new-code issues
 set -euo pipefail
 
 PAGE_SIZE=100
 LIST=0
-REQUIRE_ZERO=0
+ALLOW_NONZERO=0
 for arg in "$@"; do
   case "$arg" in
     --list) LIST=1 ;;
-    --require-zero) REQUIRE_ZERO=1 ;;
+    --require-zero) ;; # default behavior; kept for callers that already pass it
+    --allow-nonzero) ALLOW_NONZERO=1 ;;
     *)
-      echo "usage: $0 [--list] [--require-zero]" >&2
+      echo "usage: $0 [--list] [--require-zero] [--allow-nonzero]" >&2
       exit 2
       ;;
   esac
@@ -62,27 +63,26 @@ user = "${SONAR_TOKEN}:"
 EOF
 }
 
-RESPONSE="$(fetch_page 1)"
-TOTAL="$(printf '%s' "$RESPONSE" | jq -e '.total | select(type == "number" and . >= 0)')"
-printf '%s\n' "$TOTAL"
+list_issues() {
+  local issues_json='[]'
+  local page=1
+  local collected=0
+  local response="$RESPONSE"
+  local page_count
 
-if [[ "$LIST" -eq 1 ]]; then
-  ISSUES_JSON='[]'
-  page=1
-  collected=0
   while true; do
     if [[ "$page" -gt 1 ]]; then
-      RESPONSE="$(fetch_page "$page")"
+      response="$(fetch_page "$page")"
     fi
 
-    if ! printf '%s' "$RESPONSE" | jq -e '.issues | type == "array"' >/dev/null; then
+    if ! printf '%s' "$response" | jq -e '.issues | type == "array"' >/dev/null; then
       echo ".issues must be a JSON array" >&2
       exit 1
     fi
 
-    page_count="$(printf '%s' "$RESPONSE" | jq '.issues | length')"
-    ISSUES_JSON="$(
-      jq -n --argjson acc "$ISSUES_JSON" --argjson page "$(printf '%s' "$RESPONSE" | jq '.issues')" \
+    page_count="$(printf '%s' "$response" | jq '.issues | length')"
+    issues_json="$(
+      jq -n --argjson acc "$issues_json" --argjson page "$(printf '%s' "$response" | jq '.issues')" \
         '$acc + $page'
     )"
     collected=$((collected + page_count))
@@ -93,10 +93,19 @@ if [[ "$LIST" -eq 1 ]]; then
     page=$((page + 1))
   done
 
-  printf '%s' "$ISSUES_JSON" | jq -r '.[] | "\(.key) \(.message)"'
+  printf '%s' "$issues_json" | jq -r '.[] | "\(.key) \(.message)"'
+}
+
+RESPONSE="$(fetch_page 1)"
+TOTAL="$(printf '%s' "$RESPONSE" | jq -e '.total | select(type == "number" and . >= 0)')"
+printf '%s\n' "$TOTAL"
+
+# List whenever asked, and always on failure so agents/CI see what to fix without a second flag.
+if [[ "$LIST" -eq 1 || ("$ALLOW_NONZERO" -eq 0 && "$TOTAL" -ne 0) ]]; then
+  list_issues
 fi
 
-if [[ "$REQUIRE_ZERO" -eq 1 && "$TOTAL" -ne 0 ]]; then
+if [[ "$ALLOW_NONZERO" -eq 0 && "$TOTAL" -ne 0 ]]; then
   echo "expected 0 unresolved new-code issues, found ${TOTAL}" >&2
   exit 1
 fi
