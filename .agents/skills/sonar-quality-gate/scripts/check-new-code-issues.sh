@@ -22,10 +22,11 @@ set -euo pipefail
 PAGE_SIZE=100
 LIST=0
 ALLOW_NONZERO=0
+REQUIRE_ZERO_FLAG=0
 for arg in "$@"; do
   case "$arg" in
     --list) LIST=1 ;;
-    --require-zero) ;; # default behavior; kept for callers that already pass it
+    --require-zero) REQUIRE_ZERO_FLAG=1 ;; # default behavior; kept for callers that already pass it
     --allow-nonzero) ALLOW_NONZERO=1 ;;
     *)
       echo "usage: $0 [--list] [--require-zero] [--allow-nonzero]" >&2
@@ -33,6 +34,11 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+if [[ "$REQUIRE_ZERO_FLAG" -eq 1 && "$ALLOW_NONZERO" -eq 1 ]]; then
+  echo "conflicting flags: --require-zero and --allow-nonzero" >&2
+  exit 2
+fi
 
 if [[ -z "${SONAR_TOKEN:-}" ]]; then
   echo "SONAR_TOKEN is required" >&2
@@ -97,7 +103,7 @@ list_issues() {
 }
 
 RESPONSE="$(fetch_page 1)"
-TOTAL="$(printf '%s' "$RESPONSE" | jq -e '.total | select(type == "number" and . >= 0)')"
+TOTAL="$(printf '%s' "$RESPONSE" | jq -e '.total | select(type == "number" and . >= 0 and . == floor)')"
 printf '%s\n' "$TOTAL"
 
 # List whenever asked, and always on failure so agents/CI see what to fix without a second flag.
