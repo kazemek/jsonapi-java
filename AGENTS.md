@@ -149,10 +149,12 @@ understanding Snapshot or for implementing or reviewing a materialized repositor
 ## Intended steady state
 
 Linear holds the portfolio, backlog, and compact work history. Repository implementation plans
-exist only while concrete work needs a reviewed execution contract. On completion, durable facts
-are projected into Snapshot or Outlook and a concise outcome into Linear; Git remains the
-fallback for detailed historical archaeology. `.agentWork` is moving toward execution-only state
-(session reviews under `.agentWork/.session/` are already gitignored).
+exist only while concrete work needs a reviewed execution contract. On completion, durable
+current engineering facts are projected into their canonical Snapshot owners; still-future
+direction is updated, reduced, or removed in Outlook as needed; and a concise outcome is
+recorded in Linear. Git remains the fallback for detailed historical archaeology. `.agentWork`
+is moving toward execution-only state (session reviews under `.agentWork/.session/` are already
+gitignored).
 
 ## Migration in progress
 
