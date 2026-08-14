@@ -33,6 +33,9 @@ build/
 # Agent session artifacts
 /.agentWork/.session/
 
+# Maintainer-local coordination skill (not part of the public workflow)
+/.agents/skills/linear-coordination/
+
 # Eclipse / Java LSP
 .project
 .settings/

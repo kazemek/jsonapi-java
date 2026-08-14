@@ -37,8 +37,8 @@ that should be identified as ADRs — that is contract completeness, not design 
 4. State the reviewed contract boundary in the artifact (plan path and any adjacent live plans
    inspected). Never imply that unexamined plans or code were reviewed.
 
-Linear is never required to review a materialized plan. Do not treat Linear, Outlook, or deleted
-plans as engineering proof.
+External work-tracker access is never required to review a materialized plan. Do not treat
+work-tracker metadata, Outlook, or deleted plans as engineering proof.
 
 ## Review
 
@@ -70,7 +70,8 @@ every acceptance criterion to repository evidence. Check:
      original has incoming references while reconciliation is unfinished.
 5. **Dependencies and ownership:** dependencies must be hard execution-order prerequisites written
    as relative Markdown links to surviving live plan files, or `None`. Reject soft, optional, or
-   parallel-override wording and Linear IDs, Outlook, deleted plans, bare titles, or bare path stems.
+   parallel-override wording and external work-item IDs, Outlook, deleted plans, bare titles, or
+   bare path stems.
    Flag duplicated Vision, ADR, conformance, or module-docs prose that should be a canonical link.
 
 For every actionable finding, provide a concise title, plan file/line evidence, affected planning

@@ -27,10 +27,11 @@ implementation has started even when status is stale. Treat an implementation-st
 fixed delivery contract; create a dependent follow-up instead of expanding it. Ask when state is
 uncertain, and never mark planning acceptance criteria complete.
 
-Use Linear for normal work discovery when available, but only as optional coordination metadata.
-Without it, act only on a user-supplied outcome or explicitly selected/materialized plan and report
-coordination as unsynchronized. Never infer backlog order from plans, Outlook, source layout, Git
-history, or a reconstructed backlog; never put work-item IDs in plan identity.
+Use the external work tracker for normal work discovery when available, but only as optional
+coordination metadata. Without it, act only on a user-supplied outcome or explicitly
+selected/materialized plan and report coordination as unsynchronized. Never infer backlog order from
+plans, Outlook, source layout, Git history, or a reconstructed backlog; never put work-item IDs in
+plan identity.
 
 ## Build the contract
 
@@ -38,8 +39,9 @@ Start with current Snapshot evidence. Read `AGENTS.md`, the target plan when app
 the implicated module README, package documentation/Javadoc, source/tests, accepted ADRs, and
 conformance sections. Read `settings.gradle.kts` when membership matters; Vision only for its
 `AGENTS.md`-defined boundary; relevant Outlook only for revisable future direction; and adjacent
-live plans only when they constrain scope, compatibility, or order. Linear, Outlook, completed
-work, and Git archaeology cannot substitute for current-state discovery or satisfy dependencies.
+live plans only when they constrain scope, compatibility, or order. External work-tracker metadata,
+Outlook, completed work, and Git archaeology cannot substitute for current-state discovery or
+satisfy dependencies.
 Do not scan the whole repository or use deleted plans as current truth.
 
 Research externally only when repository evidence is insufficient or third-party behavior matters.
@@ -70,8 +72,8 @@ Use descriptive filenames/titles and the [plan template](reference.md#plan-file-
 use phase numbers or work-item IDs as structural identity. Before review, verify:
 
 1. Each `Dependencies` value is `None` or relative Markdown links to surviving live plans that are
-   true hard execution-order prerequisites. Parallel-safe plans have no edge; Linear, Outlook,
-   deleted plans, titles, and bare stems are invalid.
+   true hard execution-order prerequisites. Parallel-safe plans have no edge; external work-item
+   IDs, Outlook, deleted plans, titles, and bare stems are invalid.
 2. Each plan has a work-item ID or an explicit coordination-unsynchronized note.
 3. Every plan remains one coherent execution unit; decomposition neither overlaps nor omits the
    source requirements.

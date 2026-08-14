@@ -11,7 +11,7 @@ canonical ownership, and change-scope completion gates.
 > **Module:** `<module>`
 > **Dependencies:** [Other Live Plan](other-live-plan.md)
 > **Status:** Not started
-> **Work item:** <optional identifier, e.g. KAZ-24>
+> **Work item:** <optional external work-item identifier>
 
 ## Goal
 
@@ -50,8 +50,8 @@ applicable `docs/conformance.md` checklist update.
 
 Use only `Not started` or `In progress`, never `Complete`. `Dependencies` are hard execution-order
 prerequisites expressed as relative Markdown links to live plan files, or `None`; linked live plans
-block implementation. Parallel-safe plans have no edge. Never use Linear, Outlook, deleted plans,
-bare titles, or path stems as dependencies.
+block implementation. Parallel-safe plans have no edge. Never use external work-item IDs, Outlook,
+deleted plans, bare titles, or path stems as dependencies.
 
 Include only gates applicable under `AGENTS.md`. In particular:
 
@@ -86,7 +86,7 @@ numeric splitting alone.
    surviving `.agentWork/plans/*.md`.
 4. If any affected dependent is `In progress`, stop and retain the original. For each affected
    `Not started` dependent, retarget real prerequisites to replacements or remove a no-longer-real
-   prerequisite; never substitute Linear, Outlook, or historical prose.
+   prerequisite; never substitute external work-tracker metadata, Outlook, or historical prose.
 5. Run new fresh `implementation-design-review` then `implementation-plan-review` on every modified
    dependent using planning's existing two-re-review caps. This is normal refinement, not a new
    review stage. If any review is Blocked or exhausts its loop, retain the original.

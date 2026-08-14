@@ -14,7 +14,8 @@ Never write `Complete`; after review Pass and finalization, delete the plan.
 
 1. Resolve exactly one user-supplied path or name under `.agentWork/plans/`; ask when several are
    plausible. Never infer the next task from plans, Outlook, source layout, or a reconstructed
-   backlog. Linear is optional coordination and never required for a materialized plan.
+   backlog. External work-tracker coordination is optional and never required for a materialized
+   plan.
 2. Accept `Not started`. For `In progress`, distinguish the requested outcome:
    - Retry or continue the exact frozen contract: keep the plan and `In progress` status, do not
      rewrite it, and allow a fresh implementation session.
@@ -24,9 +25,9 @@ Never write `Complete`; after review Pass and finalization, delete the plan.
 3. Validate `Dependencies` as `None` or hard execution-order prerequisites represented by relative
    Markdown links. If any linked plan still exists, stop Blocked before changing status and do not
    offer an override. If a value is malformed or a linked target is absent, stop because the
-   contract is stale/invalid and require `implementation-planning` refinement. Linear and Outlook
-   never satisfy a dependency; parallel execution requires refining a `Not started` plan to remove
-   the edge, not reinterpreting it here.
+   contract is stale/invalid and require `implementation-planning` refinement. External
+   work-tracker metadata and Outlook never satisfy a dependency; parallel execution requires
+   refining a `Not started` plan to remove the edge, not reinterpreting it here.
 
 ## Implement and verify
 
@@ -109,12 +110,12 @@ exact order:
    pipeline while retaining this plan. Never modify an `In progress` dependent; stop finalization
    and retain this plan. Also stop if semantic refinement or review fails.
 4. Mechanically verify zero live references by filename, title, or relative link.
-5. Update the linked Linear item with concise outcome/coordination status, or explicitly report
-   unsynchronized. Linear unavailability is not an engineering gate.
+5. Update the linked external work item with concise outcome/coordination status, or explicitly
+   report unsynchronized. Tracker unavailability is not an engineering gate.
 6. Delete the completed plan with `git rm`; leave no `Complete` stub or plans index.
 
 ## Report
 
 Report changed paths; verification commands and outcomes; review artifact and verdict;
-Snapshot/Outlook sync; mechanical, semantic, or blocked dependent reconciliation; Linear update or
-explicit unsync; plan deletion status; and residual risks.
+Snapshot/Outlook sync; mechanical, semantic, or blocked dependent reconciliation; external
+work-item update or explicit unsync; plan deletion status; and residual risks.
