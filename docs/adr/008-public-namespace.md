@@ -27,5 +27,5 @@ On 2026-07-26, the Maven Central Portal showed `io.github.kazemek` as Verified f
 
 - Public source types may be added under `io.github.kazemek.jsonapi.*`.
 - A stable release publishes artifacts under group `io.github.kazemek`.
-- Changing the group or base package requires a new ADR and a coordinated rename across modules, docs, and milestones.
+- Changing the group or base package requires a new ADR and a coordinated rename across modules, docs, and live implementation plans.
 - The provisional name `io.github.jsonapi` is rejected and must not appear in source or publication metadata.

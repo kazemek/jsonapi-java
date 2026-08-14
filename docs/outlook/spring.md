@@ -5,8 +5,7 @@
 Optional Spring integration is in-product ([Vision](../vision.md),
 [ADR-001](../adr/001-product-boundary.md), [ADR-007](../adr/007-module-boundaries.md)). See the
 [root module registry](../../README.md) for current Spring adapter availability. Executable
-Spring work, if any, remains the existing milestone files under
-[`.agentWork/milestones/`](../../.agentWork/milestones/README.md).
+Spring work, if any, remains under [`.agentWork/plans/`](../../.agentWork/plans/).
 
 ## Direction
 

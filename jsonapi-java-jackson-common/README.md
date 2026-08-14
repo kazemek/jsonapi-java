@@ -66,6 +66,6 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   etc.). NullAway enforces this on Java `main` sources (ADR-009).
 - **Diagnostics:** `JsonApiMappingException` carries a stable `MappingDiagnostic`; read failures
   use `JsonApiDocumentReadException` with `CodecFailureCategory`, a JSON Pointer-like path, and a
-  safe `SourceLocation`. Do not introduce new failure types without a milestone.
+  safe `SourceLocation`. Do not introduce new failure types without an implementation plan.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout; unit/contract
   tests of moved types live here, while Jackson-bound integration suites stay in the adapters.

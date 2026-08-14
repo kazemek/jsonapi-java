@@ -30,25 +30,29 @@ Choose the narrowest applicable route. Do **not** scan the whole repository firs
 Project skills live at `.agents/skills/<name>/SKILL.md`. When this file names a skill, read that
 path and follow it (skills use explicit invocation only).
 
-- **Plan/refine/decompose a milestone:** use the `milestone-planning` skill; it verifies each
-  created or refined milestone with the `milestone-design-review` orchestration (two fresh-context
-  reviewers) and then the `milestone-plan-review` procedure in a fresh-context subagent.
-- **Implement a milestone:** use the `implement-milestone` skill; it runs the applicable
-  completion gates and verifies with the `milestone-review` procedure in a fresh-context subagent.
-- **Implement in an existing module:** select the governing milestone from the index (stop and
-  propose a focused milestone if none covers the work), read `settings.gradle.kts` and the
-  affected `<module>/README.md`, read `package-info.java` for changed packages, open the exact
-  production files and mirrored tests, and follow linked ADRs/conformance only when the change
-  touches their contract. That Snapshot set is current engineering truth for the module.
-- **Review a milestone design:** use the `milestone-design-review` skill for on-demand reviews;
-  the `milestone-planning` skill runs the same orchestration after create/refine/decompose.
-- **Review a milestone plan/spec:** use the `milestone-plan-review` skill for on-demand reviews;
-  the `milestone-planning` skill runs the same procedure in a fresh subagent after design-review
+- **Plan/refine/decompose an implementation plan:** use the `implementation-planning` skill; it
+  verifies each created or refined plan with the `implementation-design-review` orchestration (two
+  fresh-context reviewers) and then the `implementation-plan-review` procedure in a fresh-context
+  subagent. Work is selected from Linear when available, or from an explicit user request.
+- **Implement a plan:** use the `implement-plan` skill; it runs the applicable completion gates,
+  synchronizes Snapshot/Outlook, verifies with the `implementation-review` procedure in a
+  fresh-context subagent, then finalizes and deletes the plan on Pass.
+- **Implement in an existing module:** select the governing live plan under `.agentWork/plans/`
+  when one covers the work (stop and propose a focused plan if none does), read
+  `settings.gradle.kts` and the affected `<module>/README.md`, read `package-info.java` for
+  changed packages, open the exact production files and mirrored tests, and follow linked
+  ADRs/conformance only when the change touches their contract. That Snapshot set is current
+  engineering truth for the module.
+- **Review a plan design:** use the `implementation-design-review` skill for on-demand reviews;
+  the `implementation-planning` skill runs the same orchestration after create/refine/decompose.
+- **Review a plan/spec:** use the `implementation-plan-review` skill for on-demand reviews; the
+  `implementation-planning` skill runs the same procedure in a fresh subagent after design-review
   Pass.
-- **Review an implementation:** use the `milestone-review` skill for on-demand reviews; the
-  `implement-milestone` skill runs the same procedure in a fresh subagent.
-- **Review-isolation handoff:** use `milestone-handoff` only when a write-capable fresh subagent
-  cannot be spawned for design, plan, or implementation review; it is not a primary task route.
+- **Review an implementation:** use the `implementation-review` skill for on-demand reviews; the
+  `implement-plan` skill runs the same procedure in a fresh subagent.
+- **Review-isolation handoff:** use `implementation-handoff` only when a write-capable fresh
+  subagent cannot be spawned for design, plan, or implementation review; it is not a primary task
+  route.
 - **Repository-wide build, CI, or workflow work:** read only the root configuration, workflow,
   or guidance files directly implicated; completion follows the gate tiers below.
 - **Scope expansion:** search inside the affected module or root subsystem first; broaden only
@@ -119,7 +123,7 @@ navigation; it must not silently become competing canonical prose.
 | Workflow and agent routing | this file and `.agents/skills/` |
 | Stable product direction and principles | `docs/vision.md` |
 | Tentative, revisable future direction | `docs/outlook/` |
-| Live execution contract (during this migration) | `.agentWork/milestones/` |
+| Temporary live execution contract | `.agentWork/plans/` (unfinished plans only; no index or archive) |
 | Work coordination, backlog, prioritization, status, dependencies, compact history | Linear |
 | Forensic change history | Git |
 
@@ -137,8 +141,11 @@ the other, and they must remain coherent.
 - A Linear issue is not an implementation plan. Linear is never required to understand current
   engineering truth or to implement or review an explicitly selected, already-materialized
   repository implementation plan.
-- Completed implementation plans are not current architecture. Git is forensic; current truth
-  must not require git archaeology.
+- Completed implementation plans are deleted after review Pass and finalization; they are not
+  current architecture. Git is forensic; current truth must not require git archaeology.
+
+**Central invariant:** Plans describe change. Snapshot describes state. Outlook describes
+possible future direction. Linear coordinates work. Git preserves forensic history.
 
 **Linear boundary:** a live plan may record an optional work-item identifier (for example
 `KAZ-19`) as traceability metadata only. Filenames, paths, architecture semantics, and workflow
@@ -146,36 +153,35 @@ correctness must not structurally depend on a Linear workspace or key. Do not co
 prose into a plan as engineering truth. No Linear connector or API is a correctness gate for
 understanding Snapshot or for implementing or reviewing a materialized repository plan.
 
-## Intended steady state
+When Linear is available, normal backlog discovery and prioritization come from Linear. When
+Linear is unavailable, an explicitly selected or materialized repository plan remains fully
+implementable and reviewable, and an explicit user request may still be planned; report
+synchronization failure and do **not** infer the next task from `.agentWork/plans/`, Outlook,
+source layout, or a reconstructed repository backlog. Do not create a permanent plans index.
 
-Linear holds the portfolio, backlog, and compact work history. Repository implementation plans
-exist only while concrete work needs a reviewed execution contract. On completion, durable
-current engineering facts are projected into their canonical Snapshot owners; still-future
-direction is updated, reduced, or removed in Outlook as needed; and a concise outcome is
-recorded in Linear. Git remains the fallback for detailed historical archaeology. `.agentWork`
-is moving toward execution-only state (session reviews under `.agentWork/.session/` are already
-gitignored).
+## Plan lifecycle
 
-## Migration in progress
+Repository implementation plans live under `.agentWork/plans/` only while concrete work needs a
+reviewed execution contract. There is no `plans/README.md` backlog or historical archive.
 
-Until later migration steps land, keep the current execution machinery:
-
-- `.agentWork/milestones/` remains the live plan store and index; completed milestone files stay.
-- Feature and public-surface work proceeds through milestones; non-feature work (docs-only, CI,
-  chores, or fixes already covered by a Complete milestone) may proceed without a new milestone.
-- Milestone status vocabulary is unchanged (`Not started`, `In progress`, `Complete`). Do not
-  introduce Outlook as a milestone status.
-- A `Not started` milestone may be refined; once implementation starts it is a fixed delivery
-  contract and new scope goes into a follow-up milestone. `implement-milestone` moves `Status`
-  to `In progress` on implementation start and `Complete` only after a fresh-context review
-  passes; the status stays in sync between the milestone file and the index.
+- Status values are only `Not started` and `In progress`. There is no persistent `Complete` state.
+- A `Not started` plan may be refined in place or replaced by smaller plans when a genuine
+  execution/review boundary requires decomposition. After replacement plans are created and
+  successfully design-reviewed and plan-reviewed, delete the superseded original; do not retain
+  it as an umbrella or index. Broader portfolio grouping belongs in Linear; tentative future
+  direction belongs in Outlook.
+- Once implementation starts, the plan is a fixed delivery contract; new scope goes into a
+  follow-up plan. `implement-plan` sets `Status` to `In progress` on start.
+- `Dependencies` list other unfinished plans as relative Markdown links, or `None`. Never Linear
+  IDs, Outlook, or deleted plans.
 - Prefer the **largest coherent execution unit** that can still be reliably implemented and
   independently reviewed in one context. Numeric deliverable and acceptance-criteria bounds in
-  the `milestone-planning` skill are heuristics, not an automatic split. Conceptual
-  decomposition does not by itself create child implementation plans.
+  the `implementation-planning` skill are heuristics, not an automatic split.
 
-Completed milestone files document a delivered contract; they are not the Snapshot. Current
-capability lives in module READMEs, ADRs, conformance, and the root registry.
+After gates pass, Snapshot/Outlook synchronization, and a fresh `implementation-review` Pass,
+`implement-plan` reconciles dependent live plans, updates the linked Linear item (or reports
+unsync), then **deletes** the completed plan. Ephemeral reviews live under `.agentWork/.session/`
+(gitignored).
 
 ## Completion gates
 
