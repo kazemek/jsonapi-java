@@ -42,6 +42,9 @@ public final class EnvelopeReadScenarios {
   private static final String PEOPLE = "people";
   private static final String COMMENTS = "comments";
   private static final String NODES = "nodes";
+  private static final String ERRORS_DOCUMENT = "errors-document";
+  private static final String COMPOUND_DOCUMENT = "compound-document";
+  private static final String OTHER_PERSON_NAME = "Other";
   private static final List<Class<?>> NO_TARGETS = List.of();
   private static final List<Class<?>> ARTICLE_TARGETS = List.of(FlatArticle.class);
   private static final List<Class<?>> ARTICLE_AND_PERSON = List.of(FlatArticle.class, Person.class);
@@ -216,10 +219,10 @@ public final class EnvelopeReadScenarios {
         NO_TARGETS,
         EnvelopeEntryPoint.READ_VALUE,
         codecCase(
-            "errors-document",
+            ERRORS_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.bound(
-                null, null, requireErrors("errors-document"), null, null, null, NO_ADDITIONAL)));
+                null, null, requireErrors(ERRORS_DOCUMENT), null, null, null, NO_ADDITIONAL)));
   }
 
   private static EnvelopeReadScenario jsonapiLinksAndMembers() {
@@ -315,7 +318,7 @@ public final class EnvelopeReadScenarios {
         ARTICLE_AND_PERSON,
         EnvelopeEntryPoint.READ_VALUE,
         codecCase(
-            "compound-document",
+            COMPOUND_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             single(
                 new FlatArticle("1", null, null, ResourceIdentifier.of(PEOPLE, "9"), null),
@@ -399,7 +402,7 @@ public final class EnvelopeReadScenarios {
         ARTICLE_TARGETS,
         EnvelopeEntryPoint.READ_VALUE,
         codecCase(
-            "compound-document",
+            COMPOUND_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE, "/included/0")));
@@ -507,7 +510,7 @@ public final class EnvelopeReadScenarios {
         coreCase(
             EnvelopeBindingDocument.INDEPENDENT_ENVELOPES_UNRELATED,
             independentUnrelatedDocument(),
-            single(primary, IncludedExpectation.of(objects(new Person("99", "Other"))))));
+            single(primary, IncludedExpectation.of(objects(new Person("99", OTHER_PERSON_NAME))))));
   }
 
   private static EnvelopeReadScenario mutationSafeCollections() {
@@ -525,17 +528,17 @@ public final class EnvelopeReadScenarios {
             NO_ADDITIONAL);
     BoundEnvelope errors =
         EnvelopeReadExpectation.bound(
-            null, null, requireErrors("errors-document"), null, null, null, NO_ADDITIONAL);
+            null, null, requireErrors(ERRORS_DOCUMENT), null, null, null, NO_ADDITIONAL);
     return documentBinding(
         "reader-derived envelope collections are mutation-safe",
         ARTICLE_AND_PERSON,
         EnvelopeEntryPoint.READ_VALUE,
         codecCase(
-            "compound-document",
+            COMPOUND_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.mutationSafe(compound, true, false, true)),
         codecCase(
-            "errors-document",
+            ERRORS_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.mutationSafe(errors, false, true, false)));
   }
@@ -617,7 +620,7 @@ public final class EnvelopeReadScenarios {
     Map<String, Object> dan = new LinkedHashMap<>();
     dan.put("name", "Dan");
     Map<String, Object> other = new LinkedHashMap<>();
-    other.put("name", "Other");
+    other.put("name", OTHER_PERSON_NAME);
     return new JsonApiDocument(
         new DocumentData.SingleResource(ResourceObject.of(ARTICLES, "1")),
         null,
@@ -637,7 +640,7 @@ public final class EnvelopeReadScenarios {
   }
 
   private static JsonApiDocument independentUnrelatedDocument() {
-    return independentEnvelopeDocument("99", "Other");
+    return independentEnvelopeDocument("99", OTHER_PERSON_NAME);
   }
 
   private static JsonApiDocument independentEnvelopeDocument(String includedId, String name) {
