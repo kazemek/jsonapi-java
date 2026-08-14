@@ -2,7 +2,7 @@
 
 Assume the proposed design is wrong and try to disprove it. Produce a concrete simpler alternative
 that still meets the Goal, or state explicitly that no simpler alternative survives the constraints,
-with why. Do not implement the planned feature or score size gate, AC phrasing, index format, or
+with why. Do not implement the planned feature or score execution-unit or size-gate rules, AC phrasing, index format, or
 completion-gate lists.
 
 Instruction boundary: do not read [SKILL.md](SKILL.md), [design.md](design.md), or the other

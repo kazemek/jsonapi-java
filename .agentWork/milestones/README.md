@@ -1,6 +1,12 @@
 # Implementation Milestones
 
-Milestones are planned, testable increments. They may change until implementation starts; after completion they are retained as documentation of the delivered contract.
+Milestones are planned, testable execution contracts. They may change until implementation
+starts. A knowledge-model migration is in progress (see `AGENTS.md`): this directory remains the
+live plan store and status vocabulary is unchanged (`Not started`, `In progress`, `Complete`).
+Completed files are retained for now as delivered contracts; they are **not** the Snapshot.
+Current capability lives in module READMEs, accepted ADRs, `docs/conformance.md`, and the root
+module registry. Tentative future direction lives in `docs/outlook/`. Do not add Outlook as a
+milestone status.
 
 ## Planned execution order
 
@@ -164,11 +170,11 @@ capped at two re-reviews. Plan-review edits do not restart design review in the 
 is complete only after both a design-review Pass and a plan-review Pass for each created or refined
 milestone.
 
-An implementable milestone must fit one focused coding-agent task and reviewable commit. It
-normally contains one principal capability in one primary module or layer, at most five
-deliverables, and at most eight acceptance criteria. Independent capabilities, modules,
-architectural decisions, or verification surfaces are separate milestones with explicit
-dependencies.
+An implementable milestone should be the largest coherent unit that can still be implemented and
+independently reviewed in one context. Numeric deliverable and acceptance-criteria bounds in the
+`milestone-planning` skill are heuristics, not an automatic split. Conceptual decomposition does
+not by itself create child implementation plans; split only for a genuine execution/review
+boundary (see the `milestone-planning` skill).
 
 A `Not started` milestone may be refined or decomposed. Once implementation starts, the milestone
 is a fixed delivery contract; changed or additional scope belongs in a follow-up milestone.

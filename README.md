@@ -35,8 +35,8 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 | [`jsonapi-java-test-fixtures/`](jsonapi-java-test-fixtures/README.md) | Internal shared scenario catalogs and fixture builders, including the shared domain-write, domain-read, compound-write, and sparse-fieldset catalogs (not a published module) |
 | `fixtures/jsonapi-1.1/`        | Version-neutral canonical JSON:API document fixtures for codec parity                            |
 | `build-logic/`                 | Shared Gradle convention plugins                                                                 |
-| `docs/`                        | Vision statement and architecture decision records                                               |
-| `.agentWork/milestones/`       | Concrete, testable implementation increments                                                     |
+| `docs/`                        | Vision, Outlook, conformance, and architecture decision records                                  |
+| `.agentWork/milestones/`       | Live execution plans (knowledge-model migration in progress)                                     |
 
 ## Module registry
 
@@ -61,11 +61,12 @@ not duplicate those module-specific contracts.
 - [Annotations module](jsonapi-java-annotations/README.md)
 - [Jackson 3 module](jsonapi-java-jackson3/README.md)
 - [Jackson common contracts module](jsonapi-java-jackson-common/README.md)
-- [Vision & roadmap](docs/vision.md)
-- [Conformance checklist](docs/conformance.md)
+- [Vision](docs/vision.md) — stable product direction and principles
+- [Outlook](docs/outlook/README.md) — tentative, revisable future direction
+- [Conformance checklist](docs/conformance.md) — current JSON:API 1.1 feature status
 - [Architecture decision records](docs/adr/README.md)
-- [Implementation milestones](.agentWork/milestones/README.md)
-- [Agent workflow](AGENTS.md)
+- [Implementation milestones](.agentWork/milestones/README.md) — live execution plans (migration in progress)
+- [Agent workflow](AGENTS.md) — knowledge model, discovery, and completion gates
 
 ## License
 

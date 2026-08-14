@@ -22,7 +22,10 @@ Determine whether the request is:
 
 - **Create:** no existing milestone covers the requested outcome.
 - **Refine:** one not-started milestone exists but needs clearer evidence, boundaries, tests, or acceptance criteria.
-- **Decompose:** the requested or existing scope exceeds the size gate.
+- **Decompose:** the requested or existing scope cannot reliably fit one implementation and
+  review context, or another genuine execution/review boundary applies (see Choose an execution
+  unit). Do not decompose merely because a conceptual map has several parts or because numeric
+  heuristics are exceeded.
 
 Resolve the target phase and milestone unambiguously. Ask the user only when naming, ordering, or scope has materially different valid choices that repository evidence cannot resolve.
 
@@ -30,16 +33,26 @@ Resolve the target phase and milestone unambiguously. Ask the user only when nam
 
 Read these repository sources in order:
 
-1. `AGENTS.md`, `docs/vision.md`, and `.agentWork/milestones/README.md`.
-2. The target milestone when refining or decomposing. Read dependency or adjacent milestones only
+1. `AGENTS.md` (knowledge model and owner/reference rules), `docs/vision.md` (stable
+   product direction), and `.agentWork/milestones/README.md`.
+2. `docs/outlook/` only when the requested work is unbuilt or revisable future direction.
+   Outlook is planning input: it never overrides Snapshot, Vision, or accepted ADRs, and it
+   never satisfies dependencies.
+3. The target milestone when refining or decomposing. Read dependency or adjacent milestones only
    when their contracts can constrain ordering, compatibility, or scope; use index metadata to
    avoid opening unrelated milestones.
-3. `settings.gradle.kts` and each affected module's `README.md`.
-4. `package-info.java` for packages likely to change.
-5. Only ADRs and conformance sources linked by the vision, module README, target milestone, or directly implicated code.
-6. Narrow production and test files needed to validate feasibility and boundaries.
+4. `settings.gradle.kts` and each affected module's `README.md`.
+5. `package-info.java` for packages likely to change.
+6. Only ADRs and conformance sources linked by the vision, module README, target milestone, or directly implicated code.
+7. Narrow production and test files needed to validate feasibility and boundaries.
 
 Do not scan the whole repository first. Search for overlapping milestones, existing APIs, naming conventions, diagnostics, fixtures, and test patterns before proposing new concepts.
+
+Do not treat Linear as engineering truth. An optional work-item identifier on a plan is
+traceability metadata only. Do not copy Linear ticket prose into Research and constraints.
+Do not put work-item identifiers in filenames or paths. Linear is never required to understand
+current engineering truth or to implement or review an explicitly selected, already-materialized
+repository plan.
 
 ## Research the contract
 
@@ -51,7 +64,7 @@ Research enough to replace assumptions with implementable constraints:
 - Distinguish confirmed requirements from proposed policy.
 - Never copy large source passages into a milestone; link to the source and state its implementation consequence.
 
-If research exposes a vision conflict, flag it before writing the implementation contract. If the divergence is intentional, include the required vision update in scope or make it a prerequisite. Identify consequential, hard-to-reverse decisions that require a new or updated ADR; do not silently settle them in milestone prose.
+If research exposes a vision conflict, flag it before writing the implementation contract. If the divergence is intentional, include the required vision update in scope or make it a prerequisite. Identify consequential, hard-to-reverse decisions that require a new or updated ADR; do not silently settle them in milestone prose. Do not treat Outlook as resolving a vision, ADR, or Snapshot conflict.
 
 ## Respect milestone lifecycle
 
@@ -62,36 +75,40 @@ If research exposes a vision conflict, flag it before writing the implementation
 
 Checked acceptance criteria are delivery claims, not planning evidence. Do not mark criteria complete while planning.
 
-## Enforce the size gate
+## Choose an execution unit
 
-Every implementable milestone must satisfy all of these:
+Prefer the **largest coherent execution unit that can still be reliably implemented and
+independently reviewed in one context**.
 
-- One coherent outcome expressible in one sentence.
-- One principal capability and normally one primary module or layer.
-- Independent value and verification at its completion.
-- A narrow discovery set that does not require unrelated package or module context.
-- At most five deliverables and eight acceptance criteria, including repository completion gates.
-- Feasible for one focused coding-agent task and one reviewable commit.
+Conceptual decomposition may contain many steps or capability areas without creating multiple
+execution plans. Capability maps, adapter layers, or named sub-parts (for example Spring
+transport vs DTO vs PATCH vs WebFlux, or a Jackson 2 parity track) may be recorded in Outlook or
+Linear as direction or backlog. They are not by themselves a reason to emit N milestone files.
 
-Cross-module work is allowed only when the integration itself is the single outcome. Markdown length is not a size measure.
+An implementable execution plan should still be coherent: one outcome that can be implemented
+and reviewed in one context, normally one principal capability, with independent value at
+completion. Numeric bounds of at most five deliverables and eight acceptance criteria (including
+completion gates) are **heuristics** for that one-context check, not an automatic decomposition
+rule. Markdown length is not a size measure. Cross-module work is allowed when the integration
+itself is one coherent change.
 
-Split the work when any of these are independently deliverable:
+Create separate execution plans only when there is a genuine execution/review boundary:
 
-- foundations, public API, runtime behavior, adapters, migration, or hardening;
-- changes to separate modules that do not need to land atomically;
-- multiple architectural decisions with distinct consequences;
-- unrelated test or fixture suites;
-- acceptance groups that could pass and be useful while another group remains unimplemented.
+- the work cannot reliably fit one implementation/review context;
+- independently landable capabilities do not need to be atomic;
+- materially different prerequisites block parts independently;
+- distinct hard-to-reverse architectural decisions require separate review;
+- separate modules or workstreams genuinely should not land as one coherent change.
 
-When uncertain, prefer the smaller independently useful milestone. For decompose steps, the full
+When uncertain, keep one plan unless a boundary above is clear. For decompose steps, the full
 file template, and nullness / `module-docs` hooks, see [reference.md](reference.md).
 
 ## Write the milestone files
 
 Create or update files under `.agentWork/milestones/`. Required sections: Goal, Research and
 constraints, Deliverables, Non-goals, Implementation boundaries, Test strategy, Acceptance
-criteria (plus Module/Scope, Dependencies, Status metadata). Use the template in
-[reference.md](reference.md).
+criteria (plus Module/Scope, Dependencies, Status metadata, and optional Work item). Use the
+template in [reference.md](reference.md).
 
 ## Synchronize and verify
 
@@ -101,9 +118,9 @@ After writing all milestone files:
    must retain the canonical `milestone — module/scope — status` format.
 2. Verify every link, phase identifier, dependency, scope/module, status, and command against the
    milestone files.
-3. Reapply the size gate to each emitted milestone.
+3. Reapply the execution-unit rule to each emitted milestone.
 4. Confirm decomposed milestones do not overlap or omit requirements from the source request.
-5. Confirm milestone prose links to rather than duplicates vision, ADR, conformance, and module documentation.
+5. Confirm milestone prose links to rather than duplicates vision, ADR, conformance, Outlook, and module documentation.
 
 Then proceed to design review, then plan review. Do not treat planning as finished until every
 created or refined milestone in this run has both a design-review Pass and a plan-review Pass (or

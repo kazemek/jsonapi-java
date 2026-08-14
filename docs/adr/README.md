@@ -1,8 +1,11 @@
 # Architecture Decision Records
 
-ADRs record consequential, hard-to-reverse “why” decisions. Vision and roadmap live in
-[`docs/vision.md`](../vision.md); concrete delivery plans live under
-[`.agentWork/milestones/`](../../.agentWork/milestones/README.md).
+ADRs record consequential, hard-to-reverse “why” decisions. Stable product direction lives in
+[`docs/vision.md`](../vision.md); tentative future direction lives in
+[`docs/outlook/`](../outlook/README.md); current capability lives in module READMEs and
+[`docs/conformance.md`](../conformance.md). Live execution plans remain under
+[`.agentWork/milestones/`](../../.agentWork/milestones/README.md) until later migration steps.
+Owner and conflict rules are in [`AGENTS.md`](../../AGENTS.md).
 
 1. [ADR-001: Document Codec as the Product Boundary](001-product-boundary.md)
 2. [ADR-002: Preserve JSON:API Wire States](002-document-representation.md)

@@ -7,7 +7,7 @@ disable-model-invocation: true
 # Milestone Design Review
 
 Determine whether the proposed technical design is sound. Do not implement the planned feature,
-score size gate, AC phrasing, index format, or completion-gate lists, or modify milestones, index,
+score execution-unit or size-gate rules, AC phrasing, index format, or completion-gate lists, or modify milestones, index,
 vision, ADRs, or sources. `milestone-planning` owns fixes in its design-review loop.
 
 This skill owns orchestration (spawn, worst-wins, pointer stub). Reviewer procedures live in

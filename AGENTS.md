@@ -39,7 +39,7 @@ path and follow it (skills use explicit invocation only).
   propose a focused milestone if none covers the work), read `settings.gradle.kts` and the
   affected `<module>/README.md`, read `package-info.java` for changed packages, open the exact
   production files and mirrored tests, and follow linked ADRs/conformance only when the change
-  touches their contract.
+  touches their contract. That Snapshot set is current engineering truth for the module.
 - **Review a milestone design:** use the `milestone-design-review` skill for on-demand reviews;
   the `milestone-planning` skill runs the same orchestration after create/refine/decompose.
 - **Review a milestone plan/spec:** use the `milestone-plan-review` skill for on-demand reviews;
@@ -54,8 +54,18 @@ path and follow it (skills use explicit invocation only).
 - **Scope expansion:** search inside the affected module or root subsystem first; broaden only
   for direct callers, dependencies, public API impact, or repository-wide configuration.
 - **New submodule or changed public surface:** use the `module-docs` skill.
-- Read the full vision only when adding a module, crossing module or public product boundaries,
-  or changing project direction; otherwise module documentation suffices.
+- **Snapshot first:** current capability, inventory, and architecture live in existing surfaces
+  (module README, `package-info.java`, Javadoc, tests, accepted ADRs, `docs/conformance.md`,
+  the root README registry, and `settings.gradle.kts`). Do not reconstruct them from Linear,
+  completed plans, Outlook, or Git history.
+- Read `docs/vision.md` when adding a module, crossing public product boundaries, or changing
+  stable product direction or principles; otherwise module documentation suffices.
+- Read `docs/outlook/` only when the work is about unbuilt or revisable future direction.
+  Outlook is never current truth and never satisfies dependencies.
+- Do not treat Linear as engineering truth. Linear is never required to understand current
+  engineering truth or to implement or review an explicitly selected, already-materialized
+  repository implementation plan. Linear may still be used for backlog discovery, prioritization,
+  coordination status, broad work dependencies, and completed-work history.
 
 # Stable project boundaries
 
@@ -89,20 +99,81 @@ for failure diagnosis, and publishes a Unit tests check from JUnit XML.
 
 # Planning
 
-- **Vision:** `docs/vision.md` — architectural strategy and long-term roadmap.
-- **Milestones:** `.agentWork/milestones/` — implementation plans; the README there is the index
-  and dependency order.
-- **ADRs:** `docs/adr/` — the "why" behind consequential, hard-to-reverse choices.
-- **Conformance:** `docs/conformance.md` — feature-by-feature JSON:API 1.1 compliance status.
+## Knowledge model
 
-Feature and public-surface work proceeds through milestones; non-feature work (docs-only, CI,
-chores, or fixes already covered by a Complete milestone) may proceed without a new milestone.
-A `Not started` milestone may be refined; once implementation starts it is a fixed delivery
-contract and new scope goes into a follow-up milestone. `implement-milestone` moves `Status` to
-`In progress` on implementation start and `Complete` only after a fresh-context review passes;
-the status stays in sync between the milestone file and the index. An implementable milestone
-fits one focused coding-agent task and reviewable commit (at most five deliverables and eight
-acceptance criteria); the `milestone-planning` skill owns the detailed rules.
+Every durable engineering fact has **one canonical repository owner**. Ownership is not the same
+as executable evidence: Javadoc owns the public API contract; tests prove behavior. Other
+documentation may link to the owner or summarize only the minimum local context needed for
+navigation; it must not silently become competing canonical prose.
+
+| Kind | Owner |
+|------|--------|
+| Current module capability and usage | `<module>/README.md` |
+| Human-readable module inventory | root `README.md` |
+| Actual build membership | `settings.gradle.kts` |
+| Package-local responsibility and invariant | `package-info.java` |
+| Public API contract and semantics | Javadoc |
+| Behavioral proof | tests |
+| Cross-cutting architecture and rationale | accepted ADR under `docs/adr/` |
+| JSON:API compliance state | `docs/conformance.md` |
+| Workflow and agent routing | this file and `.agents/skills/` |
+| Stable product direction and principles | `docs/vision.md` |
+| Tentative, revisable future direction | `docs/outlook/` |
+| Live execution contract (during this migration) | `.agentWork/milestones/` |
+| Work coordination, backlog, prioritization, status, dependencies, compact history | Linear |
+| Forensic change history | Git |
+
+**Conflict rules:** Snapshot and Vision are separate authoritative concerns; neither derives from
+the other, and they must remain coherent.
+
+- For **what exists now**, current repository evidence (Snapshot) describes current state.
+- Vision constrains **intended** product direction.
+- A Snapshot/Vision conflict is a documentation or design inconsistency to resolve explicitly.
+  Do **not** silently modify current implementation merely to make it match Vision. Planning that
+  materially depends on the conflict must surface and resolve it rather than choosing whichever
+  text appears newer.
+- Outlook never overrides Snapshot, Vision, or accepted ADRs, and **never satisfies
+  dependencies**.
+- A Linear issue is not an implementation plan. Linear is never required to understand current
+  engineering truth or to implement or review an explicitly selected, already-materialized
+  repository implementation plan.
+- Completed implementation plans are not current architecture. Git is forensic; current truth
+  must not require git archaeology.
+
+**Linear boundary:** a live plan may record an optional work-item identifier (for example
+`KAZ-19`) as traceability metadata only. Filenames, paths, architecture semantics, and workflow
+correctness must not structurally depend on a Linear workspace or key. Do not copy Linear ticket
+prose into a plan as engineering truth. No Linear connector or API is a correctness gate for
+understanding Snapshot or for implementing or reviewing a materialized repository plan.
+
+## Intended steady state
+
+Linear holds the portfolio, backlog, and compact work history. Repository implementation plans
+exist only while concrete work needs a reviewed execution contract. On completion, durable facts
+are projected into Snapshot or Outlook and a concise outcome into Linear; Git remains the
+fallback for detailed historical archaeology. `.agentWork` is moving toward execution-only state
+(session reviews under `.agentWork/.session/` are already gitignored).
+
+## Migration in progress
+
+Until later migration steps land, keep the current execution machinery:
+
+- `.agentWork/milestones/` remains the live plan store and index; completed milestone files stay.
+- Feature and public-surface work proceeds through milestones; non-feature work (docs-only, CI,
+  chores, or fixes already covered by a Complete milestone) may proceed without a new milestone.
+- Milestone status vocabulary is unchanged (`Not started`, `In progress`, `Complete`). Do not
+  introduce Outlook as a milestone status.
+- A `Not started` milestone may be refined; once implementation starts it is a fixed delivery
+  contract and new scope goes into a follow-up milestone. `implement-milestone` moves `Status`
+  to `In progress` on implementation start and `Complete` only after a fresh-context review
+  passes; the status stays in sync between the milestone file and the index.
+- Prefer the **largest coherent execution unit** that can still be reliably implemented and
+  independently reviewed in one context. Numeric deliverable and acceptance-criteria bounds in
+  the `milestone-planning` skill are heuristics, not an automatic split. Conceptual
+  decomposition does not by itself create child implementation plans.
+
+Completed milestone files document a delivered contract; they are not the Snapshot. Current
+capability lives in module READMEs, ADRs, conformance, and the root registry.
 
 ## Completion gates
 

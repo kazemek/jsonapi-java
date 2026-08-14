@@ -2,6 +2,11 @@
 
 > Make JSON:API v1.1 documents straightforward to read and write in Java without taking ownership of an application's persistence, endpoints, or business architecture.
 
+This document is stable product direction and principles. It does not describe what currently
+exists; current capability lives in the [root module registry](../README.md) and each module
+README. Unbuilt or revisable direction lives in [Outlook](outlook/README.md). Authority and
+owner/reference rules are in [`AGENTS.md`](../AGENTS.md).
+
 ## Product boundary
 
 `jsonapi-java` is a lightweight, Java 21+ document codec with optional bidirectional
@@ -37,7 +42,7 @@ This boundary is deliberate. The project is not an API engine, ORM bridge, repos
   runtime dependency and must not appear on the published runtime classpath.
 - Domain mapping is opt-in, bidirectional for documented flat DTO shapes, and requires no
   inheritance or framework interfaces.
-- Jackson, query parsing, Spring WebMVC, and future WebFlux support are separate artifacts.
+- Jackson, query parsing, and Spring WebMVC are separate artifacts.
 - A relationship creates linkage; it does not automatically traverse and include an object graph.
 - The library does not execute filters, sorts, or pagination strategies.
 - Framework adapters remain thin and do not introduce application architecture.
@@ -80,23 +85,18 @@ The base model preserves valid extension members and `@` members. It does not im
 
 ## Modules
 
-- `jsonapi-java-core` — dependency-free document model and validation.
-- `jsonapi-java-annotations` — dependency-free, opt-in domain-mapping annotations.
-- `jsonapi-java-jackson3` — Jackson 3 document writer and reader are available, as are flat
-  resource-to-DTO binding and typed domain envelopes (Phase 2.10); PATCH binding remains later
-  Phase 2 work. Jackson-import-free policy types live in `jsonapi-java-jackson-common` (Phase 2.11).
-- `jsonapi-java-jackson-common` — Jackson-major-neutral public contracts for policies, diagnostics,
-  contexts, and domain envelopes shared by both Jackson adapters (Phase 2.11 complete).
-- `jsonapi-java-jackson2` — later Jackson 2 artifact with the same stable conceptual contracts.
-- `jsonapi-java-query` — optional framework-neutral query-parameter parsing.
-- `jsonapi-java-spring-webmvc` — optional Spring Boot WebMVC integration.
-- `jsonapi-java-spring-webflux` — possible later adapter, independently scoped.
+Optional adapters are separate artifacts ([ADR-007](adr/007-module-boundaries.md)). Maven group is
+`io.github.kazemek`; Java packages live under `io.github.kazemek.jsonapi` (see
+[ADR-008](adr/008-public-namespace.md)).
 
-Maven group is `io.github.kazemek`; Java packages live under `io.github.kazemek.jsonapi` (see `docs/adr/008-public-namespace.md`).
+Current inventory and capability live in the [root README](../README.md) and each module README.
+Unbuilt adapter direction lives in [Outlook](outlook/README.md).
 
 ## Compliance contract
 
-Compliance is tracked by feature and layer instead of claimed globally.
+Compliance is tracked by feature and layer instead of claimed globally. Current status is
+[`docs/conformance.md`](conformance.md). When a capability is implemented, that checklist is
+updated with one of: supported, pass-through, delegated, deferred, or out of scope.
 
 ### Guaranteed by the core and codec when implemented
 
@@ -123,45 +123,6 @@ Compliance is tracked by feature and layer instead of claimed globally.
 - Query execution and limits.
 - Extension and profile semantics.
 
-Each milestone updates a conformance checklist with one of: supported, pass-through, delegated, deferred, or out of scope.
-
-## Roadmap
-
-### Phase 0 — Publication identity
-
-- Verified Maven group `io.github.kazemek` and Java base package `io.github.kazemek.jsonapi` before public source types are implemented.
-
-### Phase 1 — Document foundation
-
-- Define a semantically complete, immutable document model.
-- Preserve absent/null/value states and legal link/member forms.
-- Enforce local invariants and validate aggregate document rules.
-
-### Phase 2 — Jackson codec and mapping
-
-1. Encode the document model with official wire fixtures (Phase 2.1 writer complete); decode is
-   available in Phase 2.4.
-2. Map Jackson-visible domain properties to and from flat resource objects.
-3. Add explicitly requested compound inclusion and sparse fieldsets with bounded traversal.
-4. Read JSON into validated document models before optional DTO binding.
-5. Expose typed domain envelopes with independently bound included resources.
-6. Bind JSON:API resource updates to presence-aware commands without applying them.
-7. Stabilize these contracts on Jackson 3, then port them to an isolated Jackson 2 artifact.
-
-### Phase 3 — Optional adapters
-
-1. Parse JSON:API query parameters without executing them.
-2. Integrate the media type, codec, query arguments, error documents, annotated DTOs, typed
-   envelopes, and presence-aware update commands with Spring WebMVC.
-3. Evaluate WebFlux as a separate artifact after WebMVC behavior is stable.
-
-### Phase 4 — Production readiness
-
-- Complete the conformance and malformed-input suites.
-- Define size, depth, traversal, and resource limits.
-- Establish performance baselines and compatibility policy.
-- Decide JPMS support and publish under a verified namespace.
-
 ## Initial non-goals
 
 - Generated controllers or repositories.
@@ -172,10 +133,3 @@ Each milestone updates a conformance checklist with one of: supported, pass-thro
 - Relationship endpoint implementation.
 - Extension-specific processing beyond explicitly supported extensions.
 - A guarantee that an application using the library is globally JSON:API compliant.
-
-## Project conventions
-
-- Java 21 toolchain.
-- Gradle Kotlin DSL and version catalog.
-- Spock specifications under `src/test/groovy`.
-- Apache License 2.0.

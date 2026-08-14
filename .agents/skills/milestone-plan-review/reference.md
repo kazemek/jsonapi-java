@@ -18,7 +18,7 @@ Use this template when writing the review artifact. Path and naming rules live i
 ### <Severity>: <finding title>
 
 - **Location:** `<path>:<line or range>`
-- **Planning requirement:** <size gate, section, acceptance criterion, or index rule>
+- **Planning requirement:** <execution-unit rule, section, acceptance criterion, or index rule>
 - **Impact:** <why this matters>
 - **Recommendation:** <specific correction>
 

@@ -2,7 +2,7 @@
 
 Review whether the milestone's technical design is sound: placement, public API, and JSON:API wire
 semantics as this repository specifies them. Do not implement the planned feature, invent a simpler
-alternative, or score size gate, AC phrasing, index format, or completion-gate lists.
+alternative, or score execution-unit or size-gate rules, AC phrasing, index format, or completion-gate lists.
 
 Instruction boundary: do not read [SKILL.md](SKILL.md), [adversarial.md](adversarial.md), or the
 other reviewer's artifact.
