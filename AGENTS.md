@@ -112,8 +112,11 @@ Classify the final diff; tiers combine when multiple scopes are touched.
 
 - For covered `.java`, `.groovy`, `.kt`, or `.gradle.kts` changes, run `./gradlew spotlessApply`
   then `./gradlew spotlessCheck` before the build.
-- Source changes are incomplete without the Sonar skill's Quality Gate wait and Issues API result of
-  zero unresolved new-code issues. If `SONAR_TOKEN` is unavailable, report the blocker; work remains
-  incomplete until CI passes and an authenticated Issues API check separately returns zero.
-- CI runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on `main` pushes and PRs.
-  Failed-run details are in the `gradle-reports` artifact and the Unit tests check.
+- Source changes are incomplete without the Sonar skill's Quality Gate wait and Issues API script
+  exiting 0 (zero unresolved new-code issues). The script fails closed by default; do not treat a
+  green Quality Gate or a printed non-zero `total` as success. If `SONAR_TOKEN` is unavailable,
+  report the blocker; work remains incomplete until CI passes including that Issues API check.
+- CI runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on `main` pushes and PRs,
+  then `.agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh --list` so neither
+  agents nor CI can complete on Quality Gate alone. Failed-run details are in the
+  `gradle-reports` artifact and the Unit tests check.

@@ -52,7 +52,7 @@ with `SONAR_TOKEN` set. `sonar.qualitygate.wait=true` is configured in the root 
 3. Separately confirm zero new-code issues via the Issues API script (required):
 
 ```bash
-.agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh
+.agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh --list
 ```
 
 Scope the query with environment variables (do not put the token on argv):
@@ -62,17 +62,19 @@ Scope the query with environment variables (do not put the token on argv):
      project's default-branch new-code period.
 
 The script owns API authentication, pagination/query mechanics, and fail-closed validation for HTTP
-or network errors, malformed JSON, missing or non-numeric `total`, and missing
-`SONAR_TOKEN`/`jq`/`curl`. It reads the token without placing it on the argument list and prints a
-validated numeric `total` on success.
+or network errors, malformed JSON, missing or non-numeric `total`, missing `SONAR_TOKEN`/`jq`/`curl`,
+and a non-zero unresolved new-code total. It reads the token without placing it on the argument list
+and prints a validated numeric `total` on success. `--list` always prints issue keys/messages;
+without `--list`, issues are still printed when `total != 0`. Use `--allow-nonzero` only when
+intentionally inspecting a non-zero total (never for completion gating).
 
-Interpret the result:
+Interpret the result by **exit code** (do not treat a printed `total` or a green Quality Gate as
+success on their own):
    - **Non-zero exit:** Do **not** declare completion and do **not** treat the result as zero
-     issues. Report the failure (API/credential/network error) and retry or escalate.
-   - **Exit 0:** `total` is a valid number. If `total == 0`, the task may be declared complete
-     for Sonar. If `total > 0`, re-run with `--list` to print issue keys/messages, fix every one
-     (or get an explicit user waiver), re-run steps 1–3, and do not claim completion while any
-     remain.
+     issues. Report the failure (API/credential/network error, or listed new-code issues), fix
+     every issue (or get an explicit user waiver), re-run steps 1–3, and do not claim completion
+     while any remain.
+   - **Exit 0:** `total` is `0`. The task may be declared complete for Sonar.
 
 Project key / organization: `kazemek_jsonapi-java` / `kazemek` (see root `build.gradle.kts`).
 
@@ -80,8 +82,10 @@ Project key / organization: `kazemek_jsonapi-java` / `kazemek` (see root `build.
 
 - Do not attach `sonar` to `build`/`check`. Developers who only build and test locally do not need
   `SONAR_TOKEN`.
-- Current CI runs the scanner and waits for the Quality Gate, but does not run the Issues API
-  script. CI success alone therefore does not satisfy the separate authenticated zero-issue check.
+- CI runs the scanner with Quality Gate wait, then the Issues API script with `--list` (PR
+  analysis sets `PULL_REQUEST`). The script fails closed on any unresolved new-code issue by
+  default, so agents and CI share the same exit-code gate. Do not treat Quality Gate success or a
+  printed non-zero `total` as completion.
 - Prefer fixing smells over suppressions. Use suppressions only when the user explicitly agrees.
 - Missing blame / SCM warnings can affect new-code detection; still fix any issues the API returns
   for `inNewCodePeriod=true`.
