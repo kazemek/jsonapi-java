@@ -28,8 +28,9 @@ plans; that is `implement-plan` finalization after Pass.
 4. State the reviewed change-set boundary in the artifact. Never imply that unexamined code was
    reviewed.
 
-Linear is never required to review a materialized plan. Linear history is coordination, not a
-substitute for missing repository knowledge. Do not search deleted plans for current truth.
+External work-tracker access is never required to review a materialized plan. Tracker history is
+coordination, not a substitute for missing repository knowledge. Do not search deleted plans for
+current truth.
 
 ## Review
 

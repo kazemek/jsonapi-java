@@ -21,8 +21,8 @@ Use the plan and review-artifact paths from the task inputs. Read:
 
 Inspect current source and tests only to check an actual observable or architectural constraint,
 not an incidental implementation pattern. State the reviewed contract boundary in the artifact.
-Never imply that unexamined files were reviewed. Do not treat Linear, deleted plans, or Git
-archaeology as current engineering truth.
+Never imply that unexamined files were reviewed. Do not treat external work-tracker metadata,
+deleted plans, or Git archaeology as current engineering truth.
 
 ## Perform the review
 

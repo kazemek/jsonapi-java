@@ -26,7 +26,7 @@ Use the plan and review-artifact paths from the task inputs. Read:
 
 Inspect code only to check design claims — not to score an implementation. State the reviewed
 contract boundary in the artifact. Never imply that unexamined files were reviewed. Do not treat
-Linear, deleted plans, or Git archaeology as current engineering truth.
+external work-tracker metadata, deleted plans, or Git archaeology as current engineering truth.
 
 ## Workflow / docs N/A
 

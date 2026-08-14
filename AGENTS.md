@@ -83,20 +83,24 @@ Every durable fact has one canonical owner; other documents should link or provi
 | Stable product direction | `docs/vision.md` |
 | Tentative future direction | `docs/outlook/` |
 | Temporary execution contract | unfinished plans under `.agentWork/plans/` |
-| Backlog, prioritization, and coordination | Linear |
+| Backlog, prioritization, and external work coordination | external work tracker (maintainer-local policy) |
 | Forensic history | Git |
 
 - Snapshot (current repository evidence) and Vision are separate authorities. Surface conflicts;
   never change implementation merely to make it match Vision. Outlook overrides neither authority
   nor accepted ADRs.
-- Linear is coordination and optional traceability, not engineering truth or a correctness gate.
-  Never use Linear IDs or Outlook as plan dependencies. When Linear is unavailable, never infer the
-  next task from live plans, Outlook, source layout, or a reconstructed backlog.
+- External work-tracker metadata is optional coordination and traceability, not engineering truth
+  or a correctness gate. Never use external work-item IDs or Outlook as plan dependencies. When the
+  tracker is unavailable, never infer the next task from live plans, Outlook, source layout, or a
+  reconstructed backlog; report coordination as unsynchronized.
 - Plans exist only while unfinished; do not create a plan index or archive. Status is only
   `Not started` or `In progress`. Dependencies are `None` or relative Markdown links to unfinished
   plan files. Once work starts, freeze its scope; after gates, synchronization, and review Pass,
   reconcile references and delete the completed plan. Session reviews belong in the gitignored
   `.agentWork/.session/`.
+- A live plan means work-in-progress. A PR for that work may be open while its plan is live, but it
+  is ready for final review/merge only after the completed plan is deleted and that deletion is
+  pushed. Never leave a post-approval cleanup commit.
 
 # Completion Gates
 

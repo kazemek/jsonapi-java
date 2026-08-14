@@ -14,7 +14,8 @@ Never write `Complete`; after review Pass and finalization, delete the plan.
 
 1. Resolve exactly one user-supplied path or name under `.agentWork/plans/`; ask when several are
    plausible. Never infer the next task from plans, Outlook, source layout, or a reconstructed
-   backlog. Linear is optional coordination and never required for a materialized plan.
+   backlog. External work-tracker coordination is optional and never required for a materialized
+   plan.
 2. Accept `Not started`. For `In progress`, distinguish the requested outcome:
    - Retry or continue the exact frozen contract: keep the plan and `In progress` status, do not
      rewrite it, and allow a fresh implementation session.
@@ -24,16 +25,19 @@ Never write `Complete`; after review Pass and finalization, delete the plan.
 3. Validate `Dependencies` as `None` or hard execution-order prerequisites represented by relative
    Markdown links. If any linked plan still exists, stop Blocked before changing status and do not
    offer an override. If a value is malformed or a linked target is absent, stop because the
-   contract is stale/invalid and require `implementation-planning` refinement. Linear and Outlook
-   never satisfy a dependency; parallel execution requires refining a `Not started` plan to remove
-   the edge, not reinterpreting it here.
+   contract is stale/invalid and require `implementation-planning` refinement. External
+   work-tracker metadata and Outlook never satisfy a dependency; parallel execution requires
+   refining a `Not started` plan to remove the edge, not reinterpreting it here.
 
 ## Implement and verify
 
 Read the plan, then follow the task-scoped discovery and authority rules in `AGENTS.md`; do not scan
-the repository or deleted plans. Set status to `In progress`, unless already set, then implement
-only its deliverables within its non-goals and boundaries. Check acceptance criteria only when
-current evidence supports each claim. Use `module-docs` when its trigger applies.
+the repository or deleted plans. Before making any implementation change, set a `Not started` plan to
+`In progress`; never implement first and repair the status afterward. When the plan links an external
+work item, synchronize its implementation state at start if the tracker is configured/available;
+otherwise report coordination as unsynchronized. Then implement only the plan's deliverables within
+its non-goals and boundaries. Check acceptance criteria only when current evidence supports each
+claim. Use `module-docs` when its trigger applies.
 
 Resolve `<base-ref>` from an explicitly supplied PR/change-set base when available. Otherwise use
 `base_ref="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD)"`; if unavailable, stop and
@@ -56,8 +60,10 @@ durable fact may exist only in the temporary plan.
 
 ## Review with fresh context
 
-The review is mandatory. Keep the plan through review. Determine the boundary mechanically from
-branch and uncommitted Git metadata without summarizing it. Derive `<plan basename>` from the
+The review is mandatory. Keep the plan through review. When the plan links an external work item
+and the configured tracker models a review transition, synchronize it at review start; otherwise
+report coordination as unsynchronized. Determine the boundary mechanically from branch and
+uncommitted Git metadata without summarizing it. Derive `<plan basename>` from the
 filename without `.md`. Spawn a new general-purpose, write-capable subagent in a fresh session and
 send this prompt verbatim, replacing only `<plan path>` and `<plan basename>`:
 
@@ -109,12 +115,15 @@ exact order:
    pipeline while retaining this plan. Never modify an `In progress` dependent; stop finalization
    and retain this plan. Also stop if semantic refinement or review fails.
 4. Mechanically verify zero live references by filename, title, or relative link.
-5. Update the linked Linear item with concise outcome/coordination status, or explicitly report
-   unsynchronized. Linear unavailability is not an engineering gate.
+5. Update the linked external work item with concise outcome/coordination status, or explicitly
+   report unsynchronized. Tracker unavailability is not an engineering gate.
 6. Delete the completed plan with `git rm`; leave no `Complete` stub or plans index.
+7. Push the plan deletion before presenting the PR as ready for final review/approval or merge. A PR
+   may be open while the plan is live (work-in-progress), but a final merge candidate must not carry
+   the completed plan, and readiness must not depend on a post-approval cleanup commit.
 
 ## Report
 
 Report changed paths; verification commands and outcomes; review artifact and verdict;
-Snapshot/Outlook sync; mechanical, semantic, or blocked dependent reconciliation; Linear update or
-explicit unsync; plan deletion status; and residual risks.
+Snapshot/Outlook sync; mechanical, semantic, or blocked dependent reconciliation; external
+work-item update or explicit unsync; plan deletion status; and residual risks.
