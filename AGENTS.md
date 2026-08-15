@@ -6,6 +6,12 @@
   ArchUnit tests, produces JaCoCo reports, and runs `spotlessCheck` through `check`.
 - Run one spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
   `./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
+  Ordinary incremental and scoped test execution is the default once task inputs are correct;
+  do not use `--rerun-tasks` as routine workflow.
+- `clean` alone does not prove tests re-executed rather than being restored from the build
+  cache. `--no-build-cache` is an exceptional troubleshooting or final-verification path: it
+  disables build-cache reuse only and does not disable ordinary up-to-date checking. For a
+  deliberately cache-free full verification, use `./gradlew clean build --no-build-cache`.
 - Dependency verification is checksum-enforced by `gradle/verification-metadata.xml`. After a
   dependency change or verification failure, run
   `./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`; never disable
