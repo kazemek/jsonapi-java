@@ -37,6 +37,9 @@ where `<artifact-stem>` is the fixed filename without `.md` (for example
 per-epoch invocation counter (including `Blocked` retries). Do not key archives only on budget
 **Attempts used**; Blocked/resume must not overwrite prior archives.
 
+Artifact paths are fixed; do not accept free-form overrides. Create `.agentWork/.session/` when
+needed. Current fixed paths always hold the latest invocation; archives preserve history.
+
 ## Reviewer prompts
 
 Replace only `<plan path>` and `<basename>`. Send or embed every other character verbatim. Do not
