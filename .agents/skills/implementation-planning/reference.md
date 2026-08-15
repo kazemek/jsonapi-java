@@ -84,48 +84,80 @@ from `.agents/skills/implementation-design-review/reference.md`:
 
 - **Kind:** design | plan
 - **Plan identity:** `<basename>`
-- **Plan path (latest):** `<path>`
+- **Plan path:** `<path>`
 - **Current epoch:** <n>
 - **Budget per epoch:** 1 initial review + at most 1 automatic re-review
 - **Attempts used in current epoch:** <m>
 - **Epoch status:** active | exhausted | passed
 - **Authorizations:**
   - Epoch 1: automatic on first planning review of this identity
-  - Epoch <n>: user <ISO-8601> — "<verbatim authorizing instruction>"
+  - Epoch <n>: <refine | exhausted-continuation | architectural-escalation> <ISO-8601> — "<verbatim instruction or reason>"
 ```
 
-Identity is the plan basename. Renaming the file updates **Plan path (latest)** only; it does not
-create a new ledger or reset counters. Editing the plan body does not reset counters. Starting a
-new chat/session does not reset counters while the ledger exists under `.agentWork/.session/`.
+Identity is the plan basename and is fixed once any review ledger exists for that plan. Renaming the
+plan file is allowed only before the first design or plan ledger is created. After a ledger exists,
+do not rename the plan; basename-keyed ledgers, artifacts, carry-forward, and archives would
+otherwise detach from the contract and reopen a reset-by-rename loophole. Editing the plan body does
+not reset counters. Starting a new chat/session does not reset counters while the ledger exists under
+`.agentWork/.session/`.
 
 ### Budget and attempts
 
 Each epoch allows one initial review attempt and, after `Changes required`, at most one automatic
 fresh re-review after the planner fixes all known in-scope findings. Two failed attempts with
-remaining gate findings exhaust the epoch. The orchestrator must not autonomously open a new epoch.
+remaining gate findings exhaust the epoch. The orchestrator must not autonomously open a new epoch
+except for the single architectural-escalation transition below.
 
 Before each new attempt, if fixed-path artifacts already exist, copy them into
 `.agentWork/.session/archive/` using the archive naming in the design-review reference, then replace
 the fixed paths with the new attempt. Keep the ledger and archives when an epoch exhausts.
 
-### User-authorized continuation
+### Design Required carry-forward
 
-After exhaustion, stop and return control to the user. A later **explicit** user instruction may
-authorize another bounded epoch for the same `Not started` plan and review kind. Record the
-verbatim instruction under **Authorizations**, increment **Current epoch**, reset attempts to 0,
-set status `active`, and preserve prior archives and ledger history.
+After every design-review attempt, planning unions every `Required` finding from the current Design
+and Adversarial artifacts into:
 
-Do not treat bare `continue`, generic “try again,” or plan edits as authorization. Do not offer
-epoch continuation for `In progress` plans or to rewrite a frozen implementation contract.
+```text
+.agentWork/.session/design-required-carry-forward-<basename>.md
+```
+
+Use a durable title plus citation/recommendation so later attempts can recognize the same finding.
+Never remove an entry because a later fresh design Pass omitted it. Remove an entry only when plan
+review has verified the plan addresses it, or when a later design attempt reports the same concern
+as `Blocking` (then it is handled under Blocking, not carry-forward). A fresh reviewer failing to
+rediscover an existing `Required` finding must not make that finding disappear.
+
+### Opening a new epoch
+
+Open a new bounded epoch (increment **Current epoch**, reset attempts to 0, set status `active`,
+preserve prior archives and ledger history) only for:
+
+1. **First review** of this identity — Epoch 1, automatic.
+2. **Exhausted continuation** — after status `exhausted`, a later **explicit** user instruction
+   authorizes another epoch for the same `Not started` plan and review kind. Record the verbatim
+   instruction. Do not treat bare `continue`, generic “try again,” or plan edits as authorization.
+3. **User-requested Refine** — an explicit later `implementation-planning` Refine of a `Not started`
+   plan whose prior design and/or plan epoch status is `passed`. The Refine invocation itself
+   authorizes new epochs for the review kinds that must run again. Record the refine instruction.
+   Planner edits inside an already-active or exhausted loop do not open a new epoch.
+4. **Architectural escalation** — when plan review reports a `Blocking` architectural finding and
+   the design ledger status is `passed`, planning opens **one** new design epoch automatically,
+   recorded as `architectural-escalation`, and re-runs design review before further plan review.
+   If the design ledger is already `exhausted`, stop and require exhausted-continuation authorization
+   instead. Do not auto-open further design epochs for the same escalation chain without a new
+   Refine or exhausted-continuation authorization after that escalated epoch ends.
+
+Do not offer epoch continuation for `In progress` plans or to rewrite a frozen implementation
+contract.
 
 ### Anti-reset rules
 
 Forbidden ways to obtain a fresh budget:
 
-- editing the plan;
-- renaming the plan;
+- editing the plan inside an active or exhausted epoch;
+- renaming the plan after any review ledger exists;
 - restarting the session;
-- deleting or ignoring the ledger;
+- deleting or ignoring the ledger or carry-forward;
 - artificial split, replacement, or decomposition solely to mint new counters.
 
 Genuine decomposition remains valid when [Choose an execution unit](SKILL.md#choose-an-execution-unit)
@@ -134,19 +166,34 @@ refuse fake splits that exist only to reset review budgets.
 
 ## Dependency-aware review waves
 
-When more than one plan is in scope, derive the DAG from each plan's `Dependencies` links.
+When more than one plan is in the current create/refine/decompose operation, derive the DAG from
+each in-scope plan's `Dependencies` links.
 
-A plan is **accepted** only when it has both a design-review official `Pass` and a plan-review
-`Pass` in the current planning effort. A plan is **reviewable** only when every linked dependency
-is accepted, or its dependencies are `None`.
+A plan **in the current planning operation** is **accepted** only when it has both a design-review
+official `Pass` and a plan-review `Pass` during this operation. Wave gating uses that current-effort
+acceptance only for plans that this operation created, refined, or decomposed.
+
+For a linked dependency:
+
+- **In this operation and not yet accepted** → downstream is not reviewable yet.
+- **In this operation and being materially revised** → downstream remains blocked until that change
+  is accepted again.
+- **Outside this operation, live, and not being materially revised** → treat as a stable external
+  prerequisite for wave ordering; do not re-review it solely to unlock a dependent.
+- **Outside this operation but known to be actively/materially changing** → downstream remains
+  blocked until that change stabilizes (accepted or otherwise settled outside this cheap re-review
+  path).
+
+A plan in this operation is **reviewable** when every linked dependency satisfies one of the stable
+cases above (or dependencies are `None`).
 
 Review only the ready wave. Independent plans in the same wave may run concurrently. Do not run a
-dependent plan's full design or plan review while a prerequisite is still unaccepted or is being
-materially revised.
+dependent plan's full design or plan review while an in-scope or materially changing prerequisite is
+still unstable.
 
-If an upstream plan changes materially before a downstream plan is accepted:
+If an upstream plan in this operation changes materially before a downstream plan is accepted:
 
-1. Retain useful downstream findings already collected (archives / prior artifacts).
+1. Retain useful downstream findings already collected (archives / prior artifacts / carry-forward).
 2. Do not repeatedly re-review the downstream plan until prerequisites are accepted again.
 3. When the downstream plan becomes eligible, apply retained findings and run a fresh review only
    as the epoch budget allows.
@@ -213,20 +260,30 @@ These cases are normative expectations for the planning/review rules above.
 
 7. Initial design finds blockers; one fresh re-review Passes → continue to plan review.
 8. Initial and automatic re-review both leave blockers → exhaust epoch; return control to user.
-9. Explicit user authorization of another epoch → preserve history; new bounded budget.
-10. Edit or rename without authorization → counters unchanged.
+9. Explicit user authorization of another epoch after exhaustion → preserve history; new bounded
+   budget.
+10. Edit inside an active/exhausted epoch without authorization → counters unchanged. Rename after
+    any review ledger exists → refuse (identity is frozen).
 11. New chat/session → counters unchanged while the ledger remains.
 12. Fake split solely for new counters → refuse.
 13. Genuine new execution-unit boundary after exhaustion → genuine decomposition still allowed.
+14. Design attempt reports Required B then Blocking A; re-review Passes without rediscovering B →
+    B remains in the Required carry-forward for plan review.
+15. Explicit user-requested Refine of a previously passed `Not started` plan → new bounded epochs
+    for the reviews that must run again; prior history preserved.
+16. Plan review reports architectural Blocking after design `passed` → one automatic new design
+    epoch (`architectural-escalation`); if design is already exhausted, stop for user authorization.
 
 ### Dependency waves
 
-14. B depends on unaccepted A → do not fully review B yet.
-15. B and C depend only on accepted A → B and C may review in parallel.
-16. D depends on C → D waits until C is accepted.
-17. Downstream had early useful findings; upstream then changed → retain findings; defer re-review
+17. B depends on in-operation unaccepted A → do not fully review B yet.
+18. B and C depend only on in-operation accepted A → B and C may review in parallel.
+19. D depends on in-operation C → D waits until C is accepted.
+20. B depends on live outside-operation A that is not being revised → A is a stable external
+    prerequisite; do not re-review A solely to unlock B.
+21. Downstream had early useful findings; upstream then changed → retain findings; defer re-review
     until prerequisites stabilize.
 
 ### Implementation freeze
 
-18. Plan is `In progress` → review-epoch continuation must not rewrite the frozen contract.
+22. Plan is `In progress` → review-epoch continuation must not rewrite the frozen contract.

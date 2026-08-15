@@ -33,9 +33,12 @@ refinement with design review — never hide it as `Required`.
    documentation; `docs/vision.md` for direction, module, or public-boundary changes or a suspected
    conflict; and linked ADRs or conformance sections. Expand only to records directly implicated by
    the planned scope.
-3. When design-review artifacts exist for the same basename, read both design and adversarial
-   artifacts (and the official stub if present). Treat every unresolved `Required` finding there as
-   a `Required` plan-review finding until the plan addresses it.
+3. Read design Required carry-forward and current design-review artifacts for the same basename when
+   they exist (carry-forward path and design/adversarial/stub paths from
+   `.agents/skills/implementation-design-review/reference.md`). Treat every unresolved `Required`
+   finding in the carry-forward **and** in current design/adversarial artifacts as a `Required`
+   plan-review finding until the plan addresses it. A finding present only in an archived attempt
+   but already recorded in carry-forward remains in scope via carry-forward.
 4. Inspect narrow production and test files only to check feasibility claims in the plan — not
    to score an implementation.
 5. State the reviewed contract boundary in the artifact (plan path and any adjacent live plans
@@ -78,9 +81,10 @@ every acceptance criterion to repository evidence. Check:
    parallel-override wording and external work-item IDs, Outlook, deleted plans, bare titles, or
    bare path stems.
    Flag duplicated Vision, ADR, conformance, or module-docs prose that should be a canonical link.
-6. **Design carry-forward and implementability:** unresolved design-review `Required` items;
-   missing compatibility, file/scope, test, gate, or migration detail an implementer would have to
-   invent; consistency with the approved design without re-litigating architecture.
+6. **Design carry-forward and implementability:** unresolved items in the design Required
+   carry-forward and current design-review `Required` findings; missing compatibility, file/scope,
+   test, gate, or migration detail an implementer would have to invent; consistency with the
+   approved design without re-litigating architecture.
 
 For every finding, provide a concise title, plan file/line evidence, affected planning requirement,
 impact, concrete correction, and severity `Blocking` | `Required` | `Advisory` per
@@ -96,8 +100,9 @@ Apply the plan-review mapping in [../review-findings.md](../review-findings.md):
   dependencies, or lifecycle state is unavailable or ambiguous.
 
 When a `Blocking` finding is architectural (unresolved design choice or contradiction with the
-approved design), say so in the recommendation and require `implementation-planning` refinement with
-design review; do not treat a local wording patch as sufficient.
+approved design), say so in the recommendation and require `implementation-planning` to follow the
+architectural-escalation epoch transition (new design review) — do not treat a local wording patch
+as sufficient.
 
 ## Artifact
 
