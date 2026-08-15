@@ -2,6 +2,9 @@
  * Shared codec scenario catalog: capability-tagged documents, negative scenarios, and dual-success
  * ambiguous primary-data scenarios consumed by Jackson-major contract tests.
  *
+ * <p>Explicit catalog entries are listed on {@code *Scenarios} classes; package-private helpers in
+ * this package may build individual entries. There is no separate {@code cases} builder package.
+ *
  * <p>Types in this package are major-neutral (see ADR-004 and ADR-010): they import only core,
  * Jackson common, JSpecify, JDK, and JSON-P types — never {@code tools.jackson..} or {@code
  * com.fasterxml.jackson.databind..}. Fixture ids and expected JSON paths are stable across majors.

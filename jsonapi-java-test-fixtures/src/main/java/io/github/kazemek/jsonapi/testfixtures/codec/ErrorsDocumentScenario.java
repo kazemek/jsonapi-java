@@ -1,18 +1,15 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.ErrorObject;
 import io.github.kazemek.jsonapi.core.model.ErrorSource;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.Link;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.Models;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-public final class ErrorsDocumentScenario {
+final class ErrorsDocumentScenario {
 
   private ErrorsDocumentScenario() {}
 

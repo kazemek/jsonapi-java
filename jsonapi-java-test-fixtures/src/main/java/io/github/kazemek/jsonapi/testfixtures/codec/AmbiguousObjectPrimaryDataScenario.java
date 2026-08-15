@@ -1,13 +1,12 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.testfixtures.codec.AmbiguousPrimaryDataScenario;
 
-public final class AmbiguousObjectPrimaryDataScenario {
+final class AmbiguousObjectPrimaryDataScenario {
 
   private AmbiguousObjectPrimaryDataScenario() {}
 

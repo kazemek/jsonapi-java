@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
@@ -6,16 +6,12 @@ import io.github.kazemek.jsonapi.core.model.Link;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.Models;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaDisagreement;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-public final class StringAndObjectLinksScenario {
+final class StringAndObjectLinksScenario {
 
   private StringAndObjectLinksScenario() {}
 

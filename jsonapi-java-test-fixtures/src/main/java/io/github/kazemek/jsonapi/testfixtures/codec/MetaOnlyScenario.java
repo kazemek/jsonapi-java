@@ -1,13 +1,11 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.Meta;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public final class MetaOnlyScenario {
+final class MetaOnlyScenario {
 
   private MetaOnlyScenario() {}
 

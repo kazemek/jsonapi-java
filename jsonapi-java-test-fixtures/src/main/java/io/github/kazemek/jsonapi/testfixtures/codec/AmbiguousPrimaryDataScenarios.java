@@ -1,8 +1,6 @@
 package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.testfixtures.FixtureCatalog;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.AmbiguousEmptyArrayPrimaryDataScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.AmbiguousObjectPrimaryDataScenario;
 import java.util.List;
 import java.util.function.Predicate;
 

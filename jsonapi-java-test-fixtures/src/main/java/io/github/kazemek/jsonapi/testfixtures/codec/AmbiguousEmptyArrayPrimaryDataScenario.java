@@ -1,12 +1,11 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.testfixtures.codec.AmbiguousPrimaryDataScenario;
 import java.util.List;
 
-public final class AmbiguousEmptyArrayPrimaryDataScenario {
+final class AmbiguousEmptyArrayPrimaryDataScenario {
 
   private AmbiguousEmptyArrayPrimaryDataScenario() {}
 

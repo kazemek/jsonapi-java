@@ -1,30 +1,6 @@
 package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.testfixtures.FixtureCatalog;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.CompoundDocumentScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.CompoundNestedIntermediateScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.CompoundSharedIdentityScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.EmptyErrorsScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.EmptyIdentifierCollectionScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.EmptyIncludedScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.EmptyWrappersScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.ErrorsDocumentScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.ExtensionAndAtMembersScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.IdentifierCollectionScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.JsonApiObjectScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.LocalIdentifierScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.MemberOrderScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.MetaOnlyScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.NullDataScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.OpenValuesScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.RelationshipEmptyToManyScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.RelationshipLinkOnlyScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.RelationshipMetaOnlyScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.RelationshipNullLinkageScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.ResourceCollectionScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.SingleIdentifierScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.SingleResourceScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.cases.StringAndObjectLinksScenario;
 import java.util.List;
 import java.util.function.Predicate;
 

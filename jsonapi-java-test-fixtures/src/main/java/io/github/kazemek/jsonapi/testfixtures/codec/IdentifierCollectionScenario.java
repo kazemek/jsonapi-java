@@ -1,14 +1,11 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.Models;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 import java.util.List;
 
-public final class IdentifierCollectionScenario {
+final class IdentifierCollectionScenario {
 
   private IdentifierCollectionScenario() {}
 

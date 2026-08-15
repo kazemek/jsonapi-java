@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.Attributes;
 import io.github.kazemek.jsonapi.core.model.DocumentData;
@@ -7,11 +7,8 @@ import io.github.kazemek.jsonapi.core.model.Links;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.Models;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 
-public final class EmptyWrappersScenario {
+final class EmptyWrappersScenario {
 
   private EmptyWrappersScenario() {}
 

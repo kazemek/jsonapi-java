@@ -9,8 +9,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | Package                                                        | Role                                                               |
 |----------------------------------------------------------------|--------------------------------------------------------------------|
 | `io.github.kazemek.jsonapi.testfixtures`                       | `Scenario` / `FixtureCatalog` contract, `JsonApiFixtures` facade, and `FixtureDirectory` |
-| `io.github.kazemek.jsonapi.testfixtures.codec`                 | `CodecScenario` capability metadata, `CodecScenarios` catalog, `AmbiguousPrimaryDataScenarios`, JSON-P-backed `NegativeCodecScenarios`, `SchemaKind` / `SchemaDisagreement` |
-| `io.github.kazemek.jsonapi.testfixtures.codec.cases`           | One scenario builder class per corpus entry (explicit list; no classpath scanning) |
+| `io.github.kazemek.jsonapi.testfixtures.codec`                 | `CodecScenario` capability metadata, `CodecScenarios` / `AmbiguousPrimaryDataScenarios` catalogs (and package-private scenario helpers), JSON-P-backed `NegativeCodecScenarios`, `SchemaKind` / `SchemaDisagreement`; see [Declaration layout](#declaration-layout) |
 | `io.github.kazemek.jsonapi.testfixtures.domainwrite`           | Shared flat domain-to-resource write fixtures: annotated domain models plus the `DomainWriteScenarios` catalog and the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types |
 | `io.github.kazemek.jsonapi.testfixtures.domainread`            | Shared flat resource-to-DTO read fixtures: annotated DTO models plus the `DomainReadScenarios` catalog and the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
@@ -49,8 +48,9 @@ them (together with `jsonapi.schema.fixtures.dir`) for every module.
 
 This module does not add wire expectations, diagnostics, or corpora per Jackson major — those
 must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). PATCH fixture
-catalogs are not present yet; the flat write, flat read, compound-write, sparse-fieldset, and
-typed-envelope catalogs are in this module.
+catalogs are not present yet; when added they follow the universal inline rule under
+[Declaration layout](#declaration-layout). The flat write, flat read, compound-write,
+sparse-fieldset, and typed-envelope catalogs are in this module.
 
 ## Further reading
 
@@ -62,6 +62,15 @@ typed-envelope catalogs are in this module.
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
+
+### Declaration layout
+
+Every explicit Java catalog declares scenarios in its `*Scenarios` catalog class. Private helpers
+in the same package are allowed; there is no mandatory per-scenario top-level builder package.
+Catalogs that grow by addition keep that rule. The JSON-backed negative codec loader
+(`NegativeCodecScenarios` / `negative-manifest.json`) is documented under **Negative corpus** and
+is outside this layout rule. Future `PatchScenarios` / `domainpatch` follow the same universal
+inline rule.
 
 - **Retrieval:** `JsonApiFixtures` plus the `FixtureCatalog` instances it exposes is the canonical
   API. Future catalogs register a facade accessor and the same public

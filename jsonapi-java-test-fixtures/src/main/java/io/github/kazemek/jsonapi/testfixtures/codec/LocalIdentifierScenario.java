@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
@@ -6,14 +6,11 @@ import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.Models;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
-public final class LocalIdentifierScenario {
+final class LocalIdentifierScenario {
 
   private LocalIdentifierScenario() {}
 

@@ -1,17 +1,14 @@
-package io.github.kazemek.jsonapi.testfixtures.codec.cases;
+package io.github.kazemek.jsonapi.testfixtures.codec;
 
 import io.github.kazemek.jsonapi.core.model.Attributes;
 import io.github.kazemek.jsonapi.core.model.DocumentData;
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario;
-import io.github.kazemek.jsonapi.testfixtures.codec.Models;
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class ResourceCollectionScenario {
+final class ResourceCollectionScenario {
 
   private ResourceCollectionScenario() {}
 
