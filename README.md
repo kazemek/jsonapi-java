@@ -24,6 +24,14 @@ Maven group: `io.github.kazemek`. Java packages: `io.github.kazemek.jsonapi.*`.
 ./gradlew clean build
 ```
 
+`check` (and therefore `build`) enforces per-module JaCoCo instruction and branch floors for
+library modules. Numeric floors live only in
+[`build-logic/src/main/kotlin/jsonapi-java-library.gradle.kts`](build-logic/src/main/kotlin/jsonapi-java-library.gradle.kts).
+Re-measure with `./gradlew jacocoTestReport`, then set each floor to `floor(measuredPercent)`.
+Intentional coverage drops must update that map in the same change.
+`jsonapi-java-annotations` is skip-listed there because it is annotation-only (no instruction/branch
+counters).
+
 ## Project structure
 
 | Path                           | Purpose                                                                                          |
