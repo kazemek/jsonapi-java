@@ -50,7 +50,7 @@ Severity definitions live in [../review-findings.md](../review-findings.md).
 | Acceptance criteria | Pass \| Fail \| Partial \| Not verified | <evidence> |
 | Dependencies | Pass \| Fail \| Partial \| Not verified | <evidence> |
 | Lifecycle and identity | Pass \| Fail \| Partial \| Not verified | <`Not started`/`In progress`; no `Complete` or persistent umbrella; temporary reconciliation window respected; no deletion while references survive> |
-| Design Required carry-forward | Pass \| Fail \| Partial \| Not applicable | <carry-forward + design artifacts checked, or why N/A> |
+| Design/plan gate carry-forward | Pass \| Fail \| Partial \| Not applicable | <gate carry-forward + design artifacts checked, or why N/A> |
 | Nullness / `module-docs` hooks | Pass \| Fail \| Partial \| Not applicable | <why required or not applicable> |
 
 ## Repo evidence inspected

@@ -18,7 +18,8 @@ top-level title.
 | Adversarial reviewer artifact | `.agentWork/.session/implementation-design-review-adversarial-<basename>.md` |
 | Design-review epoch ledger | `.agentWork/.session/review-epoch-design-<basename>.md` |
 | Plan-review epoch ledger | `.agentWork/.session/review-epoch-plan-<basename>.md` |
-| Design Required carry-forward | `.agentWork/.session/design-required-carry-forward-<basename>.md` |
+| Design gate carry-forward | `.agentWork/.session/design-gate-carry-forward-<basename>.md` |
+| Plan gate carry-forward | `.agentWork/.session/plan-gate-carry-forward-<basename>.md` |
 | Plan-review artifact | `.agentWork/.session/implementation-plan-review-<basename>.md` |
 | Implementation-review artifact | `.agentWork/.session/implementation-review-<basename>.md` |
 | Design-review handoff | `.agentWork/.session/implementation-handoff-design-review-<basename>.md` |
@@ -117,5 +118,6 @@ Create or completely replace the official pointer-stub path with exactly this sh
 
 Fill **Epoch / attempt** from the design epoch ledger when present (planning-managed). For on-demand
 design review with no ledger, write `on-demand / 1`. The stub is paths and verdicts only. Do not add
-a summary, findings, or residual risks; those remain in the reviewer artifacts. Planning maintains the
-design Required carry-forward path; plan review reads that file plus current design artifacts.
+a summary, findings, or residual risks; those remain in the reviewer artifacts. Planning maintains
+design and plan gate carry-forward paths; plan review reads those files plus current design
+artifacts.

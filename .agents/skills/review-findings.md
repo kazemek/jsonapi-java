@@ -44,8 +44,9 @@ Typical `Required` findings:
 
 `Required` findings must be fixed before implementation-plan approval. At design review they do
 **not** by themselves cause design failure or another design-review cycle; they carry into plan
-review. Planning persists them in the design Required carry-forward artifact so a later fresh design
-pass that fails to rediscover them cannot make them disappear.
+review. Planning persists unresolved design and plan gate findings in gate carry-forward artifacts so
+a later fresh pass that fails to rediscover them cannot make them disappear across attempts or
+exhausted-epoch continuations.
 
 ### Advisory
 
@@ -92,7 +93,7 @@ refinement with a new design review — do not hide it as `Required` completenes
 
 - **Changes required:** at least one `Blocking` finding.
 - **Pass:** no `Blocking` findings. `Required` findings remain in the artifact and in the planning
-  carry-forward for plan review; `Advisory` findings are residual.
+  gate carry-forward for plan review; `Advisory` findings are residual.
 - **Blocked:** a prerequisite is missing or ambiguous; do not guess.
 
 ## Plan-review verdict mapping
