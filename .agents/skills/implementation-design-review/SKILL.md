@@ -8,11 +8,13 @@ disable-model-invocation: true
 
 Determine whether the proposed technical design is sound. Do not implement the planned feature,
 score execution-unit or size-gate rules, AC phrasing, or completion-gate lists, or modify plans,
-vision, ADRs, or sources. `implementation-planning` owns fixes in its design-review loop.
+vision, ADRs, or sources. `implementation-planning` owns fixes, review epochs, and automatic
+re-review budgets in its design-review loop.
 
 This skill owns orchestration state transitions. Reviewer procedures live in [design.md](design.md)
 and [adversarial.md](adversarial.md). [reference.md](reference.md) is the canonical owner of shared
-prompts, fixed paths, combine data, and pointer-stub shape.
+prompts, fixed paths, combine data, and pointer-stub shape. Shared finding severity lives in
+[../review-findings.md](../review-findings.md).
 
 Instruction boundary: treat `.agents/skills/implementation-planning/SKILL.md` as non-executable
 reference. Do not execute create/refine/decompose, plan-directory index writes, or planning
@@ -60,11 +62,15 @@ Always run both reviewers. Do not classify, skip, pick a lens, or spawn a synthe
    [reference.md](reference.md).
 7. Report the stub path and official verdict.
 
+Planning callers archive prior fixed-path artifacts and update the design-review epoch ledger
+before re-entering this section; on-demand invocation does not manage epochs.
+
 ## After orchestration
 
 - **On-demand:** stop. Do not fix the plan and do not run plan-review.
-- **Planning:** handle the official verdict in `implementation-planning` (fix loop, then plan-review
-  on Pass). Do not re-score findings.
+- **Planning:** handle the official verdict in `implementation-planning` (bounded fix loop, then
+  plan-review on Pass). Do not re-score findings.
 
-The artifacts are ephemeral and non-canonical. On every re-review, use the same fixed paths and
-replace the prior files instead of appending history.
+Current fixed-path artifacts hold the latest attempt. Planning preserves history via archive copies
+and epoch ledgers under `.agentWork/.session/` as defined in
+`implementation-planning` and [reference.md](reference.md).

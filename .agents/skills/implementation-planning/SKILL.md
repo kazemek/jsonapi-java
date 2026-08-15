@@ -12,6 +12,10 @@ rather than restating it here. Never implement the planned work or create a plan
 finishes only when every created/refined plan passes fresh design and plan reviews and any
 superseded plan is safely reconciled and deleted.
 
+Shared finding severity and stage ownership:
+[../review-findings.md](../review-findings.md). Epoch ledgers, budgets, dependency waves, and
+scenario expectations: [reference.md](reference.md).
+
 ## Resolve the operation
 
 - **Create:** no live plan covers the requested outcome.
@@ -86,10 +90,16 @@ use phase numbers or work-item IDs as structural identity. Before review, verify
 
 ## Review with fresh context
 
-Both reviews are mandatory. Review each created/refined plan; for decomposition, review replacements
-rather than the superseded original. Reviewers derive facts only from the contract and repository evidence. Never
-send this session's summaries, reasoning, narrative, self-assessment, or diffs; never re-score a
-reported verdict. Replace artifacts on re-review.
+Both reviews are mandatory. Review each created/refined plan in
+[dependency-aware waves](reference.md#dependency-aware-review-waves); for decomposition, review
+replacements rather than the superseded original. Reviewers derive facts only from the contract and
+repository evidence. Never send this session's summaries, reasoning, narrative, self-assessment, or
+diffs; never re-score a reported verdict. Manage [review epochs](reference.md#review-epochs) and
+archive prior fixed-path artifacts before each new attempt.
+
+Do not add a separate mandatory plan-set architecture review. Shared architecture belongs in the
+earliest prerequisite plan; wave-ordered design review of that foundation covers the set without a
+third review layer.
 
 ### Design review
 
@@ -98,21 +108,26 @@ Follow **Orchestration** in
 write-capable reviewers, verbatim isolated prompts, worst-wins result, pointer stub, and terminating
 `implementation-handoff` fallback. Handle only the official pointer-stub verdict:
 
-- `Pass`: proceed to plan review.
-- `Changes required`: fix the plan, repeat **Write and verify**, then rerun Orchestration with new
-  fresh reviewers. Allow at most two re-reviews per plan; after the second, stop and report any
-  remaining findings.
+- `Pass`: proceed to plan review for that plan. Unresolved design `Required` findings stay in the
+  design artifacts for plan review; they must not trigger another design cycle by themselves.
+- `Changes required`: fix **all known** `Blocking` findings, repeat **Write and verify**, then run
+  **one** fresh design re-review in the same epoch. If `Blocking` findings remain after that
+  re-review, exhaust the epoch, stop, and return control to the user.
 - `Blocked`: stop and do not run plan review.
 
-Editing or renaming a reviewed file does not reset its cap. A pre-Pass fix that splits the contract
-creates new plans, each with its own cap. After the loop stops or design has Passed, splitting
-requires a new `implementation-planning` invocation.
+`Required` and `Advisory` findings alone never start another design-review cycle. Editing,
+renaming, or restarting a session does not reset epoch budgets. Fake split/replacement solely to
+obtain new counters is forbidden; genuine decomposition remains valid only under **Choose an
+execution unit**. After the loop stops or design has Passed, splitting requires a new
+`implementation-planning` invocation. Review-epoch continuation is only for `Not started` plans;
+never use it to rewrite an `In progress` frozen contract.
 
 ### Plan review
 
-Run only after design `Pass`. Derive `<plan basename>` from the filename without `.md`. Spawn a new
-general-purpose, write-capable subagent in a fresh session and send this prompt verbatim, replacing
-only `<plan path>` and `<plan basename>`:
+Run only after design `Pass` for that plan, and only when the plan is in a ready dependency wave.
+Derive `<plan basename>` from the filename without `.md`. Spawn a new general-purpose, write-capable
+subagent in a fresh session and send this prompt verbatim, replacing only `<plan path>` and
+`<plan basename>`:
 
 ```text
 You are the implementation plan reviewer for this repository. Your context was intentionally
@@ -134,19 +149,21 @@ Direct factual questions to repository evidence, not planning narrative. If a fr
 subagent cannot run, follow `.agents/skills/implementation-handoff/SKILL.md` for the plan and
 `implementation-plan-review`, print its one-liner, and stop for the fresh-session result.
 
-- `Pass`: the plan is accepted. Plan-review fixes never restart design review; an approach change
-  instead requires a new planning refinement and design review.
-- `Changes required`: fix, repeat **Write and verify**, and re-review with a new fresh subagent.
-  Allow at most two plan re-reviews per plan; after the second, stop and report remaining findings.
+- `Pass`: the plan is accepted for planning purposes.
+- `Changes required`: fix **all known** `Blocking`/`Required` findings, repeat **Write and
+  verify**, and run **one** fresh plan re-review in the same epoch. If findings remain after that
+  re-review, exhaust the epoch, stop, and return control to the user. Ordinary completeness fixes
+  do not restart design review. A `Blocking` architectural finding requires planning refinement and
+  a new design review instead of endless plan-only patches.
 - `Blocked`: stop and report.
 
 Overall Pass requires both review Passes for every plan. After replacement plans Pass, execute
-[decomposition finalization](reference.md#decompose-oversized-work), including the same bounded
-fresh design/plan review loops for modified `Not started` dependents. On an `In progress` dependent,
-Blocked review, or exhausted loop, retain the superseded original.
+[decomposition finalization](reference.md#decompose-oversized-work), including wave-ordered bounded
+fresh design/plan review loops for modified `Not started` dependents. On an `In progress`
+dependent, Blocked review, or exhausted epoch, retain the superseded original.
 
 ## Report
 
 Report created/refined/deleted paths, material research or decomposition decisions, each design
-stub and official verdict, each plan-review artifact and verdict, coordination sync or explicit
-unsync, and residual risks.
+stub and official verdict, each plan-review artifact and verdict, epoch ledger paths and any
+user-authorized continuation, coordination sync or explicit unsync, and residual risks.
