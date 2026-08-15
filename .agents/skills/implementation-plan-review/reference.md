@@ -1,6 +1,7 @@
 # Implementation plan review artifact template
 
 Use this template when writing the review artifact. Path and naming rules live in [SKILL.md](SKILL.md).
+Severity definitions live in [../review-findings.md](../review-findings.md).
 
 ```markdown
 # Implementation Plan Review: <plan title>
@@ -15,14 +16,25 @@ Use this template when writing the review artifact. Path and naming rules live i
 
 ## Findings
 
-### <Severity>: <finding title>
+### Blocking
+- **<title>** — `<path>:<line or range>`
+  - **Planning requirement:** <execution-unit rule, section, acceptance criterion, dependency rule, or design carry-forward>
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction; require design re-review when architectural>
 
-- **Location:** `<path>:<line or range>`
-- **Planning requirement:** <execution-unit rule, section, acceptance criterion, or dependency rule>
-- **Impact:** <why this matters>
-- **Recommendation:** <specific correction>
+### Required
+- **<title>** — `<path>:<line or range>`
+  - **Planning requirement:** <…>
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
 
-<Repeat in descending severity. Write "No actionable findings." when none exist.>
+### Advisory
+- **<title>** — `<path>:<line or range>`
+  - **Planning requirement:** <…>
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
+
+<Write "None." under any empty severity group.>
 
 ## Contract coverage
 
@@ -38,6 +50,7 @@ Use this template when writing the review artifact. Path and naming rules live i
 | Acceptance criteria | Pass \| Fail \| Partial \| Not verified | <evidence> |
 | Dependencies | Pass \| Fail \| Partial \| Not verified | <evidence> |
 | Lifecycle and identity | Pass \| Fail \| Partial \| Not verified | <`Not started`/`In progress`; no `Complete` or persistent umbrella; temporary reconciliation window respected; no deletion while references survive> |
+| Design/plan gate carry-forward | Pass \| Fail \| Partial \| Not applicable | <gate carry-forward + design artifacts checked, or why N/A> |
 | Nullness / `module-docs` hooks | Pass \| Fail \| Partial \| Not applicable | <why required or not applicable> |
 
 ## Repo evidence inspected
@@ -46,5 +59,5 @@ Use this template when writing the review artifact. Path and naming rules live i
 
 ## Residual risks
 
-<Unverified feasibility, unavailable evidence, dependency concerns, or "None identified.">
+<Advisory findings, unverified feasibility, unavailable evidence, dependency concerns, or "None identified.">
 ```

@@ -12,20 +12,26 @@ rather than restating it here. Never implement the planned work or create a plan
 finishes only when every created/refined plan passes fresh design and plan reviews and any
 superseded plan is safely reconciled and deleted.
 
+Shared finding severity and stage ownership:
+[../review-findings.md](../review-findings.md). Epoch ledgers, budgets, dependency waves, and
+scenario expectations: [reference.md](reference.md).
+
 ## Resolve the operation
 
 - **Create:** no live plan covers the requested outcome.
 - **Refine:** one `Not started` plan needs clearer evidence, boundaries, tests, or acceptance
-  criteria.
+  criteria. When prior design/plan epoch status is `passed`, this explicit Refine opens new bounded
+  review epochs per [review epochs](reference.md#review-epochs) while preserving history.
 - **Decompose:** a `Not started` plan or requested scope has a genuine execution/review boundary.
   Conceptual parts or exceeded numeric heuristics alone are insufficient.
 
 Resolve all affected plans unambiguously; ask only when evidence cannot resolve materially
-different naming, ordering, or scope choices. An existing plan may be refined or decomposed only
-before implementation starts. Status, commits, code changes, or user context may establish that
-implementation has started even when status is stale. Treat an implementation-started plan as a
-fixed delivery contract; create a dependent follow-up instead of expanding it. Ask when state is
-uncertain, and never mark planning acceptance criteria complete.
+different naming, ordering, or scope choices. Choose the final filename before the first review
+ledger exists; after any ledger exists for a plan, do not rename it. An existing plan may be refined
+or decomposed only before implementation starts. Status, commits, code changes, or user context may
+establish that implementation has started even when status is stale. Treat an implementation-started
+plan as a fixed delivery contract; create a dependent follow-up instead of expanding it. Ask when
+state is uncertain, and never mark planning acceptance criteria complete.
 
 Use the external work tracker for normal work discovery when available, but only as optional
 coordination metadata. Without it, act only on a user-supplied outcome or explicitly
@@ -86,33 +92,52 @@ use phase numbers or work-item IDs as structural identity. Before review, verify
 
 ## Review with fresh context
 
-Both reviews are mandatory. Review each created/refined plan; for decomposition, review replacements
-rather than the superseded original. Reviewers derive facts only from the contract and repository evidence. Never
-send this session's summaries, reasoning, narrative, self-assessment, or diffs; never re-score a
-reported verdict. Replace artifacts on re-review.
+Both reviews are mandatory. Review each created/refined plan in
+[dependency-aware waves](reference.md#dependency-aware-review-waves); for decomposition, review
+replacements rather than the superseded original. Reviewers derive facts only from the contract and
+repository evidence. Never send this session's summaries, reasoning, narrative, self-assessment, or
+diffs; never re-score a reported verdict. Manage [review epochs](reference.md#review-epochs),
+archive prior fixed-path artifacts before each new attempt, and maintain design/plan gate
+carry-forward after every attempt and on exhaust.
+
+Do not add a separate mandatory plan-set architecture review. Shared architecture belongs in the
+earliest prerequisite plan; wave-ordered design review of that foundation covers the set without a
+third review layer.
 
 ### Design review
 
 Follow **Orchestration** in
 `.agents/skills/implementation-design-review/SKILL.md` exactly, including its parallel fresh,
 write-capable reviewers, verbatim isolated prompts, worst-wins result, pointer stub, and terminating
-`implementation-handoff` fallback. Handle only the official pointer-stub verdict:
+`implementation-handoff` fallback. Before each design attempt, apply known design Blocking
+carry-forward to the plan. After each attempt (and on exhaust), union unresolved design gate findings
+into the design gate carry-forward per [review epochs](reference.md#review-epochs). Handle only the
+official pointer-stub verdict:
 
-- `Pass`: proceed to plan review.
-- `Changes required`: fix the plan, repeat **Write and verify**, then rerun Orchestration with new
-  fresh reviewers. Allow at most two re-reviews per plan; after the second, stop and report any
-  remaining findings.
-- `Blocked`: stop and do not run plan review.
+- `Pass`: clear pre-existing design **Blocking** carry-forward for that attempt (clear-on-Pass), keep
+  design **Required** sticky, then proceed to plan review. Required findings must not trigger another
+  design cycle by themselves.
+- `Changes required`: fix **all known** `Blocking` findings (including design gate carry-forward
+  Blocking), repeat **Write and verify**, then run **one** fresh design re-review in the same epoch.
+  If `Blocking` findings remain after that re-review, exhaust the epoch, update gate carry-forward,
+  stop, and return control to the user.
+- `Blocked`: set the design epoch to `blocked` per [review epochs](reference.md#review-epochs), stop,
+  and do not run plan review. Resume later only via blocked-resume of the same epoch.
 
-Editing or renaming a reviewed file does not reset its cap. A pre-Pass fix that splits the contract
-creates new plans, each with its own cap. After the loop stops or design has Passed, splitting
-requires a new `implementation-planning` invocation.
+`Required` and `Advisory` findings alone never start another design-review cycle. Editing the plan,
+renaming after a ledger exists, or restarting a session does not reset epoch budgets. Fake
+split/replacement solely to obtain new counters is forbidden; genuine decomposition remains valid
+only under **Choose an execution unit**. After the loop stops or design has Passed, splitting
+requires a new `implementation-planning` invocation. Review-epoch continuation, blocked-resume, and
+Refine re-entry are only for `Not started` plans; never use them to rewrite an `In progress` frozen
+contract.
 
 ### Plan review
 
-Run only after design `Pass`. Derive `<plan basename>` from the filename without `.md`. Spawn a new
-general-purpose, write-capable subagent in a fresh session and send this prompt verbatim, replacing
-only `<plan path>` and `<plan basename>`:
+Run only after design `Pass` for that plan, and only when the plan is in a ready dependency wave.
+Derive `<plan basename>` from the filename without `.md`. Spawn a new general-purpose, write-capable
+subagent in a fresh session and send this prompt verbatim, replacing only `<plan path>` and
+`<plan basename>`:
 
 ```text
 You are the implementation plan reviewer for this repository. Your context was intentionally
@@ -134,19 +159,26 @@ Direct factual questions to repository evidence, not planning narrative. If a fr
 subagent cannot run, follow `.agents/skills/implementation-handoff/SKILL.md` for the plan and
 `implementation-plan-review`, print its one-liner, and stop for the fresh-session result.
 
-- `Pass`: the plan is accepted. Plan-review fixes never restart design review; an approach change
-  instead requires a new planning refinement and design review.
-- `Changes required`: fix, repeat **Write and verify**, and re-review with a new fresh subagent.
-  Allow at most two plan re-reviews per plan; after the second, stop and report remaining findings.
-- `Blocked`: stop and report.
+- `Pass`: the plan is accepted for planning purposes only when plan gate carry-forward has no
+  unresolved Blocking/Required. Clear carry-forward entries that plan review verified as addressed.
+- `Changes required`: fix **all known** `Blocking`/`Required` findings (including plan and design
+  gate carry-forward), repeat **Write and verify**, and run **one** fresh plan re-review in the same
+  epoch. If findings remain after that re-review, exhaust the epoch, update plan gate carry-forward,
+  stop, and return control to the user. Ordinary completeness fixes do not restart design review. A
+  `Blocking` architectural finding uses the architectural-escalation transition in
+  [review epochs](reference.md#review-epochs) (one automatic new design epoch when design is
+  `passed`; otherwise stop for authorization) instead of endless plan-only patches.
+- `Blocked`: set the plan epoch to `blocked` per [review epochs](reference.md#review-epochs), stop,
+  and report. Resume later only via blocked-resume of the same epoch.
 
-Overall Pass requires both review Passes for every plan. After replacement plans Pass, execute
-[decomposition finalization](reference.md#decompose-oversized-work), including the same bounded
-fresh design/plan review loops for modified `Not started` dependents. On an `In progress` dependent,
-Blocked review, or exhausted loop, retain the superseded original.
+Overall Pass requires both review Passes for every plan in this operation. After replacement plans
+Pass, execute [decomposition finalization](reference.md#decompose-oversized-work), including
+wave-ordered bounded fresh design/plan review loops for modified `Not started` dependents. On an
+`In progress` dependent, Blocked review, or exhausted epoch, retain the superseded original.
 
 ## Report
 
 Report created/refined/deleted paths, material research or decomposition decisions, each design
-stub and official verdict, each plan-review artifact and verdict, coordination sync or explicit
-unsync, and residual risks.
+stub and official verdict, each plan-review artifact and verdict, epoch ledger paths and any
+blocked-resume / exhausted-continuation / Refine / architectural-escalation authorization,
+coordination sync or explicit unsync, and residual risks.

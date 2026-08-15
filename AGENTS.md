@@ -86,6 +86,7 @@ Every durable fact has one canonical owner; other documents should link or provi
 | Cross-cutting architecture and rationale | accepted ADR under `docs/adr/` |
 | JSON:API compliance state | `docs/conformance.md` |
 | Workflow and agent routing | this file and `.agents/skills/` |
+| Planning/review finding severity and stage ownership | `.agents/skills/review-findings.md` |
 | Stable product direction | `docs/vision.md` |
 | Tentative future direction | `docs/outlook/` |
 | Temporary execution contract | unfinished plans under `.agentWork/plans/` |
@@ -102,8 +103,8 @@ Every durable fact has one canonical owner; other documents should link or provi
 - Plans exist only while unfinished; do not create a plan index or archive. Status is only
   `Not started` or `In progress`. Dependencies are `None` or relative Markdown links to unfinished
   plan files. Once work starts, freeze its scope; after gates, synchronization, and review Pass,
-  reconcile references and delete the completed plan. Session reviews belong in the gitignored
-  `.agentWork/.session/`.
+  reconcile references and delete the completed plan. Session reviews, review-epoch ledgers, and
+  archived review attempts belong in the gitignored `.agentWork/.session/`.
 - A live plan means work-in-progress. A PR for that work may be open while its plan is live, but it
   is ready for final review/merge only after the completed plan is deleted and that deletion is
   pushed. Never leave a post-approval cleanup commit.

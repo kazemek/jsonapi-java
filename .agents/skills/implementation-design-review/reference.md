@@ -2,7 +2,9 @@
 
 This file is the canonical local owner of design-review launcher prompts, fixed artifact paths,
 official pointer-stub shape, and verdict-combination data. Orchestration and fallback state
-transitions remain in their respective skills.
+transitions remain in their respective skills. Finding severity lives in
+[../review-findings.md](../review-findings.md). Review epochs and automatic budgets live in
+`implementation-planning`.
 
 ## Placeholders and paths
 
@@ -14,14 +16,29 @@ top-level title.
 | Official design-review pointer stub | `.agentWork/.session/implementation-design-review-<basename>.md` |
 | Design reviewer artifact | `.agentWork/.session/implementation-design-review-design-<basename>.md` |
 | Adversarial reviewer artifact | `.agentWork/.session/implementation-design-review-adversarial-<basename>.md` |
+| Design-review epoch ledger | `.agentWork/.session/review-epoch-design-<basename>.md` |
+| Plan-review epoch ledger | `.agentWork/.session/review-epoch-plan-<basename>.md` |
+| Design gate carry-forward | `.agentWork/.session/design-gate-carry-forward-<basename>.md` |
+| Plan gate carry-forward | `.agentWork/.session/plan-gate-carry-forward-<basename>.md` |
 | Plan-review artifact | `.agentWork/.session/implementation-plan-review-<basename>.md` |
 | Implementation-review artifact | `.agentWork/.session/implementation-review-<basename>.md` |
 | Design-review handoff | `.agentWork/.session/implementation-handoff-design-review-<basename>.md` |
 | Plan-review handoff | `.agentWork/.session/implementation-handoff-plan-review-<basename>.md` |
 | Implementation-review handoff | `.agentWork/.session/implementation-handoff-implementation-review-<basename>.md` |
 
+Archive copies (before replacing fixed paths for a new reviewer invocation) use:
+
+```text
+.agentWork/.session/archive/<artifact-stem>-e<epoch>-r<review-sequence>.md
+```
+
+where `<artifact-stem>` is the fixed filename without `.md` (for example
+`implementation-design-review-design-<basename>`), and `<review-sequence>` is the ledger's
+per-epoch invocation counter (including `Blocked` retries). Do not key archives only on budget
+**Attempts used**; Blocked/resume must not overwrite prior archives.
+
 Artifact paths are fixed; do not accept free-form overrides. Create `.agentWork/.session/` when
-needed and completely replace an existing artifact at the applicable path.
+needed. Current fixed paths always hold the latest invocation; archives preserve history.
 
 ## Reviewer prompts
 
@@ -71,7 +88,8 @@ Procedure:
 ## Combine data and ownership
 
 Combine only the two verdict strings reported by the reviewers. Do not parse artifact `Verdict:`
-headers, inspect or re-score findings, filter taste, or invent a Pass.
+headers, invent a Pass, or re-score severity. `Required` and `Advisory` findings do not change the
+combined verdict; only reported `Changes required` / `Blocked` / `Pass` strings do.
 
 Apply this exact precedence:
 
@@ -94,10 +112,14 @@ Create or completely replace the official pointer-stub path with exactly this sh
 # Design review: <plan title>
 
 - **Plan:** `<plan path>`
+- **Epoch / review-sequence:** <epoch> / <review-sequence>
 - **Design:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-design-<basename>.md`
 - **Adversarial:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-adversarial-<basename>.md`
 - **Official:** <Pass | Changes required | Blocked>
 ```
 
-The stub is paths and verdicts only. Do not add a summary, findings, or residual risks; those remain
-in the reviewer artifacts.
+Fill **Epoch / review-sequence** from the design epoch ledger when present (planning-managed). For
+on-demand design review with no ledger, write `on-demand / 1`. The stub is paths and verdicts only.
+Do not add a summary, findings, or residual risks; those remain in the reviewer artifacts. Planning
+maintains design and plan gate carry-forward paths; plan review reads those files plus current design
+artifacts.

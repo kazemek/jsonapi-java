@@ -5,7 +5,8 @@ semantics as this repository specifies them. Do not implement the planned featur
 alternative, or score execution-unit or size-gate rules, AC phrasing, or completion-gate lists.
 
 Instruction boundary: do not read [SKILL.md](SKILL.md), [reference.md](reference.md),
-[adversarial.md](adversarial.md), or the other reviewer's artifact.
+[adversarial.md](adversarial.md), or the other reviewer's artifact. You may read
+[../review-findings.md](../review-findings.md) for shared severity and stage ownership.
 
 ## Resolve inputs
 
@@ -51,34 +52,40 @@ orchestration, handoff, artifact, verdict, and lifecycle contracts. Do not inven
      Implementation boundaries.
 3. Do not recommend a different principal mechanism as a "simpler alternative." Record placement or
    contract conflicts only.
-4. Assign each finding a severity (Critical / High / Medium / Low) for humans. Severity must **not**
-   determine the verdict.
-5. Give every finding: title, location, **Blocks:** yes or no, **Citation**, impact, recommendation.
+4. Follow [../review-findings.md](../review-findings.md): exhaustive pass; classify each finding
+   `Blocking`, `Required`, or `Advisory`. Citation-gated rules below constrain when `Blocking` is
+   allowed for product/API designs.
+5. Give every finding: title, location, **Severity**, **Citation**, impact, recommendation.
 
-## Citation-gated blocking
+## Citation-gated Blocking (product / API designs)
 
-`Blocks: yes` only with a repository citation **and** a shown conflict:
+`Blocking` only with a repository citation **and** a shown conflict:
 
 - a vision section, accepted ADR, JSON:API spec rule, existing module/allowlist, or existing public
   type;
 - conflict kinds: wrong placement, wire-semantic collapse, illegal state representable, hidden
-  application policy.
+  application policy;
+- unresolved competing architectures or implicit design (approach not stated) citing the empty or
+  non-deciding Goal / Research / Boundaries passages.
 
-Outlook must not justify `Blocks: yes`. Intentional divergence from Outlook that still satisfies
+Outlook must not justify `Blocking`. Intentional divergence from Outlook that still satisfies
 Snapshot, Vision, accepted ADRs, specifications, and current repository evidence is not a
 design-review failure.
 
-Uncited taste or hypothetical nicer APIs → `Blocks: no` (residual). Implicit design (approach not
-stated) may `Blocks: yes` citing the empty or non-deciding Goal / Research / Boundaries passages.
+Uncited taste or hypothetical nicer APIs → `Advisory`. Completeness gaps that do not invalidate the
+architecture → `Required`. A gap that forces a new architectural choice → `Blocking`.
+
+Workflow-agent plans use the same severities against workflow placement and semantics; cite the
+governing skill or `AGENTS.md` contract that conflicts.
 
 ## Choose the verdict
 
 - **Blocked:** a *prerequisite* is missing or ambiguous — lifecycle unclear, named
   dependency/ADR/file does not exist, or the spec source the plan relies on cannot be read.
   Stop. Do not guess. Do not use Blocked for disagreement or vagueness.
-- **Changes required:** at least one finding has `Blocks: yes`. Includes implicit design (write it
-  down).
-- **Pass:** no finding has `Blocks: yes`. Non-blocking findings are residual risks.
+- **Changes required:** at least one `Blocking` finding.
+- **Pass:** no `Blocking` findings. `Required` findings carry into plan review; `Advisory`
+  findings are residual risks.
 
 ## Write the artifact
 
@@ -98,15 +105,24 @@ path supplied in the task inputs. Use this template and report the artifact path
 
 ## Findings
 
-### <Severity>: <finding title>
+### Blocking
+- **<title>** — `<path>:<line or range>`
+  - **Citation:** `<path>` — <vision section, ADR, spec rule, module/allowlist, public type, or workflow contract; or "None">
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
 
-- **Location:** `<path>:<line or range>`
-- **Blocks:** yes | no
-- **Citation:** `<path>` — <vision section, ADR, spec rule, module/allowlist, or public type; or "None">
-- **Impact:** <why this matters>
-- **Recommendation:** <specific correction>
+### Required
+- **<title>** — `<path>:<line or range>`
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
 
-<Repeat in descending severity. Write "No findings." when none exist.>
+### Advisory
+- **<title>** — `<path>:<line or range>`
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
+
+<Write "None." under any empty severity group.>
 
 ## Design coverage
 
@@ -129,5 +145,5 @@ path supplied in the task inputs. Use this template and report the artifact path
 
 ## Residual risks
 
-<Non-blocking findings, unverified evidence, or "None identified.">
+<Advisory findings, unverified evidence, or "None identified.">
 ```
