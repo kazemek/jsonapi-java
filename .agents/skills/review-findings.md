@@ -44,9 +44,10 @@ Typical `Required` findings:
 
 `Required` findings must be fixed before implementation-plan approval. At design review they do
 **not** by themselves cause design failure or another design-review cycle; they carry into plan
-review. Planning persists unresolved design and plan gate findings in gate carry-forward artifacts so
-a later fresh pass that fails to rediscover them cannot make them disappear across attempts or
-exhausted-epoch continuations.
+review. Planning persists unresolved design and plan gate findings in gate carry-forward artifacts.
+Design **Blocking** clear on a later fresh design `Pass` after planning applied them; design
+**Required** and plan gate findings stay sticky until plan review verifies they are addressed. Do not
+require fresh reviewers to read prior findings merely to clear them.
 
 ### Advisory
 

@@ -88,6 +88,7 @@ from `.agents/skills/implementation-design-review/reference.md`:
 - **Current epoch:** <n>
 - **Budget per epoch:** 1 initial review + at most 1 automatic re-review
 - **Attempts used in current epoch:** <m>
+- **Review sequence in current epoch:** <r>
 - **Epoch status:** active | blocked | exhausted | passed
 - **Blocked reason:** <missing prerequisite, or "none">
 - **Authorizations:**
@@ -113,10 +114,14 @@ except for the single architectural-escalation transition below.
 **Attempts used** counts only completed `Pass` or `Changes required` attempts. A `Blocked` verdict
 does not consume budget.
 
-Before each new attempt, if fixed-path artifacts already exist, copy them into
-`.agentWork/.session/archive/` using the archive naming in the design-review reference, then replace
-the fixed paths with the new attempt. Keep the ledger and archives when an epoch exhausts or
-blocks.
+**Review sequence** increments for every actual reviewer invocation in the current epoch, including
+`Blocked`, `Pass`, and `Changes required`. It is independent of **Attempts used** and exists so
+archives never collide when Blocked/resume retries reuse the same budget slot.
+
+Before each reviewer invocation, if fixed-path artifacts already exist, copy them into
+`.agentWork/.session/archive/` using the archive naming in the design-review reference (epoch +
+review sequence), then replace the fixed paths. Keep the ledger and archives when an epoch
+exhausts or blocks.
 
 ### Blocked suspend and resume
 
@@ -124,18 +129,21 @@ On a design or plan `Blocked` verdict:
 
 1. Set epoch status to `blocked`.
 2. Record **Blocked reason** (missing ADR/file/lifecycle fact, unavailable evidence, etc.).
-3. Stop. Do not open a new epoch and do not reset attempts.
+3. Stop. Do not open a new epoch and do not reset attempts or review sequence.
 4. Do not run the next review stage.
 
 When the missing prerequisite becomes available, an **explicit later planning invocation** for the
 same `Not started` plan may resume the same bounded epoch: set status `active`, clear **Blocked
 reason**, record a `blocked-resume` authorization line, and retry within the remaining budget. Do
-not mint a fresh automatic budget. Bare `continue` or plan edits alone are not resume authorization.
-`In progress` plans cannot use blocked-resume to rewrite a frozen contract.
+not mint a fresh automatic budget. The resume increments **Review sequence** for the new invocation
+but does not increment **Attempts used** until a `Pass` or `Changes required` completes. Bare
+`continue` or plan edits alone are not resume authorization. `In progress` plans cannot use
+blocked-resume to rewrite a frozen contract.
 
 ### Gate carry-forward
 
-Unresolved gate findings must not disappear across attempts or epoch boundaries.
+Unresolved gate findings must not disappear across attempts or epoch boundaries, subject to the
+design-Blocking clear-on-Pass rule below.
 
 #### Design gate carry-forward
 
@@ -152,6 +160,18 @@ Sections:
 - **Required** — every unresolved design `Required` finding (including across Pass attempts that
   fail to rediscover them).
 
+Before each fresh design attempt, planning must apply every known design **Blocking** carry-forward
+item to the plan. Design reviewers stay fresh and isolated: they must not read prior artifacts or
+carry-forward merely to clear findings.
+
+**Design Blocking clear-on-Pass:** if that fresh exhaustive design review returns official `Pass`,
+clear the pre-existing design **Blocking** carry-forward entries for that attempt. An independent
+fresh design `Pass` is the verification that the remediated architecture is now acceptable. Do
+**not** clear design **Required** on design Pass — those remain sticky into plan review.
+
+If planning did not address a Blocking item, or the fresh review reports that item or any other
+`Blocking` finding (`Changes required`), retain/update Blocking carry-forward; it remains gating.
+
 #### Plan gate carry-forward
 
 After every plan-review attempt that produces findings, and whenever a plan epoch exhausts,
@@ -164,19 +184,17 @@ planning unions unresolved plan gate findings into:
 Sections:
 
 - **Blocking** — every unresolved plan `Blocking` finding.
-- **Required** — every unresolved plan `Required` finding (including design carry-forward items not
-  yet addressed).
+- **Required** — every unresolved plan `Required` finding (including design Required carry-forward
+  items not yet addressed).
 
-Use durable titles plus citation/recommendation. Never remove an entry because a later fresh
-reviewer omitted it. Remove an entry only when a later review has verified the plan addresses it,
-or when severity legitimately escalates (for example Required → Blocking) and the higher-severity
-entry replaces it. A fresh reviewer failing to rediscover an existing gate finding must not make
-that finding disappear.
+Plan gate entries clear only when a later plan review has verified the plan addresses them (or
+severity legitimately escalates and the higher-severity entry replaces the lower one). Never remove
+a plan gate entry or a design **Required** entry merely because a later fresh reviewer omitted it.
 
 ### Opening a new epoch
 
-Open a new bounded epoch (increment **Current epoch**, reset attempts to 0, set status `active`,
-preserve prior archives, ledger history, and gate carry-forward) only for:
+Open a new bounded epoch (increment **Current epoch**, reset attempts to 0, reset review sequence to
+0, set status `active`, preserve prior archives, ledger history, and gate carry-forward) only for:
 
 1. **First review** of this identity — Epoch 1, automatic.
 2. **Exhausted continuation** — after status `exhausted`, a later **explicit** user instruction
@@ -322,26 +340,34 @@ These cases are normative expectations for the planning/review rules above.
 13. Genuine new execution-unit boundary after exhaustion → genuine decomposition still allowed.
 14. Design attempt reports Required B then Blocking A; re-review Passes without rediscovering B →
     B remains in the design gate carry-forward for plan review.
-15. Explicit user-requested Refine of a previously passed `Not started` plan → new bounded epochs
+15. Design attempt 1 reports Blocking A; planning applies A; fresh attempt 2 returns Pass without
+    mentioning A → clear A from design Blocking carry-forward; plan review may proceed. Design
+    Required entries are not cleared by that Pass.
+16. Planning does not address Blocking A, or fresh review finds A / another Blocking → Blocking
+    carry-forward remains gating.
+17. Explicit user-requested Refine of a previously passed `Not started` plan → new bounded epochs
     for the reviews that must run again; prior history preserved.
-16. Plan review reports architectural Blocking after design `passed` → one automatic new design
+18. Plan review reports architectural Blocking after design `passed` → one automatic new design
     epoch (`architectural-escalation`); if design is already exhausted or blocked, stop for the
     matching authorization.
-17. Design or plan attempt returns `Blocked` → epoch status `blocked`; later explicit planning
+19. Design or plan attempt returns `Blocked` → epoch status `blocked`; later explicit planning
     invocation after the prerequisite is available resumes the same epoch without a new budget.
-18. Epoch 1 exhausts with unresolved Required/Blocking C; user authorizes Epoch 2; fresh Pass omits
-    C → C remains gating via gate carry-forward until verified addressed.
+20. Two consecutive Blocked/resume cycles then Pass → each invocation gets a distinct archive via
+    review sequence; Attempts used still counts only Pass/Changes required.
+21. Epoch 1 exhausts with unresolved Required/Blocking C; user authorizes Epoch 2; fresh Pass omits
+    C → design Blocking C clears only under the clear-on-Pass rule after remediation; design
+    Required C and plan gate findings remain gating until verified addressed.
 
 ### Dependency waves
 
-19. B depends on in-operation unaccepted A → do not fully review B yet.
-20. B and C depend only on in-operation accepted A → B and C may review in parallel.
-21. D depends on in-operation C → D waits until C is accepted.
-22. B depends on live outside-operation A that is not being revised → A is a stable external
+22. B depends on in-operation unaccepted A → do not fully review B yet.
+23. B and C depend only on in-operation accepted A → B and C may review in parallel.
+24. D depends on in-operation C → D waits until C is accepted.
+25. B depends on live outside-operation A that is not being revised → A is a stable external
     prerequisite; do not re-review A solely to unlock B.
-23. Downstream had early useful findings; upstream then changed → retain findings; defer re-review
+26. Downstream had early useful findings; upstream then changed → retain findings; defer re-review
     until prerequisites stabilize.
 
 ### Implementation freeze
 
-24. Plan is `In progress` → review-epoch continuation must not rewrite the frozen contract.
+27. Plan is `In progress` → review-epoch continuation must not rewrite the frozen contract.

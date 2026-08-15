@@ -109,13 +109,14 @@ third review layer.
 Follow **Orchestration** in
 `.agents/skills/implementation-design-review/SKILL.md` exactly, including its parallel fresh,
 write-capable reviewers, verbatim isolated prompts, worst-wins result, pointer stub, and terminating
-`implementation-handoff` fallback. After each attempt (and on exhaust), union unresolved design gate
-findings into the design gate carry-forward per [review epochs](reference.md#review-epochs). Handle
-only the official pointer-stub verdict:
+`implementation-handoff` fallback. Before each design attempt, apply known design Blocking
+carry-forward to the plan. After each attempt (and on exhaust), union unresolved design gate findings
+into the design gate carry-forward per [review epochs](reference.md#review-epochs). Handle only the
+official pointer-stub verdict:
 
-- `Pass`: proceed to plan review only when no unresolved design **Blocking** remain in the design
-  gate carry-forward. Unresolved design `Required` findings remain in carry-forward for plan review;
-  they must not trigger another design cycle by themselves.
+- `Pass`: clear pre-existing design **Blocking** carry-forward for that attempt (clear-on-Pass), keep
+  design **Required** sticky, then proceed to plan review. Required findings must not trigger another
+  design cycle by themselves.
 - `Changes required`: fix **all known** `Blocking` findings (including design gate carry-forward
   Blocking), repeat **Write and verify**, then run **one** fresh design re-review in the same epoch.
   If `Blocking` findings remain after that re-review, exhaust the epoch, update gate carry-forward,
@@ -133,8 +134,7 @@ contract.
 
 ### Plan review
 
-Run only after design `Pass` for that plan (with no unresolved design Blocking in carry-forward),
-and only when the plan is in a ready dependency wave.
+Run only after design `Pass` for that plan, and only when the plan is in a ready dependency wave.
 Derive `<plan basename>` from the filename without `.md`. Spawn a new general-purpose, write-capable
 subagent in a fresh session and send this prompt verbatim, replacing only `<plan path>` and
 `<plan basename>`:

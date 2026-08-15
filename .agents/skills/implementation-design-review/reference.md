@@ -26,17 +26,16 @@ top-level title.
 | Plan-review handoff | `.agentWork/.session/implementation-handoff-plan-review-<basename>.md` |
 | Implementation-review handoff | `.agentWork/.session/implementation-handoff-implementation-review-<basename>.md` |
 
-Archive copies (before replacing fixed paths for a new attempt) use:
+Archive copies (before replacing fixed paths for a new reviewer invocation) use:
 
 ```text
-.agentWork/.session/archive/<artifact-stem>-e<epoch>-a<attempt>.md
+.agentWork/.session/archive/<artifact-stem>-e<epoch>-r<review-sequence>.md
 ```
 
 where `<artifact-stem>` is the fixed filename without `.md` (for example
-`implementation-design-review-design-<basename>`).
-
-Artifact paths are fixed; do not accept free-form overrides. Create `.agentWork/.session/` when
-needed. Current fixed paths always hold the latest attempt; archives preserve history.
+`implementation-design-review-design-<basename>`), and `<review-sequence>` is the ledger's
+per-epoch invocation counter (including `Blocked` retries). Do not key archives only on budget
+**Attempts used**; Blocked/resume must not overwrite prior archives.
 
 ## Reviewer prompts
 
@@ -110,14 +109,14 @@ Create or completely replace the official pointer-stub path with exactly this sh
 # Design review: <plan title>
 
 - **Plan:** `<plan path>`
-- **Epoch / attempt:** <epoch> / <attempt>
+- **Epoch / review-sequence:** <epoch> / <review-sequence>
 - **Design:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-design-<basename>.md`
 - **Adversarial:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-adversarial-<basename>.md`
 - **Official:** <Pass | Changes required | Blocked>
 ```
 
-Fill **Epoch / attempt** from the design epoch ledger when present (planning-managed). For on-demand
-design review with no ledger, write `on-demand / 1`. The stub is paths and verdicts only. Do not add
-a summary, findings, or residual risks; those remain in the reviewer artifacts. Planning maintains
-design and plan gate carry-forward paths; plan review reads those files plus current design
+Fill **Epoch / review-sequence** from the design epoch ledger when present (planning-managed). For
+on-demand design review with no ledger, write `on-demand / 1`. The stub is paths and verdicts only.
+Do not add a summary, findings, or residual risks; those remain in the reviewer artifacts. Planning
+maintains design and plan gate carry-forward paths; plan review reads those files plus current design
 artifacts.
