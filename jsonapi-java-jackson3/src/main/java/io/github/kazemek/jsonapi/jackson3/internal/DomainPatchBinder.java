@@ -23,19 +23,22 @@ import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonParser;
 import tools.jackson.databind.BeanProperty;
 import tools.jackson.databind.DeserializationConfig;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.PropertyMetadata;
 import tools.jackson.databind.PropertyName;
 import tools.jackson.databind.ValueDeserializer;
 import tools.jackson.databind.deser.DeserializationContextExt;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ser.SerializationContextExt;
+import tools.jackson.databind.util.TokenBuffer;
 
 /**
  * Binds a validated single-resource update into a {@link PatchCommand} without constructing a DTO.
  *
  * <p>Converts only supplied mapped attributes and relationships in attribute-then-relationship
  * encounter order. Reuses {@link ResourceMapping} definitions and the same relationship cardinality
- * / linkage rules as {@link DomainResourceBinder}; attribute values use per-member {@link
+ * / linkage rules as {@link RelationshipLinkageSupport}; attribute values use per-member {@link
  * JsonMapper#convertValue}. Document {@code included} is never read.
  */
 public final class DomainPatchBinder {
@@ -59,8 +62,8 @@ public final class DomainPatchBinder {
   }
 
   /** Binds one resource object into a presence-aware patch command for {@code targetType}. */
-  @SuppressWarnings("unchecked")
-  public <T> PatchCommand<T> fromResource(ResourceObject resource, JavaType targetType) {
+  @SuppressWarnings("java:S1452")
+  public PatchCommand<?> fromResource(ResourceObject resource, JavaType targetType) {
     Objects.requireNonNull(resource, "resource");
     Objects.requireNonNull(targetType, "targetType");
     Class<?> rawType = targetType.getRawClass();
@@ -70,7 +73,9 @@ public final class DomainPatchBinder {
     List<PatchChange> changes = new ArrayList<>();
     bindAttributeChanges(resource, mapping, rawType, changes);
     bindRelationshipChanges(resource, mapping, changes);
-    return new PatchCommand<>((Class<T>) rawType, identity, changes);
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    PatchCommand<?> command = new PatchCommand(rawType, identity, changes);
+    return command;
   }
 
   private void validateResourceType(
@@ -151,8 +156,8 @@ public final class DomainPatchBinder {
       if (property == null) {
         continue;
       }
-      @Nullable Object rawValue = entry.getValue();
-      @Nullable Object value = convertAttributeValue(property, rawValue, rawType);
+      Object rawValue = entry.getValue();
+      Object value = convertAttributeValue(property, rawValue, rawType);
       changes.add(
           new PatchChange.AttributeChange(property.jsonapiName(), property.logicalName(), value));
     }
@@ -161,15 +166,30 @@ public final class DomainPatchBinder {
   /**
    * Per-member conversion via {@link JsonMapper#convertValue}, honoring property-level
    * {@code @JsonDeserialize} when present. Explicit JSON {@code null} is stored as {@code value ==
-   * null} even when {@code convertValue} would produce {@code Optional.empty()}.
+   * null} even when {@code convertValue} would produce {@code Optional.empty()}. Explicit null for
+   * a primitive property is always {@link MappingDiagnostic#UNSUPPORTED_ATTRIBUTE_VALUE},
+   * independent of the caller's {@code FAIL_ON_NULL_FOR_PRIMITIVES} setting.
    */
   private @Nullable Object convertAttributeValue(
       MappingProperty property, @Nullable Object rawValue, Class<?> rawType) {
     JavaType propertyType = property.accessor().getType();
+    if (rawValue == null && propertyType.isPrimitive()) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
+          rawType,
+          "/" + property.logicalName(),
+          "Explicit null is not supported for primitive attribute '"
+              + property.logicalName()
+              + "' on "
+              + rawType.getName());
+    }
     try {
-      Object converted = convertAttributeWithOptionalDeserializer(property, rawValue, propertyType);
+      Object converted = convertAttribute(property, rawValue, propertyType);
       return rawValue == null ? null : converted;
     } catch (RuntimeException e) {
+      if (e instanceof JsonApiMappingException mappingException) {
+        throw mappingException;
+      }
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
           rawType,
@@ -180,12 +200,11 @@ public final class DomainPatchBinder {
   }
 
   /**
-   * Honors property-level {@code @JsonDeserialize} via the mapper's {@link
-   * tools.jackson.databind.DeserializationContext} (contextualized against the property {@link
-   * tools.jackson.databind.introspect.AnnotatedMember}). Falls back to {@link
-   * JsonMapper#convertValue} when no property deserializer is declared.
+   * Uses {@code convertValue} unless the property declares {@code @JsonDeserialize}, in which case
+   * Jackson's TokenBuffer conversion helpers run that deserializer with a real context (same
+   * machinery as {@code convertValue}, property-scoped).
    */
-  private @Nullable Object convertAttributeWithOptionalDeserializer(
+  private @Nullable Object convertAttribute(
       MappingProperty property, @Nullable Object rawValue, JavaType propertyType) {
     DeserializationConfig config = mapper.deserializationConfig();
     Object deserializerDef =
@@ -196,27 +215,58 @@ public final class DomainPatchBinder {
     if (rawValue == null) {
       return null;
     }
-    DeserializationContextExt ctxt = mapper._deserializationContext();
+    DeserializationContextExt context = mapper._deserializationContext();
     ValueDeserializer<Object> deserializer =
-        ctxt.deserializerInstance(property.accessor(), deserializerDef);
+        contextualPropertyDeserializer(context, property, propertyType, deserializerDef);
     if (deserializer == null) {
       return mapper.convertValue(rawValue, propertyType);
     }
-    BeanProperty beanProperty =
-        new BeanProperty.Std(
-            PropertyName.construct(property.logicalName()),
-            propertyType,
-            null,
-            property.accessor(),
-            PropertyMetadata.STD_OPTIONAL);
+    try (JsonParser parser = conversionParser(context, rawValue)) {
+      return deserializer.deserialize(parser, context);
+    }
+  }
+
+  private static @Nullable ValueDeserializer<Object> contextualPropertyDeserializer(
+      DeserializationContextExt context,
+      MappingProperty property,
+      JavaType propertyType,
+      Object deserializerDef) {
+    ValueDeserializer<Object> created =
+        context.deserializerInstance(property.accessor(), deserializerDef);
+    if (created == null) {
+      return null;
+    }
     @SuppressWarnings("unchecked")
     ValueDeserializer<Object> contextual =
         (ValueDeserializer<Object>)
-            ctxt.handlePrimaryContextualization(deserializer, beanProperty, propertyType);
-    try (JsonParser parser = mapper.createParser(mapper.writeValueAsBytes(rawValue))) {
-      parser.nextToken();
-      return contextual.deserialize(parser, ctxt.assignParser(parser));
+            context.handlePrimaryContextualization(
+                created, asBeanProperty(property, propertyType), propertyType);
+    return contextual;
+  }
+
+  private static BeanProperty asBeanProperty(MappingProperty property, JavaType propertyType) {
+    return new BeanProperty.Std(
+        PropertyName.construct(property.logicalName()),
+        propertyType,
+        null,
+        property.accessor(),
+        PropertyMetadata.STD_OPTIONAL);
+  }
+
+  /**
+   * TokenBuffer-backed parser positioned on the first value token (Jackson {@code convertValue}).
+   */
+  private JsonParser conversionParser(DeserializationContextExt context, Object rawValue) {
+    SerializationContextExt serializationContext = mapper._serializationContext();
+    TokenBuffer buffer = serializationContext.bufferForValueConversion();
+    if (mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
+      buffer = buffer.forceUseOfBigDecimal(true);
     }
+    serializationContext.serializeValue(buffer, rawValue);
+    JsonParser parser = buffer.asParser(context);
+    context.assignParser(parser);
+    parser.nextToken();
+    return parser;
   }
 
   private void bindRelationshipChanges(
@@ -231,7 +281,7 @@ public final class DomainPatchBinder {
       if (property != null) {
         RelationshipData data = entry.getValue().data();
         if (data != null) {
-          @Nullable Object value = convertRelationship(property, data);
+          Object value = convertRelationship(property, data);
           changes.add(
               new PatchChange.RelationshipChange(
                   property.jsonapiName(), property.logicalName(), value));
@@ -251,76 +301,23 @@ public final class DomainPatchBinder {
   private @Nullable Object convertRelationship(MappingProperty property, RelationshipData data) {
     JavaType propertyType = property.accessor().getType();
     boolean toMany = DomainResourceWriter.isToManyType(propertyType);
-    Class<?> targetClass = resolveTargetClass(propertyType, toMany, property);
-    @Nullable Object intermediate;
+    Class<?> targetClass =
+        RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
+    Object intermediate;
     if (targetClass == ResourceIdentifier.class) {
-      intermediate = builtInLinkage(property, data, toMany);
+      intermediate = RelationshipLinkageSupport.builtInLinkage(property, data, toMany);
     } else {
       RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
       if (linkageMapper == null) {
-        throw unsupportedRelationshipTarget(property, targetClass);
+        throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
       }
-      JavaType mapperTargetType = toMany ? propertyType : unwrapOptionalType(propertyType);
-      intermediate = mappedLinkage(property, data, toMany, linkageMapper, mapperTargetType);
+      JavaType mapperTargetType =
+          toMany ? propertyType : RelationshipLinkageSupport.unwrapOptionalType(propertyType);
+      intermediate =
+          RelationshipLinkageSupport.mappedLinkage(
+              property, data, toMany, linkageMapper, mapperTargetType);
     }
     return finalizeRelationshipValue(intermediate, propertyType, property);
-  }
-
-  private static Class<?> resolveTargetClass(
-      JavaType propertyType, boolean toMany, MappingProperty property) {
-    if (toMany) {
-      JavaType contentType = DomainResourceWriter.resolveContentType(propertyType);
-      if (contentType == null) {
-        throw new JsonApiMappingException(
-            MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
-            rawTypeOf(property),
-            relationshipPath(property),
-            "Cannot resolve collection content type for relationship '"
-                + property.logicalName()
-                + "'");
-      }
-      return contentType.getRawClass();
-    }
-    return unwrapOptionalType(propertyType).getRawClass();
-  }
-
-  private static @Nullable Object builtInLinkage(
-      MappingProperty property, RelationshipData data, boolean toMany) {
-    boolean empty = validateCardinality(property, data, toMany);
-    return switch (data) {
-      case RelationshipData.NullLinkage ignored -> null;
-      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) -> linkageMap(identifier);
-      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
-        if (empty) {
-          yield List.of();
-        }
-        List<Object> values = new ArrayList<>(identifiers.size());
-        for (ResourceIdentifier identifier : identifiers) {
-          values.add(linkageMap(identifier));
-        }
-        yield values;
-      }
-    };
-  }
-
-  private @Nullable Object mappedLinkage(
-      MappingProperty property,
-      RelationshipData data,
-      boolean toMany,
-      RelationshipLinkageMapper linkageMapper,
-      JavaType mapperTargetType) {
-    boolean empty = validateCardinality(property, data, toMany);
-    return switch (data) {
-      case RelationshipData.NullLinkage ignored -> null;
-      case RelationshipData.SingleLinkage single ->
-          invokeLinkageMapper(linkageMapper, single, mapperTargetType, property);
-      case RelationshipData.IdentifierCollectionLinkage collection -> {
-        if (empty) {
-          yield List.of();
-        }
-        yield invokeLinkageMapper(linkageMapper, collection, mapperTargetType, property);
-      }
-    };
   }
 
   private @Nullable Object finalizeRelationshipValue(
@@ -333,8 +330,8 @@ public final class DomainPatchBinder {
     } catch (RuntimeException e) {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
-          rawTypeOf(property),
-          relationshipPath(property),
+          RelationshipLinkageSupport.rawTypeOf(property),
+          RelationshipLinkageSupport.relationshipPath(property),
           "Failed to convert relationship '"
               + property.logicalName()
               + "' to "
@@ -366,8 +363,8 @@ public final class DomainPatchBinder {
       if (contentType == null) {
         return false;
       }
-      Object first = list.get(0);
-      return first != null && contentType.getRawClass().isInstance(first);
+      Object first = list.getFirst();
+      return contentType.getRawClass().isInstance(first);
     }
     return propertyType.getRawClass().isInstance(intermediate);
   }
@@ -380,95 +377,5 @@ public final class DomainPatchBinder {
       return true;
     }
     return propertyType.isTypeOrSubTypeOf(Set.class) && !(intermediate instanceof Set);
-  }
-
-  private static boolean validateCardinality(
-      MappingProperty property, RelationshipData data, boolean toMany) {
-    return switch (data) {
-      case RelationshipData.NullLinkage ignored -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "null linkage on to-many relationship");
-        }
-        yield true;
-      }
-      case RelationshipData.SingleLinkage ignored -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "single linkage on to-many relationship");
-        }
-        yield false;
-      }
-      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
-        boolean empty = identifiers.isEmpty();
-        if (!toMany) {
-          throw cardinalityMismatch(
-              property,
-              empty
-                  ? "empty collection linkage on to-one relationship"
-                  : "collection linkage on to-one relationship");
-        }
-        yield empty;
-      }
-    };
-  }
-
-  private static @Nullable Object invokeLinkageMapper(
-      RelationshipLinkageMapper linkageMapper,
-      RelationshipData data,
-      JavaType targetType,
-      MappingProperty property) {
-    try {
-      return linkageMapper.map(data, targetType);
-    } catch (RuntimeException e) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.LINKAGE_MAPPING_FAILED,
-          rawTypeOf(property),
-          relationshipPath(property),
-          "Relationship linkage mapper failed for relationship '" + property.logicalName() + "'",
-          e);
-    }
-  }
-
-  private static Map<String, @Nullable Object> linkageMap(ResourceIdentifier identifier) {
-    Map<String, @Nullable Object> linkage = new LinkedHashMap<>();
-    linkage.put("type", identifier.type());
-    linkage.put("id", identifier.id());
-    linkage.put("lid", identifier.lid());
-    return linkage;
-  }
-
-  private static JavaType unwrapOptionalType(JavaType type) {
-    if (type.isTypeOrSubTypeOf(Optional.class) && type.containedTypeCount() == 1) {
-      return type.containedType(0);
-    }
-    return type;
-  }
-
-  private static Class<?> rawTypeOf(MappingProperty property) {
-    return property.accessor().getType().getRawClass();
-  }
-
-  private static JsonApiMappingException cardinalityMismatch(
-      MappingProperty property, String detail) {
-    return new JsonApiMappingException(
-        MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
-        rawTypeOf(property),
-        relationshipPath(property),
-        "Cardinality mismatch for relationship '" + property.logicalName() + "': " + detail);
-  }
-
-  private static JsonApiMappingException unsupportedRelationshipTarget(
-      MappingProperty property, Class<?> targetClass) {
-    return new JsonApiMappingException(
-        MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
-        rawTypeOf(property),
-        relationshipPath(property),
-        "Relationship '"
-            + property.logicalName()
-            + "' targets unsupported type "
-            + targetClass.getName());
-  }
-
-  private static String relationshipPath(MappingProperty property) {
-    return "/relationships/" + property.jsonapiName() + "/data";
   }
 }

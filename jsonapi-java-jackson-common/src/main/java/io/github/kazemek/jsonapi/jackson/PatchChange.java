@@ -36,6 +36,11 @@ public sealed interface PatchChange
       Objects.requireNonNull(logicalName, "logicalName");
       value = freezeValue(value);
     }
+
+    @Override
+    public @Nullable Object value() {
+      return exposeValue(value);
+    }
   }
 
   /** A supplied mapped relationship linkage replacement. */
@@ -46,13 +51,18 @@ public sealed interface PatchChange
       Objects.requireNonNull(logicalName, "logicalName");
       value = freezeValue(value);
     }
+
+    @Override
+    public @Nullable Object value() {
+      return exposeValue(value);
+    }
   }
 
   /**
-   * Shallow-freeze {@link List}, {@link Set}, and array values. Null elements are preserved; other
-   * objects are left as-is.
+   * Shallow-freeze {@link List}, {@link Set}, and array values for storage. Null elements are
+   * preserved; other objects are left as-is.
    */
-  static @Nullable Object freezeValue(@Nullable Object value) {
+  private static @Nullable Object freezeValue(@Nullable Object value) {
     if (value == null) {
       return null;
     }
@@ -65,14 +75,22 @@ public sealed interface PatchChange
       Set<@Nullable Object> copy = new LinkedHashSet<>(set);
       return Collections.unmodifiableSet(copy);
     }
-    Class<?> type = value.getClass();
-    if (type.isArray()) {
-      int length = Array.getLength(value);
-      Object copy = Array.newInstance(type.getComponentType(), length);
-      //noinspection SuspiciousSystemArraycopy
-      System.arraycopy(value, 0, copy, 0, length);
-      return copy;
+    return copyArray(value);
+  }
+
+  /** Defensive copy for array accessors; lists/sets are already unmodifiable. */
+  private static @Nullable Object exposeValue(@Nullable Object value) {
+    return copyArray(value);
+  }
+
+  private static @Nullable Object copyArray(@Nullable Object value) {
+    if (value == null || !value.getClass().isArray()) {
+      return value;
     }
-    return value;
+    int length = Array.getLength(value);
+    Object copy = Array.newInstance(value.getClass().getComponentType(), length);
+    //noinspection SuspiciousSystemArraycopy
+    System.arraycopy(value, 0, copy, 0, length);
+    return copy;
   }
 }

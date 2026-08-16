@@ -27,6 +27,7 @@ import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithArray
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithSet
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCountedThing
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -35,6 +36,7 @@ import spock.lang.Shared
 import spock.lang.Specification
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
+import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.JavaType
 import tools.jackson.databind.annotation.JsonDeserialize
 import tools.jackson.databind.deser.std.StdDeserializer
@@ -136,6 +138,42 @@ class PatchBindingSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
     ex.propertyPath() == "/id"
+  }
+
+  def "fromDocument JavaType returns PatchCommand wildcard with raw resourceType"() {
+    given:
+    def mapper = JsonMapper.builder().build()
+    def reader = JsonApiJackson3.patchReader(mapper)
+    def document = decodeUpdateDocument(
+        '{"data":{"type":"articles","id":"1","attributes":{"title":"Hello"}}}')
+    def javaType = mapper.constructType(FlatArticle)
+
+    when:
+    PatchCommand<?> command = reader.fromDocument(document, javaType)
+
+    then:
+    command.resourceType() == FlatArticle
+    command.identity() == "1"
+    command.changes() == [
+      new PatchChange.AttributeChange("title", "title", "Hello")
+    ]
+  }
+
+  def "explicit null on primitive attribute fails even when FAIL_ON_NULL_FOR_PRIMITIVES is off"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+        .build()
+    def reader = JsonApiJackson3.patchReader(mapper)
+    def json = '{"data":{"type":"things","id":"1","attributes":{"count":null}}}'
+
+    when:
+    reader.readValue(json, FlatCountedThing)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/count"
   }
 
   def "Builder and JavaType factory overloads bind successfully"() {
@@ -453,10 +491,16 @@ class PatchBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","relationships":{"tags":{"data":[{"type":"tags","id":"t1"}]}}}}'
     def arrayJson =
         '{"data":{"type":"articles","id":"1","relationships":{"comments":{"data":[{"type":"comments","id":"c1"}]}}}}'
+    def emptySetJson =
+        '{"data":{"type":"articles","id":"1","relationships":{"tags":{"data":[]}}}}'
+    def emptyArrayJson =
+        '{"data":{"type":"articles","id":"1","relationships":{"comments":{"data":[]}}}}'
 
     when:
     def setCommand = reader.readValue(setJson, FlatArticleWithSet)
     def arrayCommand = reader.readValue(arrayJson, FlatArticleWithArray)
+    def emptySetCommand = reader.readValue(emptySetJson, FlatArticleWithSet)
+    def emptyArrayCommand = reader.readValue(emptyArrayJson, FlatArticleWithArray)
 
     then:
     setCommand.changes().size() == 1
@@ -465,6 +509,12 @@ class PatchBindingSpec extends Specification {
     arrayCommand.changes().size() == 1
     arrayCommand.changes()[0].value() instanceof ResourceIdentifier[]
     ((ResourceIdentifier[]) arrayCommand.changes()[0].value()).length == 1
+    emptySetCommand.changes().size() == 1
+    emptySetCommand.changes()[0].value() instanceof Set
+    ((Set) emptySetCommand.changes()[0].value()).isEmpty()
+    emptyArrayCommand.changes().size() == 1
+    emptyArrayCommand.changes()[0].value() instanceof ResourceIdentifier[]
+    ((ResourceIdentifier[]) emptyArrayCommand.changes()[0].value()).length == 0
   }
 
   def "Builder factory with ValidationContext and IdentifierConverter binds"() {

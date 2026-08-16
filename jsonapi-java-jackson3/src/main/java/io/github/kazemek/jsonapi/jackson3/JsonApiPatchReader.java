@@ -126,18 +126,19 @@ public final class JsonApiPatchReader {
    * {@link DocumentData.SingleResource} primary data; other primary-data states throw {@link
    * IllegalArgumentException}.
    */
+  @SuppressWarnings("unchecked")
   public <T> PatchCommand<T> fromDocument(JsonApiDocument document, Class<T> resourceType) {
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
-    return fromDocument(document, binderMapper.constructType(resourceType));
+    return (PatchCommand<T>) fromDocument(document, binderMapper.constructType(resourceType));
   }
 
   /**
    * Binds an already-validated document without re-parsing or re-validating. Requires non-null
    * {@link DocumentData.SingleResource} primary data; other primary-data states throw {@link
-   * IllegalArgumentException}.
+   * IllegalArgumentException}. {@link PatchCommand#resourceType()} is the type's raw class.
    */
-  @SuppressWarnings("unchecked")
-  public <T> PatchCommand<T> fromDocument(JsonApiDocument document, JavaType resourceType) {
+  @SuppressWarnings("java:S1452")
+  public PatchCommand<?> fromDocument(JsonApiDocument document, JavaType resourceType) {
     Objects.requireNonNull(document, "document");
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     DocumentData data = document.data();
@@ -145,6 +146,6 @@ public final class JsonApiPatchReader {
       throw new IllegalArgumentException(
           "fromDocument requires DocumentData.SingleResource primary data");
     }
-    return (PatchCommand<T>) binder.fromResource(resource, resourceType);
+    return binder.fromResource(resource, resourceType);
   }
 }

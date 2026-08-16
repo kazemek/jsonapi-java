@@ -444,4 +444,29 @@ class JacksonCommonContractsSpec extends Specification {
     (command.changes()[1].value() as Set) == ["s"] as Set
     (command.changes()[2].value() as String[])[0] == "x"
   }
+
+  def "mutating an array returned from value cannot affect the stored change"() {
+    given:
+    def change = new PatchChange.AttributeChange("names", "names", ["a"] as String[])
+    def exposed = change.value() as String[]
+
+    when:
+    exposed[0] = "changed"
+
+    then:
+    (change.value() as String[])[0] == "a"
+  }
+
+  def "mutating a primitive array returned from value cannot affect the stored change"() {
+    given:
+    def change = new PatchChange.RelationshipChange("counts", "counts", [1, 2] as int[])
+    def exposed = change.value() as int[]
+
+    when:
+    exposed[0] = 99
+
+    then:
+    (change.value() as int[])[0] == 1
+    (change.value() as int[])[1] == 2
+  }
 }
