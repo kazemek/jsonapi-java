@@ -43,8 +43,7 @@ counters).
 | [`jsonapi-java-test-fixtures/`](jsonapi-java-test-fixtures/README.md) | Internal shared scenario catalogs and fixture builders, including the shared domain-write, domain-read, compound-write, sparse-fieldset, and presence-aware PATCH catalogs (not a published module) |
 | `fixtures/jsonapi-1.1/`        | Version-neutral canonical JSON:API document fixtures for codec parity                            |
 | `build-logic/`                 | Shared Gradle convention plugins                                                                 |
-| `docs/`                        | Vision, Outlook, conformance, and architecture decision records                                  |
-| `.agentWork/plans/`            | Temporary live implementation plans (unfinished work only)                                       |
+| `docs/`                        | Vision, conformance, and architecture decision records                                           |
 
 ## Module registry
 
@@ -70,11 +69,9 @@ not duplicate those module-specific contracts.
 - [Jackson 3 module](jsonapi-java-jackson3/README.md)
 - [Jackson common contracts module](jsonapi-java-jackson-common/README.md)
 - [Vision](docs/vision.md) — stable product direction and principles
-- [Outlook](docs/outlook/README.md) — tentative, revisable future direction
 - [Conformance checklist](docs/conformance.md) — current JSON:API 1.1 feature status
 - [Architecture decision records](docs/adr/README.md)
-- [Agent workflow](AGENTS.md) — knowledge model, discovery, plan lifecycle, and completion gates
-- Live implementation plans (when present) live under `.agentWork/plans/` — temporary execution contracts only
+- [Agent workflow](AGENTS.md) — knowledge ownership, routing, and completion gates
 
 ## License
 

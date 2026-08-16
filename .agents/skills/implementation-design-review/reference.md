@@ -1,125 +1,63 @@
 # Design Review Shared Reference
 
-This file is the canonical local owner of design-review launcher prompts, fixed artifact paths,
-official pointer-stub shape, and verdict-combination data. Orchestration and fallback state
-transitions remain in their respective skills. Finding severity lives in
-[../review-findings.md](../review-findings.md). Review epochs and automatic budgets live in
-`implementation-planning`.
+Canonical owner of design-review launcher prompts and fixed artifact paths. Finding severity:
+[../review-findings.md](../review-findings.md).
 
 ## Placeholders and paths
 
-Derive `<basename>` from the plan file name without `.md`. Derive `<plan title>` from the plan's
-top-level title.
+Derive `<basename>` from the plan file name without `.md`, or from a short slug supplied for
+plan-less design text.
 
 | Artifact | Fixed path |
 |----------|------------|
-| Official design-review pointer stub | `.agentWork/.session/implementation-design-review-<basename>.md` |
 | Design reviewer artifact | `.agentWork/.session/implementation-design-review-design-<basename>.md` |
-| Adversarial reviewer artifact | `.agentWork/.session/implementation-design-review-adversarial-<basename>.md` |
-| Design-review epoch ledger | `.agentWork/.session/review-epoch-design-<basename>.md` |
-| Plan-review epoch ledger | `.agentWork/.session/review-epoch-plan-<basename>.md` |
-| Design gate carry-forward | `.agentWork/.session/design-gate-carry-forward-<basename>.md` |
-| Plan gate carry-forward | `.agentWork/.session/plan-gate-carry-forward-<basename>.md` |
+| Adversarial reviewer artifact (optional) | `.agentWork/.session/implementation-design-review-adversarial-<basename>.md` |
 | Plan-review artifact | `.agentWork/.session/implementation-plan-review-<basename>.md` |
 | Implementation-review artifact | `.agentWork/.session/implementation-review-<basename>.md` |
 | Design-review handoff | `.agentWork/.session/implementation-handoff-design-review-<basename>.md` |
 | Plan-review handoff | `.agentWork/.session/implementation-handoff-plan-review-<basename>.md` |
 | Implementation-review handoff | `.agentWork/.session/implementation-handoff-implementation-review-<basename>.md` |
+| Work context (fallback only) | `.agentWork/.session/work-context.md` |
 
-Archive copies (before replacing fixed paths for a new reviewer invocation) use:
+Create `.agentWork/.session/` when needed. Replace fixed paths on each new invocation. Do not keep
+review ledgers, sticky finding files, or archive-sequence machinery.
 
-```text
-.agentWork/.session/archive/<artifact-stem>-e<epoch>-r<review-sequence>.md
-```
+## Design prompt
 
-where `<artifact-stem>` is the fixed filename without `.md` (for example
-`implementation-design-review-design-<basename>`), and `<review-sequence>` is the ledger's
-per-epoch invocation counter (including `Blocked` retries). Do not key archives only on budget
-**Attempts used**; Blocked/resume must not overwrite prior archives.
-
-Artifact paths are fixed; do not accept free-form overrides. Create `.agentWork/.session/` when
-needed. Current fixed paths always hold the latest invocation; archives preserve history.
-
-## Reviewer prompts
-
-Replace only `<plan path>` and `<basename>`. Send or embed every other character verbatim. Do not
-add summaries, self-assessment, reasoning, planning narrative, or draft diffs.
-
-### Design
+Replace only `<plan path>` and `<basename>` (or note plan-less design source in the Plan line).
 
 ```text
 You are the Design reviewer for this repository. Your context was intentionally started empty so
 you review independently of the planning session.
 
 Task inputs (the only facts you may assume):
-- Plan: <plan path>
+- Plan or design source: <plan path>
 - Review artifact: .agentWork/.session/implementation-design-review-design-<basename>.md (create or
   completely replace)
 
 Procedure:
 1. Read .agents/skills/implementation-design-review/design.md and follow it exactly.
-2. Base every conclusion only on the plan contract and repository evidence. Do not accept or
+2. Base every conclusion only on the plan/design text and repository evidence. Do not accept or
    ask for summaries from the planning session; ignore editor or IDE state.
-3. Do not read adversarial.md, SKILL.md, or the other reviewer's artifact.
-4. Do not perform worst-wins combine. Do not write the official pointer stub.
-5. Write the artifact, then report the artifact path and verdict.
+3. Challenge the design and state a concrete simpler alternative that still meets the Goal, or
+   explain why none survives the constraints.
+4. Write the artifact, then report the artifact path and assessment.
 ```
 
-### Adversarial
+## Adversarial prompt (optional second reviewer)
 
 ```text
 You are the Adversarial reviewer for this repository. Your context was intentionally started empty
 so you review independently of the planning session.
 
 Task inputs (the only facts you may assume):
-- Plan: <plan path>
+- Plan or design source: <plan path>
 - Review artifact: .agentWork/.session/implementation-design-review-adversarial-<basename>.md
   (create or completely replace)
 
 Procedure:
 1. Read .agents/skills/implementation-design-review/adversarial.md and follow it exactly.
-2. Base every conclusion only on the plan contract and repository evidence. Do not accept or
+2. Base every conclusion only on the plan/design text and repository evidence. Do not accept or
    ask for summaries from the planning session; ignore editor or IDE state.
-3. Do not read design.md, SKILL.md, or the other reviewer's artifact.
-4. Do not perform worst-wins combine. Do not write the official pointer stub.
-5. Write the artifact, then report the artifact path and verdict.
+3. Write the artifact, then report the artifact path and assessment.
 ```
-
-## Combine data and ownership
-
-Combine only the two verdict strings reported by the reviewers. Do not parse artifact `Verdict:`
-headers, invent a Pass, or re-score severity. `Required` and `Advisory` findings do not change the
-combined verdict; only reported `Changes required` / `Blocked` / `Pass` strings do.
-
-Apply this exact precedence:
-
-1. If either reported verdict is `Blocked`, missing, or not exactly `Pass`, `Changes required`, or
-   `Blocked`, the official verdict is `Blocked`.
-2. Else if either verdict is `Changes required`, the official verdict is `Changes required`.
-3. Else the official verdict is `Pass`.
-
-Neither reviewer may combine verdicts or write the official pointer stub. The initiating
-orchestrator is the normal owner of both operations. The handoff fallback may assign them to a
-separate mechanical combine-only step, which may consume only the two reported verdict strings,
-apply the precedence above, and write the stub. That step must not inspect findings, act as a third
-reviewer, or run design-review orchestration.
-
-## Pointer stub
-
-Create or completely replace the official pointer-stub path with exactly this shape:
-
-```markdown
-# Design review: <plan title>
-
-- **Plan:** `<plan path>`
-- **Epoch / review-sequence:** <epoch> / <review-sequence>
-- **Design:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-design-<basename>.md`
-- **Adversarial:** <Pass | Changes required | Blocked> — `.agentWork/.session/implementation-design-review-adversarial-<basename>.md`
-- **Official:** <Pass | Changes required | Blocked>
-```
-
-Fill **Epoch / review-sequence** from the design epoch ledger when present (planning-managed). For
-on-demand design review with no ledger, write `on-demand / 1`. The stub is paths and verdicts only.
-Do not add a summary, findings, or residual risks; those remain in the reviewer artifacts. Planning
-maintains design and plan gate carry-forward paths; plan review reads those files plus current design
-artifacts.

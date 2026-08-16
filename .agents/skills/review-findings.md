@@ -1,106 +1,61 @@
 # Review findings (shared)
 
-Canonical owner of finding severity, exhaustive-pass rules, and design-vs-plan stage ownership for
-`implementation-design-review` and `implementation-plan-review`. Orchestration budgets, review
-epochs, and dependency waves remain in `implementation-planning`.
+Canonical owner of finding severity and stage ownership for planning and implementation reviews.
+Planning findings are **recommendations to the maintainer**, not automatic workflow control.
 
-## Finding severity
-
-Every actionable finding uses exactly one severity. Reviewers must not label completeness or taste
-issues as `Blocking` to force another architectural cycle.
+## Finding severity (planning reviews)
 
 ### Blocking
 
-The plan cannot safely be accepted at the **current review stage** without resolving the finding.
+The reviewer believes implementation should not proceed without resolving this concern.
 
-Typical `Blocking` design findings:
-
-- architectural contradiction;
-- incoherent source-of-truth or ownership model;
-- unsafe or impossible migration;
-- unresolved public-contract break;
-- incompatible dependency assumptions;
-- a missing decision that requires choosing among materially different architectures;
-- an implementation plan whose design cannot be executed correctly without inventing a new
-  architectural decision.
-
-A missing detail that exposes a genuinely unresolved architectural choice is `Blocking`, never
-`Required`.
+This does **not** mean automation is forbidden from proceeding despite explicit maintainer
+acceptance. The maintainer may accept a known tradeoff.
 
 ### Required
 
-A concrete correctness or completeness gap that does **not** invalidate an already coherent
-architecture.
+The reviewer believes the plan or design is materially incomplete or incorrect in a way that does
+not by itself require a different architecture.
 
-Typical `Required` findings:
-
-- missing compatibility detail where intended behavior is already clear;
-- missing preservation of an existing constructor, factory, or API surface;
-- missing test case or invariant;
-- insufficiently explicit mapping between already-selected types;
-- missing file, scope, or gate detail;
-- migration detail an implementation agent must not guess, but which needs no new architectural
-  decision.
-
-`Required` findings must be fixed before implementation-plan approval. At design review they do
-**not** by themselves cause design failure or another design-review cycle; they carry into plan
-review. Planning persists unresolved design and plan gate findings in gate carry-forward artifacts.
-Design **Blocking** clear on a later fresh design `Pass` after planning applied them; design
-**Required** and plan gate findings stay sticky until plan review verifies they are addressed. Do not
-require fresh reviewers to read prior findings merely to clear them.
+The maintainer may accept the tradeoff knowingly.
 
 ### Advisory
 
-A non-blocking improvement: naming preference, wording clarification, optional simplification,
-stylistic note, or speculative extensibility with no current correctness impact. Advisory findings
-never alone fail a review stage.
+Optional improvement, simplification, wording, preference, or over-specification of harmless local
+detail. Advisory findings never alone imply the reviewer recommends stopping.
 
 ## Exhaustive pass
 
-Fresh-context reviewers inspect the entire relevant plan (or eligible plan set for their task)
-before returning a verdict. Do not stop after the first `Blocking` issue. Return one consolidated
-set of all material `Blocking`, `Required`, and `Advisory` findings visible in that pass.
-
-Exhaustive does not mean inventing speculative concerns to increase finding count. If the review
-cannot finish because required repository evidence is missing or ambiguous, return `Blocked` with
-the reason rather than guessing.
+Inspect the whole relevant artifact before returning an assessment. Return one consolidated set of
+material findings. If required evidence is missing, return **Unable to assess** rather than guessing.
 
 ## Stage ownership
 
-### Design review asks
+### Design Review asks
 
-Is the chosen architecture coherent, justified, safe, and compatible with the repository?
+Is the proposed design sound, appropriately simple, compatible, and justified versus credible
+simpler alternatives?
 
-Primary concerns: ownership and source-of-truth, architecture boundaries, migration shape,
-dependency direction, public-contract consequences, important tradeoffs, and whether material
-design decisions remain unresolved.
+### Plan Review asks
 
-Design review must not demand every implementable detail before plan review may run. It must not
-fail solely on `Required` or `Advisory` completeness issues when the architecture itself is sound.
+Is this local working plan a minimum sufficient aide for the requested outcome without material
+guessing or harmful over-specification?
 
-### Plan review asks
+### Implementation Review asks
 
-Can an implementation agent execute this plan correctly and completely without material guessing?
+Does the actual change correctly satisfy the **requested outcome / acceptance intent** and
+repository rules?
 
-Primary concerns: compatibility details, affected files/modules, exact migration obligations,
-tests, verification gates, ordering, acceptance criteria, missing implementation-level invariants,
-and consistency with an already-approved design.
+Implementation Review uses Critical / High / Medium / Low ship severities (see
+`implementation-review`). It must not reopen already accepted architecture as taste. Harmless
+divergence from a local working plan is not a defect.
 
-Plan review must not become a second architecture contest. If a finding shows a genuine unresolved
-architectural choice or contradicts an approved design, classify it `Blocking` and require planning
-refinement with a new design review — do not hide it as `Required` completeness.
+## Planning assessments
 
-## Design verdict mapping
+Prefer:
 
-- **Changes required:** at least one `Blocking` finding.
-- **Pass:** no `Blocking` findings. `Required` findings remain in the artifact and in the planning
-  gate carry-forward for plan review; `Advisory` findings are residual.
-- **Blocked:** a prerequisite is missing or ambiguous; do not guess.
+- **No material concerns**
+- **Concerns found**
+- **Unable to assess**
 
-## Plan-review verdict mapping
-
-- **Changes required:** at least one `Blocking` or `Required` finding remains (including unresolved
-  `Required` findings carried from a design Pass).
-- **Pass:** no `Blocking` or `Required` findings remain. `Advisory` findings may remain.
-- **Blocked:** required repository evidence, dependencies, or lifecycle state is unavailable or
-  ambiguous.
+Do not treat planning assessments as Pass/Changes-required permission gates into Build.

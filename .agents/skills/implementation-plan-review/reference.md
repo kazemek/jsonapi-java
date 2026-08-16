@@ -1,63 +1,37 @@
 # Implementation plan review artifact template
 
-Use this template when writing the review artifact. Path and naming rules live in [SKILL.md](SKILL.md).
-Severity definitions live in [../review-findings.md](../review-findings.md).
+Severity definitions: [../review-findings.md](../review-findings.md).
 
 ```markdown
-# Implementation Plan Review: <plan title>
+# Implementation Plan Review: <title>
 
-> **Plan:** `<plan path>`
-> **Review scope:** <plan path and inspected module/docs paths>
-> **Verdict:** Pass | Changes required | Blocked
+> **Plan:** `<path>`
+> **Review scope:** <inspected paths>
+> **Assessment:** No material concerns | Concerns found | Unable to assess
 
 ## Summary
-
-<Concise conclusion and the most important evidence.>
 
 ## Findings
 
 ### Blocking
-- **<title>** — `<path>:<line or range>`
-  - **Planning requirement:** <execution-unit rule, section, acceptance criterion, dependency rule, or design carry-forward>
-  - **Impact:** <why this matters>
-  - **Recommendation:** <specific correction; require design re-review when architectural>
+- **<title>** — `<path>:<line>`
+  - **Impact:**
+  - **Recommendation:**
 
 ### Required
-- **<title>** — `<path>:<line or range>`
-  - **Planning requirement:** <…>
-  - **Impact:** <why this matters>
-  - **Recommendation:** <specific correction>
-
 ### Advisory
-- **<title>** — `<path>:<line or range>`
-  - **Planning requirement:** <…>
-  - **Impact:** <why this matters>
-  - **Recommendation:** <specific correction>
-
-<Write "None." under any empty severity group.>
 
 ## Contract coverage
 
 | Dimension | Result | Evidence |
 |-----------|--------|----------|
-| Goal | Pass \| Fail \| Partial \| Not verified | <paths, lines, or explanation> |
-| Execution unit | Pass \| Fail \| Partial \| Not verified | <one-context implementation/review and genuine boundaries; size is only a signal> |
-| Research and constraints | Pass \| Fail \| Partial \| Not verified | <sources and implementation consequences> |
-| Deliverables | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Non-goals | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Implementation boundaries | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Test strategy | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Acceptance criteria | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Dependencies | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Lifecycle and identity | Pass \| Fail \| Partial \| Not verified | <`Not started`/`In progress`; no `Complete` or persistent umbrella; temporary reconciliation window respected; no deletion while references survive> |
-| Design/plan gate carry-forward | Pass \| Fail \| Partial \| Not applicable | <gate carry-forward + design artifacts checked, or why N/A> |
-| Nullness / `module-docs` hooks | Pass \| Fail \| Partial \| Not applicable | <why required or not applicable> |
+| Goal | Pass \| Fail \| Partial \| Not verified | |
+| Approach coherence | Pass \| Fail \| Partial \| Not verified | |
+| Constraints / ownership | Pass \| Fail \| Partial \| Not verified | |
+| Checks / verification | Pass \| Fail \| Partial \| Not verified | |
+| Over-specification | Pass \| Fail \| Partial \| Not verified | |
 
 ## Repo evidence inspected
 
-- `<path>` — <why inspected>
-
 ## Residual risks
-
-<Advisory findings, unverified feasibility, unavailable evidence, dependency concerns, or "None identified.">
 ```

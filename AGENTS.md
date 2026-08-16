@@ -44,20 +44,32 @@ Project skills live at `.agents/skills/<name>/SKILL.md` and require explicit inv
 
 | Task | Skill |
 |------|-------|
-| Create, refine, or decompose a plan | `implementation-planning` |
-| Implement a plan under `.agentWork/plans/` | `implement-plan` |
-| Review design, plan/spec, or implementation | `implementation-design-review`, `implementation-plan-review`, or `implementation-review` |
-| Produce a review handoff when a fresh write-capable reviewer cannot run | `implementation-handoff` |
+| Create or refine a local working plan for one ready increment | `implementation-planning` |
+| Independently challenge a proposed design when requested | `implementation-design-review` |
+| Independently review plan clarity when requested | `implementation-plan-review` |
+| Implement a requested work outcome | `implement-work` |
+| Review implementation against the requested outcome | `implementation-review` |
+| Produce a fresh-session review handoff when required | `implementation-handoff` |
 | Add a module or change public packages, entry points, validate/read flows, or non-goals | `module-docs` |
 | Format Spotless-covered files | `spotless-format` |
 | Complete production/test source work | `sonar-quality-gate` |
 
-- For work in an existing module, use its governing live plan when one exists. If no plan covers
-  requested implementation work, stop and propose a focused plan. Read `settings.gradle.kts`, the
-  module README, changed-package `package-info.java`, exact sources and mirrored tests, then only
-  directly relevant ADRs or conformance sections.
-- Read `docs/vision.md` only for new modules, product-boundary changes, or stable direction. Read
-  `docs/outlook/` only for tentative future work; Outlook is not current truth or a dependency.
+When the active coding harness provides a native read-only or planning mode, prefer it for
+interactive implementation planning. Native Plan Mode owns exploration and maintainer interaction.
+Repository skills own repository policy and optional local working-plan guidance. Do not depend on
+ephemeral harness plan state or a local Markdown plan as engineering authority.
+
+- If requested implementation work is not one coherent increment against current repository reality,
+  stop with **Needs decomposition** and return control to the user/coordinating layer. Do not invent
+  a repository multi-plan DAG.
+- A direct user/maintainer request is sufficient authority to plan and implement. No external
+  tracker is required.
+- Design Review and Plan Review are optional and maintainer-controlled. Neither grants Build
+  permission. After optional reviews, proceed to implementation only when the maintainer explicitly
+  affirms **Build now?**
+- Read `settings.gradle.kts`, the module README, changed-package `package-info.java`, exact sources
+  and mirrored tests, then only directly relevant ADRs or conformance sections.
+- Read `docs/vision.md` only for new modules, product-boundary changes, or stable direction.
 
 # Architecture Constraints
 
@@ -90,26 +102,26 @@ Every durable fact has one canonical owner; other documents should link or provi
 | Workflow and agent routing | this file and `.agents/skills/` |
 | Planning/review finding severity and stage ownership | `.agents/skills/review-findings.md` |
 | Stable product direction | `docs/vision.md` |
-| Tentative future direction | `docs/outlook/` |
-| Temporary execution contract | unfinished plans under `.agentWork/plans/` |
-| Backlog, prioritization, and external work coordination | external work tracker (maintainer-local policy) |
+| Requested work intent / acceptance intent | Explicit user/maintainer request, or external coordinating layer when present |
+| Backlog, prioritization, decomposition, blockers | External coordinating layer when present |
+| Temporary engineer/agent planning memory | gitignored `.agentWork/plans/*.md` (not engineering truth) |
+| Temporary review/session context | gitignored `.agentWork/.session/` |
 | Forensic history | Git |
 
 - Snapshot (current repository evidence) and Vision are separate authorities. Surface conflicts;
-  never change implementation merely to make it match Vision. Outlook overrides neither authority
-  nor accepted ADRs.
-- External work-tracker metadata is optional coordination and traceability, not engineering truth
-  or a correctness gate. Never use external work-item IDs or Outlook as plan dependencies. When the
-  tracker is unavailable, never infer the next task from live plans, Outlook, source layout, or a
-  reconstructed backlog; report coordination as unsynchronized.
-- Plans exist only while unfinished; do not create a plan index or archive. Status is only
-  `Not started` or `In progress`. Dependencies are `None` or relative Markdown links to unfinished
-  plan files. Once work starts, freeze its scope; after gates, synchronization, and review Pass,
-  reconcile references and delete the completed plan. Session reviews, review-epoch ledgers, and
-  archived review attempts belong in the gitignored `.agentWork/.session/`.
-- A live plan means work-in-progress. A PR for that work may be open while its plan is live, but it
-  is ready for final review/merge only after the completed plan is deleted and that deletion is
-  pushed. Never leave a post-approval cleanup commit.
+  never change implementation merely to make it match Vision.
+- External coordinating-layer metadata is optional coordination and traceability, not engineering
+  truth or a correctness gate. When a coordinator is unavailable, never invent backlog order from
+  local plans, source layout, or Git history; report coordination as unsynchronized if asked to
+  sync.
+- Local working plans are optional, gitignored, and disposable. They are not backlog entries,
+  roadmaps, dependency graphs, or permanent architecture docs. Delete them when no longer useful.
+  Do not create a plans index or archive.
+- Implementation Review evaluates requested outcome / acceptance intent + actual diff + repository
+  contracts/docs/tests + applicable gates. It must not reconstruct the requested work from a local
+  plan, branch names, a tracker, Git history, or inferred code alone.
+- Committed workflow skills are tracker-agnostic. Tracker-specific conventions belong only in
+  maintainer-local coordinating skills outside the public workflow.
 
 # Completion Gates
 
