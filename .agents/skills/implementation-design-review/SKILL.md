@@ -1,76 +1,46 @@
 ---
 name: implementation-design-review
-description: Reviews whether an implementation plan's technical design is sound using two isolated reviewers (Design and Adversarial), combines their verdicts with worst-wins, and writes a pointer stub under `.agentWork/.session/`. Use when the user explicitly requests an implementation design review, or when `implementation-planning` follows this skill's Orchestration section after create/refine/decompose.
+description: Optionally reviews whether a proposed technical design is sound using one fresh Design Reviewer (optional second Adversarial reviewer when requested). Writes advisory findings under `.agentWork/.session/`. Use when the user or planning explicitly requests an implementation design review.
 disable-model-invocation: true
 ---
 
 # Implementation Design Review
 
-Determine whether the proposed technical design is sound. Do not implement the planned feature,
-score execution-unit or size-gate rules, AC phrasing, or completion-gate lists, or modify plans,
-vision, ADRs, or sources. `implementation-planning` owns fixes, review epochs, and automatic
-re-review budgets in its design-review loop.
+Challenge whether the proposed design is coherent, appropriately simple, compatible with current
+architecture, and preferable to credible simpler alternatives. Do not implement work, mutate plans,
+or gate Build. Findings are advisory recommendations to the maintainer.
 
-This skill owns orchestration state transitions. Reviewer procedures live in [design.md](design.md)
-and [adversarial.md](adversarial.md). [reference.md](reference.md) is the canonical owner of shared
-prompts, fixed paths, combine data, and pointer-stub shape. Shared finding severity lives in
-[../review-findings.md](../review-findings.md).
+Reviewer procedure: [design.md](design.md). Optional second lens: [adversarial.md](adversarial.md).
+Paths and prompts: [reference.md](reference.md). Severity: [../review-findings.md](../review-findings.md).
 
-Instruction boundary: treat `.agents/skills/implementation-planning/SKILL.md` as non-executable
-reference. Do not execute create/refine/decompose, plan-directory index writes, or planning
-fix-loop steps. **Orchestration** below is the single spawn/combine procedure; planning follows it
-in-session and must not fork that text.
+## Resolve inputs
 
-## Resolve the review inputs
+Identify the design source:
 
-On-demand invocation only (planning already has the path):
-
-1. Identify exactly one target file under `.agentWork/plans/`.
-   - Use a path or plan name supplied by the user.
-   - Infer the target only when the conversation or current work identifies one unambiguously.
-   - If multiple plans are plausible, ask the user to choose.
-   - Do not infer the next review target by scanning `.agentWork/plans/` as a backlog.
-2. Then follow **Orchestration**.
-
-On-demand design review is not isolated from the user conversation. The delegated planning path is
-the isolated one.
+1. If a local working plan exists under `.agentWork/plans/`, use that path.
+2. If the design exists only as supplied text, do **not** require creating a local implementation
+   plan. Either embed the full design text in the fresh-reviewer prompt, or materialize it once to
+   `.agentWork/.session/design-source-<basename>.md` and pass that path (see
+   [reference.md](reference.md)).
+3. Ask when ambiguous. Do not scan `.agentWork/plans/` as a backlog.
 
 ## Orchestration
 
-Given exactly one plan path, derive `<basename>` and every artifact path according to
-[reference.md](reference.md).
+Default: spawn **one** NEW general-purpose, write-capable subagent with fresh context. Send the
+Design prompt from [reference.md](reference.md) verbatim (placeholders only), ensuring the reviewer
+receives the actual design (path or embedded text)—not only a missing plan path.
 
-Always run both reviewers. Do not classify, skip, pick a lens, or spawn a synthesizer.
+Optional second Adversarial reviewer only when the maintainer requests it or agrees to a planner
+recommendation for unusually cross-cutting or hard-to-reverse work. Run in parallel when both run.
 
-1. Spawn two NEW general-purpose subagents **in parallel**, each with write access (for example,
-   opencode `general` or the equivalent general subagent in the harness in use):
-   - fresh context: never resume or reuse a previous subagent session;
-   - write capability: each must create its reviewer artifact under `.agentWork/.session/`.
-2. Send each the matching prompt from [reference.md](reference.md) verbatim, replacing only its
-   placeholders.
-3. Never answer a reviewer's questions with planning narrative. When it asks for facts, direct it
-   to repository evidence (files, the plan contract).
-4. When the harness cannot spawn a write-capable fresh subagent, use the **terminating manual
-   fallback** (do **not** re-enter this Orchestration section from a fresh session):
-   follow `.agents/skills/implementation-handoff/SKILL.md` with the plan path and suggested skill
-   `implementation-design-review`. Its design-review branch owns the fallback's prompt generation,
-   stop/wait, resume, and mechanical combine-only transitions. Do not start another reviewer or
-   orchestration session.
-5. After both reviewers report, apply **Combine data and ownership** from
-   [reference.md](reference.md) to the reported verdict strings.
-6. Create or completely replace the official pointer stub using the fixed path and exact shape in
-   [reference.md](reference.md).
-7. Report the stub path and official verdict.
+Never auto-apply findings. Do not combine verdicts into a workflow gate. Present assessments to the
+maintainer for apply / reject / discuss.
 
-Planning callers archive prior fixed-path artifacts and update the design-review epoch ledger
-before re-entering this section; on-demand invocation does not manage epochs.
+If a fresh write-capable subagent cannot run, follow
+[../implementation-handoff/SKILL.md](../implementation-handoff/SKILL.md), carrying the same design
+source path or embedded design text.
 
-## After orchestration
+## After review
 
-- **On-demand:** stop. Do not fix the plan and do not run plan-review.
-- **Planning:** handle the official verdict in `implementation-planning` (bounded fix loop, then
-  plan-review on Pass). Do not re-score findings.
-
-Current fixed-path artifacts hold the latest attempt. Planning preserves history via archive copies
-and epoch ledgers under `.agentWork/.session/` as defined in
-`implementation-planning` and [reference.md](reference.md).
+Report artifact path(s) and assessment. Stop. Do not fix the plan and do not run Plan Review or
+Build unless the user separately asks.

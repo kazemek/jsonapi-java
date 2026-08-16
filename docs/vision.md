@@ -4,8 +4,8 @@
 
 This document is stable product direction and principles. It does not describe what currently
 exists; current capability lives in the [root module registry](../README.md) and each module
-README. Unbuilt or revisable direction lives in [Outlook](outlook/README.md). Authority and
-owner/reference rules are in [`AGENTS.md`](../AGENTS.md).
+README. Future work coordination, when used, lives in an external coordinating layer—not in this
+repository. Authority and owner/reference rules are in [`AGENTS.md`](../AGENTS.md).
 
 ## Product boundary
 
@@ -90,7 +90,7 @@ Optional adapters are separate artifacts ([ADR-007](adr/007-module-boundaries.md
 [ADR-008](adr/008-public-namespace.md)).
 
 Current inventory and capability live in the [root README](../README.md) and each module README.
-Unbuilt adapter direction lives in [Outlook](outlook/README.md).
+Planned modules appear in that registry; they have no usable entry points until implemented.
 
 ## Compliance contract
 

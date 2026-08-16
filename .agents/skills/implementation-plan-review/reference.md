@@ -1,38 +1,80 @@
-# Implementation plan review artifact template
+# Implementation plan review reference
 
-Use this template when writing the review artifact. Path and naming rules live in [SKILL.md](SKILL.md).
-Severity definitions live in [../review-findings.md](../review-findings.md).
+Severity definitions: [../review-findings.md](../review-findings.md). Fixed artifact paths also
+listed in [../implementation-design-review/reference.md](../implementation-design-review/reference.md).
+
+## Placeholders
+
+Derive `<basename>` from the local plan filename without `.md`, or from a short slug for plan-less
+approach text. If approach text is supplied without a durable path, materialize it once to:
+
+```text
+.agentWork/.session/plan-source-<basename>.md
+```
+
+and pass that path as the approach source. Do not create a local `.agentWork/plans/` file solely to
+request Plan Review.
+
+## Spawn prompt
+
+Replace only `<outcome>`, `<acceptance intent>`, `<approach source path>`, and `<basename>`.
+
+```text
+You are the implementation plan reviewer for this repository. Your context was intentionally
+started empty so you review independently of the planning session.
+
+Task inputs (the only facts you may assume):
+- Requested outcome: <outcome>
+- Acceptance intent: <acceptance intent>
+- Plan or approach source: <approach source path>
+- Review artifact: .agentWork/.session/implementation-plan-review-<basename>.md (create or
+  completely replace)
+
+Procedure:
+1. Read .agents/skills/implementation-plan-review/SKILL.md and follow the Reviewer procedure
+   exactly.
+2. Base every conclusion only on the supplied outcome, acceptance intent, plan/approach source,
+   and repository evidence. Do not accept or ask for summaries from the planning session; ignore
+   editor or IDE state.
+3. Write the artifact, then report the artifact path and assessment. Do not mutate the plan or
+   approach source.
+```
+
+## Artifact template
 
 ```markdown
-# Implementation Plan Review: <plan title>
+# Implementation Plan Review: <title>
 
-> **Plan:** `<plan path>`
-> **Review scope:** <plan path and inspected module/docs paths>
-> **Verdict:** Pass | Changes required | Blocked
+> **Requested outcome:** <outcome>
+> **Acceptance intent:** <acceptance intent>
+> **Plan / approach source:** `<path>`
+> **Review scope:** <inspected paths>
+> **Assessment:** No material concerns | Concerns found | Unable to assess
 
 ## Summary
-
-<Concise conclusion and the most important evidence.>
 
 ## Findings
 
 ### Blocking
-- **<title>** — `<path>:<line or range>`
-  - **Planning requirement:** <execution-unit rule, section, acceptance criterion, dependency rule, or design carry-forward>
-  - **Impact:** <why this matters>
-  - **Recommendation:** <specific correction; require design re-review when architectural>
+- **<title>** — `<path>:<line>`
+  - **Severity:** Blocking
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:**
+  - **Recommendation:**
 
 ### Required
-- **<title>** — `<path>:<line or range>`
-  - **Planning requirement:** <…>
-  - **Impact:** <why this matters>
-  - **Recommendation:** <specific correction>
+- **<title>** — `<path>:<line>`
+  - **Severity:** Required
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:**
+  - **Recommendation:**
 
 ### Advisory
-- **<title>** — `<path>:<line or range>`
-  - **Planning requirement:** <…>
-  - **Impact:** <why this matters>
-  - **Recommendation:** <specific correction>
+- **<title>** — `<path>:<line>`
+  - **Severity:** Advisory
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:**
+  - **Recommendation:**
 
 <Write "None." under any empty severity group.>
 
@@ -40,24 +82,13 @@ Severity definitions live in [../review-findings.md](../review-findings.md).
 
 | Dimension | Result | Evidence |
 |-----------|--------|----------|
-| Goal | Pass \| Fail \| Partial \| Not verified | <paths, lines, or explanation> |
-| Execution unit | Pass \| Fail \| Partial \| Not verified | <one-context implementation/review and genuine boundaries; size is only a signal> |
-| Research and constraints | Pass \| Fail \| Partial \| Not verified | <sources and implementation consequences> |
-| Deliverables | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Non-goals | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Implementation boundaries | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Test strategy | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Acceptance criteria | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Dependencies | Pass \| Fail \| Partial \| Not verified | <evidence> |
-| Lifecycle and identity | Pass \| Fail \| Partial \| Not verified | <`Not started`/`In progress`; no `Complete` or persistent umbrella; temporary reconciliation window respected; no deletion while references survive> |
-| Design/plan gate carry-forward | Pass \| Fail \| Partial \| Not applicable | <gate carry-forward + design artifacts checked, or why N/A> |
-| Nullness / `module-docs` hooks | Pass \| Fail \| Partial \| Not applicable | <why required or not applicable> |
+| Goal | Pass \| Fail \| Partial \| Not verified | |
+| Approach coherence | Pass \| Fail \| Partial \| Not verified | |
+| Constraints / ownership | Pass \| Fail \| Partial \| Not verified | |
+| Checks / verification | Pass \| Fail \| Partial \| Not verified | |
+| Over-specification | Pass \| Fail \| Partial \| Not verified | |
 
 ## Repo evidence inspected
 
-- `<path>` — <why inspected>
-
 ## Residual risks
-
-<Advisory findings, unverified feasibility, unavailable evidence, dependency concerns, or "None identified.">
 ```

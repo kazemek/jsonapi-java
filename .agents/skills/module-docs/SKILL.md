@@ -46,8 +46,8 @@ Skip when only internals or tests changed with no public-surface impact.
 6. Ensure the root `README.md` lists and links the module. Keep `AGENTS.md` generic: it routes
    through `<module>/README.md` and must not accumulate one link per module.
 7. Link to relevant Vision, ADR, conformance, build, CI, and root-workflow sources rather than
-   duplicating their prose. Include an Outlook link only when documenting unbuilt or revisable
-   future direction; never copy its prose into an available module's current-capability README.
+   duplicating their prose. Prefer the root module registry for unbuilt surfaces; never invent
+   current-capability prose for modules that do not exist yet.
 8. Re-read the golden example and verify section order, compact density, minimal usage, package
    roles, nullness, entry-point Javadoc, root registration, link-out behavior, and agent notes.
 9. Report every path created or updated.
