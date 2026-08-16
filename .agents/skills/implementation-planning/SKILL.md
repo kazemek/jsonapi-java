@@ -43,7 +43,9 @@ cross-module design, migration strategy, accepted ADR behavior, or likely new AD
 
 Ask whether Design Review is wanted. If yes:
 
-1. Run `implementation-design-review` once (default: one fresh Design Reviewer).
+1. Run `implementation-design-review` once (default: one fresh Design Reviewer). Pass a local plan
+   path when one exists; for plan-less approach text, embed the design or materialize
+   `.agentWork/.session/design-source-<basename>.md`—do not invent a plan file just for review.
 2. Present findings; maintainer chooses apply / reject / discuss per finding.
 3. Apply only accepted suggestions. Never auto-mutate from reviewer authority.
 4. Ask whether another Design Review is wanted. Never auto re-review.
@@ -52,8 +54,10 @@ Ask whether Design Review is wanted. If yes:
 
 After the working approach is acceptable to the maintainer, ask whether Plan Review is wanted. If yes:
 
-1. Run `implementation-plan-review` once.
-2. Present findings; apply / reject / discuss as above.
+1. Run `implementation-plan-review` once via a **fresh** reviewer context when the harness supports
+   it. Pass requested outcome, acceptance intent, and the local plan / approach source (materialize
+   plan-less approach text to `.agentWork/.session/plan-source-<basename>.md` when needed).
+2. Present findings; apply / reject / discuss as above. Never mutate the plan from the reviewer.
 3. Ask before any another Plan Review. Never auto re-review.
 
 ## Build authorization

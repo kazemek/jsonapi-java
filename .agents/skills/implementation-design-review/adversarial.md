@@ -10,9 +10,13 @@ the text, and simpler surviving alternatives.
 
 ## Resolve inputs
 
-Use the plan/design and review-artifact paths from the task inputs. Read accepted ADRs, module
-READMEs, package/API docs, architecture rules, and specifications that already constrain this kind
-of work. Inspect source/tests only for actual observable or architectural constraints.
+Use the plan/design path, optional embedded Design text, and review-artifact path from the task
+inputs. Read the design from that source first. Then read accepted ADRs, module READMEs,
+package/API docs, architecture rules, and specifications that already constrain this kind of work.
+Inspect source/tests only for actual observable or architectural constraints.
+
+If neither a readable design source path nor Design text is present, assessment is **Unable to
+assess**—do not invent the design from conversation memory.
 
 ## Perform the review
 

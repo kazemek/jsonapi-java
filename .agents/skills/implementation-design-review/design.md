@@ -10,13 +10,17 @@ orchestration files for other reviewers.
 
 ## Resolve inputs
 
-Use the plan/design path and review-artifact path from the task inputs. Read:
+Use the plan/design path, optional embedded Design text, and review-artifact path from the task
+inputs. Read:
 
-- the target plan or design text;
+- the target plan file, session design-source file, or embedded Design text (required);
 - implicated `AGENTS.md` sections and linked docs as needed;
 - `docs/vision.md` when product direction or public boundaries are implicated;
 - ADRs and conformance sections linked by the plan or affected module docs;
 - affected module READMEs, `package-info.java`, and narrow production types when named.
+
+If neither a readable design source path nor Design text is present, assessment is **Unable to
+assess**—do not invent the design from conversation memory.
 
 Inspect code only to check design claims. State the reviewed boundary. Do not treat tracker
 metadata, Git archaeology, or local plans as engineering truth beyond the supplied design text.
