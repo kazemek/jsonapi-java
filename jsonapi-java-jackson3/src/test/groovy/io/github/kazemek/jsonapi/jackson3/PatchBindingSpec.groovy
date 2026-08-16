@@ -270,11 +270,14 @@ class PatchBindingSpec extends Specification {
   def "caller-owned stream and parser remain open on success and failure"() {
     given:
     def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def mapper = JsonMapper.builder().build()
     def successBytes =
         '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'.bytes
+    def failureBytes = '{"data":'.bytes
     def successStream = new CloseTrackingInputStream(new ByteArrayInputStream(successBytes))
-    def failureStream = new CloseTrackingInputStream(new ByteArrayInputStream('{"data":'.bytes))
-    def parser = JsonMapper.builder().build().createParser(successBytes)
+    def failureStream = new CloseTrackingInputStream(new ByteArrayInputStream(failureBytes))
+    def parser = mapper.createParser(successBytes)
+    def failureParser = mapper.createParser(failureBytes)
 
     when:
     def command = reader.readValue(successStream, FlatArticle)
@@ -293,8 +296,16 @@ class PatchBindingSpec extends Specification {
     thrown(JsonApiDocumentReadException)
     !failureStream.closed
 
+    when:
+    reader.readValue(failureParser, FlatArticle)
+
+    then:
+    thrown(JsonApiDocumentReadException)
+    !failureParser.closed
+
     cleanup:
     parser?.close()
+    failureParser?.close()
   }
 
   def "duplicate mapping definitions fail before a command escapes"() {

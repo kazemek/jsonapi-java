@@ -401,6 +401,12 @@ class JacksonCommonContractsSpec extends Specification {
 
   def "patch command rejects null components"() {
     when:
+    new PatchCommand<>(null, "1", List.of())
+
+    then:
+    thrown(NullPointerException)
+
+    when:
     new PatchCommand<>(String, null, List.of())
 
     then:
