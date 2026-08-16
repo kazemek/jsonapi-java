@@ -29,13 +29,15 @@ compound graph without collapsing fieldset behavior into generic flags.
   scoped full-linkage exception.
 - `nested include comments.author with fields comments body` uses the exact compound article graph
   and included identity order, but its `FieldsetResourceState` values prove filtered attributes.
-  Attach it to the existing graph semantic scenario as a separate sparse contract and expected
-  projection. Remove the duplicate sparse `article()` factory when its request representation is
+  Attach it to the compound-owned nested-graph semantic scenario
+  `article.compound.nested-comments-author` as a separate sparse contract and expected projection.
+  Remove the duplicate sparse `article()` factory when its request representation is
   projected from the compound-owned graph factory.
 - `renamed JsonProperty fieldset names use final JSON:API names` uses
-  `BlogWithJsonProperty("b1", "Hello")`, not the domain read/write `"My Blog"` value. Keep it a
-  distinct semantic scenario or named domain representation; do not silently alter values to force
-  a merge.
+  `BlogWithJsonProperty("b1", "Hello")`, not the domain read/write `"My Blog"` value. It owns the
+  distinct stable semantic id `blog.json-property-name.hello`, which satisfies the Foundation
+  semantic-id grammar and is not an operation-specific sparse id. Do not silently alter values or
+  alias this owner to `blog.json-property-name` merely because the Java type and resource id match.
 - Mapped versus unmapped operations are a required discriminator: the three-argument unmapped
   calls reject non-empty fieldsets while mapped calls succeed. Preserve
   `SparseFieldsetOperation`; do not infer the entry point from request shape or id.
@@ -54,9 +56,21 @@ compound graph without collapsing fieldset behavior into generic flags.
   `SparseFieldsetInvocation` hierarchy with single, collection, concurrent-side, and
   identity-preservation variants. Every executable invocation references one or more
   scenario-owned `DomainRepresentation<?>` factories; no canonical invocation carries a supplier.
-  The variants retain the operation-specific context, policy, include/field names, and four
-  identity-preservation shapes. Preserve mapped success, unmapped success, failure,
-  concurrent-isolation, and identity-preservation expectation variants.
+  Each canonical invocation also carries the typed `SparseFieldsetOperation` discriminator
+  (mapped/unmapped) as a constructor-validated field alongside the shape variant, so executors never
+  infer the entry point from request shape or id; mapped/unmapped × expectation consistency guards
+  are enforced on the canonical contract. The variants retain the operation-specific context,
+  policy, include/field names, and four identity-preservation shapes. Preserve mapped success,
+  unmapped success, failure, concurrent-isolation, and identity-preservation expectation variants.
+- `SparseFieldsetContract` and `SparseFieldsetInvocation` live in the Foundation `semantic` package
+  and carry the existing `SparseFieldsetExpectation` variants with their `FieldsetResourceState`,
+  `ZeroReadGuarantee`, and `MappingDiagnostic` payloads; the canonical-to-legacy projection
+  reconstructs equal values from those payloads. The resulting `semantic` → `sparsefieldset`
+  dependency is already legal under the current test-fixtures ArchUnit allowlist
+  (`TestFixturesDependencyRulesSpec`); keep it covered and documented rather than changing the
+  allowlist. Sparse family declarations expose their declaration data through public static
+  accessors consumed by the coordinator (mirroring the Foundation `codec.cases` pattern); they never
+  receive builder access.
 - Contracts retain typed expected fieldset/core state, `ZeroReadGuarantee`, sparse-full-linkage
   exception state, and expected diagnostics. `SparseFieldsetRequest` and `SparseFieldsetSide` are
   supplier-bearing compatibility values only: the canonical-to-legacy projection derives their fresh
@@ -76,9 +90,38 @@ compound graph without collapsing fieldset behavior into generic flags.
 ## Deliverables
 
 - Register all 30 sparse-fieldset cases exactly once as canonical `SparseFieldsetContract` entries.
-  Reuse the compound nested graph for the proven nested include/fieldset case; create separate
-  semantic scenarios for access counting, renamed-value, policy, identity-shape, collection,
-   diagnostics, and concurrency cases unless exact values prove a shared representation.
+  The semantic-scenario attachment map is fixed:
+  - The nested `comments.author` case attaches to the compound-owned nested-graph semantic scenario
+    `article.compound.nested-comments-author` and references that scenario's representation
+    instance directly (same-owner reference, valid under the Foundation freeze).
+  - All other article-graph cases (`unrestricted MappedDocument…`, the Phase 2.3 empty-fieldset
+    case, both present-empty-list cases, the denyAll empty-list case, both non-empty-fieldset
+    rejection cases, `attribute-only fieldset via toMappedDocument`,
+    `relationship-only fieldset via toMappedResourceCollection`,
+    `renamed JsonApiAttribute fieldset uses body-text`, `per-type fieldsets…`,
+    `include author with fields articles title…`, `attribute-only omission…`, `unknown fieldset
+    field fails…`, `denyAll rejects first present fieldset name`, `missing FieldAllowance…`,
+    `unmapped name wins over policy denial`, `unused fieldset type keys…`,
+    `duplicate-free multi-field fieldset…`, `FieldAllowance-satisfied…`,
+    `FieldAllowance denies…`, `identity preserved…`, `surviving fields…`,
+    `concurrent fieldset mappings…`, and `full field list…`) attach to one sparse-owned scenario
+    `article.sparse-fieldset` with scenario-owned named `DomainRepresentation<?>` instances that
+    reuse the compound-owned graph *construction* (shared static factory code). They never reference
+    the compound scenario's representation instance, and no duplicate sparse `article()` factory is
+    retained.
+  - `renamed JsonProperty fieldset names use final JSON:API names` owns scenario
+    `blog.json-property-name.hello` with its `BlogWithJsonProperty("b1", "Hello")` representation.
+  - Both `ArticleWithRenamedAuthor` cases (`renamed JsonApiRelationship…` and `unknown
+    JsonApiRelationship rename…`) attach to scenario `article.sparse-fieldset.renamed-author` with
+    a scenario-owned representation of that DTO.
+  - `access counting proves linkage vs traversal split` attaches to scenario
+    `article.sparse-fieldset.access-counting` with a scenario-owned representation of
+    `AccessCountingFieldsetArticle`.
+  These ids satisfy the Foundation semantic-id grammar and are globally unique against the pinned
+  Foundation/Domain/Compound anchors.
+- Register the renamed-`JsonProperty` representation under semantic id
+  `blog.json-property-name.hello`; it remains distinct from Domain's `blog.json-property-name`
+  owner and from the operation-specific sparse contract id.
 - Extend the foundation registry's internal pre-freeze family assembly to register the sparse
   declarations and derive `JsonApiFixtures.sparseFieldsetContracts()` from the same frozen graph;
   retain its exactly-one-owner index and immutable post-freeze boundary.
@@ -89,7 +132,8 @@ compound graph without collapsing fieldset behavior into generic flags.
 - Convert `SparseFieldsetScenarios`, `JsonApiFixtures.sparseFieldset()`, and existing scenario values
   into an immutable projection from
   `JsonApiFixtures.sparseFieldsetContracts()`, the direct typed `FixtureCatalog` accessor derived by
-  the foundation registry. Do not add class-token dispatch or a wrapper catalogue. Keep all current
+  the foundation registry with area label `sparse-fieldset-contract` whose unknown-id diagnostic is
+  asserted by tests. Do not add class-token dispatch or a wrapper catalogue. Keep all current
    ids, order, request/expectation values, constructor guards, and lookup diagnostics; remove
    independent built-in scenario/model registration and storage from the compatibility catalogue.
    Preserve the signatures and behavior of `SparseFieldsetScenarios.catalog()`, `all()`,
@@ -101,7 +145,14 @@ compound graph without collapsing fieldset behavior into generic flags.
    `FieldsetResourceState`, and `ZeroReadGuarantee`. Directly constructed compatibility values remain
    usable outside canonical registration and never own or register fixture state.
 - Before replacing the old `SCENARIOS` list, add a test-only fixed legacy-inventory baseline for all
-  30 entries. Record each observable id, order, operation/request variant, fresh input graph values,
+  30 entries at
+  `jsonapi-java-test-fixtures/src/test/resources/semantic-catalog-baselines/sparse-fieldset.tsv`.
+  The TSV header is
+  `namespace\tid\tposition\toperation\trequestVariant\tcontext\texpectation\tzeroReadFullLinkage\tnote\tlookupDiagnostic`
+  with one row per case in catalogue order; `N/A` marks a column that does not apply to that row.
+  The value-bearing columns serialize the observable values deterministically under the current
+  equality rules (fresh input graph values per invocation, mutable/array values snapshotted).
+  Record each observable id, order, operation/request variant, fresh input graph values,
   context, expectation, note, and lookup diagnostic without becoming registration or runtime
   ownership. Retain it alongside the canonical-to-legacy projection bijection so it proves migration
   preservation independently of derived ownership.
@@ -150,8 +201,9 @@ compound graph without collapsing fieldset behavior into generic flags.
   construction or static factory use does not register or mutate canonical catalogue state.
 - Add a cross-contract test proving the nested fieldset contract references the canonical compound
   graph and preserves comments/5, comments/12, people/2, people/9 order while using its own filtered
-  expected states. Prove the `BlogWithJsonProperty("Hello")` representation remains distinct from
-  the value-equal domain read/write scenario.
+  expected states. Prove semantic id `blog.json-property-name.hello` and
+  `BlogWithJsonProperty("Hello")` remain distinct from Domain's `blog.json-property-name` and
+  `BlogWithJsonProperty("My Blog")` representation.
 - Execute every canonical sparse contract through Jackson 3 without id dispatch; assert fieldsets,
   identity, included state, full-linkage exception, zero reads, policies, diagnostics, collections,
   and concurrent isolation, then compare executed ids with the full projection.
@@ -168,15 +220,29 @@ compound graph without collapsing fieldset behavior into generic flags.
 - [ ] All 30 sparse-fieldset ids, order, operations, requests, expectations, policies, values,
       notes, and lookup diagnostics exist exactly once in the canonical projection and derived view.
 - [ ] The nested include/fieldset case reuses the canonical compound graph with a distinct filtered
-      expectation; renamed-value and other merely similar examples are not artificially merged.
+       expectation; semantic id `blog.json-property-name.hello` owns the
+       `BlogWithJsonProperty("b1", "Hello")` sparse representation and does not alias Domain's
+       `blog.json-property-name`; renamed-value and other merely similar examples are not
+       artificially merged.
 - [ ] Mapped/unmapped, identity, collection, field-policy, zero-read, full-linkage, diagnostic, and
        concurrent-isolation distinctions remain typed and constructor-validated; canonical
        invocations are representation-backed while supplier-bearing request/side values are derived
        compatibility projections only.
 - [ ] Sparse declarations register through the foundation-owned pre-freeze registry assembly; the
-       nested fieldset contract shares Compound's frozen semantic scenario and representations, and
-       `sparseFieldsetContracts()` plus its legacy projection derive from that one immutable registry
-       without a parallel sparse registry or post-freeze mutation API.
+       nested fieldset contract shares the compound-owned in-construction semantic scenario and
+       representations, and `sparseFieldsetContracts()` plus its legacy projection derive from that
+       one immutable registry without a parallel sparse registry or post-freeze mutation API.
+- [ ] Every sparse contract follows the fixed attachment map: the nested case references
+       `article.compound.nested-comments-author`'s representation instance; all other article-graph
+       cases attach to `article.sparse-fieldset` with scenario-owned representations reusing the
+       shared graph construction; `blog.json-property-name.hello`,
+       `article.sparse-fieldset.renamed-author`, and `article.sparse-fieldset.access-counting` own
+       their distinct representations. No contract references another scenario's representation
+       instance and no duplicate sparse `article()` factory remains.
+- [ ] Every canonical invocation carries the typed `SparseFieldsetOperation` discriminator as a
+       constructor-validated field; mapped/unmapped × expectation consistency guards hold on the
+       canonical contract, and the `semantic` → `sparsefieldset` dependency is verified against the
+       current ArchUnit allowlist without any allowlist change.
 - [ ] `SparseFieldsetScenarios` and `JsonApiFixtures.sparseFieldset()` contain no independent
        canonical declarations and pass exact order/value projection-bijection tests; a fixed test-only
        legacy-inventory baseline independently proves all 30 pre-migration ids, order, operation,

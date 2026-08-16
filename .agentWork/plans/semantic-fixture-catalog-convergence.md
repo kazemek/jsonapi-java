@@ -57,19 +57,24 @@ wide coverage prevents loss, duplication, or drift before future PATCH and adapt
   prerequisite. The Foundation implementation must materialize and index the accepted ADR-013
   before Convergence implementation begins; this plan must link that resulting ADR and final
   verification must inspect the materialized file and index rather than treating plan prose as proof.
-- Existing capability applicability evidence is split by the pre-migration repository model: positive
+- Foundation owns the independent pre-migration codec capability applicability baseline at
+  `jsonapi-java-test-fixtures/src/test/resources/semantic-catalog-baselines/codec-capabilities.tsv`.
+  It captures the observable membership split from the pre-migration repository model: positive
   `CodecScenario` declarations expose `writable`, `readable`, and `schemaKind != null`; the explicit
   `AmbiguousPrimaryDataScenarios` catalog is reader-only; and the JSON-P-backed
-  `NegativeCodecScenarios` catalog is read-only. The persisted manifests own IDs, paths, notes, and
-  negative diagnostics but contain no capability flags. Capture these existing observable memberships
-  in a fixed test-only baseline before canonical replacement; it is a migration oracle, not runtime
-  ownership or a second catalogue.
+  `NegativeCodecScenarios` catalog is read-only. The persisted manifests remain owners of IDs, paths,
+  notes, and negative diagnostics; Convergence consumes this retained test-only oracle and never
+  rebuilds expected capabilities from the canonical catalogue.
 
 ## Target contract model
 
 - Add `EnvelopeReadContract` as a registered `FixtureContract` root whose canonical entries are
   typed executable leaves: one leaf for each current `EnvelopeReadCase` and each
   `EnvelopeReadVariant.RegistryAttempt` (34 leaves across the current 22 stable scenario groups).
+  The Foundation hierarchy is explicit: `EnvelopeReadContract extends FixtureContract extends
+  Scenario`, so `FixtureCatalog<EnvelopeReadContract>` satisfies the existing
+  `FixtureCatalog<T extends Scenario>` bound. Preserve that relationship rather than introducing a
+  parallel contract abstraction.
   Each leaf has an explicitly declared stable `leafId` exposed as `EnvelopeReadContract.id()`, a
   separate legacy scenario id, an ordered group position, document-binding or registry-attempt
   variant, and the existing typed input/entry-point/context/expectation state. The direct
@@ -96,7 +101,8 @@ wide coverage prevents loss, duplication, or drift before future PATCH and adapt
   closed `CodecReadProjectionProvenance` value (`POSITIVE_MANIFEST`, `AMBIGUOUS_MANIFEST`, or
   `NEGATIVE_MANIFEST`), and is permitted only for `CODEC_DERIVED` leaves. It stores the effective
   non-null reader primary-data kind, including `RESOURCE` for the existing no-primary-data fallback;
-  nullable raw `CodecScenario.primaryDataKind` remains compatibility metadata only. Default-context
+  nullable raw `CodecScenario.primaryDataKind` remains compatibility metadata only and never
+  participates in outcome/context matching. Default-context
   leaves reject an outcome reference. The selected outcome key must match the effective kind and
   expected core representation before registration, and provenance is diagnostic metadata only, never
   a dispatch key.
@@ -187,51 +193,82 @@ test-only characterization source, not canonical runtime storage.
 
 ### Leaf Ownership Matrix
 
-Each leaf has one explicit semantic owner and source handle. The owner id is the semantic scenario
-that owns the referenced representation instances; repeated owner ids are intentional reuse, and
-`alias` marks an intentional named wire alias rather than a duplicate representation instance.
+Each leaf has one explicit semantic owner resolution and source handle. A literal owner id names the
+semantic scenario that owns the referenced representation instances; `RESOLVE_FROM_FROZEN_OWNER`
+resolves that scenario from the exact prerequisite source handle. Repeated owner ids are intentional
+reuse, and `alias` marks an intentional named wire alias rather than a duplicate representation
+instance.
 
-| leafId range | semantic owner id | source handle / alias |
+| leafId | semantic owner / resolution | source handle / alias |
 |---|---|---|
-| `envelope.single-resource.case-01`, `envelope.absent-empty-included.case-01` | `envelope.single-resource` | `binding:single-resource` |
-| `envelope.homogeneous-collection.case-01` | `document.resource.collection` | `codec:resource-collection` |
+| `envelope.single-resource.case-01` | `envelope.single-resource` | `binding:single-resource` |
+| `envelope.absent-empty-included.case-01` | `envelope.single-resource` | `binding:single-resource` |
+| `envelope.homogeneous-collection.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:resource-collection` |
 | `envelope.heterogeneous-collection.case-01` | `envelope.heterogeneous-collection` | `binding:heterogeneous-collection` |
-| `envelope.null-data.case-01` | `document.data.null` | `codec:null-data` |
-| `envelope.meta-only.case-01` | `document.meta-only` | `codec:meta-only` |
+| `envelope.null-data.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:null-data` |
+| `envelope.meta-only.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:meta-only` |
 | `envelope.identifier-pass-through.case-01` | `document.identifier.single` | `codec-wire:single-identifier` |
-| `envelope.identifier-pass-through.case-02` | `document.identifier.collection` | `codec-wire:identifier-collection` |
-| `envelope.errors-document.case-01` | `document.errors` | `codec:errors-document` |
-| `envelope.jsonapi-links-members.case-01` | `document.jsonapi.object` | `codec:jsonapi-object` |
-| `envelope.jsonapi-links-members.case-02` | `document.links.string-and-object` | `codec:string-and-object-links` |
+| `envelope.identifier-pass-through.case-02` | `RESOLVE_FROM_FROZEN_OWNER` | `codec-wire:identifier-collection` |
+| `envelope.errors-document.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:errors-document` |
+| `envelope.jsonapi-links-members.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:jsonapi-object` |
+| `envelope.jsonapi-links-members.case-02` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:string-and-object-links` |
 | `envelope.jsonapi-links-members.case-03` | `document.extension-and-at-members` | `codec:extension-and-at-members` |
 | `envelope.jsonapi-links-members.case-04` | `envelope.at-member-document` | `binding:at-member-document` |
-| `envelope.absent-empty-included.case-02` | `document.included.empty` | `codec:empty-included` |
-| `envelope.included-wire-order.case-01` | `document.compound` | `codec:compound-document` |
+| `envelope.absent-empty-included.case-02` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:empty-included` |
+| `envelope.included-wire-order.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:compound-document` |
 | `envelope.compound-shared-identity.case-01` | `article.compound.shared-author` | `codec:compound-shared-identity` |
 | `envelope.shared-id-lid-instance.case-01` | `envelope.shared-identity.id-lid` | `core:shared-identity-id-and-lid` |
 | `envelope.duplicate-included-identities.case-01` | `envelope.duplicate-included-identities` | `core:duplicate-included-identities` |
-| `envelope.unregistered-primary.case-01`, `envelope.unregistered-primary.case-02` | `envelope.unregistered-primary` | `binding:unregistered-primary-*` |
-| `envelope.unregistered-included.case-01` | `document.compound` | `codec:compound-document` |
-| `envelope.duplicate-registry-types.case-01` | `envelope.registry.duplicate-types` | `registry-attempt` |
-| `envelope.registration-rejects-annotations.case-01`, `case-02`, `case-03` | `envelope.registry.annotations` | `registry-attempt` |
-| `envelope.binder-failures.case-01`, `case-02`, `case-03` | `envelope.binder.failures` | `binding:binder-failure-*` |
+| `envelope.unregistered-primary.case-01` | `envelope.unregistered-primary` | `binding:unregistered-primary-single` |
+| `envelope.unregistered-primary.case-02` | `envelope.unregistered-primary` | `binding:unregistered-primary-collection` |
+| `envelope.unregistered-included.case-01` | `RESOLVE_FROM_FROZEN_OWNER` | `codec:compound-document` |
+| `envelope.duplicate-registry-types.case-01` | `envelope.registry.duplicate-types` | `registry:duplicate-type-registration` |
+| `envelope.registration-rejects-annotations.case-01` | `envelope.registry.annotations` | `registry:missing-resource-annotation` |
+| `envelope.registration-rejects-annotations.case-02` | `envelope.registry.annotations` | `registry:empty-resource-type` |
+| `envelope.registration-rejects-annotations.case-03` | `envelope.registry.annotations` | `registry:invalid-resource-type` |
+| `envelope.binder-failures.case-01` | `envelope.binder.failures` | `binding:binder-failure-collection` |
+| `envelope.binder-failures.case-02` | `envelope.binder.failures` | `binding:binder-failure-single` |
+| `envelope.binder-failures.case-03` | `envelope.binder.failures` | `binding:binder-failure-included` |
 | `envelope.root-level-binder-failure.case-01` | `envelope.binder.root-failure` | `binding:root-level-failure` |
 | `envelope.cyclic-linkage.case-01` | `envelope.cyclic-linkage` | `binding:cyclic-linkage` |
-| `envelope.independent-envelopes.case-01`, `case-02` | `envelope.independent-envelopes` | `core:independent-envelopes-*` |
+| `envelope.independent-envelopes.case-01` | `envelope.independent-envelopes` | `core:independent-envelopes-matching` |
+| `envelope.independent-envelopes.case-02` | `envelope.independent-envelopes` | `core:independent-envelopes-unrelated` |
 | `envelope.mutation-safe-collections.case-01` | `envelope.mutation.compound` | `wire-alias:compound-document` |
 | `envelope.mutation-safe-collections.case-02` | `envelope.mutation.errors` | `wire-alias:errors-document` |
 
-The matrix expands range rows by the fixed leaf table above; implementation tests must compare every
-leaf individually, validate owner/reference membership at freeze time, and permit only the aliases
-named here.
+The matrix contains one exact row per leaf; implementation tests must compare every leaf individually,
+validate owner/reference membership at freeze time, and permit only the aliases named here. Unknown,
+duplicate, colliding, or wildcard source handles are invalid.
 
-Owner ids in this matrix are stable `SemanticOwnerHandle` references resolved from the prerequisite
-registry handoffs, not implementation-chosen strings. `article.compound.shared-author` is the pinned
-Foundation/Compound anchor; every other handle must be published by its owning prerequisite
-migration or explicitly created as an envelope-only owner after the handoff proves no exact owner
-exists. Convergence must reject an unknown, colliding, or representation-incompatible handle.
+The owner-resolution column uses exact prerequisite anchors where those plans publish them, including
+`document.identifier.single`, `document.extension-and-at-members`, and
+`article.compound.shared-author`. `RESOLVE_FROM_FROZEN_OWNER` means that the exact source handle in
+the same row refers to a prerequisite-owned representation or contract; Convergence resolves its
+semantic owner through the Foundation-owned frozen owner index and does not invent a prerequisite
+semantic id. Only envelope-owned rows use new Convergence semantic owner ids. Convergence rejects an
+unknown, colliding, or representation-incompatible source/owner resolution.
 
-For every expanded leaf row, the durable baseline also records `primaryReadRepresentation`,
+The source-handle vocabulary is fixed:
+- `codec:<case-id>` — exact reference to a Foundation codec read outcome (same-owner
+  outcome-derived reference carrying the codec scenario's representation instances).
+- `codec-wire:<case-id>` — exact reference to a codec wire representation only (no outcome or
+  context selection).
+- `binding:<document-stem>` — envelope-owned `EnvelopeBindingDocument` wire representation identity.
+- `core:<document-stem>` — envelope-owned core document representation.
+- `registry:<attempt-kind>` — envelope registry-attempt source; it has no representation instance and
+  records only the attempt diagnostic source.
+- `wire-alias:<path-stem>` — an intentional named wire alias: the leaf owns a distinct named wire
+  representation instance whose persisted source path matches `<path-stem>` bytes; the owner index
+  records it as a listed alias entry (permitted exception to cross-owner instance sharing), never as
+  a shared representation instance. A `wire-alias:` row therefore always has an envelope-owned
+  semantic owner (the leaf's own scenario), never `RESOLVE_FROM_FROZEN_OWNER`. This is why
+  `envelope.mutation-safe-collections.case-01/02` own `envelope.mutation.compound` /
+  `envelope.mutation.errors` with distinct representation instances aliasing
+  `compound-document`/`errors-document` persisted bytes, while
+  `envelope.included-wire-order.case-01` and `envelope.unregistered-included.case-01` use
+  `codec:compound-document` (same-owner references to the codec scenario's representation instance).
+
+For every leaf row, the durable baseline also records `primaryReadRepresentation`,
 `includedReadRepresentation` (or `NONE`), `freshness` (`FRESH_PER_MATERIALIZATION` or an explicitly
 named `SHARED_INSTANCE_ALIAS`), and the owner handle for each representation. Primary and included
 read-domain values are separate named representations by default; only the shared-instance probe
@@ -259,6 +296,12 @@ aliases or weaken the owner index.
   mutation, id/lid, and binding documents. Add those leaves during the Foundation registry's single
   pre-freeze family assembly after prerequisite declarations and before owner-index/catalogue freeze;
   no post-freeze envelope registry or extension path is permitted.
+- Make the final type relationship compile-time visible: `EnvelopeReadContract` extends the existing
+  Foundation `FixtureContract`, which extends `Scenario`, and add a focused compile-time/static test
+  containing the equivalent of
+  `FixtureCatalog<EnvelopeReadContract> catalog = FixtureCatalog.of("envelope-read-contract", List.of(contract));`
+  through the existing generic `FixtureCatalog.of` contract. No parallel catalog-entry hierarchy or
+  raw-type escape is permitted.
 - Extend the test-only migration baseline with the complete 34-row mapping above, including exact
   leaf id, legacy group id, group position, variant kind, source reference, reader context, target
   registration, expectation, and registry diagnostic. Keep the existing 22-group inventory as a
@@ -270,7 +313,10 @@ aliases or weaken the owner index.
 - Convert `EnvelopeReadScenarios`, `JsonApiFixtures.envelopeRead()`, and existing envelope scenario
   values into an immutable projection from
   `JsonApiFixtures.envelopeReadContracts()`, the direct typed `FixtureCatalog` accessor derived by the
-  foundation registry. Do not add class-token dispatch or a wrapper catalogue. Preserve all current
+  foundation registry with area label `envelope-read-contract` whose unknown-id diagnostic is
+  asserted by tests. The projected `EnvelopeReadScenarios.catalog()` keeps the legacy `envelope-read`
+  area label so its preserved unknown-id diagnostic stays byte-stable. Do not add class-token
+  dispatch or a wrapper catalogue. Preserve all current
   input forms, order, target types, contexts, outcomes, and lookup diagnostics while removing
   independent scenario/core/wire construction from the compatibility layer. Preserve the signatures
   and behavior of `EnvelopeReadScenarios.catalog()`, `all()`, `byId(String)`, and `where(Predicate)`,
@@ -295,26 +341,22 @@ aliases or weaken the owner index.
   canonical storage. Direct one-contract families use order-preserving bijections, envelope uses its
   ordered 34-leaf-to-22-group projection, and codec uses a manifest-ordered stable-id keyed join
   proving each applicable read/write/schema contract exactly once. Its expected-id inputs are
-  independent: persisted manifest rows plus the pre-migration capability-applicability baseline for
-  codec, fixed migration baselines from the Domain,
-  Compound, and Sparse plans for those families, and the fixed 34-leaf envelope baseline plus the
+  independent: persisted manifest rows plus Foundation's retained
+  `semantic-catalog-baselines/codec-capabilities.tsv` capability-applicability baseline for codec,
+  the fixed migration baselines `domain-write.tsv`/`domain-read.tsv` (Domain),
+  `compound-write.tsv` (Compound), and `sparse-fieldset.tsv` (Sparse) in the durable forms those
+  plans establish, and the fixed 34-leaf envelope baseline plus the
   22-group inventory for envelope; the canonical catalogue under test is never its own expected-id
   source.
-- Add a fixed test-only codec capability-applicability baseline recording each stable codec id's
-  read/write/schema membership before canonical migration. For positive manifest IDs, record the
-  existing `CodecScenario` boolean/`schemaKind` selections in manifest order; record every ambiguous
-  manifest ID as read-only; and record every negative-manifest ID as read-only. Keep positive,
-  ambiguous, and negative IDs in their existing namespace-local inventories, join by stable ID plus
-  namespace, and reject missing, extra, duplicate, or conflicting membership. Manifests remain the
-  persisted owners of IDs, paths, notes, and order; the capability baseline is declaration
-  characterization only and is not a second runtime catalogue.
-- Require durable, non-runtime baseline handoffs before deleting prerequisite plans. The exact files
-  are `jsonapi-java-test-fixtures/src/test/resources/semantic-catalog-baselines/codec-capabilities.tsv`
-  (Foundation), `domain-write.tsv` and `domain-read.tsv` (Domain), `compound-write.tsv` (Compound),
-  and `sparse-fieldset.tsv` (Sparse); Convergence adds `envelope-groups.tsv` and
-  `envelope-leaves.tsv`. Each file is a fixed characterization oracle, preserves independent
-  IDs/order/values required by its owning migration, and is consumed by the convergence spec without
-  entering runtime catalogue registration.
+- Consume Foundation's durable, non-runtime
+  `semantic-catalog-baselines/codec-capabilities.tsv` handoff before deleting the Foundation plan.
+  Consume the independent fixed legacy-inventory characterization evidence owned by Domain
+  (`domain-write.tsv`, `domain-read.tsv`), Compound (`compound-write.tsv`), and Sparse
+  (`sparse-fieldset.tsv`) at the exact paths those plans establish; do not impose a Convergence
+  filename or storage format on those families. Convergence adds only its own fixed
+  `semantic-catalog-baselines/envelope-groups.tsv` and
+  `semantic-catalog-baselines/envelope-leaves.tsv` baselines. None of these baselines enters runtime
+  catalogue registration.
 - Use `module-docs` to finalize `jsonapi-java-test-fixtures/README.md`, affected package docs, and
   `JsonApiFixtures` Javadoc as the canonical contributor/adapter guide. Link the unified-catalogue
   ADR for rationale, the wire README for corpus storage, package Javadocs for contract invariants,
@@ -382,13 +424,18 @@ aliases or weaken the owner index.
   contiguous group positions, registry-only attempts, valid zero-target bindings, fresh primary and
   included representations, explicit shared-instance aliasing only where expected, and absent versus
   present-empty `included`.
-- Verify all 34 leaf-to-owner matrix rows, source handles, intentional aliases, representation
+- Verify all 34 exact leaf-to-owner matrix rows, source handles, intentional aliases, representation
   identity ownership, and pre-freeze membership independently of the canonical catalogue's own ids.
+  Reject wildcard, unknown, duplicate, and colliding handles.
+- Add a compile-time/static generic-bound test proving the final `EnvelopeReadContract` hierarchy is
+  accepted by `FixtureCatalog<EnvelopeReadContract>` and by `FixtureCatalog.of`, with no raw or
+  unchecked catalogue construction.
 - Run the catalogue-wide convergence spec over every contract root and every retained compatibility
   view. Mechanically search production fixture sources/tests to ensure old `SCENARIOS` data lists or
-  loaders are not alternate owners; use persisted manifests, the pre-migration codec capability
-  baseline, and prerequisite migration baselines as expected-id inputs rather than deriving expected
-  ids from the canonical catalogue under test.
+  loaders are not alternate owners; use persisted manifests, Foundation's retained codec capability
+  baseline, and the Domain/Compound/Sparse plans' independently owned baselines in their actual
+  durable forms as expected-id inputs rather than deriving expected ids from the canonical catalogue
+  under test.
   Static projection caches are allowed only when built from the canonical catalogue.
 - Preserve ArchUnit's test-fixtures allowlist and add dependency coverage for any new semantic
   package; no Jackson-major import may enter the shared catalogue. Verify ADR-009 package and
@@ -420,11 +467,14 @@ aliases or weaken the owner index.
       `where(Predicate)`,
       `JsonApiFixtures.envelopeRead()`, public input/expectation factories, and retained DTO/variant
        constructors remain source-compatible, lossless, and noncanonical when directly constructed.
-- [ ] Durable baseline handoffs exist at the named `semantic-catalog-baselines` test-resource paths
-       before prerequisite plans are deleted; Convergence consumes those files as independent oracles
-       and they do not enter runtime catalogue registration.
-- [ ] The fixed codec capability-applicability baseline independently preserves each stable codec id's
-       read/write/schema membership from the pre-migration `CodecScenario`,
+- [ ] Foundation's exact `semantic-catalog-baselines/codec-capabilities.tsv` handoff and
+       Convergence's `envelope-groups.tsv`/`envelope-leaves.tsv` baselines exist as independent,
+       non-runtime characterization oracles before their owning plans are deleted. Convergence
+       consumes the Domain (`domain-write.tsv`, `domain-read.tsv`), Compound (`compound-write.tsv`),
+       and Sparse (`sparse-fieldset.tsv`) legacy-inventory baselines at the exact paths their owning
+       plans establish and does not impose or duplicate a filename/format for those families.
+- [ ] The Foundation-owned codec capability-applicability baseline independently preserves each
+       stable codec id's read/write/schema membership from the pre-migration `CodecScenario`,
        `AmbiguousPrimaryDataScenarios`, and `NegativeCodecScenarios` surfaces: positive IDs use their
        existing `writable`/`readable`/`schemaKind != null` values, ambiguous IDs are read-only, and
        negative IDs are read-only. The convergence oracle joins this baseline to manifest IDs/order by
@@ -444,8 +494,13 @@ aliases or weaken the owner index.
        or post-freeze mutation path exists. Named wire aliases are the only permitted duplicate
        representation references.
 - [ ] Every leaf matches the explicit semantic-owner/source matrix, and the freeze-time identity
-       owner check rejects unlisted duplicate representation instances while allowing only the named
-       intentional wire aliases.
+       owner check rejects wildcard, unknown, duplicate, and colliding source handles, rejects
+       unlisted duplicate representation instances, and allows only the named intentional wire
+       aliases. `RESOLVE_FROM_FROZEN_OWNER` rows resolve exact prerequisite representations through
+       the Foundation-owned frozen owner index rather than inventing owner ids.
+- [ ] `EnvelopeReadContract` explicitly extends `FixtureContract` and therefore `Scenario`; a
+       compile-time/static construction of `FixtureCatalog<EnvelopeReadContract>` and
+       `FixtureCatalog.of` proves the generic bound without raw or unchecked types.
 - [ ] Each leaf has explicit primary/included read-domain representation handles, freshness mode, and
        allowed shared-instance alias; primary and included binding remain independent except for the
        named shared-instance probes.

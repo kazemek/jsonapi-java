@@ -1,7 +1,7 @@
 # Semantic Fixture Compound Inclusion Contracts
 
 > **Scope:** `jsonapi-java-test-fixtures` and Jackson 3 compound-serialization tests
-> **Dependencies:** [Semantic Fixture Domain Read and Write Contracts](semantic-fixture-domain-contracts.md)
+> **Dependencies:** [Semantic Fixture Catalog Foundation and Codec Contracts](semantic-fixture-catalog-foundation.md), [Semantic Fixture Domain Read and Write Contracts](semantic-fixture-domain-contracts.md)
 > **Status:** Not started
 > **Work item:** KAZ-18
 
@@ -34,10 +34,12 @@ compound-write API as a lossless derived projection.
   graph except that the write-domain primary article also carries title/body attributes. Store both
   named representations on one semantic scenario and keep each operation case id as its own
   contract.
-- `shared identity is included once` matches the codec `compound-shared-identity` identity graph
-  (articles/1 and /2 share people/9 Dan) while domain primary attributes differ. This is one semantic
-  identity example with distinct named domain/core/wire representations and distinct expectations,
-  not evidence that traversal deduplication and envelope DTO identity are the same contract.
+- `shared identity is included once` matches the codec `compound-shared-identity` identity example
+  (articles/1 and /2 share people/9 Dan) while domain primary attributes differ and the domain graph
+  additionally carries a present-empty `comments` linkage that the codec graph lacks. The shared
+  semantic identity is the shared people/9 example, not byte-identical graph values; the contract
+  owns its distinct named domain/core/wire representations, and the present-empty linkage is
+  explicitly disclosed rather than claimed equal.
 - Cycles, repeated path segments, depth/count boundaries, one-shot iterables, runtime subtype
   policy, access counting, conflict precedence, and concurrent isolation are operation-specific
   semantic behaviors with no required codec/domain-read representation. They remain separate
@@ -65,6 +67,12 @@ compound-write API as a lossless derived projection.
   executable input among the current 30 cases, including one-shot iterable and concurrent-side
   inputs, has one scenario-owned representation; there is no open-ended behavior-only supplier
   exception.
+- `CompoundWriteExpectation` success/failure/concurrent-isolation variants remain the canonical
+  outcome vocabulary. The canonical failure outcome carries the typed `MappingDiagnostic` plus the
+  nullable `propertyPath` and `resourceClass` payloads matching the legacy `Failure` record
+  (`Failure(diagnostic, propertyPath, resourceClass)`), so the projection reconstructs `Failure`
+  exactly and never collapses absent vs. null property path. The canonical success outcome preserves
+  the absent-`included` (`null`) vs. present-empty (`[]`) distinction as wire-visible states.
 - Constructor/catalogue invariants must reject concurrent request/outcome mismatches, missing or
   cross-scenario representations, and null or invalid individual `IncludePath` values already
   rejected today. An empty `List<IncludePath>` remains the valid no-inclusion request that omits
@@ -75,12 +83,47 @@ compound-write API as a lossless derived projection.
 
 ## Deliverables
 
-- Register all 30 compound-write cases exactly once as `CompoundWriteContract` entries. Attach every
-  contract consuming the exact nested `article()` graph, including the converging-suffix case, to the
-  foundation codec nested-graph semantic scenario; its operation id and traversal semantics remain
-  separate contract values. Attach the shared-author contract to its foundation codec scenario with
-  separate named domain and core/wire representations. Keep all other cases distinct unless exact
-  repository values prove shared semantic identity.
+- `CompoundWriteContract` is a `FixtureContract` root living in the Foundation `semantic` package;
+  the resulting `semantic` → `compoundwrite` dependency is already legal under the current
+  test-fixtures ArchUnit allowlist (`TestFixturesDependencyRulesSpec`) and stays documented, with no
+  allowlist change. Compound family declarations expose their data through public static accessors
+  consumed by the root-package coordinator (mirroring the Foundation `codec.cases` pattern).
+- Register all 30 compound-write cases exactly once as `CompoundWriteContract` entries. The
+  semantic-scenario attachment map is fixed:
+  - The 17 exact `article()`-graph consumers (`context-free overloads omit included`, `empty
+    include path list omits included`, `includes nested intermediates for comments.author`,
+    `prefix-overlapping paths traverse suffixes`, `converging different-suffix paths still traverse`,
+    `nested policy matches owner resource type`, `nested policy denies wrong owner type`, `maxDepth
+    zero rejects non-empty path`, `path longer than maxDepth fails`, `maxIncluded zero fails on first
+    included resource`, `maxIncluded exceeded fails`, `mapper-time unknown relationship fails`,
+    `denied relationship fails before traversal`, and the four `multi-failure` cases) attach to the
+    foundation nested-graph semantic scenario `article.compound.nested-comments-author` as distinct
+    contract values with same-owner references to that scenario's write-domain representation
+    instance; their operation ids, policies, limits, and traversal semantics remain separate contract
+    values.
+  - `shared identity is included once` attaches to the foundation `article.compound.shared-author`
+    scenario with a separate named domain representation, disclosing the present-empty `comments`
+    linkage difference.
+  - `one-shot iterable is materialized once` owns scenario `article.compound.one-shot-iterable` with
+    a scenario-owned representation of its iterable graph (article/2 authored by people/2 Ezra,
+    expectation `[people/9, people/2]`), which is not the shared-author graph.
+  - The remaining cases own distinct scenarios with scenario-local representations: `empty
+    resolution emits included empty array` → `article.compound.empty-included`; `self-reference
+    primary is not re-emitted in included` → `article.compound.self-reference`; `conflicting
+    representations fail` → `article.compound.conflicting-representations`; `off-path relationships
+    are not read for inclusion traversal` → `article.compound.off-path-access`; `heterogeneous
+    collection fails on later type` → `article.compound.heterogeneous-collection`; `runtime nested
+    owner type re-checks include policy` → `article.compound.runtime-subtype-policy`; `empty primary
+    collection still enforces maxDepth` → `article.compound.empty-primary-collection`; `cyclic graph
+    with repeated segment path terminates` → `node.compound.cyclic`; `multi-primary multi-path
+    first-discovery order` → `article.compound.multi-primary`; `deep nested path includes the chain`
+    → `node.compound.deep-chain`; `concurrent compound mappings isolate included sets` →
+    `article.compound.concurrent-isolation`. These ids satisfy the Foundation semantic-id grammar and
+    are globally unique against the pinned anchors.
+- The canonical collection invocation variant that carries the one-shot iterable references a
+  scenario-owned `DomainRepresentation<Iterable<...>>` whose fresh values are one-shot iterables;
+  the canonical-to-legacy projector derives the supplier as
+  `() -> representation.freshValue()` and never wraps a reusable collection into an iterable.
 - Preserve every specialized typed proof: nested intermediates, shared/primary identity exclusion,
   prefix overlap, converging suffixes, conflict detection, empty/absent included, one-shot iterable,
   owner-type and runtime-subtype policy, off-path non-access, zero/negative and finite limits,
@@ -89,10 +132,17 @@ compound-write API as a lossless derived projection.
 - Convert `CompoundWriteScenarios`, `JsonApiFixtures.compoundWrite()`, and the existing
   supplier-bearing scenario value surface into an immutable projection from
   `JsonApiFixtures.compoundWriteContracts()`, the direct typed `FixtureCatalog` accessor derived by
-  the foundation registry. Do not add class-token dispatch or a wrapper catalogue. Keep existing ids,
+  the foundation registry with area label `compound-write-contract` whose unknown-id diagnostic is
+  asserted by tests. The projected `CompoundWriteScenarios.catalog()` keeps the legacy
+  `compound-write` area label so its preserved unknown-id diagnostic stays byte-stable. Do not add
+  class-token dispatch or a wrapper catalogue. Keep existing ids,
   order, lookup diagnostics, request/expectation values, and static convenience methods; remove the
   independent `SCENARIOS` data list, supplier declaration, and graph construction from the
-  compatibility layer.
+  compatibility layer. `CompoundWriteScenario`, `CompoundWriteRequest` (all sealed variants),
+  `CompoundWriteSide`, `CompoundWriteExpectation` (all sealed variants), and `IncludedResourceRef`
+  remain source-compatible public records/types with unchanged canonical constructors and static
+  factories and standalone construction behavior, mirroring the Foundation codec-DTO and Domain
+  retention pins; only canonical storage moves.
 - Migrate Jackson 3 `CompoundSerializationSpec` shared parameterization to the canonical typed
   projection and full-projection coverage. Preserve its relaxed coverage behavior for focused
   `--tests` selection if required by the existing spec, but a normal full spec run must prove exact
@@ -109,6 +159,11 @@ compound-write API as a lossless derived projection.
   identity, or flattening policies/limits/diagnostics into generic metadata.
 - Renaming/removing case ids, changing graph values to make unrelated fixtures look equal, or moving
   Jackson-specific exact access counts into shared contracts.
+- Reshaping or restricting the public surface of `CompoundWriteScenario`, `CompoundWriteRequest`,
+  `CompoundWriteSide`, `CompoundWriteExpectation`, or `IncludedResourceRef`: their public record
+  constructors, sealed variants, and static catalogue/factory surfaces remain source-compatible and
+  standalone-constructible; only canonical storage moves, mirroring the Foundation codec-DTO and
+  Domain retention pins.
 
 ## Source-of-truth transition
 
@@ -128,11 +183,28 @@ compound-write API as a lossless derived projection.
   factories, contract-id/order uniqueness, representation membership, concurrent-side pairing, and
   the valid empty include-path list versus invalid individual-path boundary.
 - Before replacing the old `SCENARIOS` list, add a test-only fixed legacy-inventory baseline for all
-  30 entries. Record each observable id, order, request variant/context, fresh input graph values,
-  expectation, note, and unknown-id diagnostic without becoming registration or runtime ownership.
+  30 entries at
+  `jsonapi-java-test-fixtures/src/test/resources/semantic-catalog-baselines/compound-write.tsv`.
+  The TSV header is
+  `namespace\tid\tposition\trequestVariant\tcontext\texpectation\tfreshInputGraph\tnote\tlookupDiagnostic`
+  with one row per case in catalogue order; `N/A` marks a column that does not apply to that row.
+  The `namespace` value is exactly `compound-write` (matching the legacy area label), and the
+  baseline rejects a wrong header, unknown namespace, blank or duplicate key, and missing or extra
+  rows. `note` carries the observable `notes()` value per row, which equals the id for every
+  compound entry. `context` serializes the compound context (include paths, include policy, limits) deterministically;
+  `freshInputGraph` records a canonical structural description of the fresh supplier graph (for
+  cyclic and one-shot graphs the description is the graph shape and expected traversal, not a raw
+  Java serialization), and the value-bearing columns serialize the observable values deterministically
+  under the current equality rules (fresh input graph values per invocation, mutable/array values
+  snapshotted). Record
+  each observable id, order, request variant/context, fresh input graph values, expectation, note,
+  and unknown-id diagnostic without becoming registration or runtime ownership.
   Retain this characterization proof alongside the canonical-to-legacy bijection so the baseline
   proves migration preservation while the bijection proves derived ownership.
-- Rewrite `CompoundWriteScenariosCatalogSpec` as a complete canonical-to-legacy bijection. Prove the
+- Rewrite `CompoundWriteScenariosCatalogSpec` as a complete canonical-to-legacy bijection, and
+  include `JsonApiFixturesSpec` in the rewrite so the
+  `JsonApiFixtures.compoundWrite().is(CompoundWriteScenarios.catalog())` instance identity and the
+  byte-stable `compound-write` unknown-id diagnostic hold against the derived projection. Prove the
   projection is the only source of legacy suppliers, retains all constructor rejection and
   fresh-supplier behavior, and preserves the no-inclusion empty-path case.
 - Add cross-representation assertions for nested and shared-author graph identities and values,
@@ -151,15 +223,22 @@ compound-write API as a lossless derived projection.
 - [ ] All 30 compound-write ids, order, requests, expectations, graph values, notes, and lookup
       diagnostics are present exactly once in the canonical typed projection and derived view.
 - [ ] The nested comments/author and shared-author examples reuse foundation semantic scenarios with
-       named differing representations; every exact nested `article()` consumer, including
-       converging suffixes, is a distinct contract on the nested-graph scenario; and other
-       cycle/policy/limit/conflict cases remain distinct.
+       named differing representations; the 17 exact `article()` consumers attach to
+       `article.compound.nested-comments-author` as distinct contracts; `shared identity is included
+       once` attaches to `article.compound.shared-author` with the disclosed present-empty `comments`
+       linkage; `one-shot iterable is materialized once` owns
+       `article.compound.one-shot-iterable`; and the remaining distinct-scenario cases follow the
+       fixed attachment map above.
+- [ ] The one-shot iterable contract references a scenario-owned
+       `DomainRepresentation<Iterable<...>>` whose fresh values are one-shot iterables, and the
+       projector derives the supplier from `representation.freshValue()`.
 - [ ] Graph traversal, identity, first-order, one-shot iterable, access, diagnostic precedence, and
       concurrency/isolation proofs retain their existing typed expressiveness and behavior.
 - [ ] `CompoundWriteScenarios` and `JsonApiFixtures.compoundWrite()` contain no independent
        canonical declarations, graph factories, or suppliers and pass an order/value/fresh-supplier
-       bijection against `CompoundWriteContract`, including the valid empty include-path list; a
-       fixed test-only legacy-inventory baseline independently proves all 30 pre-migration entries'
+       bijection against `CompoundWriteContract`, including the valid empty include-path list; the
+       fixed test-only `semantic-catalog-baselines/compound-write.tsv` baseline independently proves
+       all 30 pre-migration entries'
        ids, order, request/context, fresh graph values, expectations, notes, and lookup diagnostic
        are preserved.
 - [ ] Jackson 3 consumes the canonical projection, dispatches on typed variants rather than ids, and

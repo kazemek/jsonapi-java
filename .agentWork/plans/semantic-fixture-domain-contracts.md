@@ -71,7 +71,11 @@ derived views for the existing domain-write and domain-read APIs.
   matching `DocumentData.ResourceCollection`. Typed contract variants validate/extract the required
   `SingleResource` or `ResourceCollection` shape for mapper/binder calls, while whole-document
   operations retain the document and compatibility projections expose their unchanged bare resource
-  or resource-list values.
+  or resource-list values. Factory/registration rejects a document value whose `data` is not the
+  required `SingleResource`/`ResourceCollection` shape for the typed variant (for example
+  `NullData`, an `Errors` document, or a bare `ResourceObject`); whole-document operations and the
+  envelope case retain the complete document value. Adapter executors therefore never guess
+  document-shape handling.
 - A domain-write contract identifies its existing case id, operation, typed single/collection/null
   input source, optional envelope only for the envelope operation, success/failure outcome, and
   comparison policy. Successful expected core resources/documents are scenario-owned core
@@ -80,7 +84,9 @@ derived views for the existing domain-write and domain-read APIs.
 - A domain-read contract identifies its existing case id, one or more scenario-owned core inputs,
   target domain representation/type, converter behavior, and success/failure expectation.
   `IncludedIsolation` references its two scenario-owned inline `WireRepresentation` values and one
-  expected DTO representation; the compatibility projection returns the exact source strings and
+  expected DTO representation; those inline wires carry the Foundation `READ_INPUT` source role and
+  are referenced by a successful read-binding contract, which the Foundation role model permits for
+  valid-JSON read inputs. The compatibility projection returns the exact source strings and
   each adapter continues to parse both values before binding. Paired core representations may support
   semantic assertions, but never replace those wire inputs. Success and failure remain sealed
   alternatives.
@@ -104,12 +110,13 @@ derived views for the existing domain-write and domain-read APIs.
   domain-write linkage contracts to one distinct `article.relationship.author-null-and-comments-empty`
   semantic scenario, and create explicit domain semantic scenarios for all other behaviors rather
   than joining examples by vague structural similarity.
-- Add one `blog.json-property-name` semantic scenario (or the foundation ADR's exact naming form)
-  with the proven shared `BlogWithJsonProperty("b1", "My Blog")` read/write domain representation,
-  core resource, domain-write contract, and domain-read contract. This is the explicit exception:
-  read/write models that differ remain separate named domain representations unless an exact semantic
-  identity is proven. Keep the sparse-fieldset `"Hello"` case separate until its own plan because its
-  value and behavioral expectation differ.
+- Add exactly one `blog.json-property-name` semantic scenario with the proven shared
+  `BlogWithJsonProperty("b1", "My Blog")` read/write domain representation, core resource,
+  domain-write contract, and domain-read contract. This is the explicit exception: read/write models
+  that differ remain separate named domain representations unless an exact semantic identity is
+  proven. The sparse-fieldset `"Hello"` value is a separate semantic representation and must not
+  alias this owner merely because it uses the same Java type and resource id; its distinct owner is
+  pinned by the Sparse plan.
 - Put the List and array empty-comments read contracts on the shared empty-linkage semantic scenario
   as separate named target representations/contracts; retain the Set `tags` contract on its distinct
   core representation. Preserve links/meta-only, null, absent, and present-empty inputs as distinct
@@ -117,9 +124,13 @@ derived views for the existing domain-write and domain-read APIs.
 - Convert `DomainWriteScenarios`, `DomainReadScenarios`, `JsonApiFixtures.domainWrite()`, and
   `JsonApiFixtures.domainRead()` into immutable projections from
   `JsonApiFixtures.domainWriteContracts()` and `JsonApiFixtures.domainReadContracts()`. Each method
-  returns the direct typed `FixtureCatalog` derived by the foundation registry; do not add class-token
-  dispatch or a wrapper catalogue. Existing scenario DTOs/static methods may remain, but must
-  materialize repository-owned built-in entries from canonical contracts and contain no
+  returns the direct typed `FixtureCatalog` derived by the foundation registry, with area labels
+  `domain-write` and `domain-read` whose unknown-id diagnostics are asserted by tests; do not add
+  class-token dispatch or a wrapper catalogue. `DomainWriteScenario` and `DomainReadScenario` remain
+  public records with unchanged canonical constructors (including their validation bodies) and
+  unchanged static `all()`/`byId()`/`where()`/`catalog()` surfaces; projections reconstruct those
+  values, mirroring the Foundation's codec-DTO retention pin. Existing scenario DTOs/static methods
+  must materialize repository-owned built-in entries from canonical contracts and contain no
   independently editable built-in case list, registration source, or model storage. Standalone value
   construction through any retained public DTO API does not register canonical data.
 - Migrate Jackson 3 `ResourceMapperSpec` and `ResourceBinderSpec` shared parameterization to the
@@ -137,6 +148,11 @@ derived views for the existing domain-write and domain-read APIs.
   persistence/lookup behavior.
 - Renaming/removing case ids, changing target DTO behavior, moving adapter-observed path details into
   shared expectations, or removing compatibility APIs needed by current live Jackson 2 plans.
+- Reshaping or restricting the public surface of `DomainWriteScenario`, `DomainReadScenario`,
+  `DomainWriteInput`, `DomainWriteOutcome`, `DomainWriteComparisonPolicy`, `DomainReadInput`, or
+  `DomainReadExpectation`: their public record constructors, nested variants, and static catalogue/
+  factory surfaces remain source-compatible and standalone-constructible; only canonical storage
+  moves, mirroring the Foundation's codec-DTO retention clause.
 - Removing operation, converter, comparison, or failure variants in favor of booleans or nullable
   fields.
 
@@ -162,18 +178,28 @@ derived views for the existing domain-write and domain-read APIs.
   and binder values.
 - Rewrite both catalogue specs as projection-bijection tests: every current id occurs once in the
   canonical typed projection and once in the derived view, in the same order, with equal operations,
-  inputs, contexts, outcomes, policies, notes, and unknown-id diagnostics.
+  inputs, contexts, outcomes, policies, notes, and unknown-id diagnostics. Include
+  `JsonApiFixturesSpec` in the rewrite so the `domainWrite()`/`domainRead()` facade-identity and
+  `notes() == id()` assertions hold against the derived projections.
 - Before replacing the old built-in lists, add a test-only fixed legacy-inventory baseline for all 14
-  write and 40 read entries. It records each observable id, order, operation/variant, notes,
-  input/output/expectation values, policy, and lookup diagnostic without becoming registration or
-  runtime ownership. Compare fresh supplier values per invocation and snapshot mutable/array values
-  with the current observable equality rules. Retain this characterization proof alongside the
-  canonical-to-derived bijection so the latter proves ownership while the baseline proves migration
-  preservation.
+  write and 40 read entries at
+  `jsonapi-java-test-fixtures/src/test/resources/semantic-catalog-baselines/domain-write.tsv` and
+  `domain-read.tsv`. The TSV header is
+  `namespace\tid\tposition\tvariant\tnote\tpolicy\tinput\texpectedOutput\texpectation\tlookupDiagnostic`
+  with one row per case in catalogue order. The `policy`/`input`/`expectedOutput`/`expectation`
+  columns carry the observable value-bearing content of each entry serialized deterministically
+  under the current equality rules (fresh suppliers compared per invocation, mutable/array values
+  snapshotted); `N/A` marks a column that does not apply to that row (for example `policy` on a read
+  row). `lookupDiagnostic` records the exact unknown-id diagnostic. The baseline records each
+  observable id, order, operation/variant, notes, input/output/expectation values, policy, and
+  lookup diagnostic without becoming registration or runtime ownership. Retain this characterization
+  proof alongside the canonical-to-derived bijection so the latter proves ownership while the
+  baseline proves migration preservation.
 - Add focused cross-contract assertions for `BlogWithJsonProperty`, explicit null author linkage,
-  and empty comments linkage. Prove `BlogWithJsonProperty("b1", "My Blog")` is the explicit shared
-  read/write domain-representation exception, and require distinct named representations for
-  List/Set/array DTOs and all read/write models that differ.
+  and empty comments linkage. Pin `blog.json-property-name` to
+  `BlogWithJsonProperty("b1", "My Blog")` as the explicit shared read/write domain-representation
+  exception, and require distinct named representations for the Sparse `"Hello"` value, List/Set/array
+  DTOs, and all other read/write models that differ.
 - Preserve fresh suppliers, one-shot collection behavior where applicable, included-isolation,
   converter exceptions/null returns, null input rejection, envelope members, comparison policy,
   diagnostics, and absent/null/empty distinctions.
@@ -188,9 +214,21 @@ derived views for the existing domain-write and domain-read APIs.
 
 - [ ] All 14 domain-write and 40 domain-read ids, order, values, variants, notes, and lookup
       diagnostics are preserved as canonical typed contracts and lossless legacy projections.
+- [ ] `DomainWriteScenario` and `DomainReadScenario` remain public records with unchanged canonical
+      constructors and static `all()`/`byId()`/`where()`/`catalog()` surfaces; their nested
+      input/outcome/expectation/policy types and factories stay source-compatible and standalone,
+      mirroring the Foundation's codec-DTO pin.
+- [ ] Typed document-valued core representations reject documents whose `data` is not the required
+      `SingleResource`/`ResourceCollection` shape at factory/registration time; whole-document
+      operations and the envelope case retain complete document values.
+- [ ] The two `IncludedIsolation` inline wire representations carry the Foundation `READ_INPUT` role
+      and are referenced by a successful read-binding contract; the compatibility projection returns
+      the exact source strings and no value is reserialized from core.
 - [ ] Read DTOs and write objects whose models differ are separate named domain representations;
-        `BlogWithJsonProperty("b1", "My Blog")` is the proven shared read/write representation
-        exception; and null input and failure cases do not require fabricated valid representations.
+        semantic id `blog.json-property-name` owns the proven shared
+        `BlogWithJsonProperty("b1", "My Blog")` read/write representation; the Sparse `"Hello"`
+        representation is not an alias; and null input and failure cases do not require fabricated
+        valid representations.
 - [ ] Contract factories reject every mismatched write operation/input/envelope/outcome and read
        input/representation/target/expectation combination before registration; document-valued
        core representations extract only the single-resource or resource-collection shape required by
