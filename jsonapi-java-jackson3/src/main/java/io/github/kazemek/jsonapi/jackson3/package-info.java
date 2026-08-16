@@ -22,9 +22,10 @@
  * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} values and error documents never bind.
  *
  * <p>Presence-aware resource updates use {@link JsonApiJackson3#patchReader} to derive a {@link
- * JsonApiPatchReader} that validate-on-reads with {@code DocumentUsage.UPDATE_REQUEST} and binds
- * only supplied mapped members into a common {@link io.github.kazemek.jsonapi.jackson.PatchCommand}
- * without constructing a DTO or reading {@code included}.
+ * JsonApiPatchReader} that applies validate-on-read with {@code DocumentUsage.UPDATE_REQUEST} and
+ * binds only supplied mapped members into a common {@link
+ * io.github.kazemek.jsonapi.jackson.PatchCommand} without constructing a DTO or reading {@code
+ * included}.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require

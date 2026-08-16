@@ -3,8 +3,10 @@ package io.github.kazemek.jsonapi.jackson;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -59,26 +61,34 @@ public sealed interface PatchChange
   }
 
   /**
-   * Shallow-freeze {@link List}, {@link Set}, and array values for storage. Null elements are
-   * preserved; other objects are left as-is.
+   * Shallow-freeze {@link List}, {@link Set}, {@link Map}, and array values for storage. Null
+   * elements and map values are preserved; other objects are left as-is.
    */
   private static @Nullable Object freezeValue(@Nullable Object value) {
-    if (value == null) {
-      return null;
-    }
-    if (value instanceof List<?> list) {
-      List<@Nullable Object> copy = new ArrayList<>(list.size());
-      copy.addAll(list);
-      return Collections.unmodifiableList(copy);
-    }
-    if (value instanceof Set<?> set) {
-      Set<@Nullable Object> copy = new LinkedHashSet<>(set);
-      return Collections.unmodifiableSet(copy);
+    switch (value) {
+      case null -> {
+        return null;
+      }
+      case List<?> list -> {
+        List<@Nullable Object> copy = new ArrayList<>(list.size());
+        copy.addAll(list);
+        return Collections.unmodifiableList(copy);
+      }
+      case Set<?> set -> {
+        Set<@Nullable Object> copy = new LinkedHashSet<>(set);
+        return Collections.unmodifiableSet(copy);
+      }
+      case Map<?, ?> map -> {
+        Map<Object, @Nullable Object> copy = new LinkedHashMap<>(map.size());
+        copy.putAll(map);
+        return Collections.unmodifiableMap(copy);
+      }
+      default -> {}
     }
     return copyArray(value);
   }
 
-  /** Defensive copy for array accessors; lists/sets are already unmodifiable. */
+  /** Defensive copy for array accessors; lists/sets/maps are already unmodifiable. */
   private static @Nullable Object exposeValue(@Nullable Object value) {
     return copyArray(value);
   }

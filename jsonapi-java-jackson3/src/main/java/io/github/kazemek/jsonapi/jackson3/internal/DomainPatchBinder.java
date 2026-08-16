@@ -39,7 +39,14 @@ import tools.jackson.databind.util.TokenBuffer;
  * <p>Converts only supplied mapped attributes and relationships in attribute-then-relationship
  * encounter order. Reuses {@link ResourceMapping} definitions and the same relationship cardinality
  * / linkage rules as {@link RelationshipLinkageSupport}; attribute values use per-member {@link
- * JsonMapper#convertValue}. Document {@code included} is never read.
+ * JsonMapper#convertValue}. Document {@code included} is never read. A relationship member without
+ * {@code data} produces no change; {@code readValue} rejects that shape earlier with {@code
+ * RELATIONSHIP_DATA_REQUIRED}, while {@code fromDocument} skips it without re-validation.
+ *
+ * <p>Property-level {@code @JsonDeserialize} conversion uses the same TokenBuffer helpers as
+ * Jackson's {@code convertValue} ({@code _deserializationContext()}, {@link
+ * DeserializationContextExt}, {@link SerializationContextExt}). Those APIs are Jackson framework
+ * conversion internals; this binder tracks the module's pinned Jackson 3.2.2 line.
  */
 public final class DomainPatchBinder {
 

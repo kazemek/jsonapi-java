@@ -463,6 +463,24 @@ class JacksonCommonContractsSpec extends Specification {
     (change.value() as String[])[0] == "a"
   }
 
+  def "mutating a map value cannot affect the stored change"() {
+    given:
+    def mutableMap = new LinkedHashMap<String, Object>()
+    mutableMap.put("type", "tags")
+    mutableMap.put("id", "t1")
+    mutableMap.put("lid", null)
+    def change = new PatchChange.RelationshipChange("author", "author", mutableMap)
+
+    when:
+    mutableMap.put("id", "mutated")
+    (change.value() as Map).put("id", "exposed")
+
+    then:
+    thrown(UnsupportedOperationException)
+    (change.value() as Map).id == "t1"
+    (change.value() as Map).type == "tags"
+  }
+
   def "mutating a primitive array returned from value cannot affect the stored change"() {
     given:
     def change = new PatchChange.RelationshipChange("counts", "counts", [1, 2] as int[])
