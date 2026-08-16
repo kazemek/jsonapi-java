@@ -57,11 +57,26 @@ Procedure:
 
 ### Blocking
 - **<title>** — `<path>:<line>`
+  - **Severity:** Blocking
+  - **Citation:** `<path>` — <evidence or "None">
   - **Impact:**
   - **Recommendation:**
 
 ### Required
+- **<title>** — `<path>:<line>`
+  - **Severity:** Required
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:**
+  - **Recommendation:**
+
 ### Advisory
+- **<title>** — `<path>:<line>`
+  - **Severity:** Advisory
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:**
+  - **Recommendation:**
+
+<Write "None." under any empty severity group.>
 
 ## Contract coverage
 

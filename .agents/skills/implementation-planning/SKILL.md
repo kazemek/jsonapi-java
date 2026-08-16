@@ -57,8 +57,9 @@ After the working approach is acceptable to the maintainer, ask whether Plan Rev
 1. Run `implementation-plan-review` once via a **fresh** reviewer context when the harness supports
    it. Pass requested outcome, acceptance intent, and the local plan / approach source (materialize
    plan-less approach text to `.agentWork/.session/plan-source-<basename>.md` when needed).
-2. Present findings; apply / reject / discuss as above. Never mutate the plan from the reviewer.
-3. Ask before any another Plan Review. Never auto re-review.
+2. Present findings; the maintainer may apply, reject, or discuss findings separately. Plan Review
+   must not mutate the plan; accepted edits happen outside the review, then ask before another
+   Plan Review if wanted. Never auto re-review.
 
 ## Build authorization
 

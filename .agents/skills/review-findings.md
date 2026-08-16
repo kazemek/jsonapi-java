@@ -38,7 +38,7 @@ simpler alternatives?
 
 ### Plan Review asks
 
-Is this local working plan a minimum sufficient aide for the requested outcome without material
+Is this local working plan a minimum sufficient aid for the requested outcome without material
 guessing or harmful over-specification?
 
 ### Implementation Review asks

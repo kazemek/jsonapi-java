@@ -47,8 +47,27 @@ assess**—do not invent the design from conversation memory.
 ## Findings
 
 ### Blocking
+- **<title>** — `<path>:<line or range>`
+  - **Severity:** Blocking
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
+
 ### Required
+- **<title>** — `<path>:<line or range>`
+  - **Severity:** Required
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
+
 ### Advisory
+- **<title>** — `<path>:<line or range>`
+  - **Severity:** Advisory
+  - **Citation:** `<path>` — <evidence or "None">
+  - **Impact:** <why this matters>
+  - **Recommendation:** <specific correction>
+
+<Write "None." under any empty severity group.>
 
 ## Repo evidence inspected
 

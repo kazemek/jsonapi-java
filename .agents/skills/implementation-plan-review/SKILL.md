@@ -1,6 +1,6 @@
 ---
 name: implementation-plan-review
-description: Optionally reviews whether a local working plan or approach is a clear enough executable aide without material guessing or harmful over-specification. Spawns a fresh-context reviewer when the harness supports it and writes an advisory assessment under `.agentWork/.session/`. Use when the user or planning explicitly requests an implementation plan review.
+description: Optionally reviews whether a local working plan or approach is a clear enough executable aid without material guessing or harmful over-specification. Spawns a fresh-context reviewer when the harness supports it and writes an advisory assessment under `.agentWork/.session/`. Use when the user or planning explicitly requests an implementation plan review.
 disable-model-invocation: true
 ---
 
