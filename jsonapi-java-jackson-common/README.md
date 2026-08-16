@@ -1,13 +1,14 @@
 # jsonapi-java-jackson-common
 
 Jackson-major-neutral public contracts for codec and domain-mapping policy, diagnostics, contexts,
-and domain envelope values shared by the Jackson 2 and Jackson 3 adapters.
+domain envelope values, and presence-aware update commands shared by the Jackson 2 and Jackson 3
+adapters.
 
 ## Packages
 
-| Package                                    | Role                                                                                 |
-|--------------------------------------------|--------------------------------------------------------------------------------------|
-| `io.github.kazemek.jsonapi.jackson`        | Jackson-import-free policy, diagnostic, context, and domain envelope contracts       |
+| Package                                    | Role                                                                                                      |
+|--------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `io.github.kazemek.jsonapi.jackson`        | Jackson-import-free policy, diagnostic, context, envelope, and presence-aware PATCH command contracts     |
 
 ## Minimal usage
 
@@ -20,16 +21,17 @@ CompoundSerializationContext inclusion =
     CompoundSerializationContext.defaults()
         .withIncludePaths(List.of(IncludePath.of("comments.author")))
         .withIncludePolicy(IncludePolicy.allowAll());
+PatchCommand<ArticleDto> command = /* from JsonApiJackson3.patchReader(...).readValue(...) */;
 ```
 
 Types here are values only: policies (`IncludePolicy`, `FieldPolicy`, allowance keys), read/write
 contexts (`DocumentReadContext`, `CompoundSerializationContext`, `DocumentEnvelope`,
 `MappedDocument`), diagnostics (`MappingDiagnostic`, `CodecFailureCategory`,
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`), identifier
-conversion (`IdentifierConverter`), and domain envelope values (`DomainData`, `IncludedResources`).
-No type in this package imports or exposes `tools.jackson.*` or `com.fasterxml.jackson.*`;
-Jackson-bound factories, readers, writers, binders, and mapping introspection stay in the
-major-specific adapter packages.
+conversion (`IdentifierConverter`), domain envelope values (`DomainData`, `IncludedResources`), and
+presence-aware update commands (`PatchCommand`, `PatchChange`). No type in this package imports or
+exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories, readers, writers,
+binders, and mapping introspection stay in the major-specific adapter packages.
 
 ## Non-goals
 
@@ -61,9 +63,11 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - **Move policy:** Neutral contracts live here, not in the adapters. When a type can be expressed
   without Jackson imports, move it here rather than duplicating it per major; when it exposes
   Jackson APIs it must stay in the adapter.
-- **Nullness:** The package is `@NullMarked` (JSpecify only). Use `@Nullable` for member absence
-  and intentionally null values; explicit wire `null` stays a sealed variant (`DomainData.NullData`,
-  etc.). NullAway enforces this on Java `main` sources (ADR-009).
+- **Nullness:** The package is `@NullMarked` (JSpecify only). Document/envelope/codec contracts:
+  Java `null` means member absence; explicit JSON `null` stays a sealed variant
+  (`DomainData.NullData`, etc.). Presence-aware PATCH: `PatchChange` entries in `changes()` are
+  present; explicit attribute JSON `null` / relationship NullLinkage use `@Nullable value == null`
+  (no sealed attribute-null variant). NullAway enforces this on Java `main` sources (ADR-009).
 - **Diagnostics:** `JsonApiMappingException` carries a stable `MappingDiagnostic`; read failures
   use `JsonApiDocumentReadException` with `CodecFailureCategory`, a JSON Pointer-like path, and a
   safe `SourceLocation`. Do not introduce new failure types without an implementation plan.

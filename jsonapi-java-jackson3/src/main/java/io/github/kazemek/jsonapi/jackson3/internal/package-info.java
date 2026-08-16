@@ -1,7 +1,7 @@
 /**
  * Internal Jackson 3 serializers, token-driven document decoding, module registration, and
- * domain-to-resource mapping engine (definition resolver, cache, writer, binder). Not a public API
- * surface.
+ * domain-to-resource mapping engine (definition resolver, cache, writer, binder, shared
+ * relationship linkage support). Not a public API surface.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson3.internal;

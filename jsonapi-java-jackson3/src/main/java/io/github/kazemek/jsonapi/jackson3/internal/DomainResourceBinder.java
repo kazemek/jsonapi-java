@@ -10,12 +10,10 @@ import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JavaType;
@@ -149,7 +147,7 @@ public final class DomainResourceBinder {
   }
 
   private static Class<?> rawTypeOf(MappingProperty property) {
-    return property.accessor().getType().getRawClass();
+    return RelationshipLinkageSupport.rawTypeOf(property);
   }
 
   private void bindAttributes(
@@ -201,144 +199,24 @@ public final class DomainResourceBinder {
       Map<String, @Nullable Object> properties, MappingProperty property, RelationshipData data) {
     JavaType propertyType = property.accessor().getType();
     boolean toMany = DomainResourceWriter.isToManyType(propertyType);
-    Class<?> targetClass = resolveTargetClass(propertyType, toMany, property);
+    Class<?> targetClass =
+        RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
     if (targetClass == ResourceIdentifier.class) {
-      putBuiltInLinkage(properties, property, data, toMany);
+      properties.put(
+          property.logicalName(),
+          RelationshipLinkageSupport.builtInLinkage(property, data, toMany));
       return;
     }
     RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
     if (linkageMapper == null) {
-      throw unsupportedRelationshipTarget(property, targetClass);
+      throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
     }
-    JavaType mapperTargetType = toMany ? propertyType : unwrapOptionalType(propertyType);
-    putMappedLinkage(properties, property, data, toMany, linkageMapper, mapperTargetType);
-  }
-
-  private static Class<?> resolveTargetClass(
-      JavaType propertyType, boolean toMany, MappingProperty property) {
-    if (toMany) {
-      JavaType contentType = DomainResourceWriter.resolveContentType(propertyType);
-      if (contentType == null) {
-        throw new JsonApiMappingException(
-            MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
-            rawTypeOf(property),
-            relationshipPath(property),
-            "Cannot resolve collection content type for relationship '"
-                + property.logicalName()
-                + "'");
-      }
-      return contentType.getRawClass();
-    }
-    return unwrapOptionalType(propertyType).getRawClass();
-  }
-
-  private void putBuiltInLinkage(
-      Map<String, @Nullable Object> properties,
-      MappingProperty property,
-      RelationshipData data,
-      boolean toMany) {
-    boolean empty = validateCardinality(property, data, toMany);
-    switch (data) {
-      case RelationshipData.NullLinkage ignored -> properties.put(property.logicalName(), null);
-      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
-          properties.put(property.logicalName(), linkageMap(identifier));
-      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
-        if (empty) {
-          properties.put(property.logicalName(), List.of());
-          return;
-        }
-        List<Object> values = new ArrayList<>(identifiers.size());
-        for (ResourceIdentifier identifier : identifiers) {
-          values.add(linkageMap(identifier));
-        }
-        properties.put(property.logicalName(), values);
-      }
-    }
-  }
-
-  private void putMappedLinkage(
-      Map<String, @Nullable Object> properties,
-      MappingProperty property,
-      RelationshipData data,
-      boolean toMany,
-      RelationshipLinkageMapper linkageMapper,
-      JavaType propertyType) {
-    boolean empty = validateCardinality(property, data, toMany);
-    switch (data) {
-      case RelationshipData.NullLinkage ignored -> properties.put(property.logicalName(), null);
-      case RelationshipData.SingleLinkage single ->
-          properties.put(
-              property.logicalName(),
-              invokeLinkageMapper(linkageMapper, single, propertyType, property));
-      case RelationshipData.IdentifierCollectionLinkage collection -> {
-        if (empty) {
-          properties.put(property.logicalName(), List.of());
-          return;
-        }
-        properties.put(
-            property.logicalName(),
-            invokeLinkageMapper(linkageMapper, collection, propertyType, property));
-      }
-    }
-  }
-
-  /**
-   * Validates linkage shape against the property's cardinality, throwing {@link
-   * MappingDiagnostic#RELATIONSHIP_CARDINALITY_MISMATCH} for illegal combinations. Returns whether
-   * the linkage denotes an empty value ({@code null} on to-one, empty collection on to-many).
-   */
-  private static boolean validateCardinality(
-      MappingProperty property, RelationshipData data, boolean toMany) {
-    return switch (data) {
-      case RelationshipData.NullLinkage ignored -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "null linkage on to-many relationship");
-        }
-        yield true;
-      }
-      case RelationshipData.SingleLinkage ignored -> {
-        if (toMany) {
-          throw cardinalityMismatch(property, "single linkage on to-many relationship");
-        }
-        yield false;
-      }
-      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
-        boolean empty = identifiers.isEmpty();
-        if (!toMany) {
-          throw cardinalityMismatch(
-              property,
-              empty
-                  ? "empty collection linkage on to-one relationship"
-                  : "collection linkage on to-one relationship");
-        }
-        yield empty;
-      }
-    };
-  }
-
-  private static @Nullable Object invokeLinkageMapper(
-      RelationshipLinkageMapper linkageMapper,
-      RelationshipData data,
-      JavaType targetType,
-      MappingProperty property) {
-    try {
-      return linkageMapper.map(data, targetType);
-    } catch (RuntimeException e) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.LINKAGE_MAPPING_FAILED,
-          rawTypeOf(property),
-          relationshipPath(property),
-          "Relationship linkage mapper failed for relationship '" + property.logicalName() + "'",
-          e);
-    }
-  }
-
-  private static Map<String, @Nullable Object> linkageMap(ResourceIdentifier identifier) {
-    Map<String, @Nullable Object> linkage = new LinkedHashMap<>();
-    linkage.put("type", identifier.type());
-    linkage.put("id", identifier.id());
-    linkage.put("lid", identifier.lid());
-    return linkage;
+    JavaType mapperTargetType =
+        toMany ? propertyType : RelationshipLinkageSupport.unwrapOptionalType(propertyType);
+    properties.put(
+        property.logicalName(),
+        RelationshipLinkageSupport.mappedLinkage(
+            property, data, toMany, linkageMapper, mapperTargetType));
   }
 
   private Object convertBean(
@@ -405,37 +283,5 @@ public final class DomainResourceBinder {
       }
     }
     return "/";
-  }
-
-  private static JavaType unwrapOptionalType(JavaType type) {
-    if (type.isTypeOrSubTypeOf(Optional.class) && type.containedTypeCount() == 1) {
-      return type.containedType(0);
-    }
-    return type;
-  }
-
-  private static JsonApiMappingException cardinalityMismatch(
-      MappingProperty property, String detail) {
-    return new JsonApiMappingException(
-        MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
-        rawTypeOf(property),
-        relationshipPath(property),
-        "Cardinality mismatch for relationship '" + property.logicalName() + "': " + detail);
-  }
-
-  private static JsonApiMappingException unsupportedRelationshipTarget(
-      MappingProperty property, Class<?> targetClass) {
-    return new JsonApiMappingException(
-        MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
-        rawTypeOf(property),
-        relationshipPath(property),
-        "Relationship '"
-            + property.logicalName()
-            + "' targets unsupported type "
-            + targetClass.getName());
-  }
-
-  private static String relationshipPath(MappingProperty property) {
-    return "/relationships/" + property.jsonapiName() + "/data";
   }
 }

@@ -6,12 +6,13 @@ Current capability: `jsonapi-java-core` owns the document model, aggregate valid
 shape, error `source.pointer` syntax, and reserved link names. `jsonapi-java-annotations` owns
 metadata-only domain-mapping annotations. `jsonapi-java-jackson3` owns the Jackson 3 document
 writer/reader, domain-to-resource mapping, compound inclusion, sparse fieldsets, flat DTO binding,
-and typed domain envelopes. `jsonapi-java-jackson-common` owns Jackson-major-neutral policy,
-diagnostics, contexts, and envelope values. Writer output is cross-checked against pinned JSON:API
-1.1 draft schemas as supplemental evidence only. The capability-tagged document corpus, closed
-negative corpus, and dual-success ambiguous primary-data cases under `fixtures/jsonapi-1.1/` are
-the shared codec contract for every Jackson major. Presence-aware PATCH binding, query parsing, and
-Spring adapters remain deferred.
+typed domain envelopes, and presence-aware PATCH binding. `jsonapi-java-jackson-common` owns
+Jackson-major-neutral policy, diagnostics, contexts, envelope values, and presence-aware update
+commands. Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
+evidence only. The capability-tagged document corpus, closed negative corpus, and dual-success
+ambiguous primary-data cases under `fixtures/jsonapi-1.1/` are the shared codec contract for every
+Jackson major. Jackson 2 presence-aware PATCH binding, query parsing, and Spring adapters remain
+deferred.
 
 ## Document structure (supported)
 
@@ -74,7 +75,7 @@ Spring adapters remain deferred.
 | Omitted/present-empty attribute and relationship wrappers; explicit-null attribute values preserved             | supported    | Absent vs `Attributes.empty()` vs explicit null values; no normalization                     |
 | Optional expected endpoint identity comparison                                                                  | supported    | `ENDPOINT_IDENTITY_MISMATCH` at `/data/type` or `/data/id`; supplied via `ValidationContext` |
 | Update rules scoped to the primary resource                                                                     | supported    | `included` resources keep response semantics; full linkage still enforced                    |
-| Command application (PATCH binding)                                                                             | deferred     | Adapters bind; applications apply. Jackson 3 and Jackson 2 PATCH plans remain unfinished     |
+| Command application                                                                                             | out of scope | Applications apply authorized update commands; Jackson 2 binding remains deferred            |
 | HTTP/route identity derivation and mutation                                                                     | out of scope | Application-owned; core compares only a supplied expected identity                           |
 
 ## Annotation metadata (supported)
@@ -123,7 +124,7 @@ matching usage-specific schema, and one malformed control per schema kind (respo
 create-resource, update-resource, update-relationship) proves the harness rejects invalid
 documents.
 
-## Domain mapping (supported; PATCH binding and Jackson 2 parity — deferred)
+## Domain mapping (supported; Jackson 2 parity — deferred)
 
 | Rule                                                    | Status       | Notes                                                                                                                                                                                                                          |
 |---------------------------------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -133,7 +134,7 @@ documents.
 | Flat resource-to-DTO binding                            | supported    | Validated document first; linkage only — never reads `included`                                                                                                                                                                |
 | Typed domain document envelopes                         | supported    | `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                                                                                                                                                             |
 | Independent typed binding of `included` resources       | supported    | Wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                            |
-| Presence-aware resource-update commands                 | deferred     | Core update validation is supported; Jackson 3 and Jackson 2 command binding remain unfinished                                                                                                                                 |
+| Presence-aware resource-update commands                 | supported    | Jackson 3 binding supported; Jackson 2 binding remains deferred                                                                                                                                                                |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                                                                                                                                                  |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                                                                                                                                                  |
 

@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-26  
-**Amended:** 2026-07-30 (registers `jsonapi-java-jackson3` write surface); 2026-08-10 (registers `jsonapi-java-jackson-common`)
+**Amended:** 2026-07-30 (registers `jsonapi-java-jackson3` write surface); 2026-08-10 (registers `jsonapi-java-jackson-common`); 2026-08-16 (presence-aware PATCH command contracts move to jackson-common)
 
 ## Context
 
@@ -15,11 +15,13 @@ Use these module boundaries:
 - `jsonapi-java-core`: dependency-free document model and validation;
 - `jsonapi-java-annotations`: dependency-free domain-mapping annotations;
 - `jsonapi-java-jackson-common`: Jackson-major-neutral public contracts for codec and
-  domain-mapping policy, diagnostics, contexts, and domain envelope values, with no
-  runtime dependency on either Jackson major;
+  domain-mapping policy, diagnostics, contexts, domain envelope values, and
+  presence-aware update-command values, with no runtime dependency on either Jackson
+  major;
 - `jsonapi-java-jackson3`: Jackson 3 document codec (writer, reads, and mapping),
-  flat DTO mapping, typed envelopes, and presence-aware PATCH
-  commands; depends on `jsonapi-java-jackson-common` for neutral contracts;
+  flat DTO mapping, typed envelopes, and PATCH reader entry points that produce the
+  common presence-aware update commands; depends on `jsonapi-java-jackson-common` for
+  neutral contracts;
 - `jsonapi-java-jackson2`: separately compiled Jackson 2 artifact with parity contracts; consumes
   the same common contracts;
 - `jsonapi-java-query`: optional query-parameter parser;

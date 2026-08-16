@@ -21,6 +21,12 @@
  * injected into relationships). Identifier primary data stays as core {@link
  * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} values and error documents never bind.
  *
+ * <p>Presence-aware resource updates use {@link JsonApiJackson3#patchReader} to derive a {@link
+ * JsonApiPatchReader} that applies validate-on-read with {@code DocumentUsage.UPDATE_REQUEST} and
+ * binds only supplied mapped members into a common {@link
+ * io.github.kazemek.jsonapi.jackson.PatchCommand} without constructing a DTO or reading {@code
+ * included}.
+ *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
  * an explicit include request and {@link IncludePolicy}. Sparse fieldsets share that context
@@ -28,9 +34,10 @@
  * overloads; pass {@link MappedDocument#applyTo} into the writer factory when relationships were
  * omitted by fieldset while inclusion still traversed them.
  *
- * <p>Codec and mapping policy, diagnostics, contexts, and domain envelope values are
- * Jackson-major-neutral contracts in {@link io.github.kazemek.jsonapi.jackson}; this package holds
- * only Jackson 3-bound factories, readers, writers, binders, and their implementation.
+ * <p>Codec and mapping policy, diagnostics, contexts, domain envelope values, and presence-aware
+ * update commands are Jackson-major-neutral contracts in {@link io.github.kazemek.jsonapi.jackson};
+ * this package holds only Jackson 3-bound factories, readers, writers, binders, and their
+ * implementation.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson3;

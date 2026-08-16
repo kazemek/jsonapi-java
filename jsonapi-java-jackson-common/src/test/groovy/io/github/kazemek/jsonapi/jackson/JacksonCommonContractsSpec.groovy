@@ -370,4 +370,127 @@ class JacksonCommonContractsSpec extends Specification {
     new SourceLocation(0, 0, 0L, 0L).isKnown()
     new SourceLocation(-1, 2, -1L, -1L).isKnown()
   }
+
+  // PatchCommand / PatchChange
+
+  def "patch change compact constructors reject null names"() {
+    when:
+    new PatchChange.AttributeChange(null, "title", "x")
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new PatchChange.AttributeChange("title", null, "x")
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new PatchChange.RelationshipChange(null, "author", null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new PatchChange.RelationshipChange("author", null, null)
+
+    then:
+    thrown(NullPointerException)
+  }
+
+  def "patch command rejects null components"() {
+    when:
+    new PatchCommand<>(null, "1", List.of())
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new PatchCommand<>(String, null, List.of())
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new PatchCommand<>(String, "1", null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new PatchCommand<>(String, "1", [null])
+
+    then:
+    thrown(NullPointerException)
+  }
+
+  def "mutating changes or list or set or array values cannot affect the command"() {
+    given:
+    def mutableList = new ArrayList<>(["a"])
+    def mutableSet = new LinkedHashSet<>(["s"])
+    def mutableArray = ["x"] as String[]
+    def changes = new ArrayList<PatchChange>()
+    changes.add(new PatchChange.AttributeChange("title", "title", mutableList))
+    changes.add(new PatchChange.AttributeChange("tags", "tags", mutableSet))
+    changes.add(new PatchChange.AttributeChange("names", "names", mutableArray))
+    def command = new PatchCommand<>(String, "1", changes)
+
+    when:
+    changes.add(new PatchChange.AttributeChange("extra", "extra", "y"))
+    mutableList.add("b")
+    mutableSet.add("t")
+    mutableArray[0] = "z"
+    command.changes().add(new PatchChange.AttributeChange("nope", "nope", "n"))
+
+    then:
+    thrown(UnsupportedOperationException)
+    command.changes().size() == 3
+    (command.changes()[0].value() as List) == ["a"]
+    (command.changes()[1].value() as Set) == ["s"] as Set
+    (command.changes()[2].value() as String[])[0] == "x"
+  }
+
+  def "mutating an array returned from value cannot affect the stored change"() {
+    given:
+    def change = new PatchChange.AttributeChange("names", "names", ["a"] as String[])
+    def exposed = change.value() as String[]
+
+    when:
+    exposed[0] = "changed"
+
+    then:
+    (change.value() as String[])[0] == "a"
+  }
+
+  def "mutating a map value cannot affect the stored change"() {
+    given:
+    def mutableMap = new LinkedHashMap<String, Object>()
+    mutableMap.put("type", "tags")
+    mutableMap.put("id", "t1")
+    mutableMap.put("lid", null)
+    def change = new PatchChange.RelationshipChange("author", "author", mutableMap)
+
+    when:
+    mutableMap.put("id", "mutated")
+    (change.value() as Map).put("id", "exposed")
+
+    then:
+    thrown(UnsupportedOperationException)
+    (change.value() as Map).id == "t1"
+    (change.value() as Map).type == "tags"
+  }
+
+  def "mutating a primitive array returned from value cannot affect the stored change"() {
+    given:
+    def change = new PatchChange.RelationshipChange("counts", "counts", [1, 2] as int[])
+    def exposed = change.value() as int[]
+
+    when:
+    exposed[0] = 99
+
+    then:
+    (change.value() as int[])[0] == 1
+    (change.value() as int[])[1] == 2
+  }
 }

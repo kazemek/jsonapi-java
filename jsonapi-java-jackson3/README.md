@@ -7,16 +7,16 @@ and for mapping annotated domain types to resource objects.
 
 | Package                                        | Role                                                                  |
 |------------------------------------------------|-----------------------------------------------------------------------|
-| `io.github.kazemek.jsonapi.jackson3`           | Public writer/reader/mapper factories and validate-then-codec entry points |
+| `io.github.kazemek.jsonapi.jackson3`           | Public writer/reader/mapper/binder/PATCH factories and validate-then-codec entry points |
 | `io.github.kazemek.jsonapi.jackson3.internal`  | Streaming serializers/decoders, mapping engine, module registration; not public API |
-| `io.github.kazemek.jsonapi.jackson`            | Jackson-major-neutral policy/context/diagnostic/envelope contracts (in `jsonapi-java-jackson-common`) |
+| `io.github.kazemek.jsonapi.jackson`            | Jackson-major-neutral policy/context/diagnostic/envelope/PATCH command contracts (in `jsonapi-java-jackson-common`) |
 
-Codec and mapping policy, contexts, diagnostics, and domain envelope values (`DocumentReadContext`,
-`CompoundSerializationContext`, `IncludePath`, `IncludePolicy`, `FieldPolicy`, `MappedDocument`,
-`IdentifierConverter`, `DomainData`, `IncludedResources`, and the failure types) live in the
-Jackson-major-neutral package `io.github.kazemek.jsonapi.jackson` and are imported from
-`jsonapi-java-jackson-common`; this module holds only Jackson 3-bound factories, readers, writers,
-and binders.
+Codec and mapping policy, contexts, diagnostics, domain envelope values, and presence-aware update
+commands (`DocumentReadContext`, `CompoundSerializationContext`, `IncludePath`, `IncludePolicy`,
+`FieldPolicy`, `MappedDocument`, `IdentifierConverter`, `DomainData`, `IncludedResources`,
+`PatchCommand`, `PatchChange`, and the failure types) live in the Jackson-major-neutral package
+`io.github.kazemek.jsonapi.jackson` and are imported from `jsonapi-java-jackson-common`; this module
+holds only Jackson 3-bound factories, readers, writers, and binders.
 
 ## Minimal usage
 
@@ -122,6 +122,17 @@ Optional<Object> includedAuthor =
         : envelope.included().find(ResourceIdentity.ofId("people", "9"));
 ```
 
+Presence-aware PATCH (validated update document → immutable command of supplied changes only):
+
+```java
+JsonApiPatchReader patchReader = JsonApiJackson3.patchReader(callerMapper);
+
+PatchCommand<FlatArticleDto> command =
+    patchReader.readValue(updateJson, FlatArticleDto.class);
+Object identity = command.identity();
+List<PatchChange> changes = command.changes();
+```
+
 `included` resources bind independently through the registry, stay wire-ordered, and are never
 injected into relationship properties; identifier primary data passes through as core
 `ResourceIdentifier` values. `domainDocumentReader` derives the binder mapper exactly like
@@ -132,21 +143,28 @@ into the application's declared DTO type, so applications can consume typed DTOs
 on `JsonApiDomainDocument` (the envelope stays available for document metadata, `included`, or
 explicit representation-state access).
 
-By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
-`IdentifierConverter` to `resourceMapper` or `resourceBinder` only when you need a different wire
-form; read binding inverts it through `IdentifierConverter.parse(String)`.
+`patchReader` forces `DocumentUsage.UPDATE_REQUEST` and `PrimaryDataKind.RESOURCE` for validate-on-read,
+binds only supplied mapped attributes and relationships into a `PatchCommand` (never a complete
+DTO), never reads `included`, and keeps binder failures as resource-relative `JsonApiMappingException`
+pointers. Pass optional `EndpointIdentity` on the factory `ValidationContext`. Applications own
+authorization and command application.
 
-`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` always derive a **new**
-mapper via `rebuild()`; the caller's mapper or builder is never mutated. Writers validate before
-emission. Readers decode through public core constructors, then run aggregate validation. Mappers
-and binders introspect types for resource metadata but do not register a Jackson module.
+By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
+`IdentifierConverter` to `resourceMapper`, `resourceBinder`, or `patchReader` only when you need a
+different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
+
+`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` always
+derive a **new** mapper via `rebuild()`; the caller's mapper or builder is never mutated. Writers
+validate before emission. Readers decode through public core constructors, then run aggregate
+validation. Mappers and binders introspect types for resource metadata but do not register a
+Jackson module.
 
 ## Non-goals
 
 HTTP `fields[TYPE]` parsing and field authorization beyond the explicit `FieldPolicy` allow-list
 remain application/adapter responsibilities. Domain graph hydration and
-persistence lookup remain out of scope. PATCH command binding remains deferred
-(typed envelopes expose independently bound DTOs only). Jackson 2 parity is a separate
+persistence lookup remain out of scope. Command application (mutating domain or persistence
+objects from a `PatchCommand`) remains application-owned. Jackson 2 parity is a separate
 artifact; both majors share the neutral contracts of
 [jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
 
@@ -161,6 +179,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
+- [ADR-012 — Resource PATCH binding](../docs/adr/012-resource-patch-binding.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -223,9 +242,11 @@ artifact; both majors share the neutral contracts of
   absence and intentionally null map values. Do not import `core.internal`.
 - **Mapping grammar:** JSON:API member-name validation delegates to
   `core.validation.MemberNames`. Do not import `core.internal`.
-- **Common contracts:** Neutral policy, context, diagnostic, and envelope types are imported from
-  `io.github.kazemek.jsonapi.jackson` (module `jsonapi-java-jackson-common`); never redefine them
-  here or in another major adapter. Assemble `IncludedResources` via its public `of(...)` API.
+- **Presence-aware PATCH:** `JsonApiPatchReader` validates with forced `UPDATE_REQUEST` usage, then
+  binds only supplied mapped attributes and relationships into a common `PatchCommand`. Never call
+  `JsonApiResourceBinder` / whole-DTO construction, never read `included`, never prefix binder
+  pointers with `/data`. Explicit attribute JSON `null` stores `value == null` (including Optional
+  properties). Identity comes from resource `id` only (no `lid` fallback) and is never a change.
 - **Architectural tests:** `Jackson3DependencyRulesSpec` allows JDK, JSpecify, core public
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
@@ -241,4 +262,7 @@ artifact; both majors share the neutral contracts of
   envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
   full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
   registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
-  malformed input, validation failures).
+  malformed input, validation failures). Presence-aware PATCH contract cases come from
+  `PatchScenarios`; `PatchBindingSpec` asserts full-catalog coverage and keeps adapter-local
+  cases local (custom deserializer, custom linkage conversion, Optional attribute null,
+  `fromDocument` missing id, factory overloads, ownership, illegal primary-data matrices).
