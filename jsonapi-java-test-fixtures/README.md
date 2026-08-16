@@ -16,6 +16,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
 | `io.github.kazemek.jsonapi.testfixtures.sparsefieldset`        | Shared sparse-fieldset write fixtures: annotated models plus the `SparseFieldsetScenarios` catalog and the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.enveloperead`          | Shared typed-envelope read fixtures: envelope-only binding targets plus the `EnvelopeReadScenarios` catalog and the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
+| `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs) |
 
 ## Minimal usage
 
@@ -39,6 +40,8 @@ JsonApiFixtures.sparseFieldset().all()
 JsonApiFixtures.sparseFieldset().byId("attribute-only fieldset via toMappedDocument")
 JsonApiFixtures.envelopeRead().all()
 JsonApiFixtures.envelopeRead().byId("binds a single-resource document into a flat DTO envelope")
+JsonApiFixtures.patch().all()
+JsonApiFixtures.patch().byId("patch-omitted-and-supplied-attributes")
 ```
 
 Test JVMs must have `jsonapi.fixtures.dir` pointing at `fixtures/jsonapi-1.1`; resolve both
@@ -48,9 +51,9 @@ them (together with `jsonapi.schema.fixtures.dir`) for every module.
 ## Non-goals
 
 This module does not add wire expectations, diagnostics, or corpora per Jackson major — those
-must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). PATCH fixture
-catalogs are not present yet; the flat write, flat read, compound-write, sparse-fieldset, and
-typed-envelope catalogs are in this module.
+must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). The flat write,
+flat read, compound-write, sparse-fieldset, typed-envelope, and presence-aware PATCH catalogs are
+in this module.
 
 ## Further reading
 
@@ -77,7 +80,8 @@ typed-envelope catalogs are in this module.
   `SparseFieldsetScenarios` ids are stable; adapter suites dispatch on
   `SparseFieldsetOperation` / `SparseFieldsetRequest`, never on scenario ids.
   `EnvelopeReadScenarios` ids are stable; adapter suites dispatch on `EnvelopeReadVariant` /
-  `EnvelopeReadExpectation`, never on scenario ids.
+  `EnvelopeReadExpectation`, never on scenario ids. `PatchScenarios` ids are stable; adapter
+  suites dispatch on `PatchExpectation`, never on scenario ids.
 - **Domain-write catalog:** `DomainWriteScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, exactly one
   operation/typed input/envelope state/discriminated outcome/comparison policy, complete expected
@@ -127,6 +131,12 @@ typed-envelope catalogs are in this module.
   registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
   malformed input, validation failures) is documented in the adapter-local specs themselves, not
   enumerated in a manifest.
+- **PATCH catalog:** `PatchScenariosCatalogSpec` enforces the local invariants that hold for every
+  entry regardless of catalog size: unique stable ids, exactly one JSON document and discriminated
+  `PatchExpectation`, and resolvable target DTOs in `domainread` / `domainwrite` / `domainpatch`.
+  Adapter suites run the whole catalog through their own patch reader and assert full-catalog
+  coverage (`executedScenarioIds == catalogScenarioIds`). Adapter-local cases (custom deserializers,
+  linkage mappers, Optional attribute null, `fromDocument` missing id) stay in adapter specs only.
 - **Capability selection:** Tests select by `FixtureCatalog.where` (and the retained
   `CodecScenarios` conveniences `writable`, `readable`, `schemaChecked`, `exactUtf8`,
   `hreflangArray`) instead of maintaining independent hard-coded id lists. Adapter write suites
@@ -136,6 +146,7 @@ typed-envelope catalogs are in this module.
   scenario ids. Adapter sparse-fieldset suites dispatch on
   `SparseFieldsetOperation`/`SparseFieldsetRequest`, never on scenario ids. Adapter envelope-read
   suites dispatch on `EnvelopeReadVariant` / `EnvelopeReadExpectation`, never on scenario ids.
+  Adapter PATCH suites dispatch on `PatchExpectation`, never on scenario ids.
 - **Directories:** Read `jsonapi.fixtures.dir` and `jsonapi.schema.fixtures.dir` only through
   `FixtureDirectory`.
 - **Negative corpus:** `NegativeCodecScenarios` loads `negative-manifest.json` with JSON-P (Jakarta
@@ -180,11 +191,12 @@ typed-envelope catalogs are in this module.
   `FieldsetResourceState.id` / `attributeNames` / `relationshipNames`;
   `EnvelopeReadExpectation.BoundEnvelope` members that are absent (`data`, `included`, `errors`,
   `jsonapi`, `links`, `meta`); `EnvelopeReadExpectation.Failure.propertyPath` / `resourceClass`;
-  `EnvelopeReadVariant.RegistryAttempt.propertyPath`). Groovy tests are not annotated.
+  `EnvelopeReadVariant.RegistryAttempt.propertyPath`; `PatchScenario.expectedEndpointIdentity`;
+  `PatchChange` / attribute and relationship change `value`). Groovy tests are not annotated.
 - **Extension workflow (Jackson 2):** a new adapter suite runs every scenario of the shared
   domain-write catalog through its own resource mapper and asserts full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite; the same
   full-catalog rule applies to the domain-read binder catalog, the compound-write catalog, the
-  sparse-fieldset catalog, and the typed-envelope catalog.
+  sparse-fieldset catalog, the typed-envelope catalog, and the presence-aware PATCH catalog.
   Jackson-API-specific behavior (mix-ins, serializers, naming strategies, converter wiring, custom
   deserializers, linkage mappers) stays in adapter-local specs, documented there.

@@ -1,7 +1,7 @@
 # Spring WebMVC Presence-Aware PATCH Binding
 
 > **Module:** `jsonapi-java-spring-webmvc`  
-> **Dependencies:** [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md), [Spring WebMVC Adapter](spring-webmvc-adapter.md), [Spring WebMVC Flat DTO Binding](spring-webmvc-flat-dto-binding.md)  
+> **Dependencies:** [Spring WebMVC Adapter](spring-webmvc-adapter.md), [Spring WebMVC Flat DTO Binding](spring-webmvc-flat-dto-binding.md)  
 > **Status:** Not started
 > **Work item:** KAZ-38
 
@@ -17,10 +17,11 @@ full DTOs or applying mutations in the adapter.
 - [ADR-009](../../docs/adr/009-jspecify-nullness.md) — public argument contracts and the
   `EndpointIdentityResolver` SPI are `@NullMarked` with accurate `@Nullable` where absence or JSON
   null is legal.
-- `jsonapi-java-jackson-common` owns the Jackson-import-free common package/module. [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md) owns
-  PATCH command
-  semantics, public command contracts (in that common package), and the factory-accepted
-  `ValidationContext` / optional `EndpointIdentity` validate-on-read bind shape. [Spring WebMVC Adapter](spring-webmvc-adapter.md) owns
+- `jsonapi-java-jackson-common` owns the Jackson-import-free common package/module.
+  `PatchCommand` / `PatchChange` and Jackson 3 `JsonApiPatchReader` (`jsonapi-java-jackson3`
+  README / [ADR-012](../../docs/adr/012-resource-patch-binding.md)) own PATCH command semantics,
+  public command contracts, and the factory-accepted `ValidationContext` / optional
+  `EndpointIdentity` validate-on-read bind shape. [Spring WebMVC Adapter](spring-webmvc-adapter.md) owns
   media-type, transport, and safe-error infrastructure this path uses—not a separate
   identity-bearing validate before bind. [Spring WebMVC Flat DTO Binding](spring-webmvc-flat-dto-binding.md) owns DTO/envelope WebMVC binding this plan
   extends.
@@ -31,20 +32,20 @@ full DTOs or applying mutations in the adapter.
   application-owned inside that bean—never undocumented path-variable name heuristics in the
   adapter.
 - The PATCH argument path consults the resolver, builds `ValidationContext` forced to
-  `DocumentUsage.UPDATE_REQUEST` with `withExpectedEndpointIdentity(...)`, and invokes [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md)
-  entry points so that context is the sole aggregate UPDATE_REQUEST validation before bind (one
-  validate-on-read, then bind).
+  `DocumentUsage.UPDATE_REQUEST` with `withExpectedEndpointIdentity(...)`, and invokes Jackson 3
+  `JsonApiPatchReader` entry points so that context is the sole aggregate UPDATE_REQUEST validation
+  before bind (one validate-on-read, then bind).
 - Activation is type-based for documented PATCH command argument types and the JSON:API media type
   only; ordinary `application/json` handling stays unchanged.
 
 ## Deliverables
 
 - Add presence-aware PATCH command controller arguments over `application/vnd.api+json` using
-  [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md) entry points and [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md) common command contracts.
+  Jackson 3 `JsonApiPatchReader` entry points and common `PatchCommand` / `PatchChange` contracts.
 - Add optional application-owned `EndpointIdentityResolver` bean support
-  (`@Nullable EndpointIdentity resolve(NativeWebRequest)`); thread the result into [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md)’s
-  `ValidationContext` before the sole UPDATE_REQUEST validate-on-read; reject mismatch before the
-  controller receives a command.
+  (`@Nullable EndpointIdentity resolve(NativeWebRequest)`); thread the result into
+  `JsonApiPatchReader`’s `ValidationContext` before the sole UPDATE_REQUEST validate-on-read; reject
+  mismatch before the controller receives a command.
 - Add MockMvc fixtures covering omitted versus explicit-null attributes, relationship replacement,
   endpoint identity mismatch, identity comparison-off when unresolved/absent, and ordinary JSON
   coexistence.
@@ -57,13 +58,14 @@ full DTOs or applying mutations in the adapter.
 - Flat DTO / typed-envelope WebMVC binding ([Spring WebMVC Flat DTO Binding](spring-webmvc-flat-dto-binding.md)).
 - Constructing complete DTOs, mutating domain objects, authorization, or persistence.
 - Inferring endpoint identity from undocumented path-variable heuristics.
-- A separate [Spring WebMVC Adapter](spring-webmvc-adapter.md) identity validate before [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md) bind.
+- A separate [Spring WebMVC Adapter](spring-webmvc-adapter.md) identity validate before Jackson 3 `JsonApiPatchReader` bind.
 - WebFlux support ([WebFlux Adapter Evaluation](spring-webflux-adapter-evaluation.md)).
 
 ## Implementation boundaries
 
-- PATCH path: resolve optional identity → [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md) factory with `UPDATE_REQUEST` +
-  `withExpectedEndpointIdentity` → one validate-on-read then presence-aware bind. [Spring WebMVC Adapter](spring-webmvc-adapter.md)
+- PATCH path: resolve optional identity → Jackson 3 `JsonApiJackson3.patchReader(...)` /
+  `JsonApiPatchReader` with `UPDATE_REQUEST` + `withExpectedEndpointIdentity` → one validate-on-read
+  then presence-aware bind. [Spring WebMVC Adapter](spring-webmvc-adapter.md)
   supplies media-type/transport/error infrastructure only.
 - Absent `EndpointIdentityResolver` bean or null resolve result ⇒ comparison off; mismatch uses
   `ENDPOINT_IDENTITY_MISMATCH` before controller invocation.
@@ -83,7 +85,7 @@ full DTOs or applying mutations in the adapter.
       attributes and relationship replacement without constructing a full DTO or mutating
       application state in the adapter.
 - [ ] When `EndpointIdentityResolver` supplies expected identity, mismatch fails before controller
-      invocation via [Jackson 3 Presence-Aware PATCH Binding](jackson3-presence-aware-patch-binding.md)’s sole UPDATE_REQUEST validate-on-read; when the bean is absent or
+      invocation via Jackson 3 `JsonApiPatchReader`’s sole UPDATE_REQUEST validate-on-read; when the bean is absent or
       returns null, identity comparison is off.
 - [ ] Public PATCH argument APIs and `EndpointIdentityResolver` satisfy ADR-009 `@NullMarked` /
       `@Nullable` rules.

@@ -12,18 +12,20 @@ import java.util.Objects;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Factory for Jackson 3 JSON:API document writers, readers, resource mappers, and flat DTO binders.
+ * Factory for Jackson 3 JSON:API document writers, readers, resource mappers, flat DTO binders, and
+ * presence-aware PATCH readers.
  *
  * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
  * replaces the caller's configuration in place. Public surface consists of {@link
  * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link
- * JsonApiResourceBinder}, and {@link JsonApiDomainDocumentReader}.
+ * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, and {@link JsonApiPatchReader}.
  */
 public final class JsonApiJackson3 {
 
   private static final String CONTEXT = "context";
   private static final String IDENTIFIER_CONVERTER = "identifierConverter";
+  private static final String LINKAGE_MAPPERS = "linkageMappers";
 
   private JsonApiJackson3() {}
 
@@ -152,7 +154,7 @@ public final class JsonApiJackson3 {
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     Objects.requireNonNull(base, "base");
     Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
-    Objects.requireNonNull(linkageMappers, "linkageMappers");
+    Objects.requireNonNull(linkageMappers, LINKAGE_MAPPERS);
     JsonMapper derived = resourceMappingMapper(base);
     DomainResourceBinder binder =
         new DomainResourceBinder(
@@ -229,7 +231,7 @@ public final class JsonApiJackson3 {
     Objects.requireNonNull(context, CONTEXT);
     Objects.requireNonNull(registry, "registry");
     Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
-    Objects.requireNonNull(linkageMappers, "linkageMappers");
+    Objects.requireNonNull(linkageMappers, LINKAGE_MAPPERS);
     return new JsonApiDomainDocumentReader(
         base, context, registry, identifierConverter, linkageMappers);
   }
@@ -268,6 +270,98 @@ public final class JsonApiJackson3 {
     Objects.requireNonNull(base, "base");
     return domainDocumentReader(
         base.build(), context, registry, identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader with {@link ValidationContext#defaults()}, default
+   * identifier conversion, and no custom relationship linkage mappers. Forces {@code
+   * DocumentUsage.UPDATE_REQUEST} and {@code PrimaryDataKind.RESOURCE} for validate-on-read.
+   */
+  public static JsonApiPatchReader patchReader(JsonMapper base) {
+    return patchReader(
+        base, ValidationContext.defaults(), IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader with the given validation context, default identifier
+   * conversion, and no custom relationship linkage mappers. Forces update-request usage while
+   * preserving other context fields (including expected endpoint identity).
+   */
+  public static JsonApiPatchReader patchReader(
+      JsonMapper base, ValidationContext validationContext) {
+    return patchReader(base, validationContext, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader with the given validation context and identifier
+   * converter, and no custom relationship linkage mappers.
+   */
+  public static JsonApiPatchReader patchReader(
+      JsonMapper base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter) {
+    return patchReader(base, validationContext, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader with the given validation context, identifier converter,
+   * and relationship linkage mappers keyed by relationship target class. Snapshots the
+   * linkage-mapper map with {@link Map#copyOf}; derives a binder mapper via {@link
+   * JsonMapper#rebuild()} and never mutates the caller's mapper.
+   */
+  public static JsonApiPatchReader patchReader(
+      JsonMapper base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    Objects.requireNonNull(validationContext, CONTEXT);
+    Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
+    Objects.requireNonNull(linkageMappers, LINKAGE_MAPPERS);
+    return new JsonApiPatchReader(base, validationContext, identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader derived from a caller-supplied builder with default
+   * validation context. The builder is not given the JSON:API module.
+   */
+  public static JsonApiPatchReader patchReader(JsonMapper.Builder base) {
+    return patchReader(
+        base, ValidationContext.defaults(), IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader derived from a caller-supplied builder and validation
+   * context. The builder is not given the JSON:API module.
+   */
+  public static JsonApiPatchReader patchReader(
+      JsonMapper.Builder base, ValidationContext validationContext) {
+    return patchReader(base, validationContext, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader derived from a caller-supplied builder, validation
+   * context, and identifier converter. The builder is not given the JSON:API module.
+   */
+  public static JsonApiPatchReader patchReader(
+      JsonMapper.Builder base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter) {
+    return patchReader(base, validationContext, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a presence-aware PATCH reader derived from a caller-supplied builder, validation
+   * context, identifier converter, and relationship linkage mappers. The builder is not given the
+   * JSON:API module.
+   */
+  public static JsonApiPatchReader patchReader(
+      JsonMapper.Builder base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    return patchReader(base.build(), validationContext, identifierConverter, linkageMappers);
   }
 
   /**
