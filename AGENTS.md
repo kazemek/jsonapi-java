@@ -40,33 +40,62 @@
 Choose the narrowest affected module or root subsystem first. Expand only for callers,
 dependencies, public API effects, or repository-wide configuration.
 
-Project skills live at `.agents/skills/<name>/SKILL.md` and require explicit invocation. Use:
+Skills live at `.agents/skills/<name>/SKILL.md`. Lifecycle workflow entrypoints are entered only
+through explicit maintainer request or authorization; workflow-support skills execute as part of an
+already-authorized workflow per that workflow's documented contract. The routing tables below are
+descriptive, not an automatic task-matching router:
 
-| Task | Skill |
-|------|-------|
-| Create or refine a local working plan for one ready increment | `implementation-planning` |
-| Independently challenge a proposed design when requested | `implementation-design-review` |
-| Independently review plan clarity when requested | `implementation-plan-review` |
-| Implement a requested work outcome | `implement-work` |
+**Lifecycle workflow entrypoints** (entering one changes or establishes lifecycle/authorization context):
+
+| User intent | Lifecycle workflow entrypoint |
+|-------------|-------------------------------|
+| Plan one coherent implementation increment | `implementation-planning` |
+| Request an independent design challenge | `implementation-design-review` |
+| Request an independent plan review | `implementation-plan-review` |
+| Implement requested work | `implement-work` |
+
+**Workflow-support skills** (may execute within an authorized workflow; may also be requested directly):
+
+| Trigger / purpose | Workflow-support skill |
+|-------------------|------------------------|
 | Review implementation against the requested outcome | `implementation-review` |
 | Produce a fresh-session review handoff when required | `implementation-handoff` |
 | Add a module or change public packages, entry points, validate/read flows, or non-goals | `module-docs` |
 | Format Spotless-covered files | `spotless-format` |
 | Complete production/test source work | `sonar-quality-gate` |
 
-When the active coding harness provides a native read-only or planning mode, prefer it for
-interactive implementation planning. Native Plan Mode owns exploration and maintainer interaction.
-Repository skills own repository policy and optional local working-plan guidance. Do not depend on
-ephemeral harness plan state or a local Markdown plan as engineering authority.
+**Planning uses the capabilities available in the current session.** Establish facts from repository
+evidence and primary sources. When executable tools are available, bounded planning spikes may be
+used when they materially reduce uncertainty. If an important planning action cannot be performed
+with the available capabilities, surface the limitation to the maintainer. The repository does not
+depend on, or prescribe, any particular harness mode.
 
+Informal planning and exploration may happen in any session using the capabilities available there.
+The `implementation-planning` workflow is a defined engineering workflow: it requires the
+capabilities necessary to execute reliably and must not silently degrade into a partial version when
+those capabilities are unavailable.
+
+- A lifecycle workflow entrypoint must not be entered merely because the current task appears to
+  match it.
+- Top-level lifecycle workflow entrypoints require explicit maintainer request or authorization,
+  which the harness may realize semantically rather than via literal slash syntax. An authorized
+  workflow may execute, delegate to, or load workflow-support instructions, or execute an explicitly
+  authorized nested lifecycle workflow, according to its documented contract and the capabilities
+  available in the current session. Using a workflow-support skill never grants authority to enter a
+  new lifecycle workflow or to transition from planning to implementation.
 - If requested implementation work is not one coherent increment against current repository reality,
   stop with **Needs decomposition** and return control to the user/coordinating layer. Do not invent
   a repository multi-plan DAG.
-- A direct user/maintainer request is sufficient authority to plan and implement. No external
-  tracker is required.
-- Design Review and Plan Review are optional and maintainer-controlled. Neither grants Build
-  permission. After optional reviews, proceed to implementation only when the maintainer explicitly
-  affirms **Build now?**
+- A direct user/maintainer request or authorization to enter a lifecycle workflow is sufficient
+  authority for that workflow. No external tracker is required. `implement-work` remains the single
+  implementation authorization boundary.
+- Planning is never automatic: planning ends ready for implementation, and implementation begins
+  only when the maintainer explicitly requests or authorizes the `implement-work` lifecycle workflow.
+  There is no separate mandatory `Build now?` confirmation; explicit maintainer intent is the
+  authorization.
+- Design Review and Plan Review are optional, advisory, and maintainer-controlled. Neither grants
+  implementation permission. An authorized workflow may execute an approved review directly rather
+  than requiring another explicit instruction.
 - Read `settings.gradle.kts`, the module README, changed-package `package-info.java`, exact sources
   and mirrored tests, then only directly relevant ADRs or conformance sections.
 - Read `docs/vision.md` only for new modules, product-boundary changes, or stable direction.
@@ -104,7 +133,7 @@ Every durable fact has one canonical owner; other documents should link or provi
 | Stable product direction | `docs/vision.md` |
 | Requested work intent / acceptance intent | Explicit user/maintainer request, or external coordinating layer when present |
 | Backlog, prioritization, decomposition, blockers | External coordinating layer when present |
-| Temporary engineer/agent planning memory | gitignored `.agentWork/plans/*.md` (not engineering truth) |
+| Temporary engineer/agent planning memory | gitignored `.agentWork/plans/*.md` and `.agentWork/.session/spikes/` (not engineering truth) |
 | Temporary review/session context | gitignored `.agentWork/.session/` |
 | Forensic history | Git |
 
