@@ -25,7 +25,10 @@
  * JsonApiPatchReader} that applies validate-on-read with {@code DocumentUsage.UPDATE_REQUEST} and
  * binds only supplied mapped members into a common {@link
  * io.github.kazemek.jsonapi.jackson.PatchCommand} without constructing a DTO or reading {@code
- * included}.
+ * included}. Direct typed PATCH DTO binding uses {@link JsonApiJackson3#patchDtoReader} to derive a
+ * {@link JsonApiPatchDtoReader} that binds the validated update directly into an application-owned
+ * annotated PATCH DTO whose patchable members are declared as {@link
+ * io.github.kazemek.jsonapi.jackson.PatchPresence}.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require

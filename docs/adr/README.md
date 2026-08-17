@@ -17,3 +17,4 @@ ADRs record consequential, hard-to-reverse “why” decisions. Stable product d
 10. [ADR-010: Architectural Tests for Module Boundaries](010-architectural-tests.md)
 11. [ADR-011: Flat DTO Reads Remain Document-First](011-flat-dto-read-binding.md)
 12. [ADR-012: Resource PATCH Produces Presence-Aware Commands](012-resource-patch-binding.md)
+13. [ADR-013: Direct Typed PATCH DTO Binding](013-direct-typed-patch-dto-binding.md)

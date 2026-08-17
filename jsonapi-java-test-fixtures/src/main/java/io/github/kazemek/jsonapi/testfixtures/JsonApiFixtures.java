@@ -8,6 +8,8 @@ import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenario;
 import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenarios;
 import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteScenario;
 import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteScenarios;
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoScenario;
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoScenarios;
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenario;
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenarios;
 import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenario;
@@ -67,5 +69,10 @@ public final class JsonApiFixtures {
   /** Shared presence-aware PATCH catalog. */
   public static FixtureCatalog<PatchScenario> patch() {
     return PatchScenarios.catalog();
+  }
+
+  /** Shared direct typed PATCH DTO catalog. */
+  public static FixtureCatalog<PatchDtoScenario> patchDto() {
+    return PatchDtoScenarios.catalog();
   }
 }

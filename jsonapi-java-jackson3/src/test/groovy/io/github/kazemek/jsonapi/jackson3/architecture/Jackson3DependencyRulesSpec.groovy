@@ -59,7 +59,7 @@ class Jackson3DependencyRulesSpec extends Specification {
         + "(CodecFailureCategory|CompoundSerializationContext|DocumentEnvelope|DocumentReadContext|"
         + "DomainData|FieldAllowance|FieldPolicy|IdentifierConverter|IncludePath|IncludePolicy|"
         + "IncludedResources|JsonApiDocumentReadException|JsonApiMappingException|MappedDocument|"
-        + "MappingDiagnostic|PrimaryDataKind|RelationshipAllowance|SourceLocation)")
+        + "MappingDiagnostic|PatchPresence|PrimaryDataKind|RelationshipAllowance|SourceLocation)")
         .check(jackson3Classes)
   }
 }

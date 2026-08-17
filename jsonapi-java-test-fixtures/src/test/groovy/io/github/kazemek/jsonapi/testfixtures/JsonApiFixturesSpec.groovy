@@ -5,6 +5,7 @@ import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadScenarios
@@ -24,6 +25,7 @@ class JsonApiFixturesSpec extends Specification {
     JsonApiFixtures.sparseFieldset().all() == SparseFieldsetScenarios.all()
     JsonApiFixtures.envelopeRead().all() == EnvelopeReadScenarios.all()
     JsonApiFixtures.patch().all() == PatchScenarios.all()
+    JsonApiFixtures.patchDto().all() == PatchDtoScenarios.all()
   }
 
   def "each accessor returns the same instance as the catalog catalog() accessor"() {
@@ -37,6 +39,7 @@ class JsonApiFixturesSpec extends Specification {
     JsonApiFixtures.sparseFieldset().is(SparseFieldsetScenarios.catalog())
     JsonApiFixtures.envelopeRead().is(EnvelopeReadScenarios.catalog())
     JsonApiFixtures.patch().is(PatchScenarios.catalog())
+    JsonApiFixtures.patchDto().is(PatchDtoScenarios.catalog())
   }
 
   def "every catalog where shim returns the full catalog for a matching predicate"() {
@@ -50,6 +53,7 @@ class JsonApiFixturesSpec extends Specification {
     SparseFieldsetScenarios.where({ true })*.id == SparseFieldsetScenarios.all()*.id
     EnvelopeReadScenarios.where({ true })*.id == EnvelopeReadScenarios.all()*.id
     PatchScenarios.where({ true })*.id == PatchScenarios.all()*.id
+    PatchDtoScenarios.where({ true })*.id == PatchDtoScenarios.all()*.id
   }
 
   def "capability filtering works through where"() {
@@ -85,6 +89,11 @@ class JsonApiFixturesSpec extends Specification {
   def "every patch entry satisfies the Scenario notes default contract"() {
     expect:
     PatchScenarios.all().every { it.notes() == it.id() }
+  }
+
+  def "every patch-dto entry satisfies the Scenario notes default contract"() {
+    expect:
+    PatchDtoScenarios.all().every { it.notes() == it.id() }
   }
 
   def "domain-write unknown byId fails with the unified message"() {
@@ -139,5 +148,14 @@ class JsonApiFixturesSpec extends Specification {
     then:
     def ex = thrown(IllegalArgumentException)
     ex.message == "Unknown patch scenario id: no such scenario"
+  }
+
+  def "patch-dto unknown byId fails with the unified message"() {
+    when:
+    PatchDtoScenarios.byId("no such scenario")
+
+    then:
+    def ex = thrown(IllegalArgumentException)
+    ex.message == "Unknown patch-dto scenario id: no such scenario"
   }
 }

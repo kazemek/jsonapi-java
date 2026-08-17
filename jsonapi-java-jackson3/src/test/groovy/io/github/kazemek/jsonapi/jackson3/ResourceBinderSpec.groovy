@@ -27,6 +27,7 @@ import io.github.kazemek.jsonapi.testfixtures.domainread.FlatRequiredThing
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThrowingCreatorThing
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.GenericArticle
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Stepwise
@@ -139,6 +140,22 @@ class ResourceBinderSpec extends Specification {
     article instanceof FlatArticle
     (article as FlatArticle).title() == "T"
     articles.size() == 2
+  }
+
+  def "generic relationship target resolves through the parameterized JavaType"() {
+    given:
+    def mapper = JsonMapper.builder().build()
+    def binder = JsonApiJackson3.resourceBinder(mapper)
+    def javaType =
+        mapper.typeFactory.constructParametricType(GenericArticle, ResourceIdentifier)
+    def resource = resource("articles", "1", null, [author: single("people", "p1")])
+
+    when:
+    def dto = binder.fromResource(resource, javaType)
+
+    then:
+    dto instanceof GenericArticle
+    ((GenericArticle) dto).author() == ResourceIdentifier.of("people", "p1")
   }
 
   def "registered linkage mapper binds to-one single linkage and to-many collection"() {

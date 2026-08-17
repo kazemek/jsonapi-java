@@ -20,6 +20,7 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PatchChange
 import io.github.kazemek.jsonapi.jackson.PatchCommand
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
+import io.github.kazemek.jsonapi.jackson3.testmodel.GenericValue
 import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchExpectation
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenario
@@ -157,6 +158,25 @@ class PatchBindingSpec extends Specification {
     command.changes() == [
       new PatchChange.AttributeChange("title", "title", "Hello")
     ]
+  }
+
+  def "generic attribute type resolves through the parameterized JavaType"() {
+    given:
+    def mapper = JsonMapper.builder().build()
+    def reader = JsonApiJackson3.patchReader(mapper)
+    def document = decodeUpdateDocument(
+        '{"data":{"type":"things","id":"1","attributes":{"value":"42"}}}')
+    def javaType = mapper.typeFactory.constructParametricType(GenericValue, Integer)
+
+    when:
+    PatchCommand<?> command = reader.fromDocument(document, javaType)
+
+    then:
+    command.resourceType() == GenericValue
+    command.identity() == "1"
+    command.changes().size() == 1
+    command.changes()[0].value() == 42
+    command.changes()[0].value() instanceof Integer
   }
 
   def "explicit null on primitive attribute fails even when FAIL_ON_NULL_FOR_PRIMITIVES is off"() {

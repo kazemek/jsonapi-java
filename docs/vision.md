@@ -77,7 +77,10 @@ unresolved linkage, cycles, identity, and persistence resolution require applica
 Resource PATCH binding produces a presence-aware update command. Omitted attributes and
 relationships remain distinguishable from explicit attribute `null` and explicit null, single, or
 collection linkage. Applications authorize and apply that command; the library does not mutate an
-existing DTO or persistence object.
+existing DTO or persistence object. A direct typed PATCH DTO path is also available: applications
+can declare an annotated PATCH DTO whose patchable members are `PatchPresence<T>` and bind a
+validated update document straight into it, keeping the same presence tri-state without a
+`PatchCommand`-to-DTO projector.
 
 ### Extensible without interpreting extensions
 

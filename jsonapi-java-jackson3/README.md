@@ -133,6 +133,24 @@ Object identity = command.identity();
 List<PatchChange> changes = command.changes();
 ```
 
+Direct typed PATCH DTO binding (validated update document → annotated PATCH DTO with
+`PatchPresence<T>` members; no projector, no separate normal DTO):
+
+```java
+@JsonApiResource(type = "articles")
+public record ArticlePatch(
+    @JsonApiId String id,
+    @JsonApiAttribute PatchPresence<String> title,
+    @JsonApiRelationship PatchPresence<ResourceIdentifier> author) {}
+
+JsonApiPatchDtoReader patchDtoReader = JsonApiJackson3.patchDtoReader(callerMapper);
+
+ArticlePatch patch = patchDtoReader.readValue(updateJson, ArticlePatch.class);
+if (!patch.title().isOmitted()) {
+  // patch.title() is Present("new title") or Present(null) for explicit JSON null
+}
+```
+
 `included` resources bind independently through the registry, stay wire-ordered, and are never
 injected into relationship properties; identifier primary data passes through as core
 `ResourceIdentifier` values. `domainDocumentReader` derives the binder mapper exactly like
@@ -149,15 +167,32 @@ DTO), never reads `included`, and keeps binder failures as resource-relative `Js
 pointers. Pass optional `EndpointIdentity` on the factory `ValidationContext`. Applications own
 authorization and command application.
 
-By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
-`IdentifierConverter` to `resourceMapper`, `resourceBinder`, or `patchReader` only when you need a
-different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
+`patchDtoReader` uses the same validate-on-read contract and binds the update **directly** into an
+application-owned annotated PATCH DTO: every attribute and relationship member must be declared
+exactly as `PatchPresence<T>` (wrapper-level `@JsonDeserialize`/`@JsonSerialize` customization —
+`using`, `converter`, key/content/null customizers, typing, type refinement, and mix-ins — on such
+a member is rejected with `INVALID_PATCH_PROPERTY_TYPE`; inner-`T` customization stays supported),
+omitted members become `PatchPresence.omitted()`, supplied members become `PatchPresence.present(...)`
+(explicit JSON `null` / null linkage becomes `present(null)`, or `present(Optional.empty())` for an
+`Optional` inner type), and supplied members unknown to the PATCH DTO fail with
+`UNKNOWN_PATCH_MEMBER` (the low-level path silently ignores them — direct binding rejects).
+Parameterized `JavaType` targets (e.g. `GenericPatch<String>`) keep their type bindings through
+mapping, conversion, and construction. The caller mapper is never mutated; the binder mapper is
+derived via `rebuild()` plus an internal `PatchPresence` module whose internal marker always
+serializes with the exact `present`/`value` member names, so the tri-state is invariant to caller
+`JsonInclude` inclusion config **and** caller property naming strategies. See
+[ADR-013](../docs/adr/013-direct-typed-patch-dto-binding.md).
 
-`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` always
-derive a **new** mapper via `rebuild()`; the caller's mapper or builder is never mutated. Writers
-validate before emission. Readers decode through public core constructors, then run aggregate
-validation. Mappers and binders introspect types for resource metadata but do not register a
-Jackson module.
+By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
+`IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
+when you need a different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
+
+`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` /
+`patchDtoReader` always derive a **new** mapper via `rebuild()`; the caller's mapper or builder is
+never mutated. Writers validate before emission. Readers decode through public core constructors,
+then run aggregate validation. Mappers and binders introspect types for resource metadata but do
+not register a Jackson module (the PATCH DTO reader additionally derives a binder mapper with an
+internal `PatchPresence` module; the caller's mapper is still never mutated).
 
 ## Non-goals
 
@@ -180,6 +215,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
 - [ADR-012 — Resource PATCH binding](../docs/adr/012-resource-patch-binding.md)
+- [ADR-013 — Direct typed PATCH DTO binding](../docs/adr/013-direct-typed-patch-dto-binding.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -247,6 +283,19 @@ artifact; both majors share the neutral contracts of
   `JsonApiResourceBinder` / whole-DTO construction, never read `included`, never prefix binder
   pointers with `/data`. Explicit attribute JSON `null` stores `value == null` (including Optional
   properties). Identity comes from resource `id` only (no `lid` fallback) and is never a change.
+- **Direct typed PATCH DTO:** `JsonApiPatchDtoReader` shares the same validate-on-read contract and
+  binds the update into an annotated PATCH DTO whose patchable members are exactly
+  `PatchPresence<T>`. Both paths share `PatchMemberConverter` (per-member conversion against an
+  explicit target `JavaType`); the DTO path converts through the unwrapped inner type and wraps in
+  `Present`/`Omitted`. Declaration violations (`INVALID_PATCH_PROPERTY_TYPE`) and unknown supplied
+  members (`UNKNOWN_PATCH_MEMBER`) fail at bind time; the declaration check covers implicit-role
+  members too and rejects every wrapper-level Jackson customization path (custom `using`
+  serializers/deserializers, converters, key/content/null customizers, typing, type refinement,
+  mix-ins). Construction uses the synthetic-map + `convertValue` strategy (ADR-004) with an
+  internal `PresenceMarker` + `PatchPresenceModule`; the marker's serializer always emits the exact
+  `present`/`value` member names (invariant to caller naming strategies and inclusion config) and
+  the deserializer fails loudly on any other marker shape. Never register a `PatchPresence`
+  deserializer on the caller's mapper.
 - **Architectural tests:** `Jackson3DependencyRulesSpec` allows JDK, JSpecify, core public
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
@@ -262,7 +311,12 @@ artifact; both majors share the neutral contracts of
   envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
   full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
   registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
-  malformed input, validation failures). Presence-aware PATCH contract cases come from
+  malformed input, validation failures).   Presence-aware PATCH contract cases come from
   `PatchScenarios`; `PatchBindingSpec` asserts full-catalog coverage and keeps adapter-local
   cases local (custom deserializer, custom linkage conversion, Optional attribute null,
   `fromDocument` missing id, factory overloads, ownership, illegal primary-data matrices).
+  Direct typed PATCH DTO contract cases come from
+  `PatchDtoScenarios`; `PatchDtoBindingSpec` asserts full-catalog coverage and keeps adapter-local
+  cases local (generics/`JavaType`, wrapper-level `@JsonDeserialize`/`@JsonSerialize` rejection,
+  inner-type customization, custom linkage mappers, naming strategy, `fromDocument`, construction
+  robustness under `NON_ABSENT`/`NON_EMPTY`, ownership).

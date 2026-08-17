@@ -19,7 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
  * replaces the caller's configuration in place. Public surface consists of {@link
  * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link
- * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, and {@link JsonApiPatchReader}.
+ * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and
+ * {@link JsonApiPatchDtoReader}.
  */
 public final class JsonApiJackson3 {
 
@@ -362,6 +363,101 @@ public final class JsonApiJackson3 {
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     Objects.requireNonNull(base, "base");
     return patchReader(base.build(), validationContext, identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader with {@link ValidationContext#defaults()}, default
+   * identifier conversion, and no custom relationship linkage mappers. Forces {@code
+   * DocumentUsage.UPDATE_REQUEST} and {@code PrimaryDataKind.RESOURCE} for validate-on-read.
+   * Derives a binder mapper via {@link JsonMapper#rebuild()} plus the internal {@code
+   * PatchPresence} module and never mutates the caller's mapper.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(JsonMapper base) {
+    return patchDtoReader(
+        base, ValidationContext.defaults(), IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader with the given validation context, default identifier
+   * conversion, and no custom relationship linkage mappers. Forces update-request usage while
+   * preserving other context fields (including expected endpoint identity).
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(
+      JsonMapper base, ValidationContext validationContext) {
+    return patchDtoReader(base, validationContext, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader with the given validation context and identifier
+   * converter, and no custom relationship linkage mappers.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(
+      JsonMapper base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter) {
+    return patchDtoReader(base, validationContext, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader with the given validation context, identifier
+   * converter, and relationship linkage mappers keyed by relationship target class. Snapshots the
+   * linkage-mapper map with {@link Map#copyOf}; derives a binder mapper via {@link
+   * JsonMapper#rebuild()} plus the internal {@code PatchPresence} module and never mutates the
+   * caller's mapper.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(
+      JsonMapper base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    Objects.requireNonNull(validationContext, CONTEXT);
+    Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
+    Objects.requireNonNull(linkageMappers, LINKAGE_MAPPERS);
+    return new JsonApiPatchDtoReader(base, validationContext, identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder with default
+   * validation context. The builder is not given the JSON:API module.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(JsonMapper.Builder base) {
+    return patchDtoReader(
+        base, ValidationContext.defaults(), IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder and validation
+   * context. The builder is not given the JSON:API module.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(
+      JsonMapper.Builder base, ValidationContext validationContext) {
+    return patchDtoReader(base, validationContext, IdentifierConverter.defaults(), Map.of());
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder, validation
+   * context, and identifier converter. The builder is not given the JSON:API module.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(
+      JsonMapper.Builder base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter) {
+    return patchDtoReader(base, validationContext, identifierConverter, Map.of());
+  }
+
+  /**
+   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder, validation
+   * context, identifier converter, and relationship linkage mappers. The builder is not given the
+   * JSON:API module.
+   */
+  public static JsonApiPatchDtoReader patchDtoReader(
+      JsonMapper.Builder base,
+      ValidationContext validationContext,
+      IdentifierConverter identifierConverter,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    Objects.requireNonNull(base, "base");
+    return patchDtoReader(base.build(), validationContext, identifierConverter, linkageMappers);
   }
 
   /**

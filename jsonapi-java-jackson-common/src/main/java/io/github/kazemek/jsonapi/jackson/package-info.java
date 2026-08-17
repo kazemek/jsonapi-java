@@ -5,9 +5,9 @@
  * values, and presence-aware update-command contracts: {@link CompoundSerializationContext}, {@link
  * DocumentReadContext}, {@link DocumentEnvelope}, {@link MappedDocument}, {@link IncludePath},
  * {@link IncludePolicy}, {@link FieldPolicy}, {@link DomainData}, {@link IncludedResources}, {@link
- * IdentifierConverter}, {@link PatchCommand}, {@link PatchChange}, {@link JsonApiMappingException},
- * {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link CodecFailureCategory},
- * {@link SourceLocation}, and the supporting allowance and kind types.
+ * IdentifierConverter}, {@link PatchCommand}, {@link PatchChange}, {@link PatchPresence}, {@link
+ * JsonApiMappingException}, {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link
+ * CodecFailureCategory}, {@link SourceLocation}, and the supporting allowance and kind types.
  *
  * <p>The package is deliberately Jackson-import-free: no {@code tools.jackson.*} or {@code
  * com.fasterxml.jackson.*} type appears in any production signature. Jackson-bound readers,
@@ -18,6 +18,8 @@
  * sealed variants represent explicit JSON {@code null}; for presence-aware PATCH, {@link
  * PatchChange} entries in {@code changes()} are present and explicit attribute JSON {@code null} /
  * relationship NullLinkage use {@code @Nullable value == null} (no sealed attribute-null variant).
+ * Direct PATCH DTO members declare presence through {@link PatchPresence}, whose {@link
+ * PatchPresence.Present} with a {@code null} value is explicit null, never omission.
  * {@code @Nullable} marks intentionally null-bearing members per ADR-009.
  */
 @NullMarked

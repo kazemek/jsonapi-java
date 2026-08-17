@@ -19,14 +19,24 @@ public final class MappingDefinitionCache {
   }
 
   ResourceMapping resolve(Class<?> rawType) {
+    return resolve(mapper.constructType(rawType));
+  }
+
+  /**
+   * Resolves the mapping for {@code javaType}, preserving full parameterization so property types
+   * introspect with type variables bound (for example {@code GenericPatch<String>} resolves its
+   * members as {@code String}). The cache key already holds the {@link JavaType}, so distinct
+   * parameterizations of the same raw class map independently.
+   */
+  ResourceMapping resolve(JavaType javaType) {
     SerializationConfig config = mapper.serializationConfig();
-    JavaType javaType = mapper.constructType(rawType);
     int configHash = configHash(config);
     CacheKey key = new CacheKey(javaType, configHash);
     ResourceMapping existing = cache.get(key);
     if (existing != null) {
       return existing;
     }
+    Class<?> rawType = javaType.getRawClass();
     return cache.computeIfAbsent(key, cacheKey -> computeMapping(rawType, javaType, config));
   }
 
