@@ -27,7 +27,6 @@ import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticlePatch
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.OptionalPatch
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoExpectation
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoScenario
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoScenarios
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -55,7 +54,7 @@ class PatchDtoBindingSpec extends Specification {
   List<String> executedScenarioIds = []
 
   def cleanupSpec() {
-    assert executedScenarioIds == PatchDtoScenarios.all()*.id
+    assert executedScenarioIds == JsonApiFixtures.patchDto().all()*.id
   }
 
   def "shared patch dto catalog scenario: #scenario.id"() {
@@ -399,6 +398,49 @@ class PatchDtoBindingSpec extends Specification {
     reader2.readValue(json, MixedPatch).title == PatchPresence.present("T")
   }
 
+  def "unknown supplied member is reported before a known member's invalid conversion"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"bogus":"x","count":"not-an-int"}}}'
+
+    when:
+    reader.readValue(json, CountPatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    ex.propertyPath() == "/attributes/bogus"
+  }
+
+  def "unknown supplied relationship is reported before a known relationship conversion"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","relationships":{"bogus":{"data":null},"author":{"data":[]}}}}'
+
+    when:
+    reader.readValue(json, ArticlePatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    ex.propertyPath() == "/relationships/bogus"
+  }
+
+  def "null dtoType reports dtoType in the message"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json = '{"data":{"type":"articles","id":"1"}}'
+
+    when:
+    reader.readValue(json, (Class) null)
+
+    then:
+    def ex = thrown(NullPointerException)
+    ex.message == "dtoType"
+  }
+
   def "fromDocument binds an already-validated document without re-validation"() {
     given:
     def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
@@ -735,6 +777,12 @@ class PatchDtoBindingSpec extends Specification {
     @JsonApiAttribute PatchPresence<String> title
     @JsonApiAttribute PatchPresence<Optional<String>> subtitle
     @JsonApiAttribute PatchPresence<String> body
+  }
+
+  @JsonApiResource(type = "articles")
+  static class CountPatch {
+    @JsonApiId String id
+    @JsonApiAttribute PatchPresence<Integer> count
   }
 
   static class AuthorId {

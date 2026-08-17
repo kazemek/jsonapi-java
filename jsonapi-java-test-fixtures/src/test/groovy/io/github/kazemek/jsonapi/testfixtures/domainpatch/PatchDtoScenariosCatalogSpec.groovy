@@ -7,6 +7,14 @@ import spock.lang.Specification
 
 class PatchDtoScenariosCatalogSpec extends Specification {
 
+  def "catalog covers every expectation kind and declaration validation"() {
+    expect:
+    PatchDtoScenarios.all().any { it.expectation() instanceof PatchDtoExpectation.Success }
+    PatchDtoScenarios.all().any { it.expectation() instanceof PatchDtoExpectation.ReaderFailure }
+    PatchDtoScenarios.all().any { it.expectation() instanceof PatchDtoExpectation.BinderFailure }
+    PatchDtoScenarios.where({ it.id().contains("declaration") }).size() >= 1
+  }
+
   def "catalog ids are unique"() {
     expect:
     PatchDtoScenarios.all()*.id.toSet().size() == PatchDtoScenarios.all().size()

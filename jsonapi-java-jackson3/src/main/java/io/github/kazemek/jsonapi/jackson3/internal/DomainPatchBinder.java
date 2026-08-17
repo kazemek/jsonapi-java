@@ -50,7 +50,7 @@ public final class DomainPatchBinder {
     Objects.requireNonNull(resource, "resource");
     Objects.requireNonNull(targetType, "targetType");
     Class<?> rawType = targetType.getRawClass();
-    ResourceMapping mapping = cache.resolve(rawType);
+    ResourceMapping mapping = cache.resolve(targetType);
     validateResourceType(resource, mapping, rawType);
     Object identity = convertIdentity(resource, mapping, rawType);
     List<PatchChange> changes = new ArrayList<>();

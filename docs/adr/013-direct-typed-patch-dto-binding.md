@@ -43,9 +43,11 @@ document and binds it **directly** into an application-owned annotated PATCH DTO
   `PatchCommand` path, which silently ignores unknown supplied members to stay a lossless change
   list; direct DTO binding has no lossless intermediate, so rejecting is the safer PATCH default.
 - PATCH DTOs are ordinary Jackson beans (records, creators, or setter classes) and construction
-  preserves full Jackson authority (ADR-004): creators, deserializers, converters, naming,
-  mix-ins, ignore rules, and configured modules all apply through a single `convertValue` over a
-  synthetic property map.
+  preserves Jackson authority (ADR-004) subject to the documented PATCH-wrapper restrictions:
+  creators, deserializers, converters, naming, ignore rules, and configured modules all apply
+  through a single `convertValue` over a synthetic property map, except that wrapper-level
+  `@JsonDeserialize` / `@JsonSerialize` customization on `PatchPresence<T>` properties is rejected
+  (below). Inner-type Jackson customization remains fully supported through normal conversion.
 - Construction uses a minimal internal presence marker (`present` boolean + already-converted
   inner value) plus a small internal `PatchPresence` deserializer registered on the derived binder
   mapper. The marker's wire shape is deterministic and independent of any caller property naming

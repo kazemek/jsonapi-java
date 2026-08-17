@@ -40,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class JsonApiPatchDtoReader {
 
-  private static final String RESOURCE_TYPE = "resourceType";
+  private static final String DTO_TYPE = "dtoType";
 
   private final JsonApiDocumentReader documentReader;
   private final JsonMapper binderMapper;
@@ -67,13 +67,13 @@ public final class JsonApiPatchDtoReader {
 
   /** Decodes, validates, and binds the JSON:API update document in the given string. */
   public <T> T readValue(String json, Class<T> dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(json), dtoType);
   }
 
   /** Decodes, validates, and binds the UTF-8 JSON:API update document in the given bytes. */
   public <T> T readValue(byte[] utf8Json, Class<T> dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(utf8Json), dtoType);
   }
 
@@ -82,7 +82,7 @@ public final class JsonApiPatchDtoReader {
    * The stream is not closed.
    */
   public <T> T readValue(InputStream utf8Stream, Class<T> dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(utf8Stream), dtoType);
   }
 
@@ -91,35 +91,35 @@ public final class JsonApiPatchDtoReader {
    * parser is not closed.
    */
   public <T> T readValue(JsonParser parser, Class<T> dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(parser), dtoType);
   }
 
   /** Decodes, validates, and binds using a {@link JavaType}, preserving full parameterization. */
   @SuppressWarnings("java:S1452")
   public Object readValue(String json, JavaType dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(json), dtoType);
   }
 
   /** Byte-array overload of {@link #readValue(String, JavaType)}. */
   @SuppressWarnings("java:S1452")
   public Object readValue(byte[] utf8Json, JavaType dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(utf8Json), dtoType);
   }
 
   /** Stream overload of {@link #readValue(String, JavaType)}. */
   @SuppressWarnings("java:S1452")
   public Object readValue(InputStream utf8Stream, JavaType dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(utf8Stream), dtoType);
   }
 
   /** Parser overload of {@link #readValue(String, JavaType)}. */
   @SuppressWarnings("java:S1452")
   public Object readValue(JsonParser parser, JavaType dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return fromDocument(documentReader.readValue(parser), dtoType);
   }
 
@@ -130,7 +130,7 @@ public final class JsonApiPatchDtoReader {
    */
   @SuppressWarnings("unchecked")
   public <T> T fromDocument(JsonApiDocument document, Class<T> dtoType) {
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     return (T) fromDocument(document, binderMapper.constructType(dtoType));
   }
 
@@ -142,7 +142,7 @@ public final class JsonApiPatchDtoReader {
   @SuppressWarnings("java:S1452")
   public Object fromDocument(JsonApiDocument document, JavaType dtoType) {
     Objects.requireNonNull(document, "document");
-    Objects.requireNonNull(dtoType, RESOURCE_TYPE);
+    Objects.requireNonNull(dtoType, DTO_TYPE);
     DocumentData data = document.data();
     if (!(data instanceof DocumentData.SingleResource(ResourceObject resource))) {
       throw new IllegalArgumentException(

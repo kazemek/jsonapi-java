@@ -201,6 +201,13 @@ public final class DomainPatchDtoBinder {
     Map<String, @Nullable Object> supplied = attributes == null ? null : attributes.attributes();
     Map<String, MappingProperty> byJsonapiName =
         PatchMemberConverter.byJsonapiName(mapping.attributes());
+    if (supplied != null) {
+      for (String name : supplied.keySet()) {
+        if (!byJsonapiName.containsKey(name)) {
+          throw unknownPatchMember(rawType, "/attributes/" + name, "attribute", name);
+        }
+      }
+    }
     for (MappingProperty property : mapping.attributes()) {
       if (supplied != null && supplied.containsKey(property.jsonapiName())) {
         Object value =
@@ -215,13 +222,6 @@ public final class DomainPatchDtoBinder {
         properties.put(property.logicalName(), new PresenceMarker(false, null));
       }
     }
-    if (supplied != null) {
-      for (String name : supplied.keySet()) {
-        if (!byJsonapiName.containsKey(name)) {
-          throw unknownPatchMember(rawType, "/attributes/" + name, "attribute", name);
-        }
-      }
-    }
   }
 
   private void bindRelationships(
@@ -234,6 +234,13 @@ public final class DomainPatchDtoBinder {
         relationships == null ? null : relationships.relationships();
     Map<String, MappingProperty> byJsonapiName =
         PatchMemberConverter.byJsonapiName(mapping.relationships());
+    if (supplied != null) {
+      for (String name : supplied.keySet()) {
+        if (!byJsonapiName.containsKey(name)) {
+          throw unknownPatchMember(rawType, "/relationships/" + name, "relationship", name);
+        }
+      }
+    }
     for (MappingProperty property : mapping.relationships()) {
       Relationship relationship = supplied == null ? null : supplied.get(property.jsonapiName());
       RelationshipData data = relationship == null ? null : relationship.data();
@@ -245,13 +252,6 @@ public final class DomainPatchDtoBinder {
       }
       Object value = converter.convertRelationship(property, data, innerType(property));
       properties.put(property.logicalName(), new PresenceMarker(true, value));
-    }
-    if (supplied != null) {
-      for (String name : supplied.keySet()) {
-        if (!byJsonapiName.containsKey(name)) {
-          throw unknownPatchMember(rawType, "/relationships/" + name, "relationship", name);
-        }
-      }
     }
   }
 

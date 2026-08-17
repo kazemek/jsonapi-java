@@ -42,6 +42,18 @@ class PatchPresenceMarkerSpec extends Specification {
     ex.message.contains("Invalid internal PatchPresence marker")
   }
 
+  def "unresolved abstract inner type binds explicit null to Present(null) without NPE"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .addModule(new PresenceTestModule(PresenceMarkerSerializer.INSTANCE))
+        .build()
+    def targetType = mapper.constructType(BeanWithAbstractPresence)
+
+    expect:
+    mapper.convertValue([title: new PresenceMarker(true, null)], targetType).title ==
+    PatchPresence.present(null)
+  }
+
   static class PresenceTestModule extends SimpleModule {
     PresenceTestModule(ValueSerializer markerSerializer) {
       super("presence-test")
@@ -52,6 +64,12 @@ class PatchPresenceMarkerSpec extends Specification {
 
   static class BeanWithPresence {
     PatchPresence<String> title
+  }
+
+  static abstract class AbstractInner {}
+
+  static class BeanWithAbstractPresence {
+    PatchPresence<AbstractInner> title
   }
 
   /**

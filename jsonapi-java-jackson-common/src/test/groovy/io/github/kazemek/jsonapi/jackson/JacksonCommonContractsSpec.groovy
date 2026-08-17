@@ -523,6 +523,13 @@ class JacksonCommonContractsSpec extends Specification {
     ]
 
     expect:
+    // The sealed contract must stay exactly the two variants exercised below; a newly permitted
+    // implementation fails this assertion until it is deliberately handled in the switch.
+    PatchPresence.class.getPermittedSubclasses().toSet() ==
+        [
+          PatchPresence.Omitted,
+          PatchPresence.Present
+        ].toSet()
     inputs.every { presence ->
       switch (presence) {
         case PatchPresence.Omitted:

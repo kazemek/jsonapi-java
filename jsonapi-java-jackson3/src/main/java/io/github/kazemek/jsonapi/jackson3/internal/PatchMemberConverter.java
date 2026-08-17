@@ -5,6 +5,8 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.PatchCommand;
+import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.LinkedHashMap;
 import java.util.List;

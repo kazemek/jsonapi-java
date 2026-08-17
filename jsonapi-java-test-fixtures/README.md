@@ -139,6 +139,16 @@ PATCH DTO catalogs are in this module.
   Adapter suites run the whole catalog through their own patch reader and assert full-catalog
   coverage (`executedScenarioIds == catalogScenarioIds`). Adapter-local cases (custom deserializers,
   linkage mappers, Optional attribute null, `fromDocument` missing id) stay in adapter specs only.
+- **Typed PATCH DTO catalog:** `PatchDtoScenariosCatalogSpec` enforces the local invariants that
+  hold for every entry regardless of catalog size: unique stable ids, exactly one JSON document
+  and discriminated `PatchDtoExpectation`, resolvable PATCH DTOs in `domainpatch` (including the
+  declaration-invalid fixtures), at least one `Success` / `ReaderFailure` / `BinderFailure` and at
+  least one declaration-validation scenario, and `PatchPresence` values on every `Success`
+  member. Adapter suites run the whole catalog through their own `patchDtoReader` and assert
+  full-catalog coverage (`executedScenarioIds == catalogScenarioIds` via the same `JsonApiFixtures`
+  accessor). Adapter-local cases (generics/`JavaType`, wrapper-level `@JsonDeserialize` /
+  `@JsonSerialize` rejection, naming strategies, `fromDocument`, custom linkage mappers,
+  `NON_ABSENT`/`NON_EMPTY` robustness) stay in adapter specs only.
 - **Capability selection:** Tests select by `FixtureCatalog.where` (and the retained
   `CodecScenarios` conveniences `writable`, `readable`, `schemaChecked`, `exactUtf8`,
   `hreflangArray`) instead of maintaining independent hard-coded id lists. Adapter write suites

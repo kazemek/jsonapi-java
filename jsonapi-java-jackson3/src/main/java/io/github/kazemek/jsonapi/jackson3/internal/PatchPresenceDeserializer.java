@@ -8,6 +8,7 @@ import tools.jackson.databind.BeanProperty;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.exc.InvalidDefinitionException;
 
 /**
  * Minimal contextual deserializer that reconstructs {@link PatchPresence} from an internal {@link
@@ -71,7 +72,7 @@ final class PatchPresenceDeserializer extends ValueDeserializer<PatchPresence<?>
     boolean sawPresent = false;
     boolean present = false;
     boolean sawValue = false;
-    @Nullable Object rawValue = null;
+    Object rawValue = null;
     JsonToken token = parser.nextToken();
     while (token != JsonToken.END_OBJECT) {
       String name = parser.currentName();
@@ -98,20 +99,27 @@ final class PatchPresenceDeserializer extends ValueDeserializer<PatchPresence<?>
   }
 
   private static @Nullable Object readValueMember(
-      JsonParser parser, DeserializationContext ctxt, JavaType innerType) {
+      JsonParser parser, DeserializationContext context, JavaType innerType) {
     if (parser.currentToken() == JsonToken.VALUE_NULL) {
-      return nullValue(ctxt, innerType);
+      return nullValue(context, innerType);
     }
-    return ctxt.readValue(parser, innerType);
+    return context.readValue(parser, innerType);
   }
 
   private static void invalidMarker(
-      DeserializationContext ctxt, JavaType innerType, String detail) {
-    ctxt.reportInputMismatch(innerType, "Invalid internal PatchPresence marker: " + detail);
+      DeserializationContext context, JavaType innerType, String detail) {
+    context.reportInputMismatch(innerType, "Invalid internal PatchPresence marker: " + detail);
   }
 
-  private static @Nullable Object nullValue(DeserializationContext ctxt, JavaType innerType) {
-    return ctxt.findRootValueDeserializer(innerType).getNullValue(ctxt);
+  private static @Nullable Object nullValue(DeserializationContext context, JavaType innerType) {
+    ValueDeserializer<Object> deserializer = context.findRootValueDeserializer(innerType);
+    if (deserializer == null) {
+      throw InvalidDefinitionException.from(
+          (JsonParser) null,
+          "Cannot deserialize the inner type of PatchPresence: " + innerType.toCanonical(),
+          innerType);
+    }
+    return deserializer.getNullValue(context);
   }
 
   private record MarkerFields(boolean present, boolean sawValue, @Nullable Object value) {}
