@@ -133,6 +133,24 @@ Object identity = command.identity();
 List<PatchChange> changes = command.changes();
 ```
 
+Typed PATCH projection (existing command → application-owned patch DTO; no re-read):
+
+```java
+@JsonApiResource(type = "articles")
+public record ArticlePatch(
+    @JsonApiAttribute PatchPresence<String> title,
+    @JsonApiAttribute(name = "body-text") PatchPresence<String> body,
+    @JsonApiRelationship PatchPresence<ResourceIdentifier> author) {}
+
+JsonApiPatchProjector patchProjector = JsonApiJackson3.patchProjector(callerMapper);
+ArticlePatch patch = patchProjector.project(command, ArticlePatch.class);
+Object identity = command.identity();
+```
+
+Each patchable property must be `PatchPresence<T>`. Resource identity stays on `PatchCommand`;
+patch DTO types must not declare `@JsonApiId`. A supplied change outside the patch DTO surface
+fails with `UNREPRESENTABLE_PATCH_CHANGE` rather than being silently ignored.
+
 `included` resources bind independently through the registry, stay wire-ordered, and are never
 injected into relationship properties; identifier primary data passes through as core
 `ResourceIdentifier` values. `domainDocumentReader` derives the binder mapper exactly like
@@ -153,8 +171,8 @@ By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toStr
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, or `patchReader` only when you need a
 different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
 
-`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` always
-derive a **new** mapper via `rebuild()`; the caller's mapper or builder is never mutated. Writers
+`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` /
+`patchProjector` always derive a **new** mapper via `rebuild()`; the caller's mapper or builder is never mutated. Writers
 validate before emission. Readers decode through public core constructors, then run aggregate
 validation. Mappers and binders introspect types for resource metadata but do not register a
 Jackson module.
@@ -180,6 +198,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
 - [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
 - [ADR-012 — Resource PATCH binding](../docs/adr/012-resource-patch-binding.md)
+- [ADR-013 — Typed PATCH DTO projection](../docs/adr/013-typed-patch-dto-projection.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -247,6 +266,11 @@ artifact; both majors share the neutral contracts of
   `JsonApiResourceBinder` / whole-DTO construction, never read `included`, never prefix binder
   pointers with `/data`. Explicit attribute JSON `null` stores `value == null` (including Optional
   properties). Identity comes from resource `id` only (no `lid` fallback) and is never a change.
+- **Typed PATCH projection:** `JsonApiPatchProjector` maps an existing `PatchCommand` into an
+  application-owned patch DTO with `PatchPresence` properties without re-reading JSON or mutating
+  domain state. Reject `@JsonApiId` on patch DTO types; reject supplied changes outside the patch
+  DTO surface with `UNREPRESENTABLE_PATCH_CHANGE`. Projection contract cases come from
+  `PatchProjectionScenarios`; `PatchProjectionSpec` asserts full-catalog coverage.
 - **Architectural tests:** `Jackson3DependencyRulesSpec` allows JDK, JSpecify, core public
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
@@ -262,7 +286,9 @@ artifact; both majors share the neutral contracts of
   envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
   full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
   registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
-  malformed input, validation failures). Presence-aware PATCH contract cases come from
+  malformed input, validation failures).   Presence-aware PATCH contract cases come from
   `PatchScenarios`; `PatchBindingSpec` asserts full-catalog coverage and keeps adapter-local
   cases local (custom deserializer, custom linkage conversion, Optional attribute null,
   `fromDocument` missing id, factory overloads, ownership, illegal primary-data matrices).
+  Typed PATCH projection contract cases come from `PatchProjectionScenarios`;
+  `PatchProjectionSpec` asserts full-catalog coverage.

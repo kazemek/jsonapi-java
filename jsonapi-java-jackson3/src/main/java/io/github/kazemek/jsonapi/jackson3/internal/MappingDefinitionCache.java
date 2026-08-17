@@ -19,24 +19,35 @@ public final class MappingDefinitionCache {
   }
 
   ResourceMapping resolve(Class<?> rawType) {
+    return resolve(rawType, false);
+  }
+
+  ResourceMapping resolvePatch(Class<?> rawType) {
+    return resolve(rawType, true);
+  }
+
+  private ResourceMapping resolve(Class<?> rawType, boolean patchDto) {
     SerializationConfig config = mapper.serializationConfig();
     JavaType javaType = mapper.constructType(rawType);
     int configHash = configHash(config);
-    CacheKey key = new CacheKey(javaType, configHash);
+    CacheKey key = new CacheKey(javaType, configHash, patchDto);
     ResourceMapping existing = cache.get(key);
     if (existing != null) {
       return existing;
     }
-    return cache.computeIfAbsent(key, cacheKey -> computeMapping(rawType, javaType, config));
+    return cache.computeIfAbsent(
+        key, cacheKey -> computeMapping(rawType, javaType, config, patchDto));
   }
 
   private ResourceMapping computeMapping(
-      Class<?> rawType, JavaType javaType, SerializationConfig config) {
+      Class<?> rawType, JavaType javaType, SerializationConfig config, boolean patchDto) {
     ClassIntrospector introspector = config.classIntrospectorInstance();
     AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
     BeanDescription beanDescription =
         introspector.introspectForSerialization(javaType, annotatedClass);
-    return MappingDefinitionResolver.resolve(beanDescription, rawType);
+    return patchDto
+        ? MappingDefinitionResolver.resolvePatchDto(beanDescription, rawType)
+        : MappingDefinitionResolver.resolve(beanDescription, rawType);
   }
 
   private static int configHash(SerializationConfig config) {
@@ -48,5 +59,5 @@ public final class MappingDefinitionCache {
     return result;
   }
 
-  private record CacheKey(JavaType type, int configHash) {}
+  private record CacheKey(JavaType type, int configHash, boolean patchDto) {}
 }

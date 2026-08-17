@@ -50,6 +50,33 @@ final class MappingDefinitionResolver {
         beanDescription.getType());
   }
 
+  /** Resolves mapping for an application-owned patch DTO without requiring {@code @JsonApiId}. */
+  static ResourceMapping resolvePatchDto(BeanDescription beanDescription, Class<?> rawType) {
+    JsonApiResource resourceAnnotation = validateResourceAnnotation(rawType);
+    String resourceType = validateResourceType(resourceAnnotation, rawType);
+
+    List<BeanPropertyDefinition> propertyDefinitions = beanDescription.findProperties();
+    List<MappingProperty> identifierProperties = new ArrayList<>();
+    List<MappingProperty> attributeProperties = new ArrayList<>();
+    List<MappingProperty> relationshipProperties = new ArrayList<>();
+
+    classifyProperties(
+        propertyDefinitions,
+        rawType,
+        identifierProperties,
+        attributeProperties,
+        relationshipProperties);
+    validatePatchPropertyRoles(
+        identifierProperties, attributeProperties, relationshipProperties, rawType);
+
+    return new ResourceMapping(
+        resourceType,
+        null,
+        List.copyOf(attributeProperties),
+        List.copyOf(relationshipProperties),
+        beanDescription.getType());
+  }
+
   private static JsonApiResource validateResourceAnnotation(Class<?> rawType) {
     JsonApiResource resourceAnnotation = rawType.getAnnotation(JsonApiResource.class);
     if (resourceAnnotation == null) {
@@ -194,6 +221,26 @@ final class MappingDefinitionResolver {
       List<MappingProperty> relationshipProperties,
       Class<?> rawType) {
     requireSingleIdentifier(identifierProperties, rawType);
+    rejectDuplicateNames(attributeProperties, rawType, "attribute");
+    rejectDuplicateNames(relationshipProperties, rawType, "relationship");
+    rejectAttributeRelationshipCollisions(attributeProperties, relationshipProperties, rawType);
+  }
+
+  private static void validatePatchPropertyRoles(
+      List<MappingProperty> identifierProperties,
+      List<MappingProperty> attributeProperties,
+      List<MappingProperty> relationshipProperties,
+      Class<?> rawType) {
+    if (!identifierProperties.isEmpty()) {
+      MappingProperty identifier = identifierProperties.getFirst();
+      throw new JsonApiMappingException(
+          MappingDiagnostic.PATCH_IDENTIFIER_NOT_SUPPORTED,
+          rawType,
+          "/" + identifier.logicalName(),
+          "Patch DTO '"
+              + rawType.getName()
+              + "' must not declare @JsonApiId; use PatchCommand.identity()");
+    }
     rejectDuplicateNames(attributeProperties, rawType, "attribute");
     rejectDuplicateNames(relationshipProperties, rawType, "relationship");
     rejectAttributeRelationshipCollisions(attributeProperties, relationshipProperties, rawType);

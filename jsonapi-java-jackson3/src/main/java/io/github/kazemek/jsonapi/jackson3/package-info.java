@@ -27,6 +27,12 @@
  * io.github.kazemek.jsonapi.jackson.PatchCommand} without constructing a DTO or reading {@code
  * included}.
  *
+ * <p>Typed patch DTO projection uses {@link JsonApiJackson3#patchProjector} to derive a {@link
+ * JsonApiPatchProjector} that maps an existing {@link
+ * io.github.kazemek.jsonapi.jackson.PatchCommand} into an application-owned patch DTO with {@link
+ * io.github.kazemek.jsonapi.jackson.PatchPresence} fields without re-reading JSON or mutating
+ * domain state.
+ *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
  * an explicit include request and {@link IncludePolicy}. Sparse fieldsets share that context

@@ -21,6 +21,7 @@ import io.github.kazemek.jsonapi.jackson.PatchChange
 import io.github.kazemek.jsonapi.jackson.PatchCommand
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
 import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDocuments
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchExpectation
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenario
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenarios
@@ -145,7 +146,7 @@ class PatchBindingSpec extends Specification {
     def mapper = JsonMapper.builder().build()
     def reader = JsonApiJackson3.patchReader(mapper)
     def document = decodeUpdateDocument(
-        '{"data":{"type":"articles","id":"1","attributes":{"title":"Hello"}}}')
+        PatchDocuments.ARTICLE_TITLE_HELLO)
     def javaType = mapper.constructType(FlatArticle)
 
     when:
@@ -178,7 +179,7 @@ class PatchBindingSpec extends Specification {
 
   def "Builder and JavaType factory overloads bind successfully"() {
     given:
-    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"Hello"}}}'
+    def json = PatchDocuments.ARTICLE_TITLE_HELLO
     def builderReader = JsonApiJackson3.patchReader(JsonMapper.builder())
     def javaType = JsonMapper.builder().build().constructType(FlatArticle)
 
@@ -338,7 +339,7 @@ class PatchBindingSpec extends Specification {
     given:
     def mapper = JsonMapper.builder().build()
     def reader = JsonApiJackson3.patchReader(mapper)
-    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"Hello"}}}'.bytes
+    def json = PatchDocuments.ARTICLE_TITLE_HELLO.bytes
     def javaType = mapper.constructType(FlatArticle)
 
     when:

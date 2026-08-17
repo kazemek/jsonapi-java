@@ -3,6 +3,7 @@ package io.github.kazemek.jsonapi.jackson3;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
 import io.github.kazemek.jsonapi.jackson.DocumentReadContext;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson3.internal.DomainPatchProjector;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
 import io.github.kazemek.jsonapi.jackson3.internal.JsonApiDocumentModule;
@@ -12,14 +13,15 @@ import java.util.Objects;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Factory for Jackson 3 JSON:API document writers, readers, resource mappers, flat DTO binders, and
- * presence-aware PATCH readers.
+ * Factory for Jackson 3 JSON:API document writers, readers, resource mappers, flat DTO binders,
+ * presence-aware PATCH readers, and typed PATCH projectors.
  *
  * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
  * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
  * replaces the caller's configuration in place. Public surface consists of {@link
  * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link
- * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, and {@link JsonApiPatchReader}.
+ * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and
+ * {@link JsonApiPatchProjector}.
  */
 public final class JsonApiJackson3 {
 
@@ -362,6 +364,27 @@ public final class JsonApiJackson3 {
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     Objects.requireNonNull(base, "base");
     return patchReader(base.build(), validationContext, identifierConverter, linkageMappers);
+  }
+
+  /**
+   * Returns a patch projector that maps an existing {@link
+   * io.github.kazemek.jsonapi.jackson.PatchCommand} into an application-owned patch DTO. Derives a
+   * mapper via {@link JsonMapper#rebuild()} and never mutates the caller's mapper.
+   */
+  public static JsonApiPatchProjector patchProjector(JsonMapper base) {
+    Objects.requireNonNull(base, "base");
+    JsonMapper projectorMapper = resourceMappingMapper(base);
+    MappingDefinitionCache cache = new MappingDefinitionCache(projectorMapper);
+    return new JsonApiPatchProjector(projectorMapper, new DomainPatchProjector(cache));
+  }
+
+  /**
+   * Returns a patch projector derived from a caller-supplied builder. The builder is not given the
+   * JSON:API module.
+   */
+  public static JsonApiPatchProjector patchProjector(JsonMapper.Builder base) {
+    Objects.requireNonNull(base, "base");
+    return patchProjector(base.build());
   }
 
   /**

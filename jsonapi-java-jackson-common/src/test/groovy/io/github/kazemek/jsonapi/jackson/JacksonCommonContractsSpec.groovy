@@ -493,4 +493,14 @@ class JacksonCommonContractsSpec extends Specification {
     (change.value() as int[])[0] == 1
     (change.value() as int[])[1] == 2
   }
+
+  // PatchPresence
+
+  def "PatchPresence omitted and present factories"() {
+    expect:
+    PatchPresence.<String>omitted() instanceof PatchPresence.Omitted
+    PatchPresence.present("hello") instanceof PatchPresence.Present
+    (PatchPresence.present("hello") as PatchPresence.Present).value() == "hello"
+    (PatchPresence.<String>present(null) as PatchPresence.Present).value() == null
+  }
 }

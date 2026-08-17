@@ -5,9 +5,9 @@
  * values, and presence-aware update-command contracts: {@link CompoundSerializationContext}, {@link
  * DocumentReadContext}, {@link DocumentEnvelope}, {@link MappedDocument}, {@link IncludePath},
  * {@link IncludePolicy}, {@link FieldPolicy}, {@link DomainData}, {@link IncludedResources}, {@link
- * IdentifierConverter}, {@link PatchCommand}, {@link PatchChange}, {@link JsonApiMappingException},
- * {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link CodecFailureCategory},
- * {@link SourceLocation}, and the supporting allowance and kind types.
+ * IdentifierConverter}, {@link PatchCommand}, {@link PatchChange}, {@link PatchPresence}, {@link
+ * JsonApiMappingException}, {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link
+ * CodecFailureCategory}, {@link SourceLocation}, and the supporting allowance and kind types.
  *
  * <p>The package is deliberately Jackson-import-free: no {@code tools.jackson.*} or {@code
  * com.fasterxml.jackson.*} type appears in any production signature. Jackson-bound readers,

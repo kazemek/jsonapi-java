@@ -22,6 +22,7 @@ CompoundSerializationContext inclusion =
         .withIncludePaths(List.of(IncludePath.of("comments.author")))
         .withIncludePolicy(IncludePolicy.allowAll());
 PatchCommand<ArticleDto> command = /* from JsonApiJackson3.patchReader(...).readValue(...) */;
+ArticlePatch patch = /* from JsonApiJackson3.patchProjector(...).project(command, ArticlePatch.class) */;
 ```
 
 Types here are values only: policies (`IncludePolicy`, `FieldPolicy`, allowance keys), read/write
@@ -29,7 +30,7 @@ contexts (`DocumentReadContext`, `CompoundSerializationContext`, `DocumentEnvelo
 `MappedDocument`), diagnostics (`MappingDiagnostic`, `CodecFailureCategory`,
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`), identifier
 conversion (`IdentifierConverter`), domain envelope values (`DomainData`, `IncludedResources`), and
-presence-aware update commands (`PatchCommand`, `PatchChange`). No type in this package imports or
+presence-aware update commands (`PatchCommand`, `PatchChange`, `PatchPresence`). No type in this package imports or
 exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories, readers, writers,
 binders, and mapping introspection stay in the major-specific adapter packages.
 
@@ -47,6 +48,8 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - [ADR-007 — Module boundaries](../docs/adr/007-module-boundaries.md)
 - [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
+- [ADR-012 — Resource PATCH binding](../docs/adr/012-resource-patch-binding.md)
+- [ADR-013 — Typed PATCH DTO projection](../docs/adr/013-typed-patch-dto-projection.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents
@@ -67,7 +70,8 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   Java `null` means member absence; explicit JSON `null` stays a sealed variant
   (`DomainData.NullData`, etc.). Presence-aware PATCH: `PatchChange` entries in `changes()` are
   present; explicit attribute JSON `null` / relationship NullLinkage use `@Nullable value == null`
-  (no sealed attribute-null variant). NullAway enforces this on Java `main` sources (ADR-009).
+  (no sealed attribute-null variant). Typed projection uses `PatchPresence` on patch DTO properties
+  (ADR-013). NullAway enforces this on Java `main` sources (ADR-009).
 - **Diagnostics:** `JsonApiMappingException` carries a stable `MappingDiagnostic`; read failures
   use `JsonApiDocumentReadException` with `CodecFailureCategory`, a JSON Pointer-like path, and a
   safe `SourceLocation`. Do not introduce new failure types without an implementation plan.

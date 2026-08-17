@@ -76,7 +76,7 @@ public final class PatchScenarios {
   private static PatchScenario omittedAndSuppliedAttributes() {
     return scenario(
         "patch-omitted-and-supplied-attributes",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"Hello\"}}}",
+        PatchDocuments.ARTICLE_TITLE_HELLO,
         FlatArticle.class,
         null,
         PatchExpectation.success(

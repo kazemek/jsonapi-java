@@ -16,7 +16,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Omitted members never appear. Explicit attribute JSON {@code null} is {@code value == null} on
  * a present {@link AttributeChange}. Relationship {@code NullLinkage} is Java {@code null} or empty
- * {@code Optional} as the Jackson adapter binder would produce.
+ * {@code Optional} as the Jackson adapter binder would produce. For typed projection into patch
+ * DTOs, see {@link PatchPresence}.
  */
 public sealed interface PatchChange
     permits PatchChange.AttributeChange, PatchChange.RelationshipChange {
@@ -79,7 +80,7 @@ public sealed interface PatchChange
         return Collections.unmodifiableSet(copy);
       }
       case Map<?, ?> map -> {
-        Map<Object, @Nullable Object> copy = new LinkedHashMap<>(map.size());
+        Map<Object, @Nullable Object> copy = LinkedHashMap.newLinkedHashMap(map.size());
         copy.putAll(map);
         return Collections.unmodifiableMap(copy);
       }
