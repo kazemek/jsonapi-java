@@ -16,8 +16,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Omitted members never appear. Explicit attribute JSON {@code null} is {@code value == null} on
  * a present {@link AttributeChange}. Relationship {@code NullLinkage} is Java {@code null} or empty
- * {@code Optional} as the Jackson adapter binder would produce. For typed projection into patch
- * DTOs, see {@link PatchPresence}.
+ * {@code Optional} as the Jackson adapter binder would produce. Typed projection into patch DTOs
+ * matches {@link #jsonapiName()} plus attribute versus relationship role, not {@link
+ * #logicalName()}; see {@link PatchPresence}.
  */
 public sealed interface PatchChange
     permits PatchChange.AttributeChange, PatchChange.RelationshipChange {

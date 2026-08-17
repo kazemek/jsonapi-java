@@ -147,9 +147,11 @@ ArticlePatch patch = patchProjector.project(command, ArticlePatch.class);
 Object identity = command.identity();
 ```
 
-Each patchable property must be `PatchPresence<T>`. Resource identity stays on `PatchCommand`;
-patch DTO types must not declare `@JsonApiId`. A supplied change outside the patch DTO surface
-fails with `UNREPRESENTABLE_PATCH_CHANGE` rather than being silently ignored.
+Each patchable property must be exactly `PatchPresence<T>`. Resource identity stays on
+`PatchCommand`; patch DTO types must not declare an identifier property (`@JsonApiId` or an
+implicit `id` member). Projection matches JSON:API member names and roles, not the command DTO's
+Java property names. A supplied change outside the patch DTO surface fails with
+`UNREPRESENTABLE_PATCH_CHANGE` rather than being silently ignored.
 
 `included` resources bind independently through the registry, stay wire-ordered, and are never
 injected into relationship properties; identifier primary data passes through as core
@@ -267,10 +269,14 @@ artifact; both majors share the neutral contracts of
   pointers with `/data`. Explicit attribute JSON `null` stores `value == null` (including Optional
   properties). Identity comes from resource `id` only (no `lid` fallback) and is never a change.
 - **Typed PATCH projection:** `JsonApiPatchProjector` maps an existing `PatchCommand` into an
-  application-owned patch DTO with `PatchPresence` properties without re-reading JSON or mutating
-  domain state. Reject `@JsonApiId` on patch DTO types; reject supplied changes outside the patch
-  DTO surface with `UNREPRESENTABLE_PATCH_CHANGE`. Projection contract cases come from
-  `PatchProjectionScenarios`; `PatchProjectionSpec` asserts full-catalog coverage.
+  application-owned patch DTO with exact `PatchPresence<T>` properties without re-reading JSON or
+  mutating domain state. Match source changes to patch properties by JSON:API member identity
+  (role + `jsonapiName`); construct records from Java record component names, not Jackson logical
+  names. Reject identifier properties (`@JsonApiId` or implicit `id`); reject incompatible
+  `PatchPresence<T>` value types and supplied changes outside the patch DTO surface with
+  `INVALID_PATCH_PROPERTY_TYPE` / `UNREPRESENTABLE_PATCH_CHANGE`. The `JavaType` overload preserves
+  generic bindings. Projection contract cases come from `PatchProjectionScenarios`;
+  `PatchProjectionSpec` asserts full-catalog coverage.
 - **Architectural tests:** `Jackson3DependencyRulesSpec` allows JDK, JSpecify, core public
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no

@@ -25,6 +25,8 @@ public final class PatchProjectionScenarios {
           omittedAndSuppliedAttributes(),
           explicitNullAttribute(),
           attributeRename(),
+          jsonapiNameMatchDifferentJavaNames(),
+          logicalNameDoesNotOverrideJsonapiName(),
           relationshipNullLinkage(),
           relationshipSingleLinkage(),
           relationshipEmptyCollection(),
@@ -33,8 +35,11 @@ public final class PatchProjectionScenarios {
           subsetAcceptsOverlappingChanges(),
           unrepresentableSuppliedChange(),
           identifierNotSupported(),
+          implicitIdentifierNotSupported(),
           resourceTypeMismatch(),
-          invalidPatchPropertyType());
+          invalidPatchPropertyType(),
+          incompatibleAttributeValueType(),
+          incompatibleRelationshipCollectionValueType());
 
   private static final FixtureCatalog<PatchProjectionScenario> CATALOG =
       FixtureCatalog.of("patch-projection", SCENARIOS);
@@ -89,7 +94,7 @@ public final class PatchProjectionScenarios {
   private static PatchProjectionScenario attributeRename() {
     return scenario(
         "patch-projection-attribute-rename",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"body-text\":\"Content\"}}}",
+        PatchDocuments.ARTICLE_BODY_TEXT_CONTENT,
         FlatArticle.class,
         FlatArticlePatch.class,
         PatchProjectionExpectation.success(
@@ -98,6 +103,26 @@ public final class PatchProjectionScenarios {
                 PatchPresence.present("Content"),
                 PatchPresence.omitted(),
                 PatchPresence.omitted())));
+  }
+
+  private static PatchProjectionScenario jsonapiNameMatchDifferentJavaNames() {
+    return scenario(
+        "patch-projection-jsonapi-name-match-different-java-names",
+        PatchDocuments.ARTICLE_BODY_TEXT_CONTENT,
+        FlatArticle.class,
+        FlatArticleBodyTextPatch.class,
+        PatchProjectionExpectation.success(
+            new FlatArticleBodyTextPatch(PatchPresence.present("Content"))));
+  }
+
+  private static PatchProjectionScenario logicalNameDoesNotOverrideJsonapiName() {
+    return scenario(
+        "patch-projection-logical-name-does-not-override-jsonapi-name",
+        PatchDocuments.ARTICLE_BODY_TEXT_CONTENT,
+        FlatArticle.class,
+        FlatArticleBodyNameMismatchPatch.class,
+        PatchProjectionExpectation.projectorFailure(
+            MappingDiagnostic.UNREPRESENTABLE_PATCH_CHANGE, "/body-text"));
   }
 
   private static PatchProjectionScenario relationshipNullLinkage() {
@@ -203,6 +228,16 @@ public final class PatchProjectionScenarios {
             MappingDiagnostic.PATCH_IDENTIFIER_NOT_SUPPORTED, "/id"));
   }
 
+  private static PatchProjectionScenario implicitIdentifierNotSupported() {
+    return scenario(
+        "patch-projection-implicit-identifier-not-supported",
+        PatchDocuments.ARTICLE_TITLE_HELLO,
+        FlatArticle.class,
+        FlatArticlePatchImplicitId.class,
+        PatchProjectionExpectation.projectorFailure(
+            MappingDiagnostic.PATCH_IDENTIFIER_NOT_SUPPORTED, "/id"));
+  }
+
   private static PatchProjectionScenario resourceTypeMismatch() {
     return scenario(
         "patch-projection-resource-type-mismatch",
@@ -221,6 +256,26 @@ public final class PatchProjectionScenarios {
         FlatArticlePlainTitlePatch.class,
         PatchProjectionExpectation.projectorFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/title"));
+  }
+
+  private static PatchProjectionScenario incompatibleAttributeValueType() {
+    return scenario(
+        "patch-projection-incompatible-attribute-value-type",
+        PatchDocuments.ARTICLE_TITLE_HELLO,
+        FlatArticle.class,
+        FlatArticleIntegerTitlePatch.class,
+        PatchProjectionExpectation.projectorFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/title"));
+  }
+
+  private static PatchProjectionScenario incompatibleRelationshipCollectionValueType() {
+    return scenario(
+        "patch-projection-incompatible-relationship-collection-value-type",
+        PatchDocuments.ARTICLE_COMMENTS_ONE,
+        FlatArticle.class,
+        FlatArticleStringCommentsPatch.class,
+        PatchProjectionExpectation.projectorFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/comments"));
   }
 
   private static PatchProjectionScenario scenario(

@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3;
 
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchCommand;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainPatchProjector;
 import java.util.Objects;
@@ -13,11 +14,14 @@ import tools.jackson.databind.json.JsonMapper;
  * never directly. The projector is safe for concurrent use once created. Projection is read-only:
  * it never re-parses JSON, never re-validates the update document, and never mutates domain state.
  *
- * <p>Each patchable property on the target type must be {@link
- * io.github.kazemek.jsonapi.jackson.PatchPresence}. Resource identity remains on {@link
- * PatchCommand#identity()}; patch DTO types must not declare {@code @JsonApiId}. Supplied changes
- * that are not representable by the selected patch DTO surface fail with {@link
- * MappingDiagnostic#UNREPRESENTABLE_PATCH_CHANGE}.
+ * <p>Each patchable property on the target type must be exactly {@link
+ * io.github.kazemek.jsonapi.jackson.PatchPresence}{@code <T>}. Resource identity remains on {@link
+ * PatchCommand#identity()}; patch DTO types must not declare an identifier property, whether
+ * annotated with {@code @JsonApiId} or implicitly named {@code id}. Supplied changes are matched by
+ * JSON:API member identity (role + final member name), not the command DTO's Java property names,
+ * and changes that are not representable by the selected patch DTO surface fail with {@link
+ * MappingDiagnostic#UNREPRESENTABLE_PATCH_CHANGE}. The {@link JavaType} overload preserves generic
+ * bindings for parameterized patch DTO types.
  */
 public final class JsonApiPatchProjector {
 

@@ -28,13 +28,19 @@ Jackson 3 projection:
   mutation;
 - requires `@JsonApiResource` on the patch DTO with the same JSON:API type as the command mapping
   type;
-- rejects `@JsonApiId` on patch DTO types; identity remains on `PatchCommand.identity()`;
+- rejects identifier properties on patch DTO types, whether annotated with `@JsonApiId` or
+  implicitly resolved from an unannotated `id` property; identity remains on
+  `PatchCommand.identity()`;
+- matches supplied changes to patch DTO properties by JSON:API member identity (`PropertyRole` +
+  final `jsonapiName`), not the command DTO's Java/Jackson logical names;
+- requires each patchable property to be declared as exactly `PatchPresence<T>` (not `Present<T>`
+  or `Omitted<T>`) whose value type is compatible with the already-converted command property type;
 - allows patch DTOs that expose only a mutable subset of the resource;
 - rejects supplied changes that are not representable by the selected patch DTO surface rather than
   silently ignoring them;
 - constructs the patch DTO through direct record construction from `PatchPresence` property
-  values (patch DTO types must be records; Jackson-major-neutral `PatchPresence` stays
-  Jackson-import-free);
+  values, using Java record component names rather than Jackson logical names (patch DTO types must
+  be records; Jackson-major-neutral `PatchPresence` stays Jackson-import-free);
 
 Applications own authorization, business validation, and command application. Spring controller
 integration and Jackson 2 parity follow as separate adapter work once this contract is stable.

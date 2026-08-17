@@ -31,10 +31,10 @@ class PatchProjectionScenariosCatalogSpec extends Specification {
     PatchProjectionScenarios.all().every { scenario ->
       def commandPkg = scenario.commandTargetType().packageName
       def patchPkg = scenario.patchTargetType().packageName
-      commandPkg == "io.github.kazemek.jsonapi.testfixtures.domainread" ||
+      (commandPkg == "io.github.kazemek.jsonapi.testfixtures.domainread" ||
           commandPkg == "io.github.kazemek.jsonapi.testfixtures.domainwrite" ||
-          commandPkg == "io.github.kazemek.jsonapi.testfixtures.domainpatch"
-      patchPkg == "io.github.kazemek.jsonapi.testfixtures.domainpatchprojection"
+          commandPkg == "io.github.kazemek.jsonapi.testfixtures.domainpatch") &&
+          patchPkg == "io.github.kazemek.jsonapi.testfixtures.domainpatchprojection"
     }
   }
 

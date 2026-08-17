@@ -17,6 +17,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | `io.github.kazemek.jsonapi.testfixtures.sparsefieldset`        | Shared sparse-fieldset write fixtures: annotated models plus the `SparseFieldsetScenarios` catalog and the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.enveloperead`          | Shared typed-envelope read fixtures: envelope-only binding targets plus the `EnvelopeReadScenarios` catalog and the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs) |
+| `io.github.kazemek.jsonapi.testfixtures.domainpatchprojection` | Shared typed PATCH projection fixtures: `PatchProjectionScenarios` catalog plus patch DTO models and `PatchProjectionExpectation` |
 
 ## Minimal usage
 

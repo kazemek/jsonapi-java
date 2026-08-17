@@ -19,28 +19,27 @@ public final class MappingDefinitionCache {
   }
 
   ResourceMapping resolve(Class<?> rawType) {
-    return resolve(rawType, false);
+    return resolve(mapper.constructType(rawType), false);
   }
 
-  ResourceMapping resolvePatch(Class<?> rawType) {
-    return resolve(rawType, true);
+  ResourceMapping resolvePatch(JavaType javaType) {
+    return resolve(javaType, true);
   }
 
-  private ResourceMapping resolve(Class<?> rawType, boolean patchDto) {
+  private ResourceMapping resolve(JavaType javaType, boolean patchDto) {
     SerializationConfig config = mapper.serializationConfig();
-    JavaType javaType = mapper.constructType(rawType);
     int configHash = configHash(config);
     CacheKey key = new CacheKey(javaType, configHash, patchDto);
     ResourceMapping existing = cache.get(key);
     if (existing != null) {
       return existing;
     }
-    return cache.computeIfAbsent(
-        key, cacheKey -> computeMapping(rawType, javaType, config, patchDto));
+    return cache.computeIfAbsent(key, cacheKey -> computeMapping(javaType, config, patchDto));
   }
 
   private ResourceMapping computeMapping(
-      Class<?> rawType, JavaType javaType, SerializationConfig config, boolean patchDto) {
+      JavaType javaType, SerializationConfig config, boolean patchDto) {
+    Class<?> rawType = javaType.getRawClass();
     ClassIntrospector introspector = config.classIntrospectorInstance();
     AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
     BeanDescription beanDescription =

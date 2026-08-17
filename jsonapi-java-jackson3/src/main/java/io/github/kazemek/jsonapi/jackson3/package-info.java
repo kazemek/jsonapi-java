@@ -29,8 +29,9 @@
  *
  * <p>Typed patch DTO projection uses {@link JsonApiJackson3#patchProjector} to derive a {@link
  * JsonApiPatchProjector} that maps an existing {@link
- * io.github.kazemek.jsonapi.jackson.PatchCommand} into an application-owned patch DTO with {@link
- * io.github.kazemek.jsonapi.jackson.PatchPresence} fields without re-reading JSON or mutating
+ * io.github.kazemek.jsonapi.jackson.PatchCommand} into an application-owned record patch DTO with
+ * exact {@link io.github.kazemek.jsonapi.jackson.PatchPresence}{@code <T>} fields, matching
+ * JSON:API member identity rather than command-DTO Java names, without re-reading JSON or mutating
  * domain state.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
