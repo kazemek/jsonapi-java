@@ -14,7 +14,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.AnnotationIntrospector;
+import tools.jackson.databind.DeserializationConfig;
 import tools.jackson.databind.JavaType;
+import tools.jackson.databind.SerializationConfig;
+import tools.jackson.databind.introspect.AnnotatedMember;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -108,19 +112,7 @@ public final class DomainPatchDtoBinder {
 
   private void validatePatchableProperty(MappingProperty property, Class<?> rawType) {
     JavaType type = property.accessor().getType();
-    boolean wrapperDeserializer =
-        mapper
-                .deserializationConfig()
-                .getAnnotationIntrospector()
-                .findDeserializer(mapper.deserializationConfig(), property.accessor())
-            != null;
-    boolean wrapperSerializer =
-        mapper
-                .serializationConfig()
-                .getAnnotationIntrospector()
-                .findSerializer(mapper.serializationConfig(), property.accessor())
-            != null;
-    if (!isPatchPresenceType(type) || wrapperDeserializer || wrapperSerializer) {
+    if (!isPatchPresenceType(type) || hasWrapperCustomization(property)) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
           rawType,
@@ -128,9 +120,53 @@ public final class DomainPatchDtoBinder {
           "PATCH DTO member '"
               + property.logicalName()
               + "' must be declared exactly as PatchPresence<T> without wrapper-level "
-              + "@JsonDeserialize/@JsonSerialize on "
+              + "@JsonDeserialize/@JsonSerialize customization on "
               + rawType.getName());
     }
+  }
+
+  /**
+   * True when the effective property metadata carries any wrapper-level Jackson serialization or
+   * deserialization customization (including mix-ins surfaced through the annotation introspector)
+   * that could replace or alter the internal presence representation. Inner-{@code T} customization
+   * (type-level serializers/deserializers, converters, modules) lives on the inner type, not on the
+   * property, so it is not detected here.
+   */
+  private boolean hasWrapperCustomization(MappingProperty property) {
+    AnnotatedMember accessor = property.accessor();
+    return hasSerializationCustomization(accessor) || hasDeserializationCustomization(accessor);
+  }
+
+  private boolean hasSerializationCustomization(AnnotatedMember accessor) {
+    SerializationConfig config = mapper.serializationConfig();
+    AnnotationIntrospector introspector = config.getAnnotationIntrospector();
+    JavaType declaredType = accessor.getType();
+    return introspector.findSerializer(config, accessor) != null
+        || introspector.findKeySerializer(config, accessor) != null
+        || introspector.findContentSerializer(config, accessor) != null
+        || introspector.findNullSerializer(config, accessor) != null
+        || introspector.findSerializationConverter(config, accessor) != null
+        || introspector.findSerializationContentConverter(config, accessor) != null
+        || introspector.findSerializationTyping(config, accessor) != null
+        || typeRefined(
+            introspector.refineSerializationType(config, accessor, declaredType), declaredType);
+  }
+
+  private boolean hasDeserializationCustomization(AnnotatedMember accessor) {
+    DeserializationConfig config = mapper.deserializationConfig();
+    AnnotationIntrospector introspector = config.getAnnotationIntrospector();
+    JavaType declaredType = accessor.getType();
+    return introspector.findDeserializer(config, accessor) != null
+        || introspector.findKeyDeserializer(config, accessor) != null
+        || introspector.findContentDeserializer(config, accessor) != null
+        || introspector.findDeserializationConverter(config, accessor) != null
+        || introspector.findDeserializationContentConverter(config, accessor) != null
+        || typeRefined(
+            introspector.refineDeserializationType(config, accessor, declaredType), declaredType);
+  }
+
+  private static boolean typeRefined(@Nullable JavaType refined, JavaType declared) {
+    return refined != null && !refined.equals(declared);
   }
 
   private static boolean isPatchPresenceType(JavaType type) {
@@ -162,8 +198,7 @@ public final class DomainPatchDtoBinder {
       Map<String, @Nullable Object> properties,
       Class<?> rawType) {
     Attributes attributes = resource.attributes();
-    @Nullable Map<String, @Nullable Object> supplied =
-        attributes == null ? null : attributes.attributes();
+    Map<String, @Nullable Object> supplied = attributes == null ? null : attributes.attributes();
     Map<String, MappingProperty> byJsonapiName =
         PatchMemberConverter.byJsonapiName(mapping.attributes());
     for (MappingProperty property : mapping.attributes()) {
@@ -195,7 +230,7 @@ public final class DomainPatchDtoBinder {
       Map<String, @Nullable Object> properties,
       Class<?> rawType) {
     Relationships relationships = resource.relationships();
-    @Nullable Map<String, Relationship> supplied =
+    Map<String, Relationship> supplied =
         relationships == null ? null : relationships.relationships();
     Map<String, MappingProperty> byJsonapiName =
         PatchMemberConverter.byJsonapiName(mapping.relationships());

@@ -16,10 +16,14 @@ import tools.jackson.databind.ValueDeserializer;
  * <p>{@link #createContextual} captures the property's single {@code PatchPresence} type argument
  * as the inner {@link JavaType}. {@code present=false} yields {@link PatchPresence#omitted()};
  * {@code present=true} yields {@link PatchPresence#present(Object)} with the {@code value} member
- * read through the inner type. When the {@code value} member is absent (dropped by a caller
- * inclusion configuration such as {@code NON_EMPTY}) or is JSON {@code null}, the inner type's null
- * value is used (for example {@code Optional.empty()} for an {@link java.util.Optional} inner), so
- * the tri-state never collapses under caller serialization configuration.
+ * read through the inner type. When the {@code value} member is absent or is JSON {@code null}, the
+ * inner type's null value is used (for example {@code Optional.empty()} for an {@link
+ * java.util.Optional} inner), so the tri-state never collapses under caller serialization
+ * configuration.
+ *
+ * <p>The marker shape is strictly enforced: any input that is not an internal marker object with a
+ * boolean {@code present} member (and only the {@code present}/{@code value} members) fails loudly
+ * instead of silently reconstructing {@code Omitted()}.
  */
 final class PatchPresenceDeserializer extends ValueDeserializer<PatchPresence<?>> {
 
@@ -49,9 +53,22 @@ final class PatchPresenceDeserializer extends ValueDeserializer<PatchPresence<?>
   @Override
   public PatchPresence<?> deserialize(JsonParser parser, DeserializationContext ctxt) {
     JavaType innerType = inner != null ? inner : ctxt.constructType(Object.class);
-    if (!parser.isExpectedStartObjectToken()) {
-      return PatchPresence.present(ctxt.readValue(parser, innerType));
+    MarkerFields fields = readMarker(parser, ctxt, innerType);
+    if (!fields.present()) {
+      return PatchPresence.omitted();
     }
+    if (!fields.sawValue()) {
+      return PatchPresence.present(nullValue(ctxt, innerType));
+    }
+    return PatchPresence.present(fields.value());
+  }
+
+  private static MarkerFields readMarker(
+      JsonParser parser, DeserializationContext ctxt, JavaType innerType) {
+    if (!parser.isExpectedStartObjectToken()) {
+      invalidMarker(ctxt, innerType, "expected an internal presence marker object");
+    }
+    boolean sawPresent = false;
     boolean present = false;
     boolean sawValue = false;
     @Nullable Object rawValue = null;
@@ -60,29 +77,42 @@ final class PatchPresenceDeserializer extends ValueDeserializer<PatchPresence<?>
       String name = parser.currentName();
       parser.nextToken();
       if (PRESENT.equals(name)) {
+        if (parser.currentToken() != JsonToken.VALUE_TRUE
+            && parser.currentToken() != JsonToken.VALUE_FALSE) {
+          invalidMarker(ctxt, innerType, "'present' must be a boolean");
+        }
         present = parser.getBooleanValue();
+        sawPresent = true;
       } else if (VALUE.equals(name)) {
         sawValue = true;
-        if (parser.currentToken() == JsonToken.VALUE_NULL) {
-          rawValue = nullValue(ctxt, innerType);
-        } else {
-          rawValue = ctxt.readValue(parser, innerType);
-        }
+        rawValue = readValueMember(parser, ctxt, innerType);
       } else {
-        parser.skipChildren();
+        invalidMarker(ctxt, innerType, "unexpected member '" + name + "'");
       }
       token = parser.nextToken();
     }
-    if (!present) {
-      return PatchPresence.omitted();
+    if (!sawPresent) {
+      invalidMarker(ctxt, innerType, "missing 'present' member");
     }
-    if (!sawValue) {
-      rawValue = nullValue(ctxt, innerType);
+    return new MarkerFields(present, sawValue, rawValue);
+  }
+
+  private static @Nullable Object readValueMember(
+      JsonParser parser, DeserializationContext ctxt, JavaType innerType) {
+    if (parser.currentToken() == JsonToken.VALUE_NULL) {
+      return nullValue(ctxt, innerType);
     }
-    return PatchPresence.present(rawValue);
+    return ctxt.readValue(parser, innerType);
+  }
+
+  private static void invalidMarker(
+      DeserializationContext ctxt, JavaType innerType, String detail) {
+    ctxt.reportInputMismatch(innerType, "Invalid internal PatchPresence marker: " + detail);
   }
 
   private static @Nullable Object nullValue(DeserializationContext ctxt, JavaType innerType) {
     return ctxt.findRootValueDeserializer(innerType).getNullValue(ctxt);
   }
+
+  private record MarkerFields(boolean present, boolean sawValue, @Nullable Object value) {}
 }

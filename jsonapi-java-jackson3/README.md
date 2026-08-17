@@ -169,16 +169,19 @@ authorization and command application.
 
 `patchDtoReader` uses the same validate-on-read contract and binds the update **directly** into an
 application-owned annotated PATCH DTO: every attribute and relationship member must be declared
-exactly as `PatchPresence<T>` (wrapper-level `@JsonDeserialize`/`@JsonSerialize` on such a member
-is rejected with `INVALID_PATCH_PROPERTY_TYPE`; inner-`T` customization stays supported), omitted
-members become `PatchPresence.omitted()`, supplied members become `PatchPresence.present(...)`
+exactly as `PatchPresence<T>` (wrapper-level `@JsonDeserialize`/`@JsonSerialize` customization —
+`using`, `converter`, key/content/null customizers, typing, type refinement, and mix-ins — on such
+a member is rejected with `INVALID_PATCH_PROPERTY_TYPE`; inner-`T` customization stays supported),
+omitted members become `PatchPresence.omitted()`, supplied members become `PatchPresence.present(...)`
 (explicit JSON `null` / null linkage becomes `present(null)`, or `present(Optional.empty())` for an
 `Optional` inner type), and supplied members unknown to the PATCH DTO fail with
 `UNKNOWN_PATCH_MEMBER` (the low-level path silently ignores them — direct binding rejects).
 Parameterized `JavaType` targets (e.g. `GenericPatch<String>`) keep their type bindings through
 mapping, conversion, and construction. The caller mapper is never mutated; the binder mapper is
-derived via `rebuild()` plus an internal `PatchPresence` module, and the tri-state never collapses
-under caller `JsonInclude` inclusion config. See [ADR-013](../docs/adr/013-direct-typed-patch-dto-binding.md).
+derived via `rebuild()` plus an internal `PatchPresence` module whose internal marker always
+serializes with the exact `present`/`value` member names, so the tri-state is invariant to caller
+`JsonInclude` inclusion config **and** caller property naming strategies. See
+[ADR-013](../docs/adr/013-direct-typed-patch-dto-binding.md).
 
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
@@ -286,9 +289,13 @@ artifact; both majors share the neutral contracts of
   explicit target `JavaType`); the DTO path converts through the unwrapped inner type and wraps in
   `Present`/`Omitted`. Declaration violations (`INVALID_PATCH_PROPERTY_TYPE`) and unknown supplied
   members (`UNKNOWN_PATCH_MEMBER`) fail at bind time; the declaration check covers implicit-role
-  members too. Construction uses the synthetic-map + `convertValue` strategy (ADR-004) with an
-  internal `PresenceMarker` + `PatchPresenceModule`; never register a `PatchPresence` deserializer
-  on the caller's mapper.
+  members too and rejects every wrapper-level Jackson customization path (custom `using`
+  serializers/deserializers, converters, key/content/null customizers, typing, type refinement,
+  mix-ins). Construction uses the synthetic-map + `convertValue` strategy (ADR-004) with an
+  internal `PresenceMarker` + `PatchPresenceModule`; the marker's serializer always emits the exact
+  `present`/`value` member names (invariant to caller naming strategies and inclusion config) and
+  the deserializer fails loudly on any other marker shape. Never register a `PatchPresence`
+  deserializer on the caller's mapper.
 - **Architectural tests:** `Jackson3DependencyRulesSpec` allows JDK, JSpecify, core public
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no

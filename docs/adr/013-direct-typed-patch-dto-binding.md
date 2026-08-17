@@ -48,14 +48,22 @@ document and binds it **directly** into an application-owned annotated PATCH DTO
   synthetic property map.
 - Construction uses a minimal internal presence marker (`present` boolean + already-converted
   inner value) plus a small internal `PatchPresence` deserializer registered on the derived binder
-  mapper. The marker's `present` boolean is a primitive, so no caller `JsonInclude` configuration
-  (`NON_ABSENT`, `NON_EMPTY`, `NON_NULL`) can collapse the tri-state: `Omitted()`, `Present(null)`,
-  and `Present(value)` survive even when the inner `value` member is dropped from the serialized
-  marker.
+  mapper. The marker's wire shape is deterministic and independent of any caller property naming
+  strategy: an internal serializer always emits exactly the `present` and `value` member names, and
+  serializes the inner value through the caller-derived configuration so inner-type serializers and
+  modules remain authoritative. The `present` boolean is a primitive, so no caller `JsonInclude`
+  configuration (`NON_ABSENT`, `NON_EMPTY`, `NON_NULL`) can collapse the tri-state:
+  `Omitted()`, `Present(null)`, and `Present(value)` survive. A marker that is not exactly this
+  internal shape (unknown or mangled member names, a non-boolean or absent `present`, or a
+  non-object value) fails loudly instead of silently reconstructing `Omitted()`.
 - Wrapper-level property `@JsonDeserialize` / `@JsonSerialize` on a `PatchPresence<T>` property is
   **rejected** at declaration validation with `INVALID_PATCH_PROPERTY_TYPE`: it would replace the
-  internal presence machinery. Inner-type customization (type-level deserializers/converters,
-  modules, naming) remains fully supported through normal Jackson conversion.
+  internal presence machinery. The check covers every Jackson serialization/deserialization
+  customization path surfaced on the effective property metadata — custom `using` serializers and
+  deserializers, converters (`converter`), key/content and null customizers, typing and type
+  refinement (`as`/`keyAs`/`contentAs`), and the same customizations supplied through mix-ins.
+  Inner-type customization (type-level deserializers/converters, modules, naming) remains fully
+  supported through normal Jackson conversion.
 - The low-level `PatchCommand<T>` path (ADR-012) stays available and unchanged. Both paths share
   per-member conversion through one internal collaborator so they cannot silently drift.
 - Applications own authorization and application; the library validates, converts, and binds only.

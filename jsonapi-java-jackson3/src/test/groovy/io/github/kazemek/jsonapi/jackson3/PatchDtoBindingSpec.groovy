@@ -46,6 +46,8 @@ import tools.jackson.databind.annotation.JsonDeserialize
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.deser.std.StdDeserializer
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.type.TypeFactory
+import tools.jackson.databind.util.Converter
 
 class PatchDtoBindingSpec extends Specification {
 
@@ -227,6 +229,51 @@ class PatchDtoBindingSpec extends Specification {
     dto.title == PatchPresence.present(new LoudValue("HELLO"))
   }
 
+  def "property-level @JsonDeserialize(converter) on a PatchPresence member is rejected"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'
+
+    when:
+    reader.readValue(json, WrapperConverterDeserializePatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
+    ex.propertyPath() == "/title"
+  }
+
+  def "property-level @JsonSerialize(converter) on a PatchPresence member is rejected"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'
+
+    when:
+    reader.readValue(json, WrapperConverterSerializePatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
+    ex.propertyPath() == "/title"
+  }
+
+  def "mix-in wrapper @JsonDeserialize on a PatchPresence member is rejected"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .addMixIn(MixinTargetPatch, MixInWithDeserializer)
+        .build()
+    def reader = JsonApiJackson3.patchDtoReader(mapper)
+    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'
+
+    when:
+    reader.readValue(json, MixinTargetPatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
+    ex.propertyPath() == "/title"
+  }
+
   def "naming strategy is honored for PATCH DTO members"() {
     given:
     def mapper = JsonMapper.builder()
@@ -241,6 +288,48 @@ class PatchDtoBindingSpec extends Specification {
     then:
     dto.id == "1"
     dto.displayTitle == PatchPresence.present("T")
+  }
+
+  def "presence tri-state is invariant to UPPER_CAMEL_CASE naming"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .propertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE)
+        .build()
+    def reader = JsonApiJackson3.patchDtoReader(mapper)
+    def withNulls = '{"data":{"type":"articles","id":"1","attributes":{"Title":"T","Body":null}}}'
+    def withOptional = '{"data":{"type":"articles","id":"1","attributes":{"Title":"T","Subtitle":null}}}'
+
+    when:
+    def dto = reader.readValue(withNulls, MixedPatch)
+    def optionalDto = reader.readValue(withOptional, MixedPatch)
+
+    then:
+    dto.id == "1"
+    dto.title == PatchPresence.present("T")
+    dto.body == PatchPresence.present(null)
+    dto.subtitle.isOmitted()
+    optionalDto.subtitle == PatchPresence.present(Optional.empty())
+  }
+
+  def "presence tri-state is invariant to UPPER_SNAKE_CASE naming"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .propertyNamingStrategy(PropertyNamingStrategies.UPPER_SNAKE_CASE)
+        .build()
+    def reader = JsonApiJackson3.patchDtoReader(mapper)
+    def withNulls = '{"data":{"type":"articles","id":"1","attributes":{"TITLE":"T","BODY":null}}}'
+    def withOptional = '{"data":{"type":"articles","id":"1","attributes":{"TITLE":"T","SUBTITLE":null}}}'
+
+    when:
+    def dto = reader.readValue(withNulls, MixedPatch)
+    def optionalDto = reader.readValue(withOptional, MixedPatch)
+
+    then:
+    dto.id == "1"
+    dto.title == PatchPresence.present("T")
+    dto.body == PatchPresence.present(null)
+    dto.subtitle.isOmitted()
+    optionalDto.subtitle == PatchPresence.present(Optional.empty())
   }
 
   def "omitted, present-value, and present-null are distinct"() {
@@ -604,6 +693,31 @@ class PatchDtoBindingSpec extends Specification {
   }
 
   @JsonApiResource(type = "articles")
+  static class WrapperConverterDeserializePatch {
+    @JsonApiId String id
+    @JsonDeserialize(converter = IdentityConverter)
+    PatchPresence<String> title
+  }
+
+  @JsonApiResource(type = "articles")
+  static class WrapperConverterSerializePatch {
+    @JsonApiId String id
+    @JsonSerialize(converter = IdentityConverter)
+    PatchPresence<String> title
+  }
+
+  @JsonApiResource(type = "articles")
+  static class MixinTargetPatch {
+    @JsonApiId String id
+    PatchPresence<String> title
+  }
+
+  static abstract class MixInWithDeserializer {
+    @JsonDeserialize(using = UppercaseDeserializer)
+    abstract PatchPresence<String> getTitle()
+  }
+
+  @JsonApiResource(type = "articles")
   static class LoudPatch {
     @JsonApiId String id
     @JsonApiAttribute PatchPresence<LoudValue> title
@@ -701,6 +815,28 @@ class PatchDtoBindingSpec extends Specification {
     @Override
     void serialize(LoudValue value, JsonGenerator gen, SerializationContext ctxt) {
       gen.writeString(value.value)
+    }
+  }
+
+  static class IdentityConverter implements Converter<Object, Object> {
+    @Override
+    Object convert(DeserializationContext ctxt, Object value) {
+      return value
+    }
+
+    @Override
+    Object convert(SerializationContext ctxt, Object value) {
+      return value
+    }
+
+    @Override
+    JavaType getInputType(TypeFactory typeFactory) {
+      return typeFactory.constructType(Object)
+    }
+
+    @Override
+    JavaType getOutputType(TypeFactory typeFactory) {
+      return typeFactory.constructType(Object)
     }
   }
 }
