@@ -36,9 +36,12 @@ Additional activities are conditional on capabilities:
 - optional Design/Plan Review requires the capabilities to run or hand off to the fresh reviewer and
   persist its review artifact.
 
-If a capability required by the core workflow is unavailable, stop the repository workflow and report
-the limitation to the maintainer rather than silently running a reduced version. Informal planning may
-continue outside the workflow.
+If a capability required by the core workflow is unavailable, stop the repository planning workflow
+and report the limitation to the maintainer rather than silently running a reduced version. If an
+explicitly requested optional activity cannot run because a required additional capability is
+unavailable, report that activity as unavailable and do not pretend or imply that it ran; this does
+not invalidate otherwise-complete planning. Only a missing core workflow capability stops the
+repository planning workflow itself. Informal planning may continue outside the workflow.
 
 ## Resolve the requested work
 

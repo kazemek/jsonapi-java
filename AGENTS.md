@@ -60,7 +60,7 @@ descriptive, not an automatic task-matching router:
 |-------------------|------------------------|
 | Review implementation against the requested outcome | `implementation-review` |
 | Produce a fresh-session review handoff when required | `implementation-handoff` |
-| Add a module or change public packages, entry points, checks, validate/read flows, or non-goals | `module-docs` |
+| Add a module or change public packages, entry points, validate/read flows, or non-goals | `module-docs` |
 | Format Spotless-covered files | `spotless-format` |
 | Complete production/test source work | `sonar-quality-gate` |
 
@@ -75,7 +75,8 @@ The `implementation-planning` workflow is a defined engineering workflow: it req
 capabilities necessary to execute reliably and must not silently degrade into a partial version when
 those capabilities are unavailable.
 
-- A workflow must not be entered merely because the current task appears to match it.
+- A lifecycle workflow entrypoint must not be entered merely because the current task appears to
+  match it.
 - Top-level lifecycle workflow entrypoints require explicit maintainer request or authorization,
   which the harness may realize semantically rather than via literal slash syntax. An authorized
   workflow may execute, delegate to, or load workflow-support instructions, or execute an explicitly
@@ -85,8 +86,9 @@ those capabilities are unavailable.
 - If requested implementation work is not one coherent increment against current repository reality,
   stop with **Needs decomposition** and return control to the user/coordinating layer. Do not invent
   a repository multi-plan DAG.
-- A direct user/maintainer request is sufficient authority to plan and implement. No external
-  tracker is required.
+- A direct user/maintainer request or authorization to enter a lifecycle workflow is sufficient
+  authority for that workflow. No external tracker is required. `implement-work` remains the single
+  implementation authorization boundary.
 - Planning is never automatic: planning ends ready for implementation, and implementation begins
   only when the maintainer explicitly requests or authorizes the `implement-work` lifecycle workflow.
   There is no separate mandatory `Build now?` confirmation; explicit maintainer intent is the
