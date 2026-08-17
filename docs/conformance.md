@@ -6,9 +6,10 @@ Current capability: `jsonapi-java-core` owns the document model, aggregate valid
 shape, error `source.pointer` syntax, and reserved link names. `jsonapi-java-annotations` owns
 metadata-only domain-mapping annotations. `jsonapi-java-jackson3` owns the Jackson 3 document
 writer/reader, domain-to-resource mapping, compound inclusion, sparse fieldsets, flat DTO binding,
-typed domain envelopes, and presence-aware PATCH binding. `jsonapi-java-jackson-common` owns
+typed domain envelopes, and presence-aware PATCH binding (low-level commands and direct typed PATCH
+DTOs). `jsonapi-java-jackson-common` owns
 Jackson-major-neutral policy, diagnostics, contexts, envelope values, and presence-aware update
-commands. Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
+contracts. Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
 evidence only. The capability-tagged document corpus, closed negative corpus, and dual-success
 ambiguous primary-data cases under `fixtures/jsonapi-1.1/` are the shared codec contract for every
 Jackson major. Jackson 2 presence-aware PATCH binding, query parsing, and Spring adapters remain
@@ -134,7 +135,8 @@ documents.
 | Flat resource-to-DTO binding                            | supported    | Validated document first; linkage only — never reads `included`                                                                                                                                                                |
 | Typed domain document envelopes                         | supported    | `JsonApiDomainDocument` via `JsonApiJackson3.domainDocumentReader`                                                                                                                                                             |
 | Independent typed binding of `included` resources       | supported    | Wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                            |
-| Presence-aware resource-update commands                 | supported    | Jackson 3 binding supported; Jackson 2 binding remains deferred                                                                                                                                                                |
+| Presence-aware resource-update commands                 | supported    | Jackson 3 binding supported; Jackson 2 binding remains deferred                                |
+| Direct typed PATCH DTO binding                          | supported    | `PatchPresence` tri-state; Jackson 3 binding supported; Jackson 2 binding remains deferred     |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                                                                                                                                                  |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                                                                                                                                                  |
 

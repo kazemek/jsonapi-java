@@ -16,7 +16,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
 | `io.github.kazemek.jsonapi.testfixtures.sparsefieldset`        | Shared sparse-fieldset write fixtures: annotated models plus the `SparseFieldsetScenarios` catalog and the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.enveloperead`          | Shared typed-envelope read fixtures: envelope-only binding targets plus the `EnvelopeReadScenarios` catalog and the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
-| `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs) |
+| `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs), and the direct typed PATCH DTO `PatchDtoScenarios` catalog plus `PatchDtoScenario` / `PatchDtoExpectation` and the shared `ArticlePatch` / `OptionalPatch` / `IntIdPatch` PATCH DTOs (including declaration-invalid PATCH DTOs) |
 
 ## Minimal usage
 
@@ -42,6 +42,8 @@ JsonApiFixtures.envelopeRead().all()
 JsonApiFixtures.envelopeRead().byId("binds a single-resource document into a flat DTO envelope")
 JsonApiFixtures.patch().all()
 JsonApiFixtures.patch().byId("patch-omitted-and-supplied-attributes")
+JsonApiFixtures.patchDto().all()
+JsonApiFixtures.patchDto().byId("patch-dto-omitted-and-supplied-attributes")
 ```
 
 Test JVMs must have `jsonapi.fixtures.dir` pointing at `fixtures/jsonapi-1.1`; resolve both
@@ -52,8 +54,8 @@ them (together with `jsonapi.schema.fixtures.dir`) for every module.
 
 This module does not add wire expectations, diagnostics, or corpora per Jackson major — those
 must stay version-neutral (see [ADR-007](../docs/adr/007-module-boundaries.md)). The flat write,
-flat read, compound-write, sparse-fieldset, typed-envelope, and presence-aware PATCH catalogs are
-in this module.
+flat read, compound-write, sparse-fieldset, typed-envelope, presence-aware PATCH, and direct typed
+PATCH DTO catalogs are in this module.
 
 ## Further reading
 

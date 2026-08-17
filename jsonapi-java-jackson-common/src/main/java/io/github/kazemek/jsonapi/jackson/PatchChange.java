@@ -79,11 +79,13 @@ public sealed interface PatchChange
         return Collections.unmodifiableSet(copy);
       }
       case Map<?, ?> map -> {
-        Map<Object, @Nullable Object> copy = new LinkedHashMap<>(map.size());
+        Map<Object, @Nullable Object> copy = LinkedHashMap.newLinkedHashMap(map.size());
         copy.putAll(map);
         return Collections.unmodifiableMap(copy);
       }
-      default -> {}
+      default -> {
+        // Scalars and arrays are copied below.
+      }
     }
     return copyArray(value);
   }

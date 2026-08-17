@@ -22,6 +22,7 @@ CompoundSerializationContext inclusion =
         .withIncludePaths(List.of(IncludePath.of("comments.author")))
         .withIncludePolicy(IncludePolicy.allowAll());
 PatchCommand<ArticleDto> command = /* from JsonApiJackson3.patchReader(...).readValue(...) */;
+PatchPresence<String> title = /* from an ArticlePatchDto member after patchDtoReader binding */;
 ```
 
 Types here are values only: policies (`IncludePolicy`, `FieldPolicy`, allowance keys), read/write
@@ -29,9 +30,9 @@ contexts (`DocumentReadContext`, `CompoundSerializationContext`, `DocumentEnvelo
 `MappedDocument`), diagnostics (`MappingDiagnostic`, `CodecFailureCategory`,
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`), identifier
 conversion (`IdentifierConverter`), domain envelope values (`DomainData`, `IncludedResources`), and
-presence-aware update commands (`PatchCommand`, `PatchChange`). No type in this package imports or
-exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories, readers, writers,
-binders, and mapping introspection stay in the major-specific adapter packages.
+presence-aware update contracts (`PatchCommand`, `PatchChange`, `PatchPresence`). No type in this
+package imports or exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories,
+readers, writers, binders, and mapping introspection stay in the major-specific adapter packages.
 
 ## Non-goals
 
@@ -67,7 +68,10 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   Java `null` means member absence; explicit JSON `null` stays a sealed variant
   (`DomainData.NullData`, etc.). Presence-aware PATCH: `PatchChange` entries in `changes()` are
   present; explicit attribute JSON `null` / relationship NullLinkage use `@Nullable value == null`
-  (no sealed attribute-null variant). NullAway enforces this on Java `main` sources (ADR-009).
+  (no sealed attribute-null variant). Direct PATCH DTO members declare presence through
+  `PatchPresence`: `Present` with a `null` value is explicit null, never omission; nullable
+  `Optional` stays a separate inner concern (`PatchPresence<Optional<T>>` is meaningful). NullAway
+  enforces this on Java `main` sources (ADR-009).
 - **Diagnostics:** `JsonApiMappingException` carries a stable `MappingDiagnostic`; read failures
   use `JsonApiDocumentReadException` with `CodecFailureCategory`, a JSON Pointer-like path, and a
   safe `SourceLocation`. Do not introduce new failure types without an implementation plan.
