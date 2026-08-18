@@ -65,10 +65,12 @@ final class StructuredValueBinder {
   private static final Shape NO_SHAPE = new Shape(null, List.of(), false, false);
 
   private final JsonMapper mapper;
+  private final PropertyScopedValueConverter propertyScoped;
   private final Map<CacheKey, Shape> shapeCache = new ConcurrentHashMap<>();
 
   StructuredValueBinder(JsonMapper mapper) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
+    this.propertyScoped = new PropertyScopedValueConverter(mapper);
   }
 
   // ============================== TYPED MODE ==============================
@@ -125,7 +127,7 @@ final class StructuredValueBinder {
     validateTypedShape(shape, pointer, rawType);
     for (Object key : wire.keySet()) {
       String name = key instanceof String string ? string : String.valueOf(key);
-      if (shape.memberByWireOrLogical(name) == null) {
+      if (shape.memberByWire(name) == null) {
         throw unknownPatchMember(rawType, pointer + "/" + PointerEscapes.escape(name), name);
       }
     }
@@ -139,16 +141,6 @@ final class StructuredValueBinder {
                 true,
                 typedMemberValue(
                     wire.get(wireName),
-                    member.type(),
-                    pointer + "/" + PointerEscapes.escape(wireName),
-                    rawType)));
-      } else if (wire.containsKey(member.internalName())) {
-        markerMap.put(
-            wireName,
-            new PresenceMarker(
-                true,
-                typedMemberValue(
-                    wire.get(member.internalName()),
                     member.type(),
                     pointer + "/" + PointerEscapes.escape(wireName),
                     rawType)));
@@ -230,13 +222,7 @@ final class StructuredValueBinder {
             bindLowLevelMember(
                 wireMap.get(wireName),
                 member,
-                pointer + "/" + PointerEscapes.escape(wireName),
-                rawType));
-      } else if (wireMap.containsKey(member.internalName())) {
-        members.add(
-            bindLowLevelMember(
-                wireMap.get(member.internalName()),
-                member,
+                beanType,
                 pointer + "/" + PointerEscapes.escape(wireName),
                 rawType));
       }
@@ -245,7 +231,7 @@ final class StructuredValueBinder {
   }
 
   private StructuredMember bindLowLevelMember(
-      @Nullable Object wire, Member member, String pointer, Class<?> rawType) {
+      @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
     LowLevelKind kind = lowLevelKind(member.type(), wire, member.accessor(), pointer, rawType);
     if (kind == LowLevelKind.RECURSE) {
       StructuredPatch nested =
@@ -258,12 +244,12 @@ final class StructuredValueBinder {
     return new StructuredMember(
         member.wireName(),
         member.internalName(),
-        new StructuredMemberState.Atomic(atomicLowLevel(wire, member.type(), pointer, rawType)));
+        new StructuredMemberState.Atomic(atomicLowLevel(wire, member, beanType, pointer, rawType)));
   }
 
   private @Nullable Object atomicLowLevel(
-      @Nullable Object wire, JavaType declaredType, String pointer, Class<?> rawType) {
-    JavaType target = unwrapPatchPresence(declaredType);
+      @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
+    JavaType target = unwrapPatchPresence(member.type());
     if (wire == null) {
       if (target.isPrimitive()) {
         throw unsupported(
@@ -273,7 +259,16 @@ final class StructuredValueBinder {
       }
       return nullValue(target, pointer, rawType);
     }
-    return convertAtomic(wire, target, pointer, rawType);
+    try {
+      return propertyScoped.convert(beanType, member.wireName(), member.type(), target, wire);
+    } catch (RuntimeException e) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
+          rawType,
+          pointer,
+          "Failed to convert the nested structured value at '" + pointer + "'",
+          e);
+    }
   }
 
   // ============================== SHAPE RESOLUTION ==============================
@@ -442,9 +437,9 @@ final class StructuredValueBinder {
   record Shape(
       @Nullable JavaType type, List<Member> members, boolean presenceAware, boolean mixed) {
 
-    @Nullable Member memberByWireOrLogical(String name) {
+    @Nullable Member memberByWire(String name) {
       for (Member member : members) {
-        if (member.wireName().equals(name) || member.internalName().equals(name)) {
+        if (member.wireName().equals(name)) {
           return member;
         }
       }

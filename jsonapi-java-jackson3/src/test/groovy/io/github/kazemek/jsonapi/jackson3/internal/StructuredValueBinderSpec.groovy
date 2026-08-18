@@ -136,4 +136,21 @@ class StructuredValueBinderSpec extends Specification {
     ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
     ex.propertyPath() == "/meta/width"
   }
+
+  def "low-level engine applies property-scoped @JsonDeserialize from a non-attribute pointer"() {
+    given:
+    def binder = new StructuredValueBinder(JsonMapper.builder().build())
+    def declared = JsonMapper.builder().build()
+        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNote)
+
+    when: // the same location-neutral machinery a structured meta mapping (KAZ-77) would reuse
+    def patch = binder.bindLowLevelStructured(
+        [note: "n"], declared, META, io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNote)
+
+    then: // the property-scoped UpperCaseStringDeserializer runs, producing "N" not "n"
+    patch == new StructuredPatch(
+        [
+          new StructuredMember("note", "note", new StructuredMemberState.Atomic("N"))
+        ])
+  }
 }

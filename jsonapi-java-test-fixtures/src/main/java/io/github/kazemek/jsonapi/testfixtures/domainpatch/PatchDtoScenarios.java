@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -66,6 +67,9 @@ public final class PatchDtoScenarios {
           nestedOptionalNull(),
           nestedOptionalMemberNull(),
           nestedContainerAtomic(),
+          nestedGenericJavaType(),
+          nestedContainerAtomicSet(),
+          nestedContainerAtomicMap(),
           nestedNonObjectWire(),
           nestedUnknownMember(),
           nestedDeclarationMixed(),
@@ -419,6 +423,49 @@ public final class PatchDtoScenarios {
                         PatchPresence.present("S"), PatchPresence.present(List.of("a", "b")))))));
   }
 
+  private static PatchDtoScenario nestedGenericJavaType() {
+    return scenario(
+        "patch-dto-nested-generic-javatype",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"box\":{\"numbers\":[\"1\",\"2\"]}}}}",
+        ArticleWithBoxPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            boxPatchMembers(
+                PatchPresence.present(new BoxPatch(PatchPresence.present(List.of(1, 2)))))));
+  }
+
+  private static PatchDtoScenario nestedContainerAtomicSet() {
+    return scenario(
+        "patch-dto-nested-container-atomic-set",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"aliases\":[\"a\",\"b\"]}}}}",
+        ArticleWithContainerAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressWithContainersPatch(
+                        PatchPresence.present("S"),
+                        PatchPresence.present(Set.of("a", "b")),
+                        PatchPresence.omitted(),
+                        PatchPresence.omitted())))));
+  }
+
+  private static PatchDtoScenario nestedContainerAtomicMap() {
+    return scenario(
+        "patch-dto-nested-container-atomic-map",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"scores\":{\"x\":\"1\",\"y\":\"2\"}}}}}",
+        ArticleWithContainerAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressWithContainersPatch(
+                        PatchPresence.present("S"),
+                        PatchPresence.omitted(),
+                        PatchPresence.omitted(),
+                        PatchPresence.present(Map.of("x", 1, "y", 2)))))));
+  }
+
   private static PatchDtoScenario nestedNonObjectWire() {
     return scenario(
         "patch-dto-nested-non-object-wire",
@@ -507,6 +554,12 @@ public final class PatchDtoScenarios {
   private static Map<String, PatchPresence<?>> addressPatchMembers(PatchPresence<?> address) {
     Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(1);
     members.put(ADDRESS, address);
+    return members;
+  }
+
+  private static Map<String, PatchPresence<?>> boxPatchMembers(PatchPresence<?> box) {
+    Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(1);
+    members.put("box", box);
     return members;
   }
 

@@ -143,11 +143,24 @@ low-level path represents requested changes independently of a PATCH DTO.
 - **Unknown nested members:** the typed path rejects them with `UNKNOWN_PATCH_MEMBER`; the low-level
   path skips them to stay a lossless change list (mirroring the top-level rules).
 - **Nested member-name resolution:** the engine resolves a supplied nested member by its
-  Jackson-resolved wire name, and also accepts the member's Jackson logical (internal) name as an
-  input alias — mirroring Jackson's internal-name matching during bean deserialization. Nested
-  marker-map keys always use the Jackson-resolved wire name, so conversion under any naming
-  strategy is correct. The top-level PATCH DTO path binds strictly by the mapped wire name
-  (jsonapiName); the nested input-alias leniency is deliberate and documented here.
+  Jackson-resolved wire name only. `wireName` is the document member name used for wire lookup and
+  diagnostics and is the canonical nested member identity on the wire; `logicalName` is carried in
+  `StructuredMember` solely for application-property correspondence and is never treated as an
+  automatic JSON input alias. Under a naming strategy (for example SNAKE_CASE) only the
+  Jackson-resolved wire name binds; the Java logical name is not an alias and either fails on the
+  typed path (`UNKNOWN_PATCH_MEMBER` at the supplied wire pointer) or is skipped on the low-level
+  path. This keeps the `wireName`/`logicalName` distinction unambiguous. If real Jackson aliases
+  (`@JsonAlias`) are later supported, they would be resolved from Jackson's actual deserialization
+  alias metadata, never approximated via the internal name.
+- **Nested atomic conversion authority:** nested atomic conversion preserves the applicable
+  configured Jackson deserialization semantics, including property-scoped customization
+  (`@JsonDeserialize using = ...`, converters, content/key deserializers, and type refinement as
+  Jackson applies them during normal binding). Both PATCH paths share one location-neutral
+  property-scoped conversion collaborator (`PropertyScopedValueConverter`), so a supplied nested
+  member converts through the same configured authority Jackson would use for that property rather
+  than being silently re-coerced by a plain whole-type `convertValue`; members without
+  property-scoped customization fall back to ordinary `convertValue` (type-level and module
+  authority still apply). Nested null semantics and primitive-null rejection are unchanged.
 - **Outer-state policy:** the engine is policy-free; the owning JSON:API mapping location constrains
   which outer presence states are wire-valid. Attributes allow `Present(null)`; a later `meta`
   mapping may reject an outer `Present(null)` while still allowing nested `Present(null)` values.

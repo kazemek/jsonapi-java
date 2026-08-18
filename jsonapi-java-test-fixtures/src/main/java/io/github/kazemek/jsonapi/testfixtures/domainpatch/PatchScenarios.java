@@ -15,7 +15,9 @@ import io.github.kazemek.jsonapi.testfixtures.domainread.FlatIntIdArticle;
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatPersonArticle;
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThingWithIgnored;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
@@ -66,6 +68,9 @@ public final class PatchScenarios {
           ordinaryDomainUnknownNestedSkip(),
           ordinaryDomainNestedPrimitiveNull(),
           ordinaryDomainContainerAtomic(),
+          ordinaryDomainGenericNestedJavaType(),
+          ordinaryDomainContainerAtomicSet(),
+          ordinaryDomainContainerAtomicMap(),
           lowLevelPresenceScalar(),
           lowLevelPresenceOrdinaryDomain(),
           lowLevelPresenceShapeRejected(),
@@ -422,6 +427,70 @@ public final class PatchScenarios {
         null,
         PatchExpectation.success(
             "1", List.of(new PatchChange.AttributeChange("tags", "tags", List.of("a", "b")))));
+  }
+
+  private static PatchScenario ordinaryDomainGenericNestedJavaType() {
+    return scenario(
+        "patch-ordinary-domain-generic-nested-javatype",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"box\":{\"numbers\":[\"1\",\"2\"]}}}}",
+        ArticleWithBox.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "box",
+                    "box",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "numbers",
+                                "numbers",
+                                new StructuredMemberState.Atomic(List.of(1, 2)))))))));
+  }
+
+  private static PatchScenario ordinaryDomainContainerAtomicSet() {
+    return scenario(
+        "patch-ordinary-domain-container-atomic-set",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"aliases\":[\"a\",\"b\"]}}}}",
+        ArticleWithContainerAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "address",
+                    "address",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S")),
+                            new StructuredMember(
+                                "aliases",
+                                "aliases",
+                                new StructuredMemberState.Atomic(Set.of("a", "b")))))))));
+  }
+
+  private static PatchScenario ordinaryDomainContainerAtomicMap() {
+    return scenario(
+        "patch-ordinary-domain-container-atomic-map",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"scores\":{\"x\":\"1\",\"y\":\"2\"}}}}}",
+        ArticleWithContainerAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "address",
+                    "address",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S")),
+                            new StructuredMember(
+                                "scores",
+                                "scores",
+                                new StructuredMemberState.Atomic(Map.of("x", 1, "y", 2)))))))));
   }
 
   private static PatchScenario lowLevelPresenceScalar() {

@@ -265,8 +265,7 @@ public final class DomainPatchDtoBinder {
     while (i < names.size() && walking) {
       String name = names.get(i);
       StructuredValueBinder.Shape shape = structuredBinder.shapeOfStructured(current);
-      StructuredValueBinder.Member member =
-          shape == null ? null : shape.memberByWireOrLogical(name);
+      StructuredValueBinder.Member member = shape == null ? null : shape.memberByWire(name);
       if (member == null) {
         if (shape != null && "value".equals(name)) {
           i++;

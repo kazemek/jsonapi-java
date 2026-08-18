@@ -64,7 +64,7 @@ public final class DomainPatchBinder {
     validateResourceType(resource, mapping, rawType);
     Object identity = convertIdentity(resource, mapping, rawType);
     List<PatchChange> changes = new ArrayList<>();
-    bindAttributeChanges(resource, mapping, rawType, changes);
+    bindAttributeChanges(resource, mapping, targetType, rawType, changes);
     bindRelationshipChanges(resource, mapping, changes);
     @SuppressWarnings({"rawtypes", "unchecked"})
     PatchCommand<?> command = new PatchCommand(rawType, identity, changes);
@@ -104,6 +104,7 @@ public final class DomainPatchBinder {
   private void bindAttributeChanges(
       ResourceObject resource,
       ResourceMapping mapping,
+      JavaType targetType,
       Class<?> rawType,
       List<PatchChange> changes) {
     Attributes attributes = resource.attributes();
@@ -118,18 +119,23 @@ public final class DomainPatchBinder {
         continue;
       }
       Object rawValue = entry.getValue();
-      Object value = bindAttributeValue(property, rawValue, rawType);
+      Object value = bindAttributeValue(property, rawValue, targetType, rawType);
       changes.add(
           new PatchChange.AttributeChange(property.jsonapiName(), property.logicalName(), value));
     }
   }
 
   private @Nullable Object bindAttributeValue(
-      MappingProperty property, @Nullable Object rawValue, Class<?> rawType) {
+      MappingProperty property, @Nullable Object rawValue, JavaType targetType, Class<?> rawType) {
     JavaType declaredType = property.accessor().getType();
     if (rawValue == null) {
       return converter.convertAttribute(
-          property, null, declaredType, PatchMemberConverter.AttributeNullPolicy.RAW_NULL, rawType);
+          property,
+          null,
+          declaredType,
+          PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
+          rawType,
+          targetType);
     }
     String pointer = "/attributes/" + property.jsonapiName();
     StructuredValueBinder.LowLevelKind kind =
@@ -143,7 +149,8 @@ public final class DomainPatchBinder {
         rawValue,
         PatchMemberConverter.unwrapPatchPresence(declaredType),
         PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
-        rawType);
+        rawType,
+        targetType);
   }
 
   private void bindRelationshipChanges(

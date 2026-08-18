@@ -129,7 +129,7 @@ class PatchStructuredBindingSpec extends Specification {
     ex.propertyPath() == "/attributes/address/geo"
   }
 
-  def "naming strategy accepts the logical member name for nested marker maps"() {
+  def "naming strategy rejects a nested logical member name on the typed path"() {
     given:
     def mapper = JsonMapper.builder()
         .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
@@ -139,14 +139,35 @@ class PatchStructuredBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","attributes":{"address":{"streetName":"S","city":"C"}}}}'
 
     when:
-    def dto = reader.readValue(json, SnakeAddressPatchDto)
+    reader.readValue(json, SnakeAddressPatchDto)
 
-    then:
-    dto.address == PatchPresence.present(
-        new SnakeAddressPatch(PatchPresence.present("S"), PatchPresence.present("C")))
+    then: // streetName is the logical name, not a wire alias under SNAKE_CASE; only street_name binds
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    ex.propertyPath() == "/attributes/address/streetName"
   }
 
-  def "nested property-level @JsonDeserialize member stays atomic on the low-level path"() {
+  def "naming strategy skips a nested logical member name on the low-level path"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+        .build()
+    def reader = JsonApiJackson3.patchReader(mapper)
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"streetName":"S"}}}}'
+
+    when:
+    def command = reader.readValue(json, SnakeAddressArticle)
+
+    then: // streetName is not a wire alias; it is skipped as an unknown nested member
+    command.changes() == [
+      new PatchChange.AttributeChange(
+      "address", "address",
+      new StructuredPatch([]))
+    ]
+  }
+
+  def "nested property-level @JsonDeserialize is honored while the surrounding bean still recurses"() {
     given:
     def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
     def json =
@@ -160,10 +181,99 @@ class PatchStructuredBindingSpec extends Specification {
       new PatchChange.AttributeChange(
       "address", "address",
       new StructuredPatch([
-        new StructuredMember("note", "note", new StructuredMemberState.Atomic("n")),
+        new StructuredMember("note", "note", new StructuredMemberState.Atomic("N")),
         new StructuredMember("street", "street", new StructuredMemberState.Atomic("S"))
       ]))
     ]
+  }
+
+  def "nested property-level deserialization failure reports the nested wire pointer"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","note":{"bad":"shape"}}}}}'
+
+    when:
+    reader.readValue(json, io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNoteArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/attributes/address/note"
+  }
+
+  def "low-level nested array member is a single frozen atomic replacement"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","initials":["A","B"]}}}}'
+
+    when:
+    def command = reader.readValue(
+        json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithContainerAddress)
+
+    then: // the array is not recursed into elements; it is one atomic replacement value
+    def patch = (StructuredPatch) command.changes()[0].value()
+    patch.members().size() == 2
+    patch.members()[0] == new StructuredMember("street", "street", new StructuredMemberState.Atomic("S"))
+    def initials = patch.members()[1]
+    initials.wireName() == "initials"
+    initials.logicalName() == "initials"
+    initials.state() instanceof StructuredMemberState.Atomic
+    ((StructuredMemberState.Atomic) initials.state()).value() == ["A", "B"] as String[]
+  }
+
+  def "typed nested array member is a single atomic replacement"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","initials":["A","B"]}}}}'
+
+    when:
+    def dto = reader.readValue(
+        json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithContainerAddressPatch)
+
+    then: // the array is not recursed into elements; it is one atomic replacement value
+    def shape = (io.github.kazemek.jsonapi.testfixtures.domainpatch.AddressWithContainersPatch) ((PatchPresence.Present) dto.address()).value()
+    shape.street() == PatchPresence.present("S")
+    shape.aliases() == PatchPresence.omitted()
+    shape.scores() == PatchPresence.omitted()
+    shape.initials() instanceof PatchPresence.Present
+    ((PatchPresence.Present) shape.initials()).value() == ["A", "B"] as String[]
+  }
+
+  def "low-level nested generic JavaType is preserved through atomic conversion"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"box":{"numbers":["1","2"]}}}}'
+
+    when:
+    def command = reader.readValue(json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithBox)
+
+    then: // List<Integer> element type is retained; a raw List would have kept the String elements
+    command.changes() == [
+      new PatchChange.AttributeChange(
+      "box", "box",
+      new StructuredPatch([
+        new StructuredMember(
+        "numbers", "numbers", new StructuredMemberState.Atomic([1, 2]))
+      ]))
+    ]
+  }
+
+  def "typed nested generic JavaType is preserved through atomic conversion"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"box":{"numbers":["1","2"]}}}}'
+
+    when:
+    def dto = reader.readValue(json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithBoxPatch)
+
+    then: // List<Integer> element type is retained; a raw List would have kept the String elements
+    def box = (io.github.kazemek.jsonapi.testfixtures.domainpatch.BoxPatch) ((PatchPresence.Present) dto.box()).value()
+    box.numbers() == PatchPresence.present([1, 2])
   }
 
   def "top-level construction failure with an empty path reports the root pointer"() {

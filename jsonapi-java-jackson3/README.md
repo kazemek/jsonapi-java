@@ -209,6 +209,15 @@ authorization and command application.
    A `PatchPresence<T>` member wrapping a presence-aware PATCH shape is rejected on this path with
    `INVALID_PATCH_PROPERTY_TYPE` — presence-aware PATCH shapes are a typed-path concept.
 
+ Nested members bind by their Jackson-resolved **wire name** only. `wireName` is the document member
+ name used for lookup and diagnostics; `logicalName` is carried in each `StructuredMember` solely for
+ application-property correspondence and is never treated as an automatic JSON input alias (under a
+ naming strategy, the Java logical name does not bind). Nested atomic conversion preserves the
+ applicable configured Jackson deserialization semantics, including property-scoped customization
+ (`@JsonDeserialize using = ...`, converters, content/key deserializers, type refinement) — both
+ paths share one location-neutral property-scoped conversion collaborator, so a supplied nested
+ member converts through the same authority Jackson would use for that property.
+
  Diagnostic pointers for nested failures are engine-accumulated wire-name pointers (e.g.
  `/attributes/address/street`); final typed-path construction failures are shape-translated to the
  wire-name pointer.

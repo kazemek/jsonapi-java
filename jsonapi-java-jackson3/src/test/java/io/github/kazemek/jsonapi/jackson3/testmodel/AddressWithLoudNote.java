@@ -3,9 +3,10 @@ package io.github.kazemek.jsonapi.jackson3.testmodel;
 import tools.jackson.databind.annotation.JsonDeserialize;
 
 /**
- * Ordinary non-record structured domain value type with a property-level
- * {@code @JsonDeserialize}-customized member, proving the low-level path treats such members as
- * atomic rather than traversing them (ADR-014).
+ * Ordinary non-record structured domain value type with a property-level {@code @JsonDeserialize}
+ * on a JavaBean field. Proves the low-level path treats such a member as atomic (rather than
+ * traversing it) while still honoring the property-scoped deserializer during nested atomic
+ * conversion (ADR-014).
  */
 public final class AddressWithLoudNote {
 

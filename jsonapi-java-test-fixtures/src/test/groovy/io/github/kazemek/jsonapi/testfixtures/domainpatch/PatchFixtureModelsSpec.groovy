@@ -192,4 +192,38 @@ class PatchFixtureModelsSpec extends Specification {
     new PatchPresenceAddressPatchArticle("1", PatchPresence.present(
         new AddressPatch(PatchPresence.present("S"), PatchPresence.omitted()))).id() == "1"
   }
+
+  def "generic and container structured fixtures expose accessors and equality"() {
+    expect:
+    def box = new Box([1, 2])
+    box.numbers() == [1, 2]
+    box == new Box([1, 2])
+    box.hashCode() == new Box([1, 2]).hashCode()
+
+    def boxPatch = new BoxPatch(PatchPresence.present([1, 2]))
+    boxPatch.numbers() == PatchPresence.present([1, 2])
+    boxPatch == new BoxPatch(PatchPresence.present([1, 2]))
+
+    new ArticleWithBox("1", box).box().numbers() == [1, 2]
+    new ArticleWithBoxPatch("1", PatchPresence.present(boxPatch)).box().value().numbers() ==
+        PatchPresence.present([1, 2])
+
+    def containers = new AddressWithContainers("S", ["a", "b"] as Set, ["A", "B"] as String[], [x: 1])
+    containers.street() == "S"
+    containers.aliases() == ["a", "b"] as Set
+    containers.initials() == ["A", "B"] as String[]
+    containers.scores() == [x: 1]
+
+    new ArticleWithContainerAddress("1", containers).address().aliases() == ["a", "b"] as Set
+
+    def containersPatch = new AddressWithContainersPatch(
+        PatchPresence.present("S"),
+        PatchPresence.present(["a", "b"] as Set),
+        PatchPresence.present(["A", "B"] as String[]),
+        PatchPresence.present([x: 1]))
+    containersPatch.aliases().value() == ["a", "b"] as Set
+    containersPatch.initials().value() == ["A", "B"] as String[]
+    new ArticleWithContainerAddressPatch("1", PatchPresence.present(containersPatch))
+        .address().value().scores().value() == [x: 1]
+  }
 }
