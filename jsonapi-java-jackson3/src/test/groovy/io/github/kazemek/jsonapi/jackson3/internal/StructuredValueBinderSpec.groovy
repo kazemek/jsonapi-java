@@ -105,7 +105,7 @@ class StructuredValueBinderSpec extends Specification {
     def declared = JsonMapper.builder().build().constructType(Address)
 
     expect:
-    binder.lowLevelKind(declared, [street: "S"], null, META, Address) ==
+    binder.lowLevelKind(declared, [street: "S"], null, null, META, Address) ==
     StructuredValueBinder.LowLevelKind.RECURSE
 
     when:
@@ -125,7 +125,7 @@ class StructuredValueBinderSpec extends Specification {
         .constructType(io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions)
 
     expect:
-    binder.lowLevelKind(dimensions, [width: null], null, META, io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions) ==
+    binder.lowLevelKind(dimensions, [width: null], null, null, META, io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions) ==
     StructuredValueBinder.LowLevelKind.RECURSE
 
     when:

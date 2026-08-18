@@ -176,6 +176,7 @@ final class StructuredValueBinder {
   LowLevelKind lowLevelKind(
       JavaType declaredType,
       @Nullable Object wire,
+      @Nullable AnnotatedMember serializationMember,
       @Nullable AnnotatedMember deserializationMember,
       String pointer,
       Class<?> rawType) {
@@ -184,8 +185,7 @@ final class StructuredValueBinder {
     }
     boolean viaPatchPresence = isPatchPresence(declaredType);
     JavaType beanType = unwrapLowLevel(declaredType);
-    if (deserializationMember != null
-        && WrapperCustomization.hasDeserialization(mapper, deserializationMember)) {
+    if (hasDeserializationCustomization(serializationMember, deserializationMember)) {
       return LowLevelKind.ATOMIC;
     }
     Shape shape = shapeOf(beanType);
@@ -235,7 +235,13 @@ final class StructuredValueBinder {
   private StructuredMember bindLowLevelMember(
       @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
     LowLevelKind kind =
-        lowLevelKind(member.type(), wire, member.deserializationMember(), pointer, rawType);
+        lowLevelKind(
+            member.type(),
+            wire,
+            member.serializationMember(),
+            member.deserializationMember(),
+            pointer,
+            rawType);
     if (kind == LowLevelKind.RECURSE) {
       StructuredPatch nested =
           (StructuredPatch) bindLowLevelStructured(wire, member.type(), pointer, rawType);
@@ -407,6 +413,20 @@ final class StructuredValueBinder {
 
   private static JavaType unwrapLowLevel(JavaType type) {
     return unwrapOptional(unwrapPatchPresence(type));
+  }
+
+  /**
+   * True when the property carries property-scoped deserialization customization on its
+   * serialization-side or deserialization-side member. Jackson may surface a deserialization
+   * annotation through the accessor (getter / field), the mutator (creator parameter / setter /
+   * field), or both, so both are inspected to honor setter-, creator-, field-, and getter-placed
+   * customization as normal Jackson binding would.
+   */
+  private boolean hasDeserializationCustomization(
+      @Nullable AnnotatedMember serializationMember,
+      @Nullable AnnotatedMember deserializationMember) {
+    return WrapperCustomization.hasDeserialization(mapper, serializationMember)
+        || WrapperCustomization.hasDeserialization(mapper, deserializationMember);
   }
 
   private static JsonApiMappingException unknownPatchMember(

@@ -140,7 +140,12 @@ public final class DomainPatchBinder {
     String pointer = "/attributes/" + property.jsonapiName();
     StructuredValueBinder.LowLevelKind kind =
         structuredBinder.lowLevelKind(
-            declaredType, rawValue, property.definition().getMutator(), pointer, rawType);
+            declaredType,
+            rawValue,
+            property.accessor(),
+            property.definition().getMutator(),
+            pointer,
+            rawType);
     if (kind == StructuredValueBinder.LowLevelKind.RECURSE) {
       return structuredBinder.bindLowLevelStructured(rawValue, declaredType, pointer, rawType);
     }
