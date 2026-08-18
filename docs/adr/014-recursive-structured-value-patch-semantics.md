@@ -63,7 +63,14 @@ structured `meta` mapping can reuse the same machinery at its own location.
   deserialization config), including creator parameters (records / constructor-bound beans) and
   ordinary JavaBean property binding (getter/setter or field). A member is visible iff Jackson would
   bind it from an object. The wire name of a member is its Jackson-resolved name (explicit
-  `@JsonProperty` or the naming strategy applied to the logical property name).
+  `@JsonProperty` or the naming strategy applied to the logical property name). Each member carries
+  both its serialization-side member (`getAccessor()`: getter, then field) and its
+  deserialization-side member (`getMutator()`: creator parameter, then setter, then field) because
+  Jackson may surface property-scoped annotations on different accessors; the member's resolved
+  `JavaType` always comes from the deserialization-side primary type, never inferred from a single
+  accessor. Member and shape resolution preserve full generic `JavaType` bindings recursively (a
+  `Box<Integer>` member resolves as `List<Integer>`), so raw-`Class` resolution would fail the
+  resulting atomic conversion.
 - **Shape classification** is cached per `JavaType` plus the deserialization-config hash (naming
   strategy and visibility checker), independently of the serialization-keyed resource-mapping cache.
   A type is traversable only when it resolves to a property/creator-driven bean deserializer
@@ -160,7 +167,13 @@ low-level path represents requested changes independently of a PATCH DTO.
   member converts through the same configured authority Jackson would use for that property rather
   than being silently re-coerced by a plain whole-type `convertValue`; members without
   property-scoped customization fall back to ordinary `convertValue` (type-level and module
-  authority still apply). Nested null semantics and primitive-null rejection are unchanged.
+  authority still apply). Whether a member is considered customized is decided from Jackson's
+  effective deserialization property metadata — setter-, creator-parameter-, field-, and getter-
+  placed `@JsonDeserialize` are all detected — while serialization wrapper customization is checked
+  independently on the serialization-side member. On the low-level path a bean-valued property with
+  a property-scoped deserialization customization stays an atomic converted member (the custom
+  deserializer is applied), never a recursed `StructuredPatch`, while the surrounding bean still
+  recurses. Nested null semantics and primitive-null rejection are unchanged.
 - **Outer-state policy:** the engine is policy-free; the owning JSON:API mapping location constrains
   which outer presence states are wire-valid. Attributes allow `Present(null)`; a later `meta`
   mapping may reject an outer `Present(null)` while still allowing nested `Present(null)` values.

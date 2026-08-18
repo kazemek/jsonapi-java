@@ -154,7 +154,8 @@ final class StructuredValueBinder {
   /** On shape entry, every visible member must satisfy the strict presence-aware contract. */
   private void validateTypedShape(Shape shape, String pointer, Class<?> rawType) {
     for (Member member : shape.members()) {
-      if (member.accessor() != null && WrapperCustomization.has(mapper, member.accessor())) {
+      if (WrapperCustomization.has(
+          mapper, member.serializationMember(), member.deserializationMember())) {
         throw invalidPatchPropertyType(
             rawType,
             pointer + "/" + PointerEscapes.escape(member.wireName()),
@@ -175,7 +176,7 @@ final class StructuredValueBinder {
   LowLevelKind lowLevelKind(
       JavaType declaredType,
       @Nullable Object wire,
-      @Nullable AnnotatedMember accessor,
+      @Nullable AnnotatedMember deserializationMember,
       String pointer,
       Class<?> rawType) {
     if (!(wire instanceof Map<?, ?>)) {
@@ -183,7 +184,8 @@ final class StructuredValueBinder {
     }
     boolean viaPatchPresence = isPatchPresence(declaredType);
     JavaType beanType = unwrapLowLevel(declaredType);
-    if (accessor != null && WrapperCustomization.hasDeserialization(mapper, accessor)) {
+    if (deserializationMember != null
+        && WrapperCustomization.hasDeserialization(mapper, deserializationMember)) {
       return LowLevelKind.ATOMIC;
     }
     Shape shape = shapeOf(beanType);
@@ -232,7 +234,8 @@ final class StructuredValueBinder {
 
   private StructuredMember bindLowLevelMember(
       @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
-    LowLevelKind kind = lowLevelKind(member.type(), wire, member.accessor(), pointer, rawType);
+    LowLevelKind kind =
+        lowLevelKind(member.type(), wire, member.deserializationMember(), pointer, rawType);
     if (kind == LowLevelKind.RECURSE) {
       StructuredPatch nested =
           (StructuredPatch) bindLowLevelStructured(wire, member.type(), pointer, rawType);
@@ -331,6 +334,7 @@ final class StructuredValueBinder {
               definition.getInternalName(),
               definition.getFullName().getSimpleName(),
               memberType,
+              definition.getMutator(),
               definition.getAccessor()));
     }
     boolean presenceAware = hasPresenceAttempt && allExactlyPresence && !members.isEmpty();
@@ -429,9 +433,20 @@ final class StructuredValueBinder {
         MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, rawType, path, message);
   }
 
-  /** One visible, bindable member of a structured shape. */
+  /**
+   * One visible, bindable member of a structured shape. {@code deserializationMember} is the
+   * property's deserialization-side member ({@code BeanPropertyDefinition.getMutator()}: creator
+   * parameter, then setter, then field) and {@code serializationMember} its serialization-side
+   * member ({@code BeanPropertyDefinition.getAccessor()}: getter, then field). Jackson may place
+   * deserialization and serialization annotations on different accessors of the same property, so
+   * both are carried explicitly rather than a single ambiguous accessor.
+   */
   record Member(
-      String internalName, String wireName, JavaType type, @Nullable AnnotatedMember accessor) {}
+      String internalName,
+      String wireName,
+      JavaType type,
+      @Nullable AnnotatedMember deserializationMember,
+      @Nullable AnnotatedMember serializationMember) {}
 
   /** Resolved structured shape: visible members plus typed-mode classification. */
   record Shape(

@@ -18,8 +18,21 @@ final class WrapperCustomization {
 
   private WrapperCustomization() {}
 
-  static boolean has(JsonMapper mapper, @Nullable AnnotatedMember accessor) {
-    return hasSerialization(mapper, accessor) || hasDeserialization(mapper, accessor);
+  /**
+   * Checks serialization customization on the property's serialization-side member and
+   * deserialization customization on the union of its serialization- and deserialization-side
+   * members. Jackson may surface a property-scoped deserialization annotation through the accessor
+   * (getter / field), the mutator (creator parameter / setter / field), or both depending on the
+   * class shape, so both are inspected to avoid missing setter-, creator-, field-, or getter-placed
+   * customization.
+   */
+  static boolean has(
+      JsonMapper mapper,
+      @Nullable AnnotatedMember serializationMember,
+      @Nullable AnnotatedMember deserializationMember) {
+    return hasSerialization(mapper, serializationMember)
+        || hasDeserialization(mapper, serializationMember)
+        || hasDeserialization(mapper, deserializationMember);
   }
 
   /**

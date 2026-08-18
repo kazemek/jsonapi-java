@@ -10,6 +10,11 @@ import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.StructuredMember
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState
 import io.github.kazemek.jsonapi.jackson.StructuredPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.CreatorCustomizedAddressPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.Details
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithCreatorCustomDetails
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails
+import io.github.kazemek.jsonapi.jackson3.testmodel.SetterCustomizedAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.SnakeAddress
 import io.github.kazemek.jsonapi.jackson3.testmodel.SnakeAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingAddressPatch
@@ -325,6 +330,76 @@ class PatchStructuredBindingSpec extends Specification {
     ((StructuredPatch) lowEmpty.changes()[0].value()).members().isEmpty()
   }
 
+  def "typed nested setter-level @JsonDeserialize on a presence-aware member is rejected"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","city":"C"}}}}'
+
+    when:
+    reader.readValue(json, SetterCustomizedAddressPatchDto)
+
+    then: // wrapper-level @JsonDeserialize on the setter is deserialization-side customization
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
+    ex.propertyPath() == "/attributes/address/city"
+  }
+
+  def "typed nested creator-parameter @JsonDeserialize on a presence-aware member is rejected"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","city":"C"}}}}'
+
+    when:
+    reader.readValue(json, CreatorCustomizedAddressPatchDto)
+
+    then: // wrapper-level @JsonDeserialize on the creator parameter is deserialization-side
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
+    ex.propertyPath() == "/attributes/address/city"
+  }
+
+  def "low-level bean-valued setter @JsonDeserialize stays atomic and applies the deserializer"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"outer":{"details":{"name":"x"}}}}}'
+
+    when:
+    def command = reader.readValue(json, OuterWithSetterCustomDetailsArticle)
+
+    then: // the surrounding bean recurses but the customized details member is Atomic, not Structured
+    command.changes() == [
+      new PatchChange.AttributeChange(
+      "outer", "outer",
+      new StructuredPatch([
+        new StructuredMember(
+        "details", "details", new StructuredMemberState.Atomic(new Details("custom")))
+      ]))
+    ]
+  }
+
+  def "low-level bean-valued creator-parameter @JsonDeserialize stays atomic and applies the deserializer"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"outer":{"details":{"name":"x"}}}}}'
+
+    when:
+    def command = reader.readValue(json, OuterWithCreatorCustomDetailsArticle)
+
+    then:
+    command.changes() == [
+      new PatchChange.AttributeChange(
+      "outer", "outer",
+      new StructuredPatch([
+        new StructuredMember(
+        "details", "details", new StructuredMemberState.Atomic(new Details("custom")))
+      ]))
+    ]
+  }
+
   @JsonApiResource(type = "articles")
   static class SnakeAddressPatchDto {
     @JsonApiId String id
@@ -347,5 +422,29 @@ class PatchStructuredBindingSpec extends Specification {
   static class ThrowingGeoPatchDto {
     @JsonApiId String id
     @JsonApiAttribute PatchPresence<ThrowingAddressPatch> address
+  }
+
+  @JsonApiResource(type = "articles")
+  static class SetterCustomizedAddressPatchDto {
+    @JsonApiId String id
+    @JsonApiAttribute PatchPresence<SetterCustomizedAddressPatch> address
+  }
+
+  @JsonApiResource(type = "articles")
+  static class CreatorCustomizedAddressPatchDto {
+    @JsonApiId String id
+    @JsonApiAttribute PatchPresence<CreatorCustomizedAddressPatch> address
+  }
+
+  @JsonApiResource(type = "articles")
+  static class OuterWithSetterCustomDetailsArticle {
+    @JsonApiId String id
+    @JsonApiAttribute OuterWithSetterCustomDetails outer
+  }
+
+  @JsonApiResource(type = "articles")
+  static class OuterWithCreatorCustomDetailsArticle {
+    @JsonApiId String id
+    @JsonApiAttribute OuterWithCreatorCustomDetails outer
   }
 }

@@ -4,8 +4,9 @@ import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import java.util.List;
 
 /**
- * Presence-aware PATCH shape with a generically-typed {@code List<Integer>} inner member, proving
- * the typed path preserves the full {@code JavaType} through atomic conversion (ADR-014): a raw
- * {@code List} class would lose the {@code Integer} element type during {@code convertValue}.
+ * Generic presence-aware PATCH shape. The {@code T} type variable must be substituted from the
+ * enclosing {@link JavaType} (e.g. {@code BoxPatch<Integer>}) during recursive shape resolution so
+ * the member resolves as {@code PatchPresence<List<Integer>>}; a raw {@code BoxPatch} would retain
+ * {@code T} and fail {@code Integer} element conversion (ADR-014).
  */
-public record BoxPatch(PatchPresence<List<Integer>> numbers) {}
+public record BoxPatch<T>(PatchPresence<List<T>> numbers) {}

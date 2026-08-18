@@ -153,4 +153,28 @@ class StructuredValueBinderSpec extends Specification {
           new StructuredMember("note", "note", new StructuredMemberState.Atomic("N"))
         ])
   }
+
+  def "low-level engine keeps a setter-customized bean-valued member atomic from a non-attribute pointer"() {
+    given:
+    def binder = new StructuredValueBinder(JsonMapper.builder().build())
+    def declared = JsonMapper.builder().build()
+        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails)
+
+    when: // the details setter's @JsonDeserialize must make it atomic, not a recursed StructuredPatch
+    def patch = binder.bindLowLevelStructured(
+        [details: [name: "x"]],
+        declared,
+        META,
+        io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails)
+
+    then:
+    patch == new StructuredPatch(
+        [
+          new StructuredMember(
+          "details",
+          "details",
+          new StructuredMemberState.Atomic(
+          new io.github.kazemek.jsonapi.jackson3.testmodel.Details("custom")))
+        ])
+  }
 }

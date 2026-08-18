@@ -207,6 +207,7 @@ class PatchFixtureModelsSpec extends Specification {
     new ArticleWithBox("1", box).box().numbers() == [1, 2]
     new ArticleWithBoxPatch("1", PatchPresence.present(boxPatch)).box().value().numbers() ==
         PatchPresence.present([1, 2])
+    new ArticleWithBoxList("1", new Box([[1, 2], [3]])).box().numbers() == [[1, 2], [3]]
 
     def containers = new AddressWithContainers("S", ["a", "b"] as Set, ["A", "B"] as String[], [x: 1])
     containers.street() == "S"

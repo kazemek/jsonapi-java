@@ -69,6 +69,7 @@ public final class PatchScenarios {
           ordinaryDomainNestedPrimitiveNull(),
           ordinaryDomainContainerAtomic(),
           ordinaryDomainGenericNestedJavaType(),
+          ordinaryDomainGenericNestedMultiLevelJavaType(),
           ordinaryDomainContainerAtomicSet(),
           ordinaryDomainContainerAtomicMap(),
           lowLevelPresenceScalar(),
@@ -447,6 +448,27 @@ public final class PatchScenarios {
                                 "numbers",
                                 "numbers",
                                 new StructuredMemberState.Atomic(List.of(1, 2)))))))));
+  }
+
+  private static PatchScenario ordinaryDomainGenericNestedMultiLevelJavaType() {
+    return scenario(
+        "patch-ordinary-domain-generic-nested-multilevel-javatype",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"box\":{\"numbers\":[[\"1\",\"2\"],[\"3\"]]}}}}",
+        ArticleWithBoxList.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "box",
+                    "box",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "numbers",
+                                "numbers",
+                                new StructuredMemberState.Atomic(
+                                    List.of(List.of(1, 2), List.of(3))))))))));
   }
 
   private static PatchScenario ordinaryDomainContainerAtomicSet() {

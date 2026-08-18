@@ -4,8 +4,6 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 
-/**
- * Shared low-level PATCH DTO with a generically-typed ordinary structured {@link Box} attribute.
- */
+/** Shared low-level PATCH DTO with a generic ordinary structured {@link Box}<Integer> attribute. */
 @JsonApiResource(type = "articles")
-public record ArticleWithBox(@JsonApiId String id, @JsonApiAttribute Box box) {}
+public record ArticleWithBox(@JsonApiId String id, @JsonApiAttribute Box<Integer> box) {}
