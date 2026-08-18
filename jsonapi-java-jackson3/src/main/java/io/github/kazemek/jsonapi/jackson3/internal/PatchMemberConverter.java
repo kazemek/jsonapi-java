@@ -308,4 +308,19 @@ final class PatchMemberConverter {
     }
     return byName;
   }
+
+  static Map<String, MappingProperty> byLogicalName(List<MappingProperty> properties) {
+    Map<String, MappingProperty> byName = new LinkedHashMap<>();
+    for (MappingProperty property : properties) {
+      byName.put(property.logicalName(), property);
+    }
+    return byName;
+  }
+
+  /** Unwraps a single exact {@code PatchPresence<T>} wrapper, leaving other types unchanged. */
+  static JavaType unwrapPatchPresence(JavaType type) {
+    return type.getRawClass() == PatchPresence.class && type.containedTypeCount() == 1
+        ? type.containedType(0)
+        : type;
+  }
 }

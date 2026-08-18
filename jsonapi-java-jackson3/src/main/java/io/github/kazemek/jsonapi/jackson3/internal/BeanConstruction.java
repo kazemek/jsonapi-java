@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -15,8 +16,20 @@ import tools.jackson.databind.json.JsonMapper;
  * Shared bean construction from a synthetic property map with a single {@link
  * JsonMapper#convertValue(Object, JavaType)}, plus stable creator/coercion failure classification
  * used by the flat DTO binder and the typed PATCH DTO binder.
+ *
+ * <p>The typed PATCH DTO path may supply a {@link FailurePathTranslator} so deep Jackson
+ * construction-failure paths are translated to wire-name pointers through the structured-value
+ * shape metadata (ADR-014); the flat DTO path keeps the innermost-property path.
  */
 final class BeanConstruction {
+
+  /**
+   * Translates a failed bean construction's Jackson path into a resource-relative property path.
+   */
+  @FunctionalInterface
+  interface FailurePathTranslator {
+    String translate(Throwable failure, Class<?> rawType);
+  }
 
   private BeanConstruction() {}
 
@@ -25,6 +38,15 @@ final class BeanConstruction {
       Map<String, @Nullable Object> properties,
       JavaType targetType,
       Class<?> rawType) {
+    return convertBean(mapper, properties, targetType, rawType, null);
+  }
+
+  static Object convertBean(
+      JsonMapper mapper,
+      Map<String, @Nullable Object> properties,
+      JavaType targetType,
+      Class<?> rawType,
+      @Nullable FailurePathTranslator translator) {
     try {
       return mapper.convertValue(properties, targetType);
     } catch (RuntimeException e) {
@@ -33,10 +55,12 @@ final class BeanConstruction {
           isCreatorInputFailure(failure)
               ? MappingDiagnostic.MISSING_CREATOR_INPUT
               : MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE;
+      String path =
+          translator != null ? translator.translate(failure, rawType) : propertyPath(failure);
       throw new JsonApiMappingException(
           diagnostic,
           rawType,
-          propertyPath(failure),
+          path,
           "Failed to construct " + rawType.getName() + " from resource values",
           failure);
     }
@@ -74,7 +98,25 @@ final class BeanConstruction {
     return failure;
   }
 
-  private static String propertyPath(Throwable failure) {
+  /** The non-null property names of the Jackson failure path, outermost first. */
+  static List<String> pathNames(Throwable failure) {
+    if (failure instanceof JacksonException jackson) {
+      List<JacksonException.Reference> path = jackson.getPath();
+      if (path != null) {
+        List<String> names = new ArrayList<>();
+        for (JacksonException.Reference reference : path) {
+          String name = reference.getPropertyName();
+          if (name != null && !name.isEmpty()) {
+            names.add(name);
+          }
+        }
+        return names;
+      }
+    }
+    return List.of();
+  }
+
+  static String propertyPath(Throwable failure) {
     if (failure instanceof JacksonException jackson) {
       List<JacksonException.Reference> path = jackson.getPath();
       if (path != null) {

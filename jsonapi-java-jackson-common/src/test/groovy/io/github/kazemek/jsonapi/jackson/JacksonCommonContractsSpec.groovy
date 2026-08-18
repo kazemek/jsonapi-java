@@ -553,4 +553,97 @@ class JacksonCommonContractsSpec extends Specification {
     empty.value() == Optional.empty()
     nulled.value() == null
   }
+
+  // StructuredPatch / StructuredMember / StructuredMemberState (recursive structured-value payload)
+
+  def "structured patch rejects null members and freezes the members list"() {
+    when:
+    new StructuredPatch(null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    def members = new ArrayList<StructuredMember>()
+    members.add(new StructuredMember("street", "street", new StructuredMemberState.Atomic("S")))
+    def patch = new StructuredPatch(members)
+
+    then:
+    members.add(new StructuredMember("x", "x", new StructuredMemberState.Atomic("x")))
+    patch.members().size() == 1
+  }
+
+  def "structured member rejects null names and state"() {
+    when:
+    new StructuredMember(null, "street", new StructuredMemberState.Atomic("S"))
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new StructuredMember("street", null, new StructuredMemberState.Atomic("S"))
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new StructuredMember("street", "street", null)
+
+    then:
+    thrown(NullPointerException)
+  }
+
+  def "structured member state has exactly atomic and structured variants"() {
+    expect:
+    StructuredMemberState.class.getPermittedSubclasses().toSet() ==
+        [
+          StructuredMemberState.Atomic,
+          StructuredMemberState.Structured
+        ].toSet()
+  }
+
+  def "structured state freezes nested members recursively and atomics shallowly"() {
+    given:
+    def nestedList = new ArrayList<StructuredMember>()
+    nestedList.add(new StructuredMember("lat", "lat", new StructuredMemberState.Atomic("1")))
+    def structured = new StructuredMemberState.Structured(nestedList)
+    def container = new ArrayList<String>(["a"])
+    def atomic = new StructuredMemberState.Atomic(container)
+
+    when:
+    nestedList.add(new StructuredMember("lon", "lon", new StructuredMemberState.Atomic("2")))
+    container.add("b")
+
+    then:
+    structured.members().size() == 1
+    atomic.value() == ["a"]
+
+    when:
+    def storedArray = new StructuredMemberState.Atomic(["x"] as String[])
+    def exposedArray = (String[]) storedArray.value()
+    exposedArray[0] = "y"
+
+    then:
+    ((String[]) storedArray.value())[0] == "x"
+  }
+
+  def "structured patch equality follows nested structure"() {
+    expect:
+    new StructuredPatch(
+        [
+          new StructuredMember("street", "street", new StructuredMemberState.Atomic("S"))
+        ]) ==
+        new StructuredPatch(
+        [
+          new StructuredMember("street", "street", new StructuredMemberState.Atomic("S"))
+        ])
+    new StructuredPatch(
+        [
+          new StructuredMember("street", "street", new StructuredMemberState.Atomic("S"))
+        ]) !=
+        new StructuredPatch(
+        [
+          new StructuredMember("city", "city", new StructuredMemberState.Atomic("S"))
+        ])
+  }
 }

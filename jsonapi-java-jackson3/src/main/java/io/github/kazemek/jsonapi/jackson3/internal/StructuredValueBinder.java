@@ -1,0 +1,456 @@
+package io.github.kazemek.jsonapi.jackson3.internal;
+
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.StructuredMember;
+import io.github.kazemek.jsonapi.jackson.StructuredMemberState;
+import io.github.kazemek.jsonapi.jackson.StructuredPatch;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.DeserializationConfig;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.deser.bean.BeanDeserializerBase;
+import tools.jackson.databind.introspect.AnnotatedClass;
+import tools.jackson.databind.introspect.AnnotatedMember;
+import tools.jackson.databind.introspect.BeanPropertyDefinition;
+import tools.jackson.databind.introspect.ClassIntrospector;
+import tools.jackson.databind.json.JsonMapper;
+
+/**
+ * Location-agnostic recursive structured-value PATCH engine shared by the low-level {@link
+ * PatchCommand} path and the direct typed PATCH DTO path.
+ *
+ * <p>The engine owns member resolution (deserialization-side Jackson introspection), shape and
+ * boundary classification, nested conversion, null policy, wire-pointer accumulation, and lazy
+ * nested declaration validation. It has no {@link ResourceMapping} / {@link MappingProperty} /
+ * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.PatchChange} dependency:
+ * callers supply the declared {@link JavaType}, wire value, starting pointer, and (low-level)
+ * accessor, so a later structured JSON:API {@code meta} mapping can reuse the same machinery at its
+ * own location with a stricter outer-state policy (ADR-014, KAZ-77 reuse boundary).
+ *
+ * <p>Two modes (ADR-014): the typed mode recurses only through deliberately presence-aware nested
+ * PATCH shapes (every visible member exactly {@code PatchPresence<T>}, no wrapper-level
+ * customization); the low-level mode derives supplied-only nested changes from ordinary structured
+ * domain value types under the traversable-bean + object-wire boundary, with {@link Optional} as a
+ * transparent qualification wrapper and a single {@code PatchPresence} wrapper unwrap.
+ * Presence-aware PATCH shapes are a typed-path concept: on the low-level path a {@code
+ * PatchPresence<T>} member whose inner type is a presence-aware shape fails loudly with {@link
+ * MappingDiagnostic#INVALID_PATCH_PROPERTY_TYPE} at the accumulated pointer.
+ *
+ * <p>Shape resolution is cached per {@link JavaType} plus the deserialization-config hash (naming
+ * strategy and visibility checker), independently of the serialization-keyed resource-mapping
+ * cache. Nested shape declarations are validated lazily: an invalid nested shape is only rejected
+ * when it is actually bound, so arbitrary type graphs are not traversed for declaration validation.
+ */
+final class StructuredValueBinder {
+
+  /** Low-level traversal decision for one member. */
+  enum LowLevelKind {
+    /** The declared type traverses into a {@link StructuredPatch} for this object wire value. */
+    RECURSE,
+    /** The member stays an atomic converted value. */
+    ATOMIC
+  }
+
+  private static final Shape NO_SHAPE = new Shape(null, List.of(), false, false);
+
+  private final JsonMapper mapper;
+  private final Map<CacheKey, Shape> shapeCache = new ConcurrentHashMap<>();
+
+  StructuredValueBinder(JsonMapper mapper) {
+    this.mapper = Objects.requireNonNull(mapper, "mapper");
+  }
+
+  // ============================== TYPED MODE ==============================
+
+  /**
+   * Binds one supplied member value for the typed PATCH DTO path.
+   *
+   * <p>{@code declaredPatchPresenceType} must be exactly {@code PatchPresence<T>} (top-level
+   * members are validated eagerly by the typed binder; nested members by the engine on shape
+   * entry). Returns the value to place inside an internal {@link PresenceMarker} with {@code
+   * present=true}: a converted atomic value, {@code null}, or a nested marker map that the single
+   * whole-tree {@code convertValue} reads through the inner type (preserving the strict marker
+   * invariant).
+   */
+  @Nullable Object typedMemberValue(
+      @Nullable Object wire, JavaType declaredPatchPresenceType, String pointer, Class<?> rawType) {
+    JavaType inner = declaredPatchPresenceType.containedType(0);
+    JavaType effective = unwrapOptional(inner);
+    if (wire == null) {
+      if (effective.isPrimitive()) {
+        throw unsupported(
+            rawType,
+            pointer,
+            "Explicit null is not supported for a primitive nested PATCH member at '"
+                + pointer
+                + "'");
+      }
+      return nullValue(effective, pointer, rawType);
+    }
+    Shape shape = shapeOf(effective);
+    if (shape == null) {
+      return convertAtomic(wire, inner, pointer, rawType);
+    }
+    if (shape.presenceAware()) {
+      if (wire instanceof Map<?, ?> map) {
+        return bindTypedShape(map, shape, pointer, rawType);
+      }
+      return convertAtomic(wire, inner, pointer, rawType);
+    }
+    if (shape.mixed()) {
+      throw invalidPatchPropertyType(
+          rawType,
+          pointer,
+          "mixed nested PATCH shape: every visible member of "
+              + effective.toCanonical()
+              + " must be declared exactly as PatchPresence<T> when the shape is used as a nested "
+              + "PATCH shape");
+    }
+    return convertAtomic(wire, inner, pointer, rawType);
+  }
+
+  private Map<String, Object> bindTypedShape(
+      Map<?, ?> wire, Shape shape, String pointer, Class<?> rawType) {
+    validateTypedShape(shape, pointer, rawType);
+    for (Object key : wire.keySet()) {
+      String name = key instanceof String string ? string : String.valueOf(key);
+      if (shape.memberByWireOrLogical(name) == null) {
+        throw unknownPatchMember(rawType, pointer + "/" + PointerEscapes.escape(name), name);
+      }
+    }
+    Map<String, Object> markerMap = LinkedHashMap.newLinkedHashMap(shape.members().size());
+    for (Member member : shape.members()) {
+      String wireName = member.wireName();
+      if (wire.containsKey(wireName)) {
+        markerMap.put(
+            wireName,
+            new PresenceMarker(
+                true,
+                typedMemberValue(
+                    wire.get(wireName),
+                    member.type(),
+                    pointer + "/" + PointerEscapes.escape(wireName),
+                    rawType)));
+      } else if (wire.containsKey(member.internalName())) {
+        markerMap.put(
+            wireName,
+            new PresenceMarker(
+                true,
+                typedMemberValue(
+                    wire.get(member.internalName()),
+                    member.type(),
+                    pointer + "/" + PointerEscapes.escape(wireName),
+                    rawType)));
+      } else {
+        markerMap.put(wireName, new PresenceMarker(false, null));
+      }
+    }
+    return markerMap;
+  }
+
+  /** On shape entry, every visible member must satisfy the strict presence-aware contract. */
+  private void validateTypedShape(Shape shape, String pointer, Class<?> rawType) {
+    for (Member member : shape.members()) {
+      if (member.accessor() != null && WrapperCustomization.has(mapper, member.accessor())) {
+        throw invalidPatchPropertyType(
+            rawType,
+            pointer + "/" + PointerEscapes.escape(member.wireName()),
+            "nested PATCH member '"
+                + member.wireName()
+                + "' must not carry wrapper-level @JsonDeserialize/@JsonSerialize customization");
+      }
+    }
+  }
+
+  // ============================== LOW-LEVEL MODE ==============================
+
+  /**
+   * Decides whether one supplied member value recurses into a {@link StructuredPatch} on the
+   * low-level path. Throws {@link MappingDiagnostic#INVALID_PATCH_PROPERTY_TYPE} when the declared
+   * type unwraps to a presence-aware PATCH shape (a typed-path concept).
+   */
+  LowLevelKind lowLevelKind(
+      JavaType declaredType,
+      @Nullable Object wire,
+      @Nullable AnnotatedMember accessor,
+      String pointer,
+      Class<?> rawType) {
+    if (!(wire instanceof Map<?, ?>)) {
+      return LowLevelKind.ATOMIC;
+    }
+    boolean viaPatchPresence = isPatchPresence(declaredType);
+    JavaType beanType = unwrapLowLevel(declaredType);
+    if (accessor != null && WrapperCustomization.hasDeserialization(mapper, accessor)) {
+      return LowLevelKind.ATOMIC;
+    }
+    Shape shape = shapeOf(beanType);
+    if (shape == null) {
+      return LowLevelKind.ATOMIC;
+    }
+    if (viaPatchPresence && shape.presenceAware()) {
+      throw invalidPatchPropertyType(
+          rawType,
+          pointer,
+          "presence-aware nested PATCH shapes are a typed-path concept: PatchPresence<"
+              + beanType.toCanonical()
+              + "> is not supported on the low-level PatchCommand<T> path at '"
+              + pointer
+              + "'");
+    }
+    return LowLevelKind.RECURSE;
+  }
+
+  /**
+   * Recursively binds one supplied object wire value into a {@link StructuredPatch} for the
+   * low-level path. The caller must have decided {@link LowLevelKind#RECURSE} for this member.
+   * Supplied-only nested members are produced in declaration order; unknown wire members are
+   * skipped (lossless change-list contract).
+   */
+  Object bindLowLevelStructured(
+      @Nullable Object wire, JavaType declaredType, String pointer, Class<?> rawType) {
+    JavaType beanType = unwrapLowLevel(declaredType);
+    Shape shape = Objects.requireNonNull(shapeOf(beanType), "shape");
+    Map<?, ?> wireMap = (Map<?, ?>) Objects.requireNonNull(wire, "wire");
+    List<StructuredMember> members = new ArrayList<>();
+    for (Member member : shape.members()) {
+      String wireName = member.wireName();
+      if (wireMap.containsKey(wireName)) {
+        members.add(
+            bindLowLevelMember(
+                wireMap.get(wireName),
+                member,
+                pointer + "/" + PointerEscapes.escape(wireName),
+                rawType));
+      } else if (wireMap.containsKey(member.internalName())) {
+        members.add(
+            bindLowLevelMember(
+                wireMap.get(member.internalName()),
+                member,
+                pointer + "/" + PointerEscapes.escape(wireName),
+                rawType));
+      }
+    }
+    return new StructuredPatch(members);
+  }
+
+  private StructuredMember bindLowLevelMember(
+      @Nullable Object wire, Member member, String pointer, Class<?> rawType) {
+    LowLevelKind kind = lowLevelKind(member.type(), wire, member.accessor(), pointer, rawType);
+    if (kind == LowLevelKind.RECURSE) {
+      StructuredPatch nested =
+          (StructuredPatch) bindLowLevelStructured(wire, member.type(), pointer, rawType);
+      return new StructuredMember(
+          member.wireName(),
+          member.internalName(),
+          new StructuredMemberState.Structured(nested.members()));
+    }
+    return new StructuredMember(
+        member.wireName(),
+        member.internalName(),
+        new StructuredMemberState.Atomic(atomicLowLevel(wire, member.type(), pointer, rawType)));
+  }
+
+  private @Nullable Object atomicLowLevel(
+      @Nullable Object wire, JavaType declaredType, String pointer, Class<?> rawType) {
+    JavaType target = unwrapPatchPresence(declaredType);
+    if (wire == null) {
+      if (target.isPrimitive()) {
+        throw unsupported(
+            rawType,
+            pointer,
+            "Explicit null is not supported for a primitive nested member at '" + pointer + "'");
+      }
+      return nullValue(target, pointer, rawType);
+    }
+    return convertAtomic(wire, target, pointer, rawType);
+  }
+
+  // ============================== SHAPE RESOLUTION ==============================
+
+  /**
+   * Resolves the structured shape of {@code type} when it is a traversable bean, or {@code null}
+   * for atomic types (scalars, containers, custom/scalar deserializers, unresolved types).
+   */
+  private @Nullable Shape shapeOf(JavaType type) {
+    DeserializationConfig config = mapper.deserializationConfig();
+    CacheKey key = new CacheKey(type, configHash(config));
+    Shape cached = shapeCache.get(key);
+    if (cached != null) {
+      return cached == NO_SHAPE ? null : cached;
+    }
+    Shape result =
+        shapeCache.computeIfAbsent(
+            key,
+            ignored -> {
+              Shape computed = computeShape(type, config);
+              return computed == null ? NO_SHAPE : computed;
+            });
+    return result == NO_SHAPE ? null : result;
+  }
+
+  /**
+   * Presence-aware structured shape of a typed member's inner type, or null. For path translation.
+   */
+  @Nullable Shape shapeOfStructured(JavaType declaredType) {
+    Shape shape = shapeOf(unwrapOptional(unwrapPatchPresence(declaredType)));
+    return shape != null && shape.presenceAware() ? shape : null;
+  }
+
+  private @Nullable Shape computeShape(JavaType type, DeserializationConfig config) {
+    DeserializationContext context = mapper._deserializationContext();
+    ValueDeserializer<?> deserializer = context.findRootValueDeserializer(type);
+    if (!(deserializer instanceof BeanDeserializerBase)) {
+      return null;
+    }
+    ClassIntrospector introspector = config.classIntrospectorInstance();
+    AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(type);
+    BeanDescription beanDescription =
+        introspector.introspectForDeserialization(type, annotatedClass);
+    List<Member> members = new ArrayList<>();
+    boolean hasPresenceAttempt = false;
+    boolean allExactlyPresence = true;
+    for (BeanPropertyDefinition definition : beanDescription.findProperties()) {
+      if (definition.getMutator() == null && !definition.hasConstructorParameter()) {
+        continue;
+      }
+      JavaType memberType = definition.getPrimaryType();
+      if (isPresenceAttempt(memberType)) {
+        hasPresenceAttempt = true;
+      }
+      if (!isPatchPresence(memberType)) {
+        allExactlyPresence = false;
+      }
+      members.add(
+          new Member(
+              definition.getInternalName(),
+              definition.getFullName().getSimpleName(),
+              memberType,
+              definition.getAccessor()));
+    }
+    boolean presenceAware = hasPresenceAttempt && allExactlyPresence && !members.isEmpty();
+    return new Shape(
+        type, List.copyOf(members), presenceAware, hasPresenceAttempt && !allExactlyPresence);
+  }
+
+  private static int configHash(DeserializationConfig config) {
+    int result =
+        config.getPropertyNamingStrategy() != null
+            ? config.getPropertyNamingStrategy().hashCode()
+            : 0;
+    result = 31 * result + config.getDefaultVisibilityChecker().hashCode();
+    return result;
+  }
+
+  // ============================== SHARED CONVERSION ==============================
+
+  private @Nullable Object convertAtomic(
+      @Nullable Object wire, JavaType targetType, String pointer, Class<?> rawType) {
+    try {
+      return mapper.convertValue(wire, targetType);
+    } catch (RuntimeException e) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
+          rawType,
+          pointer,
+          "Failed to convert the nested structured value at '" + pointer + "'",
+          e);
+    }
+  }
+
+  private @Nullable Object nullValue(JavaType type, String pointer, Class<?> rawType) {
+    DeserializationContext context = mapper._deserializationContext();
+    ValueDeserializer<Object> deserializer = context.findRootValueDeserializer(type);
+    if (deserializer == null) {
+      throw unsupported(
+          rawType, pointer, "Cannot resolve a deserializer for '" + type.toCanonical() + "'");
+    }
+    return deserializer.getNullValue(context);
+  }
+
+  // ============================== HELPERS ==============================
+
+  private static boolean isPatchPresence(JavaType type) {
+    return type.getRawClass() == PatchPresence.class && type.containedTypeCount() == 1;
+  }
+
+  private static boolean isPresenceAttempt(JavaType type) {
+    Class<?> raw = type.getRawClass();
+    return raw == PatchPresence.class
+        || raw == PatchPresence.Present.class
+        || raw == PatchPresence.Omitted.class;
+  }
+
+  private static boolean isOptional(JavaType type) {
+    return type.getRawClass() == Optional.class && type.containedTypeCount() == 1;
+  }
+
+  private static JavaType unwrapPatchPresence(JavaType type) {
+    return isPatchPresence(type) ? type.containedType(0) : type;
+  }
+
+  private static JavaType unwrapOptional(JavaType type) {
+    while (isOptional(type)) {
+      type = type.containedType(0);
+    }
+    return type;
+  }
+
+  private static JavaType unwrapLowLevel(JavaType type) {
+    return unwrapOptional(unwrapPatchPresence(type));
+  }
+
+  private static JsonApiMappingException unknownPatchMember(
+      Class<?> rawType, String path, String name) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.UNKNOWN_PATCH_MEMBER,
+        rawType,
+        path,
+        "Unknown supplied nested member '" + name + "' at '" + path + "'");
+  }
+
+  private static JsonApiMappingException invalidPatchPropertyType(
+      Class<?> rawType, String path, String detail) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
+        rawType,
+        path,
+        "Invalid nested PATCH property type at '" + path + "': " + detail);
+  }
+
+  private static JsonApiMappingException unsupported(
+      Class<?> rawType, String path, String message) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, rawType, path, message);
+  }
+
+  /** One visible, bindable member of a structured shape. */
+  record Member(
+      String internalName, String wireName, JavaType type, @Nullable AnnotatedMember accessor) {}
+
+  /** Resolved structured shape: visible members plus typed-mode classification. */
+  record Shape(
+      @Nullable JavaType type, List<Member> members, boolean presenceAware, boolean mixed) {
+
+    @Nullable Member memberByWireOrLogical(String name) {
+      for (Member member : members) {
+        if (member.wireName().equals(name) || member.internalName().equals(name)) {
+          return member;
+        }
+      }
+      return null;
+    }
+  }
+
+  private record CacheKey(JavaType type, int configHash) {}
+}

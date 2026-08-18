@@ -1,14 +1,6 @@
 package io.github.kazemek.jsonapi.jackson;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -36,12 +28,12 @@ public sealed interface PatchChange
     public AttributeChange {
       Objects.requireNonNull(jsonapiName, "jsonapiName");
       Objects.requireNonNull(logicalName, "logicalName");
-      value = freezeValue(value);
+      value = PatchValues.freeze(value);
     }
 
     @Override
     public @Nullable Object value() {
-      return exposeValue(value);
+      return PatchValues.expose(value);
     }
   }
 
@@ -51,58 +43,12 @@ public sealed interface PatchChange
     public RelationshipChange {
       Objects.requireNonNull(jsonapiName, "jsonapiName");
       Objects.requireNonNull(logicalName, "logicalName");
-      value = freezeValue(value);
+      value = PatchValues.freeze(value);
     }
 
     @Override
     public @Nullable Object value() {
-      return exposeValue(value);
+      return PatchValues.expose(value);
     }
-  }
-
-  /**
-   * Shallow-freeze {@link List}, {@link Set}, {@link Map}, and array values for storage. Null
-   * elements and map values are preserved; other objects are left as-is.
-   */
-  private static @Nullable Object freezeValue(@Nullable Object value) {
-    switch (value) {
-      case null -> {
-        return null;
-      }
-      case List<?> list -> {
-        List<@Nullable Object> copy = new ArrayList<>(list.size());
-        copy.addAll(list);
-        return Collections.unmodifiableList(copy);
-      }
-      case Set<?> set -> {
-        Set<@Nullable Object> copy = new LinkedHashSet<>(set);
-        return Collections.unmodifiableSet(copy);
-      }
-      case Map<?, ?> map -> {
-        Map<Object, @Nullable Object> copy = LinkedHashMap.newLinkedHashMap(map.size());
-        copy.putAll(map);
-        return Collections.unmodifiableMap(copy);
-      }
-      default -> {
-        // Scalars and arrays are copied below.
-      }
-    }
-    return copyArray(value);
-  }
-
-  /** Defensive copy for array accessors; lists/sets/maps are already unmodifiable. */
-  private static @Nullable Object exposeValue(@Nullable Object value) {
-    return copyArray(value);
-  }
-
-  private static @Nullable Object copyArray(@Nullable Object value) {
-    if (value == null || !value.getClass().isArray()) {
-      return value;
-    }
-    int length = Array.getLength(value);
-    Object copy = Array.newInstance(value.getClass().getComponentType(), length);
-    //noinspection SuspiciousSystemArraycopy
-    System.arraycopy(value, 0, copy, 0, length);
-    return copy;
   }
 }

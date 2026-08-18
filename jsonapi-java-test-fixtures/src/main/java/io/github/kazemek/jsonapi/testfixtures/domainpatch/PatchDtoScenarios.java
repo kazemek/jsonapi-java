@@ -25,7 +25,13 @@ public final class PatchDtoScenarios {
   private static final String AUTHOR = "author";
   private static final String COMMENTS = "comments";
   private static final String SUBTITLE = "subtitle";
+  private static final String ADDRESS = "address";
   private static final String TITLE_PATH = "/title";
+  private static final String ADDRESS_ATTRIBUTE_PATH = "/attributes/address";
+  private static final String IDENTITY_ONLY_DOCUMENT =
+      "{\"data\":{\"type\":\"articles\",\"id\":\"1\"}}";
+  private static final String MIXED_ADDRESS_DOCUMENT =
+      "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"city\":\"C\"}}}}";
   private static final String DECLARATION_DOCUMENT =
       "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"}}}";
 
@@ -50,7 +56,23 @@ public final class PatchDtoScenarios {
           declarationRawPatchPresence(),
           declarationDirectPresent(),
           declarationUnannotatedMember(),
-          declarationPresenceId());
+          declarationPresenceId(),
+          nestedPartialStructuredObject(),
+          nestedEmptyStructuredObject(),
+          nestedExplicitNull(),
+          nestedOmitted(),
+          nestedMultiLevel(),
+          nestedOptionalObject(),
+          nestedOptionalNull(),
+          nestedOptionalMemberNull(),
+          nestedContainerAtomic(),
+          nestedNonObjectWire(),
+          nestedUnknownMember(),
+          nestedDeclarationMixed(),
+          nestedDeclarationRaw(),
+          nestedDeclarationDirectPresent(),
+          nestedInvalidShapeOmitted(),
+          javabeanNestedPartial());
 
   private static final FixtureCatalog<PatchDtoScenario> CATALOG =
       FixtureCatalog.of("patch-dto", SCENARIOS);
@@ -288,9 +310,179 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationPresenceId() {
     return scenario(
         "patch-dto-declaration-presence-id",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\"}}",
+        IDENTITY_ONLY_DOCUMENT,
         PresenceIdPatch.class,
         PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/id"));
+  }
+
+  private static PatchDtoScenario nestedPartialStructuredObject() {
+    return scenario(
+        "patch-dto-nested-partial-structured-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"New Street\"}}}}",
+        ArticleWithAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressPatch(
+                        PatchPresence.present("New Street"), PatchPresence.omitted())))));
+  }
+
+  private static PatchDtoScenario nestedEmptyStructuredObject() {
+    return scenario(
+        "patch-dto-nested-empty-structured-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{}}}}",
+        ArticleWithAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressPatch(PatchPresence.omitted(), PatchPresence.omitted())))));
+  }
+
+  private static PatchDtoScenario nestedExplicitNull() {
+    return scenario(
+        "patch-dto-nested-explicit-null",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":null}}}",
+        ArticleWithAddressPatch.class,
+        PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.present(null))));
+  }
+
+  private static PatchDtoScenario nestedOmitted() {
+    return scenario(
+        "patch-dto-nested-omitted",
+        IDENTITY_ONLY_DOCUMENT,
+        ArticleWithAddressPatch.class,
+        PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario nestedMultiLevel() {
+    return scenario(
+        "patch-dto-nested-multi-level",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"geo\":{\"lat\":\"1\"}}}}}",
+        ArticleWithGeoPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressWithGeoPatch(
+                        PatchPresence.present("S"),
+                        PatchPresence.present(
+                            new GeoPatch(PatchPresence.present("1"), PatchPresence.omitted())))))));
+  }
+
+  private static PatchDtoScenario nestedOptionalObject() {
+    return scenario(
+        "patch-dto-nested-optional-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\"}}}}",
+        ArticleWithOptionalAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    Optional.of(
+                        new AddressPatch(PatchPresence.present("S"), PatchPresence.omitted()))))));
+  }
+
+  private static PatchDtoScenario nestedOptionalNull() {
+    return scenario(
+        "patch-dto-nested-optional-null",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":null}}}",
+        ArticleWithOptionalAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1", addressPatchMembers(PatchPresence.present(Optional.empty()))));
+  }
+
+  private static PatchDtoScenario nestedOptionalMemberNull() {
+    return scenario(
+        "patch-dto-nested-optional-member-null",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"city\":null}}}}",
+        ArticleWithOptionalCityPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressWithOptionalCityPatch(
+                        PatchPresence.present("S"), PatchPresence.present(Optional.empty()))))));
+  }
+
+  private static PatchDtoScenario nestedContainerAtomic() {
+    return scenario(
+        "patch-dto-nested-container-atomic",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"tags\":[\"a\",\"b\"]}}}}",
+        ArticleWithAddressTagsPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new AddressWithTagsPatch(
+                        PatchPresence.present("S"), PatchPresence.present(List.of("a", "b")))))));
+  }
+
+  private static PatchDtoScenario nestedNonObjectWire() {
+    return scenario(
+        "patch-dto-nested-non-object-wire",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":\"not-an-object\"}}}",
+        ArticleWithAddressPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, ADDRESS_ATTRIBUTE_PATH));
+  }
+
+  private static PatchDtoScenario nestedUnknownMember() {
+    return scenario(
+        "patch-dto-nested-unknown-member",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"bogus\":\"x\"}}}}",
+        ArticleWithAddressPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.UNKNOWN_PATCH_MEMBER, "/attributes/address/bogus"));
+  }
+
+  private static PatchDtoScenario nestedDeclarationMixed() {
+    return scenario(
+        "patch-dto-nested-declaration-mixed",
+        MIXED_ADDRESS_DOCUMENT,
+        ArticleWithMixedAddressPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
+  }
+
+  private static PatchDtoScenario nestedDeclarationRaw() {
+    return scenario(
+        "patch-dto-nested-declaration-raw",
+        MIXED_ADDRESS_DOCUMENT,
+        ArticleWithRawAddressPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
+  }
+
+  private static PatchDtoScenario nestedDeclarationDirectPresent() {
+    return scenario(
+        "patch-dto-nested-declaration-direct-present",
+        MIXED_ADDRESS_DOCUMENT,
+        ArticleWithDirectPresentAddressPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
+  }
+
+  private static PatchDtoScenario nestedInvalidShapeOmitted() {
+    return scenario(
+        "patch-dto-nested-invalid-shape-omitted",
+        IDENTITY_ONLY_DOCUMENT,
+        ArticleWithMixedAddressPatch.class,
+        PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario javabeanNestedPartial() {
+    return scenario(
+        "patch-dto-javabean-nested-partial",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\"}}}}",
+        MutableArticleWithAddressPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            addressPatchMembers(
+                PatchPresence.present(
+                    new MutableAddressPatch(
+                        PatchPresence.present("S"), PatchPresence.omitted())))));
   }
 
   private static Map<String, PatchPresence<?>> article(
@@ -309,6 +501,12 @@ public final class PatchDtoScenarios {
   private static Map<String, PatchPresence<?>> optionalArticle(PatchPresence<?> subtitle) {
     Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(1);
     members.put(SUBTITLE, subtitle);
+    return members;
+  }
+
+  private static Map<String, PatchPresence<?>> addressPatchMembers(PatchPresence<?> address) {
+    Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(1);
+    members.put(ADDRESS, address);
     return members;
   }
 
