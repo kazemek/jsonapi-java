@@ -18,7 +18,6 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.RenamedRelationshipMetaArtic
 import io.github.kazemek.jsonapi.jackson3.testmodel.ScalarMetaArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ScalarMetaPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.UnmappedRelationshipMetaArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.ConstantPatchPresenceSerializer
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.Meta
@@ -144,6 +143,20 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+    e.propertyPath == "/meta"
+  }
+
+  def "write relationship meta failure reports the relationship meta pointer"() {
+    given:
+    def article = new ArticleWithMapMeta("1", "T", null, null, ["": "bad"])
+
+    when:
+    mapper().toResource(article)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+    e.propertyPath == "/relationships/author/meta"
   }
 
   // ============================== READ ==============================
