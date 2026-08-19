@@ -541,6 +541,27 @@ class FlatMetaMappingSpec extends Specification {
     e.diagnostic == MappingDiagnostic.INVALID_FIELDSET_FIELD
   }
 
+  // ============================== WIRE-LEVEL INVALID META NULL ==============================
+
+  def "wire-level resource meta null is rejected at the reader"() {
+    when:
+    documentFrom('{"data":{"type":"articles","id":"1","meta":null}}')
+
+    then:
+    def e = thrown(io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException)
+    e.category == io.github.kazemek.jsonapi.jackson.CodecFailureCategory.UNEXPECTED_TOKEN
+  }
+
+  def "wire-level relationship meta null is rejected at the reader"() {
+    when:
+    documentFrom(
+        '{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"p1"},"meta":null}}}}')
+
+    then:
+    def e = thrown(io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException)
+    e.category == io.github.kazemek.jsonapi.jackson.CodecFailureCategory.UNEXPECTED_TOKEN
+  }
+
   private static JsonApiDocument documentFrom(String json) {
     JsonApiJackson3.reader(JsonMapper.builder().build(),
         io.github.kazemek.jsonapi.jackson.DocumentReadContext.resourceDefaults()).readValue(json)

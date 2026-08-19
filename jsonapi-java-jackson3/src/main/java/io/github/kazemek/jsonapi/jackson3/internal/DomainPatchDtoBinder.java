@@ -74,14 +74,47 @@ public final class DomainPatchDtoBinder {
     bindRelationships(resource, mapping, properties, rawType);
     bindResourceMeta(resource, mapping, properties, rawType);
     bindRelationshipMeta(resource, mapping, properties, rawType);
-    Map<String, MappingProperty> attributesByLogicalName =
-        PatchMemberConverter.byLogicalName(mapping.attributes());
+    Map<String, ConstructionLocation> locationsByLogicalName =
+        constructionLocationsByLogicalName(mapping);
     return BeanConstruction.convertBean(
         mapper,
         properties,
         targetType,
         rawType,
-        (failure, ignored) -> translateConstructionPath(failure, attributesByLogicalName));
+        (failure, ignored) -> translateConstructionPath(failure, locationsByLogicalName));
+  }
+
+  /** One structured member's construction-translation location: wire prefix and declared type. */
+  private record ConstructionLocation(String prefix, JavaType declaredType) {}
+
+  /**
+   * Maps every structured member's Jackson logical name to its resource-relative wire prefix and
+   * declared type for construction-failure pointer translation (ADR-014/015): attributes under
+   * {@code /attributes/<name>}, resource meta under {@code /meta}, and relationship meta under
+   * {@code /relationships/<name>/meta}.
+   */
+  private static Map<String, ConstructionLocation> constructionLocationsByLogicalName(
+      ResourceMapping mapping) {
+    Map<String, ConstructionLocation> locations = new LinkedHashMap<>();
+    for (MappingProperty property : mapping.attributes()) {
+      locations.put(
+          property.logicalName(),
+          new ConstructionLocation(
+              ATTRIBUTE_PATH_PREFIX + "/" + property.jsonapiName(), property.accessor().getType()));
+    }
+    MappingProperty resourceMeta = mapping.resourceMeta();
+    if (resourceMeta != null) {
+      locations.put(
+          resourceMeta.logicalName(),
+          new ConstructionLocation("/meta", resourceMeta.accessor().getType()));
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      locations.put(
+          property.logicalName(),
+          new ConstructionLocation(
+              "/relationships/" + property.jsonapiName() + "/meta", property.accessor().getType()));
+    }
+    return locations;
   }
 
   private void validateResourceType(
@@ -352,28 +385,28 @@ public final class DomainPatchDtoBinder {
 
   /**
    * Translates a failed single-pass bean-construction Jackson path into a resource-relative
-   * wire-name pointer for structured attributes (ADR-014).
+   * wire-name pointer for structured members (ADR-014/015).
    *
-   * <p>The path's first name is the top-level synthetic-map key (the attribute's Jackson logical
-   * name); it is mapped to the JSON:API wire name via the resolved mapping. Deeper names are walked
-   * through the already-resolved presence-aware shape metadata: each name that matches a nested
-   * member contributes that member's wire name, and the internal marker {@code value} member
-   * between two shape levels is skipped. Walking stops at the first name that is not a shape
-   * member, so Jackson-internal names below an atomic member are never leaked into the pointer.
+   * <p>The path's first name is the top-level synthetic-map key (the member's Jackson logical
+   * name); it is mapped to the member's resource-relative wire prefix via the resolved mapping.
+   * Deeper names are walked through the already-resolved presence-aware shape metadata: each name
+   * that matches a nested member contributes that member's wire name, and the internal marker
+   * {@code value} member between two shape levels is skipped. Walking stops at the first name that
+   * is not a shape member, so Jackson-internal names below an atomic member are never leaked into
+   * the pointer.
    */
   private String translateConstructionPath(
-      Throwable failure, Map<String, MappingProperty> attributesByLogicalName) {
+      Throwable failure, Map<String, ConstructionLocation> locationsByLogicalName) {
     List<String> names = BeanConstruction.pathNames(failure);
     if (names.isEmpty()) {
       return "/";
     }
-    MappingProperty top = attributesByLogicalName.get(names.getFirst());
-    if (top == null) {
+    ConstructionLocation location = locationsByLogicalName.get(names.getFirst());
+    if (location == null) {
       return BeanConstruction.propertyPath(failure);
     }
-    StringBuilder pointer =
-        new StringBuilder(ATTRIBUTE_PATH_PREFIX).append('/').append(top.jsonapiName());
-    JavaType current = top.accessor().getType();
+    JavaType current = location.declaredType();
+    StringBuilder pointer = new StringBuilder(location.prefix());
     int i = 1;
     boolean walking = true;
     while (i < names.size() && walking) {

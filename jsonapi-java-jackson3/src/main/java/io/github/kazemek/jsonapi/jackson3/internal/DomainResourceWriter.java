@@ -360,7 +360,7 @@ public final class DomainResourceWriter {
     if (metaProperty != null) {
       meta =
           buildMetaValue(
-              resource, metaProperty, "relationship meta '" + metaProperty.logicalName() + "'");
+              resource, metaProperty, "/relationships/" + property.jsonapiName() + "/meta");
     }
     return new Relationship(linkage, null, meta, Map.of());
   }
@@ -371,18 +371,15 @@ public final class DomainResourceWriter {
     if (resourceMetaProperty == null) {
       return null;
     }
-    return buildMetaValue(
-        resource,
-        resourceMetaProperty,
-        "resource meta '" + resourceMetaProperty.logicalName() + "'");
+    return buildMetaValue(resource, resourceMetaProperty, "/meta");
   }
 
   /**
    * Converts one whole-meta property value into a core {@link Meta}. The converted result must be a
    * {@link Map}; scalar/array/non-object runtime values fail with a stable meta diagnostic (never a
-   * leaked cast or core-validation failure).
+   * leaked cast or core-validation failure). Failures report the location-specific {@code path}.
    */
-  private @Nullable Meta buildMetaValue(Object resource, MappingProperty property, String label) {
+  private @Nullable Meta buildMetaValue(Object resource, MappingProperty property, String path) {
     Object rawValue = readValue(resource, property, property.role());
     Object value = unwrapOptional(rawValue);
     if (value == null) {
@@ -392,13 +389,13 @@ public final class DomainResourceWriter {
     try {
       converted = mapper.convertValue(value, Object.class);
     } catch (RuntimeException e) {
-      throw metaValueFailure(resource, property, label, "Failed to convert meta value", e);
+      throw metaValueFailure(resource, property, path, "Failed to convert meta value", e);
     }
     if (!(converted instanceof Map<?, ?> map)) {
       throw metaValueFailure(
           resource,
           property,
-          label,
+          path,
           "Converted meta value is not an object (expected a JSON object, got "
               + (converted == null ? "null" : converted.getClass().getName())
               + ")",
@@ -407,7 +404,7 @@ public final class DomainResourceWriter {
     try {
       return Meta.of(castMembers(map));
     } catch (JsonApiValidationException e) {
-      throw metaValueFailure(resource, property, label, "Invalid meta members", e);
+      throw metaValueFailure(resource, property, path, "Invalid meta members", e);
     }
   }
 
@@ -431,10 +428,9 @@ public final class DomainResourceWriter {
   private JsonApiMappingException metaValueFailure(
       Object resource,
       MappingProperty property,
-      String label,
+      String path,
       String message,
       @Nullable Throwable cause) {
-    String path = "/" + property.logicalName();
     return cause == null
         ? new JsonApiMappingException(
             MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), path, message)
