@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.Attributes;
+import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
@@ -42,9 +43,9 @@ import tools.jackson.databind.json.JsonMapper;
 public final class DomainPatchDtoBinder {
 
   private static final String IDENTIFIER_PATH_ID = "/id";
-  private static final String ATTRIBUTE_PATH_PREFIX = "/attributes";
-  private static final String RESOURCE_META_PATH = "/meta";
-  private static final String RELATIONSHIP_PATH_PREFIX = "/relationships/";
+  private static final String ATTRIBUTE_PATH_PREFIX = "/" + JsonApiMembers.ATTRIBUTES;
+  private static final String RESOURCE_META_PATH = "/" + JsonApiMembers.META;
+  private static final String RELATIONSHIP_PATH_PREFIX = "/" + JsonApiMembers.RELATIONSHIPS + "/";
 
   private final JsonMapper mapper;
   private final MappingDefinitionCache cache;
