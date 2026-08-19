@@ -18,8 +18,6 @@
   dependency change or verification failure, run
   `./gradlew --refresh-dependencies --write-verification-metadata sha256 clean build`; never disable
   verification globally.
-- Spotless 8.5.1 is intentionally capped in `gradle/libs.versions.toml` and `renovate.json` because
-  8.6+ breaks Greclipse input fingerprinting on cold CI.
 
 # Repository Shape
 

@@ -14,7 +14,9 @@ spotless {
     groovy {
         target("**/*.groovy")
         targetExclude("**/build/**", "**/bin/**")
-        greclipse().configFile("config/spotless/greclipse.properties")
+        // Pin Groovy-Eclipse 4.35 (Groovy 5.0.0): newer bundled formatters (4.38+ / Groovy 6)
+        // collapse the column alignment in Spock where: data tables.
+        greclipse("4.35").configFile("config/spotless/greclipse.properties")
         trimTrailingWhitespace()
         endWithNewline()
     }
