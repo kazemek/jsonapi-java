@@ -389,12 +389,11 @@ public final class DomainResourceWriter {
     try {
       converted = mapper.convertValue(value, Object.class);
     } catch (RuntimeException e) {
-      throw metaValueFailure(resource, property, path, "Failed to convert meta value", e);
+      throw metaValueFailure(resource, path, "Failed to convert meta value", e);
     }
     if (!(converted instanceof Map<?, ?> map)) {
       throw metaValueFailure(
           resource,
-          property,
           path,
           "Converted meta value is not an object (expected a JSON object, got "
               + (converted == null ? "null" : converted.getClass().getName())
@@ -404,7 +403,7 @@ public final class DomainResourceWriter {
     try {
       return Meta.of(castMembers(map));
     } catch (JsonApiValidationException e) {
-      throw metaValueFailure(resource, property, path, "Invalid meta members", e);
+      throw metaValueFailure(resource, path, "Invalid meta members", e);
     }
   }
 
@@ -426,11 +425,7 @@ public final class DomainResourceWriter {
   }
 
   private JsonApiMappingException metaValueFailure(
-      Object resource,
-      MappingProperty property,
-      String path,
-      String message,
-      @Nullable Throwable cause) {
+      Object resource, String path, String message, @Nullable Throwable cause) {
     return cause == null
         ? new JsonApiMappingException(
             MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), path, message)

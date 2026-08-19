@@ -43,6 +43,8 @@ public final class DomainPatchDtoBinder {
 
   private static final String IDENTIFIER_PATH_ID = "/id";
   private static final String ATTRIBUTE_PATH_PREFIX = "/attributes";
+  private static final String RESOURCE_META_PATH = "/meta";
+  private static final String RELATIONSHIP_PATH_PREFIX = "/relationships/";
 
   private final JsonMapper mapper;
   private final MappingDefinitionCache cache;
@@ -106,13 +108,14 @@ public final class DomainPatchDtoBinder {
     if (resourceMeta != null) {
       locations.put(
           resourceMeta.logicalName(),
-          new ConstructionLocation("/meta", resourceMeta.accessor().getType()));
+          new ConstructionLocation(RESOURCE_META_PATH, resourceMeta.accessor().getType()));
     }
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
       locations.put(
           property.logicalName(),
           new ConstructionLocation(
-              "/relationships/" + property.jsonapiName() + "/meta", property.accessor().getType()));
+              RELATIONSHIP_PATH_PREFIX + property.jsonapiName() + RESOURCE_META_PATH,
+              property.accessor().getType()));
     }
     return locations;
   }
@@ -282,7 +285,7 @@ public final class DomainPatchDtoBinder {
     if (supplied != null) {
       for (String name : supplied.keySet()) {
         if (!byJsonapiName.containsKey(name)) {
-          throw unknownPatchMember(rawType, "/relationships/" + name, "relationship", name);
+          throw unknownPatchMember(rawType, RELATIONSHIP_PATH_PREFIX + name, "relationship", name);
         }
       }
     }
@@ -321,7 +324,7 @@ public final class DomainPatchDtoBinder {
     MappingProperty property = mapping.resourceMeta();
     if (property == null) {
       if (resource.meta() != null) {
-        throw unknownPatchMember(rawType, "/meta", "meta", "meta");
+        throw unknownPatchMember(rawType, RESOURCE_META_PATH, "meta", "meta");
       }
       return;
     }
@@ -331,7 +334,7 @@ public final class DomainPatchDtoBinder {
     }
     Object value =
         structuredBinder.typedMemberValue(
-            resource.meta().members(), property.accessor().getType(), "/meta", rawType);
+            resource.meta().members(), property.accessor().getType(), RESOURCE_META_PATH, rawType);
     properties.put(property.logicalName(), new PresenceMarker(true, value));
   }
 
@@ -359,9 +362,9 @@ public final class DomainPatchDtoBinder {
             && !metaByTarget.containsKey(entry.getKey())) {
           throw unknownPatchMember(
               rawType,
-              "/relationships/" + entry.getKey() + "/meta",
+              RELATIONSHIP_PATH_PREFIX + entry.getKey() + RESOURCE_META_PATH,
               "relationship meta",
-              entry.getKey() + "/meta");
+              entry.getKey() + RESOURCE_META_PATH);
         }
       }
     }
@@ -371,7 +374,7 @@ public final class DomainPatchDtoBinder {
         properties.put(property.logicalName(), new PresenceMarker(false, null));
         continue;
       }
-      String pointer = "/relationships/" + property.jsonapiName() + "/meta";
+      String pointer = RELATIONSHIP_PATH_PREFIX + property.jsonapiName() + RESOURCE_META_PATH;
       Object value =
           structuredBinder.typedMemberValue(
               relationship.meta().members(), property.accessor().getType(), pointer, rawType);
