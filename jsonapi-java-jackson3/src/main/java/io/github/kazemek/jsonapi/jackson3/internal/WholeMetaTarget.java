@@ -3,7 +3,12 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JavaType;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.deser.bean.BeanDeserializerBase;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Whole-meta target-shape rules shared by the entry points that consume whole-meta mappings
@@ -13,18 +18,33 @@ import tools.jackson.databind.JavaType;
  * its own role's wrapper chain against these rules. Read/write and low-level domain mappings allow
  * exactly one optional {@link Optional} wrapper around a Bean / {@link Map} / {@link Object}
  * target; typed PATCH DTOs allow exactly one {@code PatchPresence<T>} wrapper and at most one
- * {@link Optional} inside it. Containers, scalars, primitives, enums, raw {@code PatchPresence},
- * and nested wrapper combinations are invalid.
+ * {@link Optional} inside it.
+ *
+ * <p>Whether an effective target is a legal whole-meta object target is decided by Jackson, not a
+ * manually maintained scalar taxonomy: after rejecting primitives, containers, and the already
+ * unwrapped {@link Optional}/{@code PatchPresence} raws, a target is valid iff its root
+ * deserializer is a property/creator-driven {@link BeanDeserializerBase} (records, POJOs,
+ * constructor-bound beans), or it is {@code Object} or {@link Map}-like. This is the same
+ * deserializer signal KAZ-76 uses for its structured-value boundary, so JDK scalars ({@code
+ * String}, {@code Character}, {@code Boolean}, {@code Number}, {@code java.time}, {@code
+ * java.math}, {@link java.util.UUID}, {@link java.net.URI}/{@link java.net.URL}) and custom scalar
+ * deserializers resolve to non-bean deserializers and are rejected. Presence-aware recursion is a
+ * separate {@link StructuredValueBinder} decision and is never required here.
  */
 final class WholeMetaTarget {
 
-  private WholeMetaTarget() {}
+  private final JsonMapper mapper;
+  private final Map<JavaType, Boolean> beanShapeCache = new ConcurrentHashMap<>();
+
+  WholeMetaTarget(JsonMapper mapper) {
+    this.mapper = mapper;
+  }
 
   /**
    * Read/write and low-level domain-mapping rule: exactly one optional Optional, then
    * Bean/Map/Object.
    */
-  static boolean validReadWriteTarget(JavaType declared) {
+  boolean validReadWriteTarget(JavaType declared) {
     JavaType effective = unwrapOptional(declared);
     if (isOptional(effective)) {
       return false;
@@ -36,7 +56,7 @@ final class WholeMetaTarget {
    * Typed PATCH DTO rule: exactly one PatchPresence, at most one Optional inside, then
    * Bean/Map/Object.
    */
-  static boolean validTypedPatchTarget(JavaType declared) {
+  boolean validTypedPatchTarget(JavaType declared) {
     if (!isPatchPresence(declared)) {
       return false;
     }
@@ -48,19 +68,7 @@ final class WholeMetaTarget {
     return isObjectCompatible(effective);
   }
 
-  static boolean isPatchPresence(JavaType type) {
-    return type.getRawClass() == PatchPresence.class && type.containedTypeCount() == 1;
-  }
-
-  private static boolean isOptional(JavaType type) {
-    return type.getRawClass() == Optional.class && type.containedTypeCount() == 1;
-  }
-
-  private static JavaType unwrapOptional(JavaType type) {
-    return isOptional(type) ? type.containedType(0) : type;
-  }
-
-  private static boolean isObjectCompatible(JavaType type) {
+  private boolean isObjectCompatible(JavaType type) {
     if (type.isPrimitive() || type.isArrayType() || type.isCollectionLikeType()) {
       return false;
     }
@@ -77,13 +85,33 @@ final class WholeMetaTarget {
         || raw == PatchPresence.Omitted.class) {
       return false;
     }
-    if (raw.isEnum()
-        || raw == String.class
-        || raw == Character.class
-        || raw == Boolean.class
-        || Number.class.isAssignableFrom(raw)) {
-      return false;
-    }
-    return true;
+    return isPropertyDrivenBean(type);
+  }
+
+  /**
+   * True when Jackson resolves a property/creator-driven bean deserializer ({@link
+   * BeanDeserializerBase}) for the type — the same structured-value boundary KAZ-76 uses, so a
+   * target is object-shaped only when Jackson itself treats it as a bean.
+   */
+  private boolean isPropertyDrivenBean(JavaType type) {
+    return beanShapeCache.computeIfAbsent(
+        type,
+        ignored -> {
+          DeserializationContext context = mapper._deserializationContext();
+          ValueDeserializer<?> deserializer = context.findRootValueDeserializer(type);
+          return deserializer instanceof BeanDeserializerBase;
+        });
+  }
+
+  private static boolean isPatchPresence(JavaType type) {
+    return type.getRawClass() == PatchPresence.class && type.containedTypeCount() == 1;
+  }
+
+  private static boolean isOptional(JavaType type) {
+    return type.getRawClass() == Optional.class && type.containedTypeCount() == 1;
+  }
+
+  private static JavaType unwrapOptional(JavaType type) {
+    return isOptional(type) ? type.containedType(0) : type;
   }
 }

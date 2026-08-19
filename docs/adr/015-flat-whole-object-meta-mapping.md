@@ -30,7 +30,7 @@ record Article(
     @JsonApiId ArticleId id,
     @JsonApiAttribute String title,
     @JsonApiMeta ArticleMeta meta,
-    @JsonApiRelationship("author") AuthorId author,
+    @JsonApiRelationship(name = "author") AuthorId author,
     @JsonApiRelationshipMeta("author") AuthorRelationshipMeta authorMeta) {}
 ```
 

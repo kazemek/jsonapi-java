@@ -48,6 +48,7 @@ public final class DomainPatchDtoBinder {
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
   private final StructuredValueBinder structuredBinder;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainPatchDtoBinder(
       JsonMapper mapper,
@@ -58,6 +59,7 @@ public final class DomainPatchDtoBinder {
     this.cache = Objects.requireNonNull(cache, "cache");
     this.converter = new PatchMemberConverter(mapper, identifierConverter, linkageMappers);
     this.structuredBinder = new StructuredValueBinder(mapper);
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /** Binds one resource object into a PATCH DTO instance of {@code targetType}. */
@@ -205,7 +207,7 @@ public final class DomainPatchDtoBinder {
               + "@JsonDeserialize/@JsonSerialize customization on "
               + rawType.getName());
     }
-    if (!WholeMetaTarget.validTypedPatchTarget(type)) {
+    if (!wholeMetaTarget.validTypedPatchTarget(type)) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_META_TARGET,
           rawType,

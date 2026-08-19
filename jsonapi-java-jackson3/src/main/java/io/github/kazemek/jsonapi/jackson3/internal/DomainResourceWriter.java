@@ -34,12 +34,14 @@ public final class DomainResourceWriter {
   private final JsonMapper mapper;
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainResourceWriter(
       JsonMapper mapper, IdentifierConverter identifierConverter, MappingDefinitionCache cache) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.identifierConverter = Objects.requireNonNull(identifierConverter, "identifierConverter");
     this.cache = Objects.requireNonNull(cache, "cache");
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /**
@@ -181,10 +183,10 @@ public final class DomainResourceWriter {
    * Object with exactly one optional {@link Optional} wrapper. Validation lives at the consuming
    * entry point, not the kind-agnostic resolver (ADR-015).
    */
-  private static void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
+  private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
     MappingProperty resourceMeta = mapping.resourceMeta();
     if (resourceMeta != null
-        && !WholeMetaTarget.validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
+        && !wholeMetaTarget.validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_META_TARGET,
           rawType,
@@ -196,7 +198,7 @@ public final class DomainResourceWriter {
               + rawType.getName());
     }
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
-      if (!WholeMetaTarget.validReadWriteTarget(property.definition().getPrimaryType())) {
+      if (!wholeMetaTarget.validReadWriteTarget(property.definition().getPrimaryType())) {
         throw new JsonApiMappingException(
             MappingDiagnostic.INVALID_META_TARGET,
             rawType,

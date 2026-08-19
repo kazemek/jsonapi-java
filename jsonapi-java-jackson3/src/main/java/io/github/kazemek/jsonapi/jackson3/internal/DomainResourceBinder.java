@@ -35,6 +35,7 @@ public final class DomainResourceBinder {
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
   private final Map<Class<?>, RelationshipLinkageMapper> linkageMappers;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainResourceBinder(
       JsonMapper mapper,
@@ -45,6 +46,7 @@ public final class DomainResourceBinder {
     this.identifierConverter = Objects.requireNonNull(identifierConverter, "identifierConverter");
     this.cache = Objects.requireNonNull(cache, "cache");
     this.linkageMappers = Map.copyOf(Objects.requireNonNull(linkageMappers, "linkageMappers"));
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /** Binds one resource object to the given target type. */
@@ -84,7 +86,7 @@ public final class DomainResourceBinder {
   private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
     MappingProperty resourceMeta = mapping.resourceMeta();
     if (resourceMeta != null
-        && !WholeMetaTarget.validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
+        && !wholeMetaTarget.validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_META_TARGET,
           rawType,
@@ -95,7 +97,7 @@ public final class DomainResourceBinder {
               + rawType.getName());
     }
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
-      if (!WholeMetaTarget.validReadWriteTarget(property.definition().getPrimaryType())) {
+      if (!wholeMetaTarget.validReadWriteTarget(property.definition().getPrimaryType())) {
         throw new JsonApiMappingException(
             MappingDiagnostic.INVALID_META_TARGET,
             rawType,

@@ -18,11 +18,23 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.RenamedRelationshipMetaArtic
 import io.github.kazemek.jsonapi.jackson3.testmodel.ScalarMetaArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ScalarMetaPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.UnmappedRelationshipMetaArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.UuidMetaArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.UuidMetaPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.InstantMetaArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.UriMetaArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithBoxMeta
+import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithBoxMetaPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithNullEmptyCityMeta
+import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithTypedContactMeta
+import io.github.kazemek.jsonapi.jackson3.testmodel.EmailContact
+import io.github.kazemek.jsonapi.jackson3.testmodel.MetaBox
+import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
@@ -497,6 +509,137 @@ class FlatMetaMappingSpec extends Specification {
     e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
   }
 
+  // ============================== SCALAR META TARGET REJECTION (Jackson-aware) ==============
+
+  def "UUID whole-meta target is rejected on the write path even when meta is absent"() {
+    when:
+    mapper().toResource(new UuidMetaArticle("1", null))
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "UUID whole-meta target is rejected on the read path even when meta is absent"() {
+    given:
+    def document = documentFrom('{"data":{"type":"articles","id":"1"}}')
+
+    when:
+    binder().fromResource(((DocumentData.SingleResource) document.data()).resource(), UuidMetaArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "UUID whole-meta target is rejected on the low-level patch path even when meta is absent"() {
+    when:
+    patchReader().readValue('{"data":{"type":"articles","id":"1"}}', UuidMetaArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "UUID typed PATCH meta target is rejected on the typed patch path"() {
+    when:
+    patchDtoReader().readValue(
+        '{"data":{"type":"articles","id":"1"}}', UuidMetaPatch)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "java.time whole-meta target is rejected on the write path even when meta is absent"() {
+    when:
+    mapper().toResource(new InstantMetaArticle("1", null))
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "java.time whole-meta target is rejected on the read path even when meta is absent"() {
+    given:
+    def document = documentFrom('{"data":{"type":"articles","id":"1"}}')
+
+    when:
+    binder().fromResource(((DocumentData.SingleResource) document.data()).resource(), InstantMetaArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "URI whole-meta target is rejected on the write path even when meta is absent"() {
+    when:
+    mapper().toResource(new UriMetaArticle("1", null))
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  def "URI whole-meta target is rejected on the low-level patch path even when meta is absent"() {
+    when:
+    patchReader().readValue('{"data":{"type":"articles","id":"1"}}', UriMetaArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
+  }
+
+  // ============================== POSITIVE WHOLE-META TARGET SHAPES =======================
+
+  def "Object whole-meta target is a valid declaration and writes a map value"() {
+    given:
+    def article = new ObjectMetaArticle("1", [source: "cms"])
+
+    when:
+    def resource = mapper().toResource(article)
+
+    then:
+    resource.meta().members() == [source: "cms"]
+  }
+
+  def "Map whole-meta target round-trips"() {
+    given:
+    def article = new ArticleWithMapMeta("1", "T", null, [source: "cms"], [displayName: "Alice"])
+    def resource = mapper().toResource(article)
+    def bound = binder().fromResource(resource, ArticleWithMapMeta)
+
+    expect:
+    bound.meta() == [source: "cms"]
+    bound.authorMeta() == [displayName: "Alice"]
+  }
+
+  def "Optional-wrapped bean meta target is valid on write and read"() {
+    given:
+    def article = new ArticleWithOptionalMeta(
+        "1", "T", null, Optional.of(new ArticleMeta("cms", "n")), Optional.of(new AuthorMeta("Alice")))
+    def resource = mapper().toResource(article)
+    def bound = binder().fromResource(resource, ArticleWithOptionalMeta)
+
+    expect:
+    bound.meta() == Optional.of(new ArticleMeta("cms", "n"))
+    bound.authorMeta() == Optional.of(new AuthorMeta("Alice"))
+  }
+
+  def "typed PatchPresence bean/map/object/optional targets are valid declarations"() {
+    expect:
+    // presence-aware bean target binds through the typed reader without declaration failure
+    !patchDtoReader().readValue(
+        '{"data":{"type":"articles","id":"1","meta":{"source":"cms"}}}', ArticleWithMetaPatch)
+        .meta().isOmitted()
+    patchDtoReader().readValue(
+        '{"data":{"type":"articles","id":"1","meta":{"source":"cms"}}}', ArticleWithMapMetaPatch)
+        .meta() == PatchPresence.present([source: "cms"])
+    patchDtoReader().readValue(
+        '{"data":{"type":"articles","id":"1","meta":{"source":"cms"}}}', ArticleWithOptionalMetaPatch)
+        .meta() == PatchPresence.present(Optional.of(new ArticleMeta("cms", null)))
+  }
+
   // ============================== SPARSE FIELDSETS ==============================
 
   def "resource meta is emitted even for an empty fieldset selection"() {
@@ -573,6 +716,136 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException)
     e.category == io.github.kazemek.jsonapi.jackson.CodecFailureCategory.UNEXPECTED_TOKEN
+  }
+
+  // ============================== JACKSON AUTHORITY AT META LOCATIONS ======================
+
+  def "low-level recursive meta preserves generic JavaType binding"() {
+    given:
+    def json = '{"data":{"type":"articles","id":"1","meta":{"value":"42"}}}'
+
+    when:
+    def command = patchReader().readValue(json, ArticleWithBoxMeta)
+
+    then: // the nested value converts as Integer, not Object/String/raw type
+    command.changes() == [
+      new PatchChange.ResourceMetaChange(
+      "meta", "meta",
+      new StructuredPatch(
+      [
+        new StructuredMember("value", "value", new StructuredMemberState.Atomic(42))
+      ]))
+    ]
+  }
+
+  def "typed meta preserves generic JavaType binding"() {
+    given:
+    def json = '{"data":{"type":"articles","id":"1","meta":{"value":"42"}}}'
+
+    when:
+    def patch = patchDtoReader().readValue(json, ArticleWithBoxMetaPatch)
+
+    then:
+    patch.meta() == PatchPresence.present(new MetaBox<>(42))
+  }
+
+  def "low-level recursive meta routes nested explicit null through the property null provider"() {
+    given:
+    def json = '{"data":{"type":"articles","id":"1","meta":{"city":null}}}'
+
+    when: // the city setter's @JsonSetter(nulls = Nulls.AS_EMPTY) null provider yields "" for null
+    def command = patchReader().readValue(json, ArticleWithNullEmptyCityMeta)
+
+    then: // not the root String deserializer's null value (null)
+    command.changes() == [
+      new PatchChange.ResourceMetaChange(
+      "meta", "meta",
+      new StructuredPatch(
+      [
+        new StructuredMember("city", "city", new StructuredMemberState.Atomic(""))
+      ]))
+    ]
+  }
+
+  def "low-level recursive meta preserves a property-level TypeDeserializer for a polymorphic nested member"() {
+    given:
+    def json =
+        '{"data":{"type":"articles","id":"1","meta":{"contact":{"kind":"email","email":"a@b.c"}}}}'
+
+    when: // the polymorphic contact converts through the property's TypeDeserializer path
+    def command = patchReader().readValue(json, ArticleWithTypedContactMeta)
+
+    then:
+    command.changes() == [
+      new PatchChange.ResourceMetaChange(
+      "meta", "meta",
+      new StructuredPatch(
+      [
+        new StructuredMember(
+        "contact",
+        "contact",
+        new StructuredMemberState.Atomic(new EmailContact("a@b.c")))
+      ]))
+    ]
+  }
+
+  // ============================== FROM-DOCUMENT DATA-LESS RELATIONSHIP META ================
+
+  def "fromDocument skips a data-less relationship with meta on the low-level path"() {
+    given:
+    def document = dataLessMetaDocument(null)
+    def command = patchReader().fromDocument(document, ArticleWithMeta)
+
+    expect:
+    command.identity() == "1"
+    command.changes().isEmpty()
+  }
+
+  def "fromDocument skips a data-less relationship with meta but keeps other supplied changes on the low-level path"() {
+    given:
+    def document = dataLessMetaDocument([title: "T"])
+    def command = patchReader().fromDocument(document, ArticleWithMeta)
+
+    expect:
+    command.changes() == [
+      new PatchChange.AttributeChange("title", "title", "T")
+    ]
+  }
+
+  def "fromDocument binds a data-less relationship with meta as Omitted on the typed path"() {
+    given:
+    def document = dataLessMetaDocument(null)
+    def dto = patchDtoReader().fromDocument(document, ArticleWithMetaPatch)
+
+    expect:
+    dto.author().isOmitted()
+    dto.authorMeta().isOmitted()
+  }
+
+  def "fromDocument binds a data-less relationship with meta as Omitted but keeps other supplied members on the typed path"() {
+    given:
+    def document = dataLessMetaDocument([title: "T"])
+    def dto = patchDtoReader().fromDocument(document, ArticleWithMetaPatch)
+
+    expect:
+    dto.title() == PatchPresence.present("T")
+    dto.author().isOmitted()
+    dto.authorMeta().isOmitted()
+  }
+
+  private static JsonApiDocument dataLessMetaDocument(Map suppliedAttrs) {
+    def resource = new ResourceObject(
+        "articles",
+        "1",
+        null,
+        suppliedAttrs == null ? null : Attributes.ofAttributes(suppliedAttrs),
+        Relationships.ofRelationships(
+        [author: Relationship.metaOnly(Meta.of([displayName: "Alice"]))]),
+        null,
+        null,
+        [:])
+    return new JsonApiDocument(
+        new DocumentData.SingleResource(resource), null, null, null, null, null, [:])
   }
 
   private static JsonApiDocument documentFrom(String json) {
