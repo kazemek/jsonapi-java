@@ -13,6 +13,7 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage
+import io.github.kazemek.jsonapi.core.validation.EndpointIdentity
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
@@ -603,7 +604,7 @@ class PatchDtoBindingSpec extends Specification {
   def "endpoint identity mismatch fails validation on readValue"() {
     given:
     def context = ValidationContext.defaults()
-        .withExpectedEndpointIdentity(new io.github.kazemek.jsonapi.core.validation.EndpointIdentity("articles", "99"))
+        .withExpectedEndpointIdentity(new EndpointIdentity("articles", "99"))
     def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build(), context)
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'
 

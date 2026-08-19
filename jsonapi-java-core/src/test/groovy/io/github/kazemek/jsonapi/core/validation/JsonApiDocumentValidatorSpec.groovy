@@ -1069,9 +1069,11 @@ class JsonApiDocumentValidatorSpec extends Specification {
   }
 
   def "validation context rejects null pagination hint values"() {
-    when:
+    given:
     def hints = new LinkedHashMap<RelationshipPaginationKey, RelationshipCardinality>()
     hints.put(RelationshipPaginationKey.of("articles", "comments"), null)
+
+    when:
     new ValidationContext(
         DocumentUsage.RESPONSE_OR_OTHER,
         Set.of(),
@@ -1089,9 +1091,11 @@ class JsonApiDocumentValidatorSpec extends Specification {
   }
 
   def "validation context rejects null pagination hint keys"() {
-    when:
+    given:
     def hints = new LinkedHashMap<RelationshipPaginationKey, RelationshipCardinality>()
     hints.put(null, RelationshipCardinality.TO_MANY)
+
+    when:
     new ValidationContext(
         DocumentUsage.RESPONSE_OR_OTHER,
         Set.of(),
@@ -1145,9 +1149,11 @@ class JsonApiDocumentValidatorSpec extends Specification {
   }
 
   def "validation context rejects null policy set elements"() {
-    when:
+    given:
     def namespaces = new HashSet<String>()
     namespaces.add(null)
+
+    when:
     new ValidationContext(
         DocumentUsage.RESPONSE_OR_OTHER,
         namespaces,

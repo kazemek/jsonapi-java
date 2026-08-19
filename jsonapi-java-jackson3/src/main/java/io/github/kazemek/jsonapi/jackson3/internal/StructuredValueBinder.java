@@ -27,7 +27,7 @@ import tools.jackson.databind.introspect.ClassIntrospector;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Location-agnostic recursive structured-value PATCH engine shared by the low-level {@link
+ * Location-agnostic recursive structured-value PATCH engine shared by the low-level {@code
  * PatchCommand} path and the direct typed PATCH DTO path.
  *
  * <p>The engine owns member resolution (deserialization-side Jackson introspection), shape and

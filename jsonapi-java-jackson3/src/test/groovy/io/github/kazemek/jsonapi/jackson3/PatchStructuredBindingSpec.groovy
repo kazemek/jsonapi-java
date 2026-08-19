@@ -10,6 +10,7 @@ import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.StructuredMember
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState
 import io.github.kazemek.jsonapi.jackson.StructuredPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNoteArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.CreatorCustomizedAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.Details
 import io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedProfile
@@ -21,10 +22,17 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.SetterSerializeCustomizedAdd
 import io.github.kazemek.jsonapi.jackson3.testmodel.SnakeAddress
 import io.github.kazemek.jsonapi.jackson3.testmodel.SnakeAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingAddressPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingArticlePatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.WrapperCustomizedAddressPatch
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.AddressPatch
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.AddressWithContainersPatch
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithAddressPatch
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithBox
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithBoxPatch
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithContainerAddress
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithContainerAddressPatch
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithOptionalAddress
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.BoxPatch
 import spock.lang.Specification
 import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.json.JsonMapper
@@ -182,7 +190,7 @@ class PatchStructuredBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","note":"n"}}}}'
 
     when:
-    def command = reader.readValue(json, io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNoteArticle)
+    def command = reader.readValue(json, AddressWithLoudNoteArticle)
 
     then:
     command.changes() == [
@@ -202,7 +210,7 @@ class PatchStructuredBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","note":{"bad":"shape"}}}}}'
 
     when:
-    reader.readValue(json, io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNoteArticle)
+    reader.readValue(json, AddressWithLoudNoteArticle)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -218,7 +226,7 @@ class PatchStructuredBindingSpec extends Specification {
 
     when:
     def command = reader.readValue(
-        json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithContainerAddress)
+        json, ArticleWithContainerAddress)
 
     then: // the array is not recursed into elements; it is one atomic replacement value
     def patch = (StructuredPatch) command.changes()[0].value()
@@ -239,10 +247,10 @@ class PatchStructuredBindingSpec extends Specification {
 
     when:
     def dto = reader.readValue(
-        json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithContainerAddressPatch)
+        json, ArticleWithContainerAddressPatch)
 
     then: // the array is not recursed into elements; it is one atomic replacement value
-    def shape = (io.github.kazemek.jsonapi.testfixtures.domainpatch.AddressWithContainersPatch) ((PatchPresence.Present) dto.address()).value()
+    def shape = (AddressWithContainersPatch) ((PatchPresence.Present) dto.address()).value()
     shape.street() == PatchPresence.present("S")
     shape.aliases() == PatchPresence.omitted()
     shape.scores() == PatchPresence.omitted()
@@ -257,7 +265,7 @@ class PatchStructuredBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","attributes":{"box":{"numbers":["1","2"]}}}}'
 
     when:
-    def command = reader.readValue(json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithBox)
+    def command = reader.readValue(json, ArticleWithBox)
 
     then: // List<Integer> element type is retained; a raw List would have kept the String elements
     command.changes() == [
@@ -277,10 +285,10 @@ class PatchStructuredBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","attributes":{"box":{"numbers":["1","2"]}}}}'
 
     when:
-    def dto = reader.readValue(json, io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithBoxPatch)
+    def dto = reader.readValue(json, ArticleWithBoxPatch)
 
     then: // List<Integer> element type is retained; a raw List would have kept the String elements
-    def box = (io.github.kazemek.jsonapi.testfixtures.domainpatch.BoxPatch) ((PatchPresence.Present) dto.box()).value()
+    def box = (BoxPatch) ((PatchPresence.Present) dto.box()).value()
     box.numbers() == PatchPresence.present([1, 2])
   }
 
@@ -290,7 +298,7 @@ class PatchStructuredBindingSpec extends Specification {
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'
 
     when:
-    reader.readValue(json, io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingArticlePatch)
+    reader.readValue(json, ThrowingArticlePatch)
 
     then:
     def ex = thrown(JsonApiMappingException)

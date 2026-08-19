@@ -22,9 +22,8 @@ public sealed interface RelationshipData
 
   record SingleLinkage(ResourceIdentifier identifier) implements RelationshipData {
     public SingleLinkage {
-      identifier =
-          LocalValidation.requireNonNull(
-              identifier, "/relationships/data", "Linkage identifier must not be null");
+      LocalValidation.requireNonNull(
+          identifier, "/relationships/data", "Linkage identifier must not be null");
     }
   }
 

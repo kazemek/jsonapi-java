@@ -89,7 +89,6 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetExpectation.failure(
                   MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT)),
           unmappedCollection(
-              "three-argument toResourceCollection rejects non-empty fieldsets",
               () -> List.of(article()),
               fieldsets(Map.of(ARTICLES, List.of(TITLE))),
               SparseFieldsetExpectation.failure(
@@ -100,7 +99,6 @@ public final class SparseFieldsetScenarios {
               fieldsets(Map.of(ARTICLES, List.of(TITLE))),
               SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, true)),
           mappedCollection(
-              "relationship-only fieldset via toMappedResourceCollection",
               () -> List.of(article()),
               fieldsets(Map.of(ARTICLES, List.of(AUTHOR))),
               SparseFieldsetExpectation.mapped(authorOnlyArticle(), null, true)),
@@ -309,12 +307,11 @@ public final class SparseFieldsetScenarios {
   }
 
   private static SparseFieldsetScenario mappedCollection(
-      String id,
       Supplier<Iterable<?>> supplier,
       CompoundSerializationContext context,
       SparseFieldsetExpectation expectation) {
     return new SparseFieldsetScenario(
-        id,
+        "relationship-only fieldset via toMappedResourceCollection",
         SparseFieldsetOperation.TO_MAPPED_RESOURCE_COLLECTION,
         SparseFieldsetRequest.collection(supplier, context),
         expectation);
@@ -333,12 +330,11 @@ public final class SparseFieldsetScenarios {
   }
 
   private static SparseFieldsetScenario unmappedCollection(
-      String id,
       Supplier<Iterable<?>> supplier,
       CompoundSerializationContext context,
       SparseFieldsetExpectation expectation) {
     return new SparseFieldsetScenario(
-        id,
+        "three-argument toResourceCollection rejects non-empty fieldsets",
         SparseFieldsetOperation.TO_RESOURCE_COLLECTION,
         SparseFieldsetRequest.collection(supplier, context),
         expectation);

@@ -95,8 +95,8 @@ public sealed interface CompoundWriteRequest
     return new Concurrent(first, second);
   }
 
-  private static <T> T requireSupplier(T supplier) {
-    return Objects.requireNonNull(supplier, "supplier");
+  private static void requireSupplier(Supplier<?> supplier) {
+    Objects.requireNonNull(supplier, "supplier");
   }
 
   private static void requireLimits(int maxDepth, int maxIncluded) {

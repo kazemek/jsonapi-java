@@ -32,17 +32,6 @@ final class PatchMemberConverter {
 
   private static final String IDENTIFIER_PATH_ID = "/id";
 
-  /**
-   * Null policy for attribute conversion: {@link #RAW_NULL} stores explicit JSON {@code null} as
-   * raw Java {@code null} (low-level {@code PatchCommand} contract); {@link #CONVERT_THROUGH}
-   * converts explicit JSON {@code null} through the inner type first (for example {@code
-   * Optional.empty()}), which the DTO path wraps in {@code Present}.
-   */
-  enum AttributeNullPolicy {
-    RAW_NULL,
-    CONVERT_THROUGH
-  }
-
   private final JsonMapper mapper;
   private final PropertyScopedValueConverter propertyScoped;
   private final IdentifierConverter identifierConverter;
@@ -98,18 +87,15 @@ final class PatchMemberConverter {
   }
 
   /**
-   * Converts one supplied attribute value against {@code targetType}. In {@link
-   * AttributeNullPolicy#RAW_NULL} mode explicit JSON {@code null} becomes raw Java {@code null}; in
-   * {@link AttributeNullPolicy#CONVERT_THROUGH} mode it is converted through the inner type first.
-   * Explicit null for a primitive target is always {@link
-   * MappingDiagnostic#UNSUPPORTED_ATTRIBUTE_VALUE}, independent of the caller's {@code
-   * FAIL_ON_NULL_FOR_PRIMITIVES} setting.
+   * Converts one supplied attribute value against {@code targetType}. Explicit JSON {@code null}
+   * becomes raw Java {@code null} (low-level {@code PatchCommand} contract). Explicit null for a
+   * primitive target is always {@link MappingDiagnostic#UNSUPPORTED_ATTRIBUTE_VALUE}, independent
+   * of the caller's {@code FAIL_ON_NULL_FOR_PRIMITIVES} setting.
    */
   @Nullable Object convertAttribute(
       MappingProperty property,
       @Nullable Object rawValue,
       JavaType targetType,
-      AttributeNullPolicy nullPolicy,
       Class<?> rawType,
       JavaType beanType) {
     if (rawValue == null && targetType.isPrimitive()) {
@@ -123,7 +109,7 @@ final class PatchMemberConverter {
               + rawType.getName());
     }
     try {
-      if (rawValue == null && nullPolicy == AttributeNullPolicy.RAW_NULL) {
+      if (rawValue == null) {
         return null;
       }
       return convertAttributeViaJackson(property, rawValue, targetType, beanType);
@@ -274,14 +260,6 @@ final class PatchMemberConverter {
     Map<String, MappingProperty> byName = new LinkedHashMap<>();
     for (MappingProperty property : properties) {
       byName.put(property.jsonapiName(), property);
-    }
-    return byName;
-  }
-
-  static Map<String, MappingProperty> byLogicalName(List<MappingProperty> properties) {
-    Map<String, MappingProperty> byName = new LinkedHashMap<>();
-    for (MappingProperty property : properties) {
-      byName.put(property.logicalName(), property);
     }
     return byName;
   }

@@ -376,7 +376,7 @@ public final class DomainResourceWriter {
           resource,
           path,
           "Converted meta value is not an object (expected a JSON object, got "
-              + (converted == null ? "null" : converted.getClass().getName())
+              + converted.getClass().getName()
               + ")",
           null);
     }

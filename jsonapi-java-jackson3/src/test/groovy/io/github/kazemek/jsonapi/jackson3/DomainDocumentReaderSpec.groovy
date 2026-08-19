@@ -354,7 +354,7 @@ class DomainDocumentReaderSpec extends Specification {
     }
   }
 
-  private JsonApiDomainDocumentReader readerFor(
+  private static JsonApiDomainDocumentReader readerFor(
       EnvelopeReadVariant.DocumentBinding binding, EnvelopeReadCase envelopeCase) {
     def builder = ResourceTypeRegistry.builder()
     for (Class<?> target : binding.targetClasses()) {
@@ -382,7 +382,7 @@ class DomainDocumentReaderSpec extends Specification {
     }
   }
 
-  private void verify(EnvelopeReadScenario scenario, List results) {
+  private static void verify(EnvelopeReadScenario scenario, List results) {
     def variant = scenario.variant()
     if (variant instanceof EnvelopeReadVariant.Registry) {
       variant.attempts().eachWithIndex { attempt, index ->

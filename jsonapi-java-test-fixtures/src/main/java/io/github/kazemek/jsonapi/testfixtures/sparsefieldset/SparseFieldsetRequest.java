@@ -86,7 +86,7 @@ public sealed interface SparseFieldsetRequest
     return new IdentityPreservation(supplier, contexts);
   }
 
-  private static <T> T requireSupplier(T supplier) {
-    return Objects.requireNonNull(supplier, "supplier");
+  private static void requireSupplier(Supplier<?> supplier) {
+    Objects.requireNonNull(supplier, "supplier");
   }
 }

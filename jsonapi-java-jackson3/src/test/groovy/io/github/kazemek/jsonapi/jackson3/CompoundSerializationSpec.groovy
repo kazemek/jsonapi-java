@@ -124,7 +124,7 @@ class CompoundSerializationSpec extends Specification {
     return document
   }
 
-  private void executeConcurrent(
+  private static void executeConcurrent(
       CompoundWriteRequest.Concurrent request,
       CompoundWriteExpectation.ConcurrentIsolation isolation) {
     def shared = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())

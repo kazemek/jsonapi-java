@@ -45,12 +45,12 @@ final class WholeMetaTarget {
   }
 
   /** Read/write and low-level domain-mapping rule: at most one Optional, then Bean/Map/Object. */
-  boolean validReadWriteTarget(JavaType declared) {
+  boolean invalidReadWriteTarget(JavaType declared) {
     JavaType effective = unwrapOptional(declared);
     if (isOptional(effective)) {
-      return false;
+      return true;
     }
-    return isObjectCompatible(effective);
+    return !isObjectCompatible(effective);
   }
 
   /**
@@ -62,11 +62,12 @@ final class WholeMetaTarget {
    */
   void validateReadWriteTargets(ResourceMapping mapping, Class<?> rawType) {
     MappingProperty resourceMeta = mapping.resourceMeta();
-    if (resourceMeta != null && !validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
+    if (resourceMeta != null
+        && invalidReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
       throw invalidTarget("Resource meta", resourceMeta, rawType);
     }
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
-      if (!validReadWriteTarget(property.definition().getPrimaryType())) {
+      if (invalidReadWriteTarget(property.definition().getPrimaryType())) {
         throw invalidTarget("Relationship meta", property, rawType);
       }
     }

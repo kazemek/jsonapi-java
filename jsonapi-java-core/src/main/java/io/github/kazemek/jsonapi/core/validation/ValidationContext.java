@@ -34,12 +34,9 @@ public record ValidationContext(
   private static final String PATH_RELATIONSHIP_PAGINATION_HINTS = "/relationshipPaginationHints";
 
   public ValidationContext {
-    documentUsage =
-        LocalValidation.requireNonNull(
-            documentUsage, "/documentUsage", "documentUsage must not be null");
-    linksContext =
-        LocalValidation.requireNonNull(
-            linksContext, "/linksContext", "linksContext must not be null");
+    LocalValidation.requireNonNull(
+        documentUsage, "/documentUsage", "documentUsage must not be null");
+    LocalValidation.requireNonNull(linksContext, "/linksContext", "linksContext must not be null");
     allowedExtensionNamespaces =
         copyRequiredStringSet(
             allowedExtensionNamespaces,

@@ -23,8 +23,7 @@ public sealed interface DocumentData
 
   record SingleResource(ResourceObject resource) implements DocumentData {
     public SingleResource {
-      resource =
-          LocalValidation.requireNonNull(resource, path(), "Resource payload must not be null");
+      LocalValidation.requireNonNull(resource, path(), "Resource payload must not be null");
     }
   }
 
@@ -36,8 +35,7 @@ public sealed interface DocumentData
 
   record SingleIdentifier(ResourceIdentifier identifier) implements DocumentData {
     public SingleIdentifier {
-      identifier =
-          LocalValidation.requireNonNull(identifier, path(), "Identifier payload must not be null");
+      LocalValidation.requireNonNull(identifier, path(), "Identifier payload must not be null");
     }
   }
 

@@ -27,6 +27,8 @@ public final class NegativeCodecScenarios {
   private static final FixtureCatalog<NegativeCodecScenario> CATALOG =
       FixtureCatalog.of("negative-codec", load());
 
+  private static final String SOURCE_LOCATION = "sourceLocation";
+
   private NegativeCodecScenarios() {}
 
   public static FixtureCatalog<NegativeCodecScenario> catalog() {
@@ -62,7 +64,9 @@ public final class NegativeCodecScenarios {
                 entry.getString("category"),
                 optionalString(entry, "pointer"),
                 optionalString(entry, "ruleCode"),
-                booleanOrFalse(entry, "sourceLocation")));
+                entry.containsKey(SOURCE_LOCATION)
+                    && !entry.isNull(SOURCE_LOCATION)
+                    && entry.getBoolean(SOURCE_LOCATION)));
       }
       return List.copyOf(loaded);
     } catch (IOException e) {
@@ -75,12 +79,5 @@ public final class NegativeCodecScenarios {
       return null;
     }
     return object.getString(name);
-  }
-
-  private static boolean booleanOrFalse(JsonObject object, String name) {
-    if (!object.containsKey(name) || object.isNull(name)) {
-      return false;
-    }
-    return object.getBoolean(name);
   }
 }

@@ -37,6 +37,9 @@ public final class PatchScenarios {
   private static final String AUTHOR = "author";
   private static final String ADDRESS = "address";
   private static final String STREET = "street";
+  private static final String NUMBERS = "numbers";
+  private static final String SOURCE = "source";
+  private static final String DISPLAY_NAME = "displayName";
   private static final String ADDRESS_OBJECT_WITH_STREET_DOCUMENT =
       "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\"}}}}";
 
@@ -449,8 +452,8 @@ public final class PatchScenarios {
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
-                                "numbers",
-                                "numbers",
+                                NUMBERS,
+                                NUMBERS,
                                 new StructuredMemberState.Atomic(List.of(1, 2)))))))));
   }
 
@@ -469,8 +472,8 @@ public final class PatchScenarios {
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
-                                "numbers",
-                                "numbers",
+                                NUMBERS,
+                                NUMBERS,
                                 new StructuredMemberState.Atomic(
                                     List.of(List.of(1, 2), List.of(3))))))))));
   }
@@ -485,8 +488,8 @@ public final class PatchScenarios {
             "1",
             List.of(
                 new PatchChange.AttributeChange(
-                    "address",
-                    "address",
+                    ADDRESS,
+                    ADDRESS,
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
@@ -507,8 +510,8 @@ public final class PatchScenarios {
             "1",
             List.of(
                 new PatchChange.AttributeChange(
-                    "address",
-                    "address",
+                    ADDRESS,
+                    ADDRESS,
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
@@ -592,7 +595,7 @@ public final class PatchScenarios {
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
-                                "source", "source", new StructuredMemberState.Atomic("cms")),
+                                SOURCE, SOURCE, new StructuredMemberState.Atomic("cms")),
                             new StructuredMember(
                                 "note", "note", new StructuredMemberState.Atomic("n"))))),
                 new PatchChange.AttributeChange(TITLE, TITLE, "T"),
@@ -604,8 +607,8 @@ public final class PatchScenarios {
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
-                                "displayName",
-                                "displayName",
+                                DISPLAY_NAME,
+                                DISPLAY_NAME,
                                 new StructuredMemberState.Atomic("Alice"))))))));
   }
 
@@ -618,7 +621,7 @@ public final class PatchScenarios {
         PatchExpectation.success(
             "1",
             List.of(
-                new PatchChange.ResourceMetaChange("meta", "meta", Map.of("source", "cms")),
+                new PatchChange.ResourceMetaChange("meta", "meta", Map.of(SOURCE, "cms")),
                 new PatchChange.AttributeChange(TITLE, TITLE, "T"))));
   }
 
@@ -640,8 +643,8 @@ public final class PatchScenarios {
                     new StructuredPatch(
                         List.of(
                             new StructuredMember(
-                                "displayName",
-                                "displayName",
+                                DISPLAY_NAME,
+                                DISPLAY_NAME,
                                 new StructuredMemberState.Atomic("Alice"))))))));
   }
 

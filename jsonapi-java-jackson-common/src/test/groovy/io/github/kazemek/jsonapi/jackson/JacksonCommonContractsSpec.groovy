@@ -525,7 +525,7 @@ class JacksonCommonContractsSpec extends Specification {
     expect:
     // The sealed contract must stay exactly the two variants exercised below; a newly permitted
     // implementation fails this assertion until it is deliberately handled in the switch.
-    PatchPresence.class.getPermittedSubclasses().toSet() ==
+    (Set) PatchPresence.class.getPermittedSubclasses().toSet() ==
         [
           PatchPresence.Omitted,
           PatchPresence.Present
@@ -595,7 +595,7 @@ class JacksonCommonContractsSpec extends Specification {
 
   def "structured member state has exactly atomic and structured variants"() {
     expect:
-    StructuredMemberState.class.getPermittedSubclasses().toSet() ==
+    (Set) StructuredMemberState.class.getPermittedSubclasses().toSet() ==
         [
           StructuredMemberState.Atomic,
           StructuredMemberState.Structured
