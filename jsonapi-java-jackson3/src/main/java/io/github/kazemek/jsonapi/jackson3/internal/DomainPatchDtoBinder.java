@@ -124,10 +124,10 @@ public final class DomainPatchDtoBinder {
   }
 
   private void validatePatchableProperty(MappingProperty property, Class<?> rawType) {
-    JavaType type = property.accessor().getType();
+    JavaType type = property.definition().getPrimaryType();
     if (!isPatchPresenceType(type)
         || WrapperCustomization.has(
-            mapper, property.accessor(), property.definition().getMutator())) {
+            mapper, type, property.accessor(), property.definition().getMutator())) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
           rawType,

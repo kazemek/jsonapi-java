@@ -163,15 +163,19 @@ low-level path represents requested changes independently of a PATCH DTO.
   configured Jackson deserialization semantics, including property-scoped customization
   (`@JsonDeserialize using = ...`, converters, content/key deserializers, and type refinement as
   Jackson applies them during normal binding). Both PATCH paths share one location-neutral
-  property-scoped conversion collaborator (`PropertyScopedValueConverter`), so a supplied nested
-  member converts through the same configured authority Jackson would use for that property rather
-  than being silently re-coerced by a plain whole-type `convertValue`; members without
-  property-scoped customization fall back to ordinary `convertValue` (type-level and module
-  authority still apply). Whether a member is considered customized is decided from Jackson's
-  effective deserialization property metadata — setter-, creator-parameter-, field-, and getter-
-  placed `@JsonDeserialize` are all detected — while serialization wrapper customization is checked
-  independently on the serialization-side member. On the low-level path a bean-valued property with
-  a property-scoped deserialization customization stays an atomic converted member (the custom
+  property-scoped conversion collaborator (`PropertyScopedValueConverter`), which resolves the
+  containing bean's fully-contextualized `SettableBeanProperty` and delegates to
+  `SettableBeanProperty.deserialize`, preserving the property's `TypeDeserializer` (polymorphic
+  values) and null provider; members without a bean-based property fall back to ordinary
+  `convertValue` (type-level and module authority still apply). Whether a member is considered
+  customized is decided from Jackson's effective deserialization and serialization property metadata
+  on both the serialization-side and deserialization-side members (setter-, creator-parameter-,
+  field-, and getter-placed `@JsonDeserialize` / `@JsonSerialize` are all detected, symmetrically).
+  Type-refinement checks use the member's resolved property `JavaType` (the deserialization-side
+  primary type), never `AnnotatedMember.getType()` — for a setter that returns the method return
+  type (`void`) instead of the setter parameter type, which makes `as`/`contentAs`/`keyAs`
+  refinement detection incorrect. On the low-level path a bean-valued property with a
+  property-scoped deserialization customization stays an atomic converted member (the custom
   deserializer is applied), never a recursed `StructuredPatch`, while the surrounding bean still
   recurses. Nested null semantics and primitive-null rejection are unchanged.
 - **Outer-state policy:** the engine is policy-free; the owning JSON:API mapping location constrains

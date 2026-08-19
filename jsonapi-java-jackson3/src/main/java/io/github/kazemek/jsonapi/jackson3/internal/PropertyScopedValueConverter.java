@@ -26,15 +26,17 @@ import tools.jackson.databind.util.TokenBuffer;
  * conversion-target {@link JavaType}, and the raw wire value, so a later structured JSON:API {@code
  * meta} mapping can reuse the same machinery at its own location (ADR-014, KAZ-77 reuse boundary).
  *
- * <p>The member's fully-contextualized property deserializer is resolved from the containing bean's
- * {@link BeanDeserializerBase} (the same {@link SettableBeanProperty} Jackson would use during
- * normal binding), so all property-scoped deserialization customization is honored exactly as
- * Jackson applies it — {@code @JsonDeserialize using / contentUsing / keyUsing}, deserialization
- * converters, and type refinement, regardless of whether the annotation sits on a field, accessor,
- * or creator parameter. When no bean-based property deserializer can be resolved, the value falls
- * back to ordinary {@code convertValue}, which still applies type-level and module authority. A
- * null {@code rawValue} converts through the target type's null value (for example {@code
- * Optional.empty()} for an {@link java.util.Optional} target).
+ * <p>The member's fully-contextualized property is resolved from the containing bean's {@link
+ * BeanDeserializerBase} (the same {@link SettableBeanProperty} Jackson would use during normal
+ * binding) and the value converts through {@link SettableBeanProperty#deserialize}, so all
+ * property-scoped deserialization semantics are honored exactly as Jackson applies them —
+ * {@code @JsonDeserialize using / contentUsing / keyUsing}, deserialization converters, type
+ * refinement (including a property-level {@code TypeDeserializer} for polymorphic values), and the
+ * property's null provider — regardless of whether the annotation sits on a field, accessor, or
+ * creator parameter. When no bean-based property can be resolved, the value falls back to ordinary
+ * {@code convertValue}, which still applies type-level and module authority. A null {@code
+ * rawValue} converts through the property's null value (for example {@code Optional.empty()} for an
+ * {@link java.util.Optional} target).
  */
 final class PropertyScopedValueConverter {
 
@@ -58,29 +60,25 @@ final class PropertyScopedValueConverter {
       JavaType declaredType,
       JavaType targetType,
       @Nullable Object rawValue) {
-    if (rawValue == null) {
-      return mapper.convertValue(null, targetType);
-    }
-    ValueDeserializer<Object> deserializer = null;
+    SettableBeanProperty property = null;
     if (declaredType.equals(targetType)) {
-      deserializer = propertyDeserializer(beanType, wireName);
+      property = matchingProperty(beanType, wireName);
     }
-    if (deserializer == null) {
+    if (property == null) {
       return mapper.convertValue(rawValue, targetType);
     }
     DeserializationContextExt context = mapper._deserializationContext();
     try (JsonParser parser = conversionParser(context, rawValue)) {
-      return deserializer.deserialize(parser, context);
+      return property.deserialize(parser, context);
     }
   }
 
   /**
-   * Resolves the fully-contextualized property value deserializer from the containing bean, or
+   * Resolves the fully-contextualized {@link SettableBeanProperty} from the containing bean, or
    * {@code null} when the bean has no property-driven deserializer or the wire-named property is
    * absent.
    */
-  private @Nullable ValueDeserializer<Object> propertyDeserializer(
-      JavaType beanType, String wireName) {
+  private @Nullable SettableBeanProperty matchingProperty(JavaType beanType, String wireName) {
     DeserializationContextExt context = mapper._deserializationContext();
     @SuppressWarnings("unchecked")
     ValueDeserializer<Object> root =
@@ -88,14 +86,16 @@ final class PropertyScopedValueConverter {
     if (!(root instanceof BeanDeserializerBase bean)) {
       return null;
     }
-    SettableBeanProperty property = bean.findProperty(PropertyName.construct(wireName));
-    return property == null ? null : property.getValueDeserializer();
+    return bean.findProperty(PropertyName.construct(wireName));
   }
 
   /**
-   * TokenBuffer-backed parser positioned on the first value token (Jackson {@code convertValue}).
+   * TokenBuffer-backed parser positioned on the first value token (Jackson {@code convertValue}). A
+   * {@code null} {@code rawValue} serializes to a {@link tools.jackson.core.JsonToken#VALUE_NULL}
+   * token so the property deserializer's null handling applies.
    */
-  private JsonParser conversionParser(DeserializationContextExt context, Object rawValue) {
+  private JsonParser conversionParser(
+      DeserializationContextExt context, @Nullable Object rawValue) {
     SerializationContextExt serializationContext = mapper._serializationContext();
     TokenBuffer buffer = serializationContext.bufferForValueConversion();
     if (mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {

@@ -155,7 +155,7 @@ final class StructuredValueBinder {
   private void validateTypedShape(Shape shape, String pointer, Class<?> rawType) {
     for (Member member : shape.members()) {
       if (WrapperCustomization.has(
-          mapper, member.serializationMember(), member.deserializationMember())) {
+          mapper, member.type(), member.serializationMember(), member.deserializationMember())) {
         throw invalidPatchPropertyType(
             rawType,
             pointer + "/" + PointerEscapes.escape(member.wireName()),
@@ -185,7 +185,7 @@ final class StructuredValueBinder {
     }
     boolean viaPatchPresence = isPatchPresence(declaredType);
     JavaType beanType = unwrapLowLevel(declaredType);
-    if (hasDeserializationCustomization(serializationMember, deserializationMember)) {
+    if (hasDeserializationCustomization(declaredType, serializationMember, deserializationMember)) {
       return LowLevelKind.ATOMIC;
     }
     Shape shape = shapeOf(beanType);
@@ -420,13 +420,16 @@ final class StructuredValueBinder {
    * serialization-side or deserialization-side member. Jackson may surface a deserialization
    * annotation through the accessor (getter / field), the mutator (creator parameter / setter /
    * field), or both, so both are inspected to honor setter-, creator-, field-, and getter-placed
-   * customization as normal Jackson binding would.
+   * customization as normal Jackson binding would. {@code declaredType} is the member's resolved
+   * property {@link JavaType}, used as the base for type-refinement checks (never {@code
+   * AnnotatedMember#getType()}, which is {@code void} for setters).
    */
   private boolean hasDeserializationCustomization(
+      JavaType declaredType,
       @Nullable AnnotatedMember serializationMember,
       @Nullable AnnotatedMember deserializationMember) {
-    return WrapperCustomization.hasDeserialization(mapper, serializationMember)
-        || WrapperCustomization.hasDeserialization(mapper, deserializationMember);
+    return WrapperCustomization.hasDeserialization(mapper, declaredType, serializationMember)
+        || WrapperCustomization.hasDeserialization(mapper, declaredType, deserializationMember);
   }
 
   private static JsonApiMappingException unknownPatchMember(

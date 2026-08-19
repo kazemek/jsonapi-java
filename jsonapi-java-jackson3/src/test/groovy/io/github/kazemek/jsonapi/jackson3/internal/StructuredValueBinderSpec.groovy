@@ -177,4 +177,30 @@ class StructuredValueBinderSpec extends Specification {
           new io.github.kazemek.jsonapi.jackson3.testmodel.Details("custom")))
         ])
   }
+
+  def "low-level engine detects setter-level @JsonDeserialize(as=...) via the real property type"() {
+    given:
+    def binder = new StructuredValueBinder(JsonMapper.builder().build())
+    def declared = JsonMapper.builder().build()
+        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile)
+
+    when: // the profile setter's @JsonDeserialize(as=...) refinement is detected through the
+    // resolved property type (a setter AnnotatedMethod.getType() is void, which would make the
+    // refinement check throw); the member stays Atomic with the refined deserializer applied
+    def patch = binder.bindLowLevelStructured(
+        [profile: [name: "N", email: "E"]],
+        declared,
+        META,
+        io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile)
+
+    then:
+    patch == new StructuredPatch(
+        [
+          new StructuredMember(
+          "profile",
+          "profile",
+          new StructuredMemberState.Atomic(
+          new io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedProfile("N", "E")))
+        ])
+  }
 }

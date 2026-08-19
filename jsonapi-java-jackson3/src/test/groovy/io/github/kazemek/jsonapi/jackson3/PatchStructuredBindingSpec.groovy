@@ -12,9 +12,12 @@ import io.github.kazemek.jsonapi.jackson.StructuredMemberState
 import io.github.kazemek.jsonapi.jackson.StructuredPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.CreatorCustomizedAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.Details
+import io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedProfile
 import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithCreatorCustomDetails
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile
 import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails
 import io.github.kazemek.jsonapi.jackson3.testmodel.SetterCustomizedAddressPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.SetterSerializeCustomizedAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.SnakeAddress
 import io.github.kazemek.jsonapi.jackson3.testmodel.SnakeAddressPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingAddressPatch
@@ -400,6 +403,43 @@ class PatchStructuredBindingSpec extends Specification {
     ]
   }
 
+  def "low-level bean-valued setter @JsonDeserialize(as=...) stays atomic rather than recursing"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"outer":{"profile":{"name":"N","email":"E"}}}}}'
+
+    when: // the surrounding bean recurses but the as-refined profile member is Atomic, not Structured
+    def command = reader.readValue(json, OuterWithSetterAsProfileArticle)
+
+    then:
+    command.changes() == [
+      new PatchChange.AttributeChange(
+      "outer", "outer",
+      new StructuredPatch([
+        new StructuredMember(
+        "profile", "profile",
+        new StructuredMemberState.Atomic(new ExtendedProfile("N", "E")))
+      ]))
+    ]
+  }
+
+  def "wrapper-level @JsonSerialize on a non-getter side is rejected for typed PatchPresence"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"street":"S","city":"C"}}}}'
+
+    when: // @JsonSerialize on the setter is wrapper-level serialization customization on a
+    // non-getter side; both members are inspected symmetrically for both directions
+    reader.readValue(json, SetterSerializeCustomizedAddressPatchDto)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
+    ex.propertyPath() == "/attributes/address/city"
+  }
+
   @JsonApiResource(type = "articles")
   static class SnakeAddressPatchDto {
     @JsonApiId String id
@@ -446,5 +486,17 @@ class PatchStructuredBindingSpec extends Specification {
   static class OuterWithCreatorCustomDetailsArticle {
     @JsonApiId String id
     @JsonApiAttribute OuterWithCreatorCustomDetails outer
+  }
+
+  @JsonApiResource(type = "articles")
+  static class OuterWithSetterAsProfileArticle {
+    @JsonApiId String id
+    @JsonApiAttribute OuterWithSetterAsProfile outer
+  }
+
+  @JsonApiResource(type = "articles")
+  static class SetterSerializeCustomizedAddressPatchDto {
+    @JsonApiId String id
+    @JsonApiAttribute PatchPresence<SetterSerializeCustomizedAddressPatch> address
   }
 }
