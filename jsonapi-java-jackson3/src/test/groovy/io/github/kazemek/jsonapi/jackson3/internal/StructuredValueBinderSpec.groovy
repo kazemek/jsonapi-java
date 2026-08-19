@@ -203,4 +203,46 @@ class StructuredValueBinderSpec extends Specification {
           new io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedProfile("N", "E")))
         ])
   }
+
+  def "low-level engine routes nested explicit null through the property null provider"() {
+    given:
+    def binder = new StructuredValueBinder(JsonMapper.builder().build())
+    def declared = JsonMapper.builder().build()
+        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithNullEmptyCity)
+
+    when: // the city setter's @JsonSetter(nulls = Nulls.AS_EMPTY) null provider yields "" for null
+    def patch = binder.bindLowLevelStructured(
+        [city: null], declared, META, io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithNullEmptyCity)
+
+    then: // not the root String deserializer's null value (null)
+    patch == new StructuredPatch(
+        [
+          new StructuredMember(
+          "city", "city", new StructuredMemberState.Atomic(""))
+        ])
+  }
+
+  def "low-level engine preserves a property-level TypeDeserializer for a polymorphic nested member"() {
+    given:
+    def binder = new StructuredValueBinder(JsonMapper.builder().build())
+    def declared = JsonMapper.builder().build()
+        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithTypedContact)
+
+    when: // the polymorphic contact converts through the property's TypeDeserializer path
+    def patch = binder.bindLowLevelStructured(
+        [contact: [kind: "email", email: "a@b.c"]],
+        declared,
+        META,
+        io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithTypedContact)
+
+    then:
+    patch == new StructuredPatch(
+        [
+          new StructuredMember(
+          "contact",
+          "contact",
+          new StructuredMemberState.Atomic(
+          new io.github.kazemek.jsonapi.jackson3.testmodel.EmailContact("a@b.c")))
+        ])
+  }
 }

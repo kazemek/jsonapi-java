@@ -177,7 +177,11 @@ low-level path represents requested changes independently of a PATCH DTO.
   refinement detection incorrect. On the low-level path a bean-valued property with a
   property-scoped deserialization customization stays an atomic converted member (the custom
   deserializer is applied), never a recursed `StructuredPatch`, while the surrounding bean still
-  recurses. Nested null semantics and primitive-null rejection are unchanged.
+  recurses. Explicit nested null also converts through the containing property's
+  `SettableBeanProperty.deserialize`, so a property-level null provider (for example
+  `@JsonSetter(nulls = Nulls.AS_EMPTY)`) applies rather than the root target deserializer's null
+  value; only the primitive-null rejection is handled locally. A property-level `TypeDeserializer`
+  (polymorphic values) is likewise preserved through the nested atomic conversion.
 - **Outer-state policy:** the engine is policy-free; the owning JSON:API mapping location constrains
   which outer presence states are wire-valid. Attributes allow `Present(null)`; a later `meta`
   mapping may reject an outer `Present(null)` while still allowing nested `Present(null)` values.

@@ -259,14 +259,11 @@ final class StructuredValueBinder {
   private @Nullable Object atomicLowLevel(
       @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
     JavaType target = unwrapPatchPresence(member.type());
-    if (wire == null) {
-      if (target.isPrimitive()) {
-        throw unsupported(
-            rawType,
-            pointer,
-            "Explicit null is not supported for a primitive nested member at '" + pointer + "'");
-      }
-      return nullValue(target, pointer, rawType);
+    if (wire == null && target.isPrimitive()) {
+      throw unsupported(
+          rawType,
+          pointer,
+          "Explicit null is not supported for a primitive nested member at '" + pointer + "'");
     }
     try {
       return propertyScoped.convert(beanType, member.wireName(), member.type(), target, wire);
