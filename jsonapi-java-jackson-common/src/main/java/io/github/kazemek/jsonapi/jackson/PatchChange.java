@@ -28,12 +28,16 @@ public sealed interface PatchChange
   /** Converted property value; {@code null} means explicit null / null linkage, not omission. */
   @Nullable Object value();
 
+  private static void requireNames(String jsonapiName, String logicalName) {
+    Objects.requireNonNull(jsonapiName, "jsonapiName");
+    Objects.requireNonNull(logicalName, "logicalName");
+  }
+
   /** A supplied mapped attribute change. */
   record AttributeChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public AttributeChange {
-      Objects.requireNonNull(jsonapiName, "jsonapiName");
-      Objects.requireNonNull(logicalName, "logicalName");
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
@@ -47,8 +51,7 @@ public sealed interface PatchChange
   record RelationshipChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public RelationshipChange {
-      Objects.requireNonNull(jsonapiName, "jsonapiName");
-      Objects.requireNonNull(logicalName, "logicalName");
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
@@ -71,8 +74,7 @@ public sealed interface PatchChange
   record ResourceMetaChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public ResourceMetaChange {
-      Objects.requireNonNull(jsonapiName, "jsonapiName");
-      Objects.requireNonNull(logicalName, "logicalName");
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
@@ -94,8 +96,7 @@ public sealed interface PatchChange
   record RelationshipMetaChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public RelationshipMetaChange {
-      Objects.requireNonNull(jsonapiName, "jsonapiName");
-      Objects.requireNonNull(logicalName, "logicalName");
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 

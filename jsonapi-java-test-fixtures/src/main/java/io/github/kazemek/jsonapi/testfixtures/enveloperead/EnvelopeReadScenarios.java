@@ -43,6 +43,8 @@ public final class EnvelopeReadScenarios {
   private static final String COMMENTS = "comments";
   private static final String NODES = "nodes";
   private static final String ERRORS_DOCUMENT = "errors-document";
+  private static final String JSONAPI_OBJECT_DOCUMENT = "jsonapi-object";
+  private static final String STRING_AND_OBJECT_LINKS_DOCUMENT = "string-and-object-links";
   private static final String COMPOUND_DOCUMENT = "compound-document";
   private static final String OTHER_PERSON_NAME = "Other";
   private static final List<Class<?>> NO_TARGETS = List.of();
@@ -112,7 +114,6 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.SINGLE_RESOURCE,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             single(
                 new FlatArticle(
                     "1",
@@ -145,7 +146,6 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.HETEROGENEOUS_COLLECTION,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             collection(
                 objects(new FlatArticle("1", "First", null, null, null), new Person("9", "Dan")),
                 null)));
@@ -222,7 +222,7 @@ public final class EnvelopeReadScenarios {
             ERRORS_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.bound(
-                null, null, requireErrors(ERRORS_DOCUMENT), null, null, null, NO_ADDITIONAL)));
+                null, null, requireErrors(), null, null, null, NO_ADDITIONAL)));
   }
 
   private static EnvelopeReadScenario jsonapiLinksAndMembers() {
@@ -235,18 +235,18 @@ public final class EnvelopeReadScenarios {
         ARTICLE_TARGETS,
         EnvelopeEntryPoint.READ_VALUE,
         codecCase(
-            "jsonapi-object",
+            JSONAPI_OBJECT_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.bound(
                 new DomainData.SingleResource(new FlatArticle("1", null, null, null, null)),
                 null,
                 null,
-                requireJsonapi("jsonapi-object"),
+                requireJsonapi(),
                 null,
                 null,
                 NO_ADDITIONAL)),
         codecCase(
-            "string-and-object-links",
+            STRING_AND_OBJECT_LINKS_DOCUMENT,
             EnvelopeReaderContext.CODEC_DERIVED,
             EnvelopeReadExpectation.bound(
                 new DomainData.ResourceCollection(
@@ -254,7 +254,7 @@ public final class EnvelopeReadScenarios {
                 null,
                 null,
                 null,
-                requireLinks("string-and-object-links"),
+                requireLinks(),
                 null,
                 NO_ADDITIONAL)),
         codecCase(
@@ -270,7 +270,6 @@ public final class EnvelopeReadScenarios {
                 extMembers)),
         bindingCase(
             EnvelopeBindingDocument.AT_MEMBER_DOCUMENT,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.bound(
                 new DomainData.SingleResource(new FlatArticle("1", "Hello", null, null, null)),
                 null,
@@ -288,7 +287,6 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.SINGLE_RESOURCE,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             single(
                 new FlatArticle(
                     "1",
@@ -387,11 +385,9 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.UNREGISTERED_PRIMARY_SINGLE,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.failure(MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE, "/data")),
         bindingCase(
             EnvelopeBindingDocument.UNREGISTERED_PRIMARY_COLLECTION,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE, "/data/0")));
   }
@@ -449,21 +445,18 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.BINDER_FAILURE_COLLECTION,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
                 "/data/0/relationships/author/data",
                 ResourceIdentifier.class)),
         bindingCase(
             EnvelopeBindingDocument.BINDER_FAILURE_SINGLE,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
                 "/data/relationships/author/data",
                 ResourceIdentifier.class)),
         bindingCase(
             EnvelopeBindingDocument.BINDER_FAILURE_INCLUDED,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
                 "/included/1/title",
@@ -477,7 +470,6 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.ROOT_LEVEL_FAILURE,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.MISSING_CREATOR_INPUT, "/data", FlatThrowingArticle.class)));
   }
@@ -489,7 +481,6 @@ public final class EnvelopeReadScenarios {
         EnvelopeEntryPoint.READ_VALUE,
         bindingCase(
             EnvelopeBindingDocument.CYCLIC_LINKAGE,
-            EnvelopeReaderContext.RESOURCE_DEFAULTS,
             single(
                 new FlatNode("1", ResourceIdentifier.of(NODES, "2")),
                 IncludedExpectation.of(
@@ -527,8 +518,7 @@ public final class EnvelopeReadScenarios {
             null,
             NO_ADDITIONAL);
     BoundEnvelope errors =
-        EnvelopeReadExpectation.bound(
-            null, null, requireErrors(ERRORS_DOCUMENT), null, null, null, NO_ADDITIONAL);
+        EnvelopeReadExpectation.bound(null, null, requireErrors(), null, null, null, NO_ADDITIONAL);
     return documentBinding(
         "reader-derived envelope collections are mutation-safe",
         ARTICLE_AND_PERSON,
@@ -561,10 +551,9 @@ public final class EnvelopeReadScenarios {
   }
 
   private static EnvelopeReadCase bindingCase(
-      EnvelopeBindingDocument document,
-      EnvelopeReaderContext readerContext,
-      EnvelopeReadExpectation expectation) {
-    return new EnvelopeReadCase(EnvelopeReadInput.binding(document), readerContext, expectation);
+      EnvelopeBindingDocument document, EnvelopeReadExpectation expectation) {
+    return new EnvelopeReadCase(
+        EnvelopeReadInput.binding(document), EnvelopeReaderContext.RESOURCE_DEFAULTS, expectation);
   }
 
   private static EnvelopeReadCase coreCase(
@@ -684,15 +673,19 @@ public final class EnvelopeReadScenarios {
     return Objects.requireNonNull(CodecScenarios.byId(codecId).document().meta(), codecId);
   }
 
-  private static List<ErrorObject> requireErrors(String codecId) {
-    return Objects.requireNonNull(CodecScenarios.byId(codecId).document().errors(), codecId);
+  private static List<ErrorObject> requireErrors() {
+    return Objects.requireNonNull(
+        CodecScenarios.byId(ERRORS_DOCUMENT).document().errors(), ERRORS_DOCUMENT);
   }
 
-  private static JsonApiObject requireJsonapi(String codecId) {
-    return Objects.requireNonNull(CodecScenarios.byId(codecId).document().jsonapi(), codecId);
+  private static JsonApiObject requireJsonapi() {
+    return Objects.requireNonNull(
+        CodecScenarios.byId(JSONAPI_OBJECT_DOCUMENT).document().jsonapi(), JSONAPI_OBJECT_DOCUMENT);
   }
 
-  private static Links requireLinks(String codecId) {
-    return Objects.requireNonNull(CodecScenarios.byId(codecId).document().links(), codecId);
+  private static Links requireLinks() {
+    return Objects.requireNonNull(
+        CodecScenarios.byId(STRING_AND_OBJECT_LINKS_DOCUMENT).document().links(),
+        STRING_AND_OBJECT_LINKS_DOCUMENT);
   }
 }

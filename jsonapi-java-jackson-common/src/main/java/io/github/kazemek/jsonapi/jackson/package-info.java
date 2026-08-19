@@ -21,8 +21,8 @@
  * relationship NullLinkage use {@code @Nullable value == null} (no sealed attribute-null variant).
  * Direct PATCH DTO members declare presence through {@link PatchPresence}, whose {@link
  * PatchPresence.Present} with a {@code null} value is explicit null, never omission. Recursive
- * structured attributes use {@link StructuredPatch} / {@link StructuredMember(wireName,
- * logicalName)} / {@link StructuredMemberState} (Atomic / Structured) as the neutral
+ * structured attributes use {@link StructuredPatch} / {@link StructuredMember} (wire and logical
+ * member names) / {@link StructuredMemberState} (Atomic / Structured) as the neutral
  * requested-change payload (ADR-014); an empty {@code StructuredPatch} is a supplied empty
  * structured object, never a clear-all. {@code @Nullable} marks intentionally null-bearing members
  * per ADR-009.

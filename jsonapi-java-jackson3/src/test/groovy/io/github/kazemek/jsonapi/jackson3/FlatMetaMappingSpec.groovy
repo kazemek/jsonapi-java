@@ -76,19 +76,19 @@ class FlatMetaMappingSpec extends Specification {
   '"meta":{"source":"cms","note":"n"},' +
   '"relationships":{"author":{"data":{"type":"people","id":"p1"},"meta":{"displayName":"Alice"}}}}}'
 
-  def mapper() {
+  static def mapper() {
     JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
   }
 
-  def binder() {
+  static def binder() {
     JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
   }
 
-  def patchReader() {
+  static def patchReader() {
     JsonApiJackson3.patchReader(JsonMapper.builder().build())
   }
 
-  def patchDtoReader() {
+  static def patchDtoReader() {
     JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
   }
 

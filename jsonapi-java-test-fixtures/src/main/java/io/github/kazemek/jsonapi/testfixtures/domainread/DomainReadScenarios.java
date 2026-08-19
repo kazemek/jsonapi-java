@@ -32,6 +32,7 @@ public final class DomainReadScenarios {
 
   private static final String ARTICLES = "articles";
   private static final String AUTHOR = "author";
+  private static final String ALICE = "Alice";
   private static final String COMMENTS = "comments";
   private static final String PEOPLE = "people";
   private static final String TITLE = "title";
@@ -121,19 +122,19 @@ public final class DomainReadScenarios {
               DomainReadExpectation.bound(new FlatIntIdArticle(42, "T"))),
           new DomainReadScenario(
               "lid-only resource binds into identifier property",
-              DomainReadInput.single(resourceWithLid(ARTICLES, null, "l1", attrs(TITLE, "T"))),
+              DomainReadInput.single(resourceWithLid("l1", attrs(TITLE, "T"))),
               FlatLidArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(new FlatLidArticle("l1", "T"))),
           new DomainReadScenario(
               "resource without id or lid omits the identifier property",
-              DomainReadInput.single(resourceWithLid(ARTICLES, null, null, attrs(TITLE, "T"))),
+              DomainReadInput.single(resourceWithLid(null, attrs(TITLE, "T"))),
               FlatLidArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(new FlatLidArticle(null, "T"))),
           new DomainReadScenario(
               "explicit-null attribute binds null and omitted attribute keeps its default",
-              DomainReadInput.single(resource(ARTICLES, "1", nullableAttr(TITLE, null), null)),
+              DomainReadInput.single(resource(ARTICLES, "1", nullableAttr(TITLE), null)),
               FlatDefaultedArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(new FlatDefaultedArticle("1", null, "default"))),
@@ -406,7 +407,7 @@ public final class DomainReadScenarios {
               DomainReadExpectation.failure(MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE)),
           new DomainReadScenario(
               "explicit-null attribute into primitive property is UNSUPPORTED_ATTRIBUTE_VALUE",
-              DomainReadInput.single(resource(THINGS, "1", nullableAttr("count", null), null)),
+              DomainReadInput.single(resource(THINGS, "1", nullableAttr("count"), null)),
               FlatCountedThing.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE)),
@@ -414,11 +415,8 @@ public final class DomainReadScenarios {
               "binds resource meta and relationship meta",
               DomainReadInput.single(
                   resourceWithMeta(
-                      ARTICLES,
-                      "1",
                       attrs(TITLE, HELLO),
-                      relsWithMeta(
-                          AUTHOR, toOne(PEOPLE, "p1"), Meta.of(Map.of("displayName", "Alice"))),
+                      relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of("displayName", ALICE))),
                       Meta.of(Map.of("source", "cms", "note", "n")))),
               FlatMetaArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
@@ -428,7 +426,7 @@ public final class DomainReadScenarios {
                       HELLO,
                       ResourceIdentifier.of(PEOPLE, "p1"),
                       new ArticleMeta("cms", "n"),
-                      new AuthorMeta("Alice")))),
+                      new AuthorMeta(ALICE)))),
           new DomainReadScenario(
               "absent meta leaves meta properties null",
               DomainReadInput.single(resource(ARTICLES, "1", attrs(TITLE, HELLO), null)),
@@ -439,15 +437,13 @@ public final class DomainReadScenarios {
               "meta-only relationship binds its meta on the read side",
               DomainReadInput.single(
                   resourceWithMeta(
-                      ARTICLES,
-                      "1",
                       attrs(TITLE, HELLO),
-                      relsOnlyMeta(AUTHOR, Meta.of(Map.of("displayName", "Alice"))),
+                      relsOnlyMeta(Meta.of(Map.of("displayName", ALICE))),
                       null)),
               FlatMetaArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatMetaArticle("1", HELLO, null, null, new AuthorMeta("Alice")))),
+                  new FlatMetaArticle("1", HELLO, null, null, new AuthorMeta(ALICE)))),
           new DomainReadScenario(
               "binder never sees document included resources",
               DomainReadInput.includedIsolation(INCLUDED_PRIMARY, INCLUDED_SWAPPED),
@@ -498,14 +494,12 @@ public final class DomainReadScenarios {
   }
 
   private static ResourceObject resourceWithMeta(
-      String type,
-      @Nullable String id,
       @Nullable Map<String, @Nullable Object> attributes,
       @Nullable Map<String, Relationship> relationships,
       @Nullable Meta meta) {
     return new ResourceObject(
-        type,
-        id,
+        ARTICLES,
+        "1",
         null,
         attributes == null ? null : Attributes.ofAttributes(attributes),
         relationships == null
@@ -516,27 +510,23 @@ public final class DomainReadScenarios {
         Map.of());
   }
 
-  private static Map<String, Relationship> relsWithMeta(
-      String name, Relationship relationship, Meta meta) {
+  private static Map<String, Relationship> relsWithMeta(Relationship relationship, Meta meta) {
     Map<String, Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
-        name, new Relationship(relationship.data(), relationship.links(), meta, Map.of()));
+        AUTHOR, new Relationship(relationship.data(), relationship.links(), meta, Map.of()));
     return relationships;
   }
 
-  private static Map<String, Relationship> relsOnlyMeta(String name, Meta meta) {
+  private static Map<String, Relationship> relsOnlyMeta(Meta meta) {
     Map<String, Relationship> relationships = new LinkedHashMap<>();
-    relationships.put(name, Relationship.metaOnly(meta));
+    relationships.put(AUTHOR, Relationship.metaOnly(meta));
     return relationships;
   }
 
   private static ResourceObject resourceWithLid(
-      String type,
-      @Nullable String id,
-      @Nullable String lid,
-      Map<String, @Nullable Object> attributes) {
+      @Nullable String lid, Map<String, @Nullable Object> attributes) {
     return new ResourceObject(
-        type, id, lid, Attributes.ofAttributes(attributes), null, null, null, Map.of());
+        ARTICLES, null, lid, Attributes.ofAttributes(attributes), null, null, null, Map.of());
   }
 
   private static Map<String, @Nullable Relationship> copyRelationships(
@@ -565,9 +555,9 @@ public final class DomainReadScenarios {
     return attributes;
   }
 
-  private static Map<String, @Nullable Object> nullableAttr(String name, @Nullable Object value) {
+  private static Map<String, @Nullable Object> nullableAttr(String name) {
     Map<String, @Nullable Object> attributes = new LinkedHashMap<>();
-    attributes.put(name, value);
+    attributes.put(name, null);
     return attributes;
   }
 

@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,11 +14,7 @@ final class RelationshipMetaSupport {
    * guarantees at most one relationship-meta property per target, so keys are unique.
    */
   static Map<String, MappingProperty> byTarget(List<MappingProperty> relationshipMetaProperties) {
-    Map<String, MappingProperty> byTarget = new LinkedHashMap<>();
-    for (MappingProperty property : relationshipMetaProperties) {
-      byTarget.put(property.jsonapiName(), property);
-    }
-    return byTarget;
+    return PatchMemberConverter.byJsonapiName(relationshipMetaProperties);
   }
 
   /** Resource-relative diagnostic pointer for the resource-side {@code meta} location. */

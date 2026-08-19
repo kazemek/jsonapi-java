@@ -214,6 +214,20 @@ class PatchFixtureModelsSpec extends Specification {
     containers.aliases() == ["a", "b"] as Set
     containers.initials() == ["A", "B"] as String[]
     containers.scores() == [x: 1]
+    // Content-aware equality: array members compare by content, not identity.
+    containers == containers
+    containers == new AddressWithContainers("S", ["a", "b"] as Set, ["A", "B"] as String[], [x: 1])
+    containers.hashCode() ==
+        new AddressWithContainers("S", ["a", "b"] as Set, ["A", "B"] as String[], [x: 1]).hashCode()
+    containers != new AddressWithContainers("S", ["a", "b"] as Set, ["B", "A"] as String[], [x: 1])
+    containers != new AddressWithContainers("S", ["a", "b"] as Set, ["A", "B", "C"] as String[], [x: 1])
+    containers != new AddressWithContainers("S", ["a", "b"] as Set, null, [x: 1])
+    containers != new AddressWithContainers("T", ["a", "b"] as Set, ["A", "B"] as String[], [x: 1])
+    containers != new AddressWithContainers("S", ["a", "b"] as Set, ["A", "B"] as String[], [x: 2])
+    containers != null
+    containers != "not an address"
+    containers.toString() ==
+        "AddressWithContainers[street=S, aliases=[a, b], initials=[A, B], scores={x=1}]"
 
     new ArticleWithContainerAddress("1", containers).address().aliases() == ["a", "b"] as Set
 

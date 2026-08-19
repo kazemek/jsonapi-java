@@ -27,6 +27,7 @@ public final class PatchDtoScenarios {
   private static final String COMMENTS = "comments";
   private static final String SUBTITLE = "subtitle";
   private static final String ADDRESS = "address";
+  private static final String PEOPLE = "people";
   private static final String TITLE_PATH = "/title";
   private static final String ADDRESS_ATTRIBUTE_PATH = "/attributes/address";
   private static final String IDENTITY_ONLY_DOCUMENT =
@@ -180,7 +181,7 @@ public final class PatchDtoScenarios {
             article(
                 PatchPresence.omitted(),
                 PatchPresence.omitted(),
-                PatchPresence.present(ResourceIdentifier.of("people", "p1")),
+                PatchPresence.present(ResourceIdentifier.of(PEOPLE, "p1")),
                 PatchPresence.omitted())));
   }
 
@@ -436,7 +437,7 @@ public final class PatchDtoScenarios {
         PatchDtoExpectation.success(
             "1",
             boxPatchMembers(
-                PatchPresence.present(new BoxPatch(PatchPresence.present(List.of(1, 2)))))));
+                PatchPresence.present(new BoxPatch<>(PatchPresence.present(List.of(1, 2)))))));
   }
 
   private static PatchDtoScenario nestedContainerAtomicSet() {
@@ -582,7 +583,7 @@ public final class PatchDtoScenarios {
                 PatchPresence.present("T"),
                 PatchPresence.present(
                     new ArticleMetaPatch(PatchPresence.present("cms"), PatchPresence.present("n"))),
-                PatchPresence.present(ResourceIdentifier.of("people", "p1")),
+                PatchPresence.present(ResourceIdentifier.of(PEOPLE, "p1")),
                 PatchPresence.present(new AuthorMeta("Alice")))));
   }
 
@@ -599,7 +600,7 @@ public final class PatchDtoScenarios {
             mapMetaPatchMembers(
                 PatchPresence.present("T"),
                 PatchPresence.present(Map.of("source", "cms")),
-                PatchPresence.present(ResourceIdentifier.of("people", "p1")),
+                PatchPresence.present(ResourceIdentifier.of(PEOPLE, "p1")),
                 PatchPresence.present(Map.of("displayName", "Alice")))));
   }
 

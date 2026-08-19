@@ -50,7 +50,7 @@ public final class MemberNames {
     }
     for (int i = 0; i < namespace.length(); i++) {
       char c = namespace.charAt(i);
-      if (!isAlpha(c) && !isDigit(c)) {
+      if (isNotAlpha(c) && isNotDigit(c)) {
         return false;
       }
     }
@@ -75,14 +75,14 @@ public final class MemberNames {
   }
 
   private static boolean isNotMemberEdge(char c) {
-    return !isAlpha(c) && !isDigit(c) && c <= 0x7F;
+    return isNotAlpha(c) && isNotDigit(c) && c <= 0x7F;
   }
 
-  private static boolean isAlpha(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+  private static boolean isNotAlpha(char c) {
+    return !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
   }
 
-  private static boolean isDigit(char c) {
-    return c >= '0' && c <= '9';
+  private static boolean isNotDigit(char c) {
+    return !(c >= '0' && c <= '9');
   }
 }

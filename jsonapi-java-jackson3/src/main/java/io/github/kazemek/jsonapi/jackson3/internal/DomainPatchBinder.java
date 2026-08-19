@@ -34,7 +34,7 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Recursive structured attributes (ADR-014) use the {@link StructuredValueBinder}: a supplied
  * attribute whose declared type is an ordinary traversable structured domain value (or a single
  * {@code PatchPresence} wrapper / transparent {@code Optional} around one) and whose wire value is
- * an object binds to an {@link AttributeChange} carrying a {@link
+ * an object binds to an {@link PatchChange.AttributeChange} carrying a {@link
  * io.github.kazemek.jsonapi.jackson.StructuredPatch} of supplied-only nested changes instead of a
  * fully materialized replacement bean. Presence-aware PATCH shapes remain a typed-path concept and
  * are rejected on this path.
@@ -94,7 +94,7 @@ public final class DomainPatchBinder {
 
   /**
    * Whole-meta declared-target validation for the low-level domain-mapping role (read/write rule):
-   * Bean / Map / Object with at most one {@link Optional} wrapper (ADR-015).
+   * Bean / Map / Object with at most one {@link java.util.Optional} wrapper (ADR-015).
    */
   private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
     wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
@@ -142,13 +142,7 @@ public final class DomainPatchBinder {
       MappingProperty property, @Nullable Object rawValue, JavaType targetType, Class<?> rawType) {
     JavaType declaredType = property.accessor().getType();
     if (rawValue == null) {
-      return converter.convertAttribute(
-          property,
-          null,
-          declaredType,
-          PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
-          rawType,
-          targetType);
+      return converter.convertAttribute(property, null, declaredType, rawType, targetType);
     }
     String pointer = "/attributes/" + property.jsonapiName();
     StructuredValueBinder.LowLevelKind kind =
@@ -166,7 +160,6 @@ public final class DomainPatchBinder {
         property,
         rawValue,
         PatchMemberConverter.unwrapPatchPresence(declaredType),
-        PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
         rawType,
         targetType);
   }

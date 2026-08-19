@@ -80,9 +80,7 @@ final class PropertyScopedValueConverter {
    */
   private @Nullable SettableBeanProperty matchingProperty(JavaType beanType, String wireName) {
     DeserializationContextExt context = mapper._deserializationContext();
-    @SuppressWarnings("unchecked")
-    ValueDeserializer<Object> root =
-        (ValueDeserializer<Object>) context.findRootValueDeserializer(beanType);
+    ValueDeserializer<Object> root = context.findRootValueDeserializer(beanType);
     if (!(root instanceof BeanDeserializerBase bean)) {
       return null;
     }

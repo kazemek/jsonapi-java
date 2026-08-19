@@ -376,7 +376,7 @@ public final class DomainResourceWriter {
           resource,
           path,
           "Converted meta value is not an object (expected a JSON object, got "
-              + (converted == null ? "null" : converted.getClass().getName())
+              + convertedTypeName(converted)
               + ")",
           null);
     }
@@ -385,6 +385,10 @@ public final class DomainResourceWriter {
     } catch (JsonApiValidationException e) {
       throw metaValueFailure(resource, path, "Invalid meta members", e);
     }
+  }
+
+  private static String convertedTypeName(@Nullable Object converted) {
+    return converted == null ? "null" : converted.getClass().getName();
   }
 
   /**

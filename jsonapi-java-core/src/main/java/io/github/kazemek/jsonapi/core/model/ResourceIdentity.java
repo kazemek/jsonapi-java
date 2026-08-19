@@ -11,10 +11,9 @@ public record ResourceIdentity(Kind kind, String type, String value) {
   }
 
   public ResourceIdentity {
-    kind = LocalValidation.requireNonNull(kind, "/resourceIdentity/kind", "kind must not be null");
-    type = LocalValidation.requireNonNull(type, "/resourceIdentity/type", "type must not be null");
-    value =
-        LocalValidation.requireNonNull(value, "/resourceIdentity/value", "value must not be null");
+    LocalValidation.requireNonNull(kind, "/resourceIdentity/kind", "kind must not be null");
+    LocalValidation.requireNonNull(type, "/resourceIdentity/type", "type must not be null");
+    LocalValidation.requireNonNull(value, "/resourceIdentity/value", "value must not be null");
   }
 
   public static ResourceIdentity ofId(String type, String id) {

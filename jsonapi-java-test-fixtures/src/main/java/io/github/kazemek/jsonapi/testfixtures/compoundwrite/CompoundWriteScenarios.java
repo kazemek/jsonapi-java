@@ -240,10 +240,9 @@ public final class CompoundWriteScenarios {
               "empty primary collection still enforces maxDepth",
               // Fresh list per call: List.of() returns a shared empty instance and would
               // break the per-invocation freshness invariant.
-              () -> new ArrayList<>(),
+              ArrayList::new,
               IncludePolicy.allowAll(),
               0,
-              DEFAULT_MAX_INCLUDED,
               CompoundWriteExpectation.failure(MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, AUTHOR),
               AUTHOR),
           document(
@@ -343,13 +342,7 @@ public final class CompoundWriteScenarios {
       CompoundWriteExpectation expectation,
       String... dottedPaths) {
     return collection(
-        id,
-        supplier,
-        IncludePolicy.allowAll(),
-        DEFAULT_MAX_DEPTH,
-        DEFAULT_MAX_INCLUDED,
-        expectation,
-        dottedPaths);
+        id, supplier, IncludePolicy.allowAll(), DEFAULT_MAX_DEPTH, expectation, dottedPaths);
   }
 
   private static CompoundWriteScenario collection(
@@ -357,13 +350,12 @@ public final class CompoundWriteScenarios {
       Supplier<Iterable<?>> supplier,
       IncludePolicy policy,
       int maxDepth,
-      int maxIncluded,
       CompoundWriteExpectation expectation,
       String... dottedPaths) {
     return new CompoundWriteScenario(
         id,
         CompoundWriteRequest.collection(
-            supplier, paths(dottedPaths), policy, maxDepth, maxIncluded),
+            supplier, paths(dottedPaths), policy, maxDepth, DEFAULT_MAX_INCLUDED),
         expectation);
   }
 

@@ -6,8 +6,18 @@ import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.StructuredMember
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState
 import io.github.kazemek.jsonapi.jackson.StructuredPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNote
+import io.github.kazemek.jsonapi.jackson3.testmodel.Details
+import io.github.kazemek.jsonapi.jackson3.testmodel.EmailContact
+import io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedProfile
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithNullEmptyCity
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails
+import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithTypedContact
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.Address
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.AddressPatch
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.MixedAddressPatch
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
@@ -74,7 +84,7 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(mapper())
     def target = mapper().typeFactory.constructParametricType(
-        PatchPresence, io.github.kazemek.jsonapi.testfixtures.domainpatch.MixedAddressPatch)
+        PatchPresence, MixedAddressPatch)
 
     when:
     binder.typedMemberValue([street: "S", city: "C"], target, META, AddressPatch)
@@ -122,14 +132,14 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(JsonMapper.builder().build())
     def dimensions = JsonMapper.builder().build()
-        .constructType(io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions)
+        .constructType(Dimensions)
 
     expect:
-    binder.lowLevelKind(dimensions, [width: null], null, null, META, io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions) ==
+    binder.lowLevelKind(dimensions, [width: null], null, null, META, Dimensions) ==
     StructuredValueBinder.LowLevelKind.RECURSE
 
     when:
-    binder.bindLowLevelStructured([width: null], dimensions, META, io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions)
+    binder.bindLowLevelStructured([width: null], dimensions, META, Dimensions)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -141,11 +151,11 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(JsonMapper.builder().build())
     def declared = JsonMapper.builder().build()
-        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNote)
+        .constructType(AddressWithLoudNote)
 
     when: // the same location-neutral machinery a structured meta mapping (KAZ-77) would reuse
     def patch = binder.bindLowLevelStructured(
-        [note: "n"], declared, META, io.github.kazemek.jsonapi.jackson3.testmodel.AddressWithLoudNote)
+        [note: "n"], declared, META, AddressWithLoudNote)
 
     then: // the property-scoped UpperCaseStringDeserializer runs, producing "N" not "n"
     patch == new StructuredPatch(
@@ -158,14 +168,14 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(JsonMapper.builder().build())
     def declared = JsonMapper.builder().build()
-        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails)
+        .constructType(OuterWithSetterCustomDetails)
 
     when: // the details setter's @JsonDeserialize must make it atomic, not a recursed StructuredPatch
     def patch = binder.bindLowLevelStructured(
         [details: [name: "x"]],
         declared,
         META,
-        io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails)
+        OuterWithSetterCustomDetails)
 
     then:
     patch == new StructuredPatch(
@@ -174,7 +184,7 @@ class StructuredValueBinderSpec extends Specification {
           "details",
           "details",
           new StructuredMemberState.Atomic(
-          new io.github.kazemek.jsonapi.jackson3.testmodel.Details("custom")))
+          new Details("custom")))
         ])
   }
 
@@ -182,7 +192,7 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(JsonMapper.builder().build())
     def declared = JsonMapper.builder().build()
-        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile)
+        .constructType(OuterWithSetterAsProfile)
 
     when: // the profile setter's @JsonDeserialize(as=...) refinement is detected through the
     // resolved property type (a setter AnnotatedMethod.getType() is void, which would make the
@@ -191,7 +201,7 @@ class StructuredValueBinderSpec extends Specification {
         [profile: [name: "N", email: "E"]],
         declared,
         META,
-        io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile)
+        OuterWithSetterAsProfile)
 
     then:
     patch == new StructuredPatch(
@@ -200,7 +210,7 @@ class StructuredValueBinderSpec extends Specification {
           "profile",
           "profile",
           new StructuredMemberState.Atomic(
-          new io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedProfile("N", "E")))
+          new ExtendedProfile("N", "E")))
         ])
   }
 
@@ -208,11 +218,11 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(JsonMapper.builder().build())
     def declared = JsonMapper.builder().build()
-        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithNullEmptyCity)
+        .constructType(OuterWithNullEmptyCity)
 
     when: // the city setter's @JsonSetter(nulls = Nulls.AS_EMPTY) null provider yields "" for null
     def patch = binder.bindLowLevelStructured(
-        [city: null], declared, META, io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithNullEmptyCity)
+        [city: null], declared, META, OuterWithNullEmptyCity)
 
     then: // not the root String deserializer's null value (null)
     patch == new StructuredPatch(
@@ -226,14 +236,14 @@ class StructuredValueBinderSpec extends Specification {
     given:
     def binder = new StructuredValueBinder(JsonMapper.builder().build())
     def declared = JsonMapper.builder().build()
-        .constructType(io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithTypedContact)
+        .constructType(OuterWithTypedContact)
 
     when: // the polymorphic contact converts through the property's TypeDeserializer path
     def patch = binder.bindLowLevelStructured(
         [contact: [kind: "email", email: "a@b.c"]],
         declared,
         META,
-        io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithTypedContact)
+        OuterWithTypedContact)
 
     then:
     patch == new StructuredPatch(
@@ -242,7 +252,7 @@ class StructuredValueBinderSpec extends Specification {
           "contact",
           "contact",
           new StructuredMemberState.Atomic(
-          new io.github.kazemek.jsonapi.jackson3.testmodel.EmailContact("a@b.c")))
+          new EmailContact("a@b.c")))
         ])
   }
 }
