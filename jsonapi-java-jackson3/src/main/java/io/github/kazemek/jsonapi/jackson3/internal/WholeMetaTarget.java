@@ -1,5 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import java.util.Map;
 import java.util.Optional;
@@ -16,9 +18,9 @@ import tools.jackson.databind.type.LogicalType;
  *
  * <p>The mapping cache/resolver is deliberately kind-agnostic; each consuming entry point validates
  * its own role's wrapper chain against these rules. Read/write and low-level domain mappings allow
- * exactly one optional {@link Optional} wrapper around a Bean / {@link Map} / {@link Object}
- * target; typed PATCH DTOs allow exactly one {@code PatchPresence<T>} wrapper and at most one
- * {@link Optional} inside it.
+ * at most one {@link Optional} wrapper around a Bean / {@link Map} / {@link Object} target; typed
+ * PATCH DTOs allow exactly one {@code PatchPresence<T>} wrapper and at most one {@link Optional}
+ * inside it.
  *
  * <p>Whether an effective target is a legal whole-meta object target is decided by Jackson, not a
  * manually maintained scalar taxonomy: after rejecting primitives, containers, and the already
@@ -42,16 +44,45 @@ final class WholeMetaTarget {
     this.mapper = mapper;
   }
 
-  /**
-   * Read/write and low-level domain-mapping rule: exactly one optional Optional, then
-   * Bean/Map/Object.
-   */
+  /** Read/write and low-level domain-mapping rule: at most one Optional, then Bean/Map/Object. */
   boolean validReadWriteTarget(JavaType declared) {
     JavaType effective = unwrapOptional(declared);
     if (isOptional(effective)) {
       return false;
     }
     return isObjectCompatible(effective);
+  }
+
+  /**
+   * Validates every declared whole-meta target of {@code mapping} for the read/write and low-level
+   * domain-mapping roles, throwing {@link MappingDiagnostic#INVALID_META_TARGET} at the property
+   * path when a declared target is not Bean / Map / Object with at most one {@link Optional}
+   * wrapper. The mapping cache/resolver stays kind-agnostic; each consuming entry point invokes
+   * this shared rule itself (ADR-015).
+   */
+  void validateReadWriteTargets(ResourceMapping mapping, Class<?> rawType) {
+    MappingProperty resourceMeta = mapping.resourceMeta();
+    if (resourceMeta != null && !validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
+      throw invalidTarget("Resource meta", resourceMeta, rawType);
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      if (!validReadWriteTarget(property.definition().getPrimaryType())) {
+        throw invalidTarget("Relationship meta", property, rawType);
+      }
+    }
+  }
+
+  private static JsonApiMappingException invalidTarget(
+      String kind, MappingProperty property, Class<?> rawType) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.INVALID_META_TARGET,
+        rawType,
+        "/" + property.logicalName(),
+        kind
+            + " property '"
+            + property.logicalName()
+            + "' must be a Bean, Map, or Object (with at most one Optional wrapper) on "
+            + rawType.getName());
   }
 
   /**

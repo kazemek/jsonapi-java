@@ -180,36 +180,11 @@ public final class DomainResourceWriter {
 
   /**
    * Whole-meta declared-target validation for the read/write domain-mapping role: Bean / Map /
-   * Object with exactly one optional {@link Optional} wrapper. Validation lives at the consuming
-   * entry point, not the kind-agnostic resolver (ADR-015).
+   * Object with at most one {@link Optional} wrapper. Validation lives at the consuming entry
+   * point, not the kind-agnostic resolver (ADR-015).
    */
   private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
-    MappingProperty resourceMeta = mapping.resourceMeta();
-    if (resourceMeta != null
-        && !wholeMetaTarget.validReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.INVALID_META_TARGET,
-          rawType,
-          "/" + resourceMeta.logicalName(),
-          "Resource meta property '"
-              + resourceMeta.logicalName()
-              + "' must be a Bean, Map, or "
-              + "Object (with at most one Optional wrapper) on "
-              + rawType.getName());
-    }
-    for (MappingProperty property : mapping.relationshipMetaProperties()) {
-      if (!wholeMetaTarget.validReadWriteTarget(property.definition().getPrimaryType())) {
-        throw new JsonApiMappingException(
-            MappingDiagnostic.INVALID_META_TARGET,
-            rawType,
-            "/" + property.logicalName(),
-            "Relationship meta property '"
-                + property.logicalName()
-                + "' must be a Bean, Map, or "
-                + "Object (with at most one Optional wrapper) on "
-                + rawType.getName());
-      }
-    }
+    wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
   @Nullable String extractId(Object resource, ResourceMapping mapping) {

@@ -187,27 +187,14 @@ public final class DomainPatchDtoBinder {
   }
 
   /**
-   * Whole-meta member validation for the typed PATCH DTO role (ADR-015): exactly {@code
-   * PatchPresence<T>}, no wrapper-level customization, and after unwrapping one {@code
-   * PatchPresence} and at most one {@link java.util.Optional}, an effective Bean / Map / Object
-   * target.
+   * Whole-meta member validation for the typed PATCH DTO role (ADR-015): the shared patchable
+   * member authority (exactly {@code PatchPresence<T>}, no wrapper-level customization) plus, after
+   * unwrapping one {@code PatchPresence} and at most one {@link java.util.Optional}, an effective
+   * Bean / Map / Object target.
    */
   private void validatePatchableMetaProperty(MappingProperty property, Class<?> rawType) {
-    JavaType type = property.definition().getPrimaryType();
-    if (!isPatchPresenceType(type)
-        || WrapperCustomization.has(
-            mapper, type, property.accessor(), property.definition().getMutator())) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
-          rawType,
-          "/" + property.logicalName(),
-          "PATCH DTO member '"
-              + property.logicalName()
-              + "' must be declared exactly as PatchPresence<T> without wrapper-level "
-              + "@JsonDeserialize/@JsonSerialize customization on "
-              + rawType.getName());
-    }
-    if (!wholeMetaTarget.validTypedPatchTarget(type)) {
+    validatePatchableProperty(property, rawType);
+    if (!wholeMetaTarget.validTypedPatchTarget(property.definition().getPrimaryType())) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_META_TARGET,
           rawType,
@@ -373,7 +360,7 @@ public final class DomainPatchDtoBinder {
               rawType,
               RelationshipMetaSupport.relationshipMetaPath(entry.getKey()),
               "relationship meta",
-              entry.getKey() + RelationshipMetaSupport.resourceMetaPath());
+              entry.getKey());
         }
       }
     }

@@ -229,7 +229,7 @@ Diagnostic pointers for nested failures are engine-accumulated wire-name pointer
   - **Annotations:** `@JsonApiMeta` maps resource meta; `@JsonApiRelationshipMeta("author")` maps
     the meta of the relationship whose resolved JSON:API member name is `author` (required; a
     renamed relationship needs the wire name here). At most one meta property per location.
-  - **Targets:** Bean / `Map` / `Object`, with exactly one optional `Optional` wrapper (read/write
+  - **Targets:** Bean / `Map` / `Object`, with at most one `Optional` wrapper (read/write
     and low-level PATCH); typed PATCH DTOs declare exactly `PatchPresence<T>` with at most one
     `Optional` inside. Scalars, containers, and nested wrapper chains are rejected with a stable
     meta diagnostic at the consuming entry point.

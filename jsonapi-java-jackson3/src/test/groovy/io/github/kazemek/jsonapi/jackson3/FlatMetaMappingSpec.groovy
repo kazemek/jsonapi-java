@@ -7,6 +7,11 @@ import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.StructuredMember
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState
 import io.github.kazemek.jsonapi.jackson.StructuredPatch
+import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
+import io.github.kazemek.jsonapi.jackson.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.FieldPolicy
+import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson3.testmodel.DuplicateMetaArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.DuplicateRelationshipMetaArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ListMetaArticle
@@ -35,6 +40,8 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.PolyMetaArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.PolyMetaArticlePatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.RenamedNestedMetaPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.SourceMeta
+import io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingMetaPatchArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.ThrowingRelMetaPatchArticle
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
@@ -55,6 +62,7 @@ import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithOptionalMet
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleWithOptionalMetaPatch
 import io.github.kazemek.jsonapi.testfixtures.domainpatch.AuthorMeta
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatMetaArticle
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
 import java.util.Map
 import java.util.Optional
 import spock.lang.Specification
@@ -198,7 +206,7 @@ class FlatMetaMappingSpec extends Specification {
     given:
     def resource = new ResourceObject(
         "articles", "1", null, null,
-        io.github.kazemek.jsonapi.core.model.Relationships.ofRelationships(
+        Relationships.ofRelationships(
         [author: Relationship.metaOnly(Meta.of([displayName: "Alice"]))]),
         null, null, [:])
 
@@ -298,7 +306,7 @@ class FlatMetaMappingSpec extends Specification {
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"},"meta":{"source":"cms"}}}'
 
     when:
-    def command = patchReader().readValue(json, io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle)
+    def command = patchReader().readValue(json, FlatArticle)
 
     then:
     command.changes() == [
@@ -424,6 +432,9 @@ class FlatMetaMappingSpec extends Specification {
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
     e.propertyPath == "/relationships/author/meta"
+    // the supplied member name is the relationship wire name only, never a meta pointer fragment
+    e.message.contains("Unknown supplied relationship meta 'author'")
+    !e.message.contains("author/meta")
   }
 
   def "typed patch rejects scalar meta target declaration"() {
@@ -469,7 +480,7 @@ class FlatMetaMappingSpec extends Specification {
 
   def "relationship meta referencing an unmapped relationship is rejected at mapping resolution"() {
     when:
-    mapper().toResource(new UnmappedRelationshipMetaArticle("1", "x"))
+    mapper().toResource(new UnmappedRelationshipMetaArticle("1", new AuthorMeta("x")))
 
     then:
     def e = thrown(JsonApiMappingException)
@@ -666,9 +677,9 @@ class FlatMetaMappingSpec extends Specification {
     def article = new ArticleWithMeta(
         "1", "T", ResourceIdentifier.of("people", "p1"),
         new ArticleMeta("cms", "n"), new AuthorMeta("Alice"))
-    def context = io.github.kazemek.jsonapi.jackson.CompoundSerializationContext.defaults()
+    def context = CompoundSerializationContext.defaults()
         .withFieldsets([articles: []])
-        .withFieldPolicy(io.github.kazemek.jsonapi.jackson.FieldPolicy.allowAll())
+        .withFieldPolicy(FieldPolicy.allowAll())
 
     when:
     def mapped = mapper.toMappedDocument(article, null, context)
@@ -686,9 +697,9 @@ class FlatMetaMappingSpec extends Specification {
     def article = new ArticleWithMeta(
         "1", "T", ResourceIdentifier.of("people", "p1"),
         new ArticleMeta("cms", "n"), new AuthorMeta("Alice"))
-    def context = io.github.kazemek.jsonapi.jackson.CompoundSerializationContext.defaults()
+    def context = CompoundSerializationContext.defaults()
         .withFieldsets([articles: ["title"]])
-        .withFieldPolicy(io.github.kazemek.jsonapi.jackson.FieldPolicy.allowAll())
+        .withFieldPolicy(FieldPolicy.allowAll())
 
     when:
     def mapped = mapper.toMappedDocument(article, null, context)
@@ -703,9 +714,9 @@ class FlatMetaMappingSpec extends Specification {
     given:
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
     def article = new ArticleWithMeta("1", "T", null, new ArticleMeta("cms", "n"), null)
-    def context = io.github.kazemek.jsonapi.jackson.CompoundSerializationContext.defaults()
+    def context = CompoundSerializationContext.defaults()
         .withFieldsets([articles: ["meta"]])
-        .withFieldPolicy(io.github.kazemek.jsonapi.jackson.FieldPolicy.allowAll())
+        .withFieldPolicy(FieldPolicy.allowAll())
 
     when:
     mapper.toMappedDocument(article, null, context)
@@ -722,8 +733,8 @@ class FlatMetaMappingSpec extends Specification {
     documentFrom('{"data":{"type":"articles","id":"1","meta":null}}')
 
     then:
-    def e = thrown(io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException)
-    e.category == io.github.kazemek.jsonapi.jackson.CodecFailureCategory.UNEXPECTED_TOKEN
+    def e = thrown(JsonApiDocumentReadException)
+    e.category == CodecFailureCategory.UNEXPECTED_TOKEN
   }
 
   def "wire-level relationship meta null is rejected at the reader"() {
@@ -732,8 +743,8 @@ class FlatMetaMappingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"p1"},"meta":null}}}}')
 
     then:
-    def e = thrown(io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException)
-    e.category == io.github.kazemek.jsonapi.jackson.CodecFailureCategory.UNEXPECTED_TOKEN
+    def e = thrown(JsonApiDocumentReadException)
+    e.category == CodecFailureCategory.UNEXPECTED_TOKEN
   }
 
   // ============================== JACKSON AUTHORITY AT META LOCATIONS ======================
@@ -841,7 +852,7 @@ class FlatMetaMappingSpec extends Specification {
     ]
   }
 
-  def "typed patch binds an abstract polymorphic whole-meta target through presence-aware recursion"() {
+  def "typed patch preserves root polymorphic conversion for an abstract whole-meta target"() {
     given:
     def json =
         '{"data":{"type":"articles","id":"1","meta":{"kind":"source","source":"cms","note":"n"}}}'
@@ -881,6 +892,37 @@ class FlatMetaMappingSpec extends Specification {
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
     e.propertyPath == "/meta/w_source"
+  }
+
+  def "typed patch final meta construction failure reports the renamed nested wire pointer"() {
+    given:
+    // The wire converts successfully into PresenceMarker values; only the final DTO construction
+    // fails (the whole-meta shape's setter throws on a supplied member). The pointer must be the
+    // wire location, not the logical name, PresenceMarker.value, the root, or a Jackson path.
+    def json = '{"data":{"type":"articles","id":"1","meta":{"w_source":"cms","note":"n"}}}'
+
+    when:
+    patchDtoReader().readValue(json, ThrowingMetaPatchArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    e.propertyPath == "/meta/w_source"
+  }
+
+  def "typed patch final relationship-meta construction failure reports the renamed nested wire pointer"() {
+    given:
+    def json =
+        '{"data":{"type":"articles","id":"1","relationships":' +
+        '{"author":{"data":{"type":"people","id":"p1"},"meta":{"w_source":"cms","note":"n"}}}}}'
+
+    when:
+    patchDtoReader().readValue(json, ThrowingRelMetaPatchArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    e.propertyPath == "/relationships/author/meta/w_source"
   }
 
   // ============================== FROM-DOCUMENT DATA-LESS RELATIONSHIP META ================
@@ -944,6 +986,6 @@ class FlatMetaMappingSpec extends Specification {
 
   private static JsonApiDocument documentFrom(String json) {
     JsonApiJackson3.reader(JsonMapper.builder().build(),
-        io.github.kazemek.jsonapi.jackson.DocumentReadContext.resourceDefaults()).readValue(json)
+        DocumentReadContext.resourceDefaults()).readValue(json)
   }
 }

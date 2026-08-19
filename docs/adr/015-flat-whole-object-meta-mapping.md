@@ -59,7 +59,7 @@ association, duplicate/conflict checks, and common mapping invariants. Entry-poi
 wrapper-chain validation belongs to the consuming binder/writer:
 
 - **Normal domain read/write and low-level `PatchCommand` domain mappings:** valid whole-meta
-  declarations are Bean / `Map` / `Object` with exactly one optional `Optional<T>` wrapper;
+  declarations are Bean / `Map` / `Object` with at most one `Optional<T>` wrapper;
   `PatchPresence<?>` is invalid in these models and nested `Optional<Optional<...>>` is invalid.
 - **Typed PATCH DTO mappings:** the meta property must be declared exactly `PatchPresence<T>`
   (consistent with the ADR-013 declaration contract); unwrap exactly one `PatchPresence`, then at
