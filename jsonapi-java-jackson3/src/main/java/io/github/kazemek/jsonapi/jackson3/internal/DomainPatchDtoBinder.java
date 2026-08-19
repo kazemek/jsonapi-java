@@ -72,6 +72,8 @@ public final class DomainPatchDtoBinder {
     bindIdentity(resource, mapping, properties, rawType);
     bindAttributes(resource, mapping, properties, rawType);
     bindRelationships(resource, mapping, properties, rawType);
+    bindResourceMeta(resource, mapping, properties, rawType);
+    bindRelationshipMeta(resource, mapping, properties, rawType);
     Map<String, MappingProperty> attributesByLogicalName =
         PatchMemberConverter.byLogicalName(mapping.attributes());
     return BeanConstruction.convertBean(
@@ -121,6 +123,13 @@ public final class DomainPatchDtoBinder {
     for (MappingProperty property : mapping.relationships()) {
       validatePatchableProperty(property, rawType);
     }
+    MappingProperty resourceMeta = mapping.resourceMeta();
+    if (resourceMeta != null) {
+      validatePatchableMetaProperty(resourceMeta, rawType);
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      validatePatchableMetaProperty(property, rawType);
+    }
   }
 
   private void validatePatchableProperty(MappingProperty property, Class<?> rawType) {
@@ -136,6 +145,39 @@ public final class DomainPatchDtoBinder {
               + property.logicalName()
               + "' must be declared exactly as PatchPresence<T> without wrapper-level "
               + "@JsonDeserialize/@JsonSerialize customization on "
+              + rawType.getName());
+    }
+  }
+
+  /**
+   * Whole-meta member validation for the typed PATCH DTO role (ADR-015): exactly {@code
+   * PatchPresence<T>}, no wrapper-level customization, and after unwrapping one {@code
+   * PatchPresence} and at most one {@link java.util.Optional}, an effective Bean / Map / Object
+   * target.
+   */
+  private void validatePatchableMetaProperty(MappingProperty property, Class<?> rawType) {
+    JavaType type = property.definition().getPrimaryType();
+    if (!isPatchPresenceType(type)
+        || WrapperCustomization.has(
+            mapper, type, property.accessor(), property.definition().getMutator())) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
+          rawType,
+          "/" + property.logicalName(),
+          "PATCH DTO member '"
+              + property.logicalName()
+              + "' must be declared exactly as PatchPresence<T> without wrapper-level "
+              + "@JsonDeserialize/@JsonSerialize customization on "
+              + rawType.getName());
+    }
+    if (!WholeMetaTarget.validTypedPatchTarget(type)) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_META_TARGET,
+          rawType,
+          "/" + property.logicalName(),
+          "PATCH DTO meta member '"
+              + property.logicalName()
+              + "' must be PatchPresence<Bean|Map|Object> (with at most one Optional inside) on "
               + rawType.getName());
     }
   }
@@ -232,6 +274,76 @@ public final class DomainPatchDtoBinder {
         rawType,
         path,
         "Unknown supplied " + kind + " '" + name + "' for PATCH DTO " + rawType.getName());
+  }
+
+  /**
+   * Binds supplied resource meta as a {@code PatchPresence} member. Supplied meta without a
+   * declared {@code @JsonApiMeta} member is rejected on the strict typed path (ADR-015).
+   */
+  private void bindResourceMeta(
+      ResourceObject resource,
+      ResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
+    MappingProperty property = mapping.resourceMeta();
+    if (property == null) {
+      if (resource.meta() != null) {
+        throw unknownPatchMember(rawType, "/meta", "meta", "meta");
+      }
+      return;
+    }
+    if (resource.meta() == null) {
+      properties.put(property.logicalName(), new PresenceMarker(false, null));
+      return;
+    }
+    Object value =
+        structuredBinder.typedMemberValue(
+            resource.meta().members(), property.accessor().getType(), "/meta", rawType);
+    properties.put(property.logicalName(), new PresenceMarker(true, value));
+  }
+
+  /**
+   * Binds supplied relationship meta for each mapped relationship-meta member. Meta participates
+   * only when the relationship carries {@code data}; supplied meta for a mapped relationship
+   * without a declared {@code @JsonApiRelationshipMeta} member is rejected on the strict typed path
+   * (ADR-015).
+   */
+  private void bindRelationshipMeta(
+      ResourceObject resource,
+      ResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
+    Relationships relationships = resource.relationships();
+    Map<String, Relationship> supplied =
+        relationships == null ? null : relationships.relationships();
+    Map<String, MappingProperty> metaByTarget =
+        RelationshipMetaSupport.byTarget(mapping.relationshipMetaProperties());
+    if (supplied != null) {
+      for (Map.Entry<String, Relationship> entry : supplied.entrySet()) {
+        Relationship relationship = entry.getValue();
+        if (relationship.data() != null
+            && relationship.meta() != null
+            && !metaByTarget.containsKey(entry.getKey())) {
+          throw unknownPatchMember(
+              rawType,
+              "/relationships/" + entry.getKey() + "/meta",
+              "relationship meta",
+              entry.getKey() + "/meta");
+        }
+      }
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      Relationship relationship = supplied == null ? null : supplied.get(property.jsonapiName());
+      if (relationship == null || relationship.data() == null || relationship.meta() == null) {
+        properties.put(property.logicalName(), new PresenceMarker(false, null));
+        continue;
+      }
+      String pointer = "/relationships/" + property.jsonapiName() + "/meta";
+      Object value =
+          structuredBinder.typedMemberValue(
+              relationship.meta().members(), property.accessor().getType(), pointer, rawType);
+      properties.put(property.logicalName(), new PresenceMarker(true, value));
+    }
   }
 
   private static JavaType innerType(MappingProperty property) {

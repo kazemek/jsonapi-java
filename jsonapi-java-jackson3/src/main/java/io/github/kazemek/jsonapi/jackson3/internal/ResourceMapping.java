@@ -9,4 +9,6 @@ record ResourceMapping(
     @Nullable MappingProperty identifierProperty,
     List<MappingProperty> attributes,
     List<MappingProperty> relationships,
+    @Nullable MappingProperty resourceMeta,
+    List<MappingProperty> relationshipMetaProperties,
     JavaType domainType) {}

@@ -35,7 +35,17 @@
  * an explicit include request and {@link IncludePolicy}. Sparse fieldsets share that context
  * ({@code fieldsets} + {@link FieldPolicy}) and are applied only by the {@link MappedDocument}
  * overloads; pass {@link MappedDocument#applyTo} into the writer factory when relationships were
- * omitted by fieldset while inclusion still traversed them.
+ * omitted by fieldset while inclusion still traversed them. Fieldsets select attributes and
+ * relationships only; whole-object resource meta is emitted independently (ADR-015).
+ *
+ * <p>Whole-object resource-side meta mapping (ADR-015) maps the complete {@code meta} object of a
+ * resource or of a specific mapped relationship to one application-owned property per location via
+ * {@link io.github.kazemek.jsonapi.annotation.JsonApiMeta} and {@link
+ * io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta}, across domain read, domain write,
+ * the low-level {@link io.github.kazemek.jsonapi.jackson.PatchCommand} path (new resource-meta and
+ * relationship-meta {@link io.github.kazemek.jsonapi.jackson.PatchChange} variants), and the typed
+ * PATCH DTO path. Document-level meta remains document-owned through the domain envelope; no
+ * resource annotation means document meta.
  *
  * <p>Codec and mapping policy, diagnostics, contexts, domain envelope values, and presence-aware
  * update commands are Jackson-major-neutral contracts in {@link io.github.kazemek.jsonapi.jackson};

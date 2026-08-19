@@ -4,14 +4,20 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One requested change in a {@link PatchCommand}: a supplied mapped attribute or relationship.
+ * One requested change in a {@link PatchCommand}: a supplied mapped attribute, relationship, or
+ * resource-side meta location.
  *
  * <p>Omitted members never appear. Explicit attribute JSON {@code null} is {@code value == null} on
  * a present {@link AttributeChange}. Relationship {@code NullLinkage} is Java {@code null} or empty
- * {@code Optional} as the Jackson adapter binder would produce.
+ * {@code Optional} as the Jackson adapter binder would produce. Resource and relationship meta
+ * changes carry the converted atomic meta value, or a {@link StructuredPatch} where KAZ-76
+ * recursion applies on the low-level path (ADR-015).
  */
 public sealed interface PatchChange
-    permits PatchChange.AttributeChange, PatchChange.RelationshipChange {
+    permits PatchChange.AttributeChange,
+        PatchChange.RelationshipChange,
+        PatchChange.ResourceMetaChange,
+        PatchChange.RelationshipMetaChange {
 
   /** Final JSON:API member name (including attribute/relationship renames). */
   String jsonapiName();
@@ -41,6 +47,53 @@ public sealed interface PatchChange
   record RelationshipChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public RelationshipChange {
+      Objects.requireNonNull(jsonapiName, "jsonapiName");
+      Objects.requireNonNull(logicalName, "logicalName");
+      value = PatchValues.freeze(value);
+    }
+
+    @Override
+    public @Nullable Object value() {
+      return PatchValues.expose(value);
+    }
+  }
+
+  /**
+   * A supplied resource-side {@code meta} change.
+   *
+   * <p>{@link #jsonapiName()} is the fixed {@code "meta"} JSON:API location marker. It is a
+   * location marker, not a discriminator: an attribute named {@code meta} is wire-legal, so
+   * consumers must dispatch on the sealed variant rather than infer semantics from the name alone.
+   * {@link #logicalName()} is the annotated meta property's logical Java name and {@link #value()}
+   * the converted atomic meta value or a {@link StructuredPatch} where KAZ-76 recursion applies on
+   * the low-level path (ADR-015).
+   */
+  record ResourceMetaChange(String jsonapiName, String logicalName, @Nullable Object value)
+      implements PatchChange {
+    public ResourceMetaChange {
+      Objects.requireNonNull(jsonapiName, "jsonapiName");
+      Objects.requireNonNull(logicalName, "logicalName");
+      value = PatchValues.freeze(value);
+    }
+
+    @Override
+    public @Nullable Object value() {
+      return PatchValues.expose(value);
+    }
+  }
+
+  /**
+   * A supplied relationship {@code meta} change for a specific mapped relationship.
+   *
+   * <p>{@link #jsonapiName()} is the referenced relationship's JSON:API member name (pairing it
+   * with the sibling {@link RelationshipChange} of the same name); {@link #logicalName()} is the
+   * annotated meta property's logical Java name; {@link #value()} is the converted atomic meta
+   * value or a {@link StructuredPatch} where KAZ-76 recursion applies on the low-level path
+   * (ADR-015).
+   */
+  record RelationshipMetaChange(String jsonapiName, String logicalName, @Nullable Object value)
+      implements PatchChange {
+    public RelationshipMetaChange {
       Objects.requireNonNull(jsonapiName, "jsonapiName");
       Objects.requireNonNull(logicalName, "logicalName");
       value = PatchValues.freeze(value);

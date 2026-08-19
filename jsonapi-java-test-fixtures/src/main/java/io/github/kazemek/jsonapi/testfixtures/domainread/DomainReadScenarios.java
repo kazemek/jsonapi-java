@@ -9,6 +9,8 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testfixtures.FixtureCatalog;
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleMeta;
+import io.github.kazemek.jsonapi.testfixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.BlogWithJsonProperty;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -409,6 +411,44 @@ public final class DomainReadScenarios {
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE)),
           new DomainReadScenario(
+              "binds resource meta and relationship meta",
+              DomainReadInput.single(
+                  resourceWithMeta(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      relsWithMeta(
+                          AUTHOR, toOne(PEOPLE, "p1"), Meta.of(Map.of("displayName", "Alice"))),
+                      Meta.of(Map.of("source", "cms", "note", "n")))),
+              FlatMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatMetaArticle(
+                      "1",
+                      HELLO,
+                      ResourceIdentifier.of(PEOPLE, "p1"),
+                      new ArticleMeta("cms", "n"),
+                      new AuthorMeta("Alice")))),
+          new DomainReadScenario(
+              "absent meta leaves meta properties null",
+              DomainReadInput.single(resource(ARTICLES, "1", attrs(TITLE, HELLO), null)),
+              FlatMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(new FlatMetaArticle("1", HELLO, null, null, null))),
+          new DomainReadScenario(
+              "meta-only relationship binds its meta on the read side",
+              DomainReadInput.single(
+                  resourceWithMeta(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      relsOnlyMeta(AUTHOR, Meta.of(Map.of("displayName", "Alice"))),
+                      null)),
+              FlatMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatMetaArticle("1", HELLO, null, null, new AuthorMeta("Alice")))),
+          new DomainReadScenario(
               "binder never sees document included resources",
               DomainReadInput.includedIsolation(INCLUDED_PRIMARY, INCLUDED_SWAPPED),
               FlatArticle.class,
@@ -455,6 +495,39 @@ public final class DomainReadScenarios {
         null,
         null,
         Map.of());
+  }
+
+  private static ResourceObject resourceWithMeta(
+      String type,
+      @Nullable String id,
+      @Nullable Map<String, @Nullable Object> attributes,
+      @Nullable Map<String, Relationship> relationships,
+      @Nullable Meta meta) {
+    return new ResourceObject(
+        type,
+        id,
+        null,
+        attributes == null ? null : Attributes.ofAttributes(attributes),
+        relationships == null
+            ? null
+            : Relationships.ofRelationships(copyRelationships(relationships)),
+        null,
+        meta,
+        Map.of());
+  }
+
+  private static Map<String, Relationship> relsWithMeta(
+      String name, Relationship relationship, Meta meta) {
+    Map<String, Relationship> relationships = new LinkedHashMap<>();
+    relationships.put(
+        name, new Relationship(relationship.data(), relationship.links(), meta, Map.of()));
+    return relationships;
+  }
+
+  private static Map<String, Relationship> relsOnlyMeta(String name, Meta meta) {
+    Map<String, Relationship> relationships = new LinkedHashMap<>();
+    relationships.put(name, Relationship.metaOnly(meta));
+    return relationships;
   }
 
   private static ResourceObject resourceWithLid(

@@ -19,3 +19,4 @@ ADRs record consequential, hard-to-reverse “why” decisions. Stable product d
 12. [ADR-012: Resource PATCH Produces Presence-Aware Commands](012-resource-patch-binding.md)
 13. [ADR-013: Direct Typed PATCH DTO Binding](013-direct-typed-patch-dto-binding.md)
 14. [ADR-014: Recursive Structured Value PATCH Semantics](014-recursive-structured-value-patch-semantics.md)
+15. [ADR-015: Flat Whole-Object Mapping for Resource-Side Meta](015-flat-whole-object-meta-mapping.md)

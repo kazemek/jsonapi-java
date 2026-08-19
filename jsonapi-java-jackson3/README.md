@@ -218,9 +218,31 @@ authorization and command application.
  paths share one location-neutral property-scoped conversion collaborator, so a supplied nested
  member converts through the same authority Jackson would use for that property.
 
- Diagnostic pointers for nested failures are engine-accumulated wire-name pointers (e.g.
- `/attributes/address/street`); final typed-path construction failures are shape-translated to the
- wire-name pointer.
+Diagnostic pointers for nested failures are engine-accumulated wire-name pointers (e.g.
+  `/attributes/address/street`); final typed-path construction failures are shape-translated to the
+  wire-name pointer.
+
+ Whole-object resource-side meta mapping (see [ADR-015](../docs/adr/015-flat-whole-object-meta-mapping.md))
+  maps the complete `ResourceObject.meta` / `Relationship.meta` object to one application-owned
+  property per location, on read, write, and both PATCH paths:
+
+  - **Annotations:** `@JsonApiMeta` maps resource meta; `@JsonApiRelationshipMeta("author")` maps
+    the meta of the relationship whose resolved JSON:API member name is `author` (required; a
+    renamed relationship needs the wire name here). At most one meta property per location.
+  - **Targets:** Bean / `Map` / `Object`, with exactly one optional `Optional` wrapper (read/write
+    and low-level PATCH); typed PATCH DTOs declare exactly `PatchPresence<T>` with at most one
+    `Optional` inside. Scalars, containers, and nested wrapper chains are rejected with a stable
+    meta diagnostic at the consuming entry point.
+  - **Write** converts through the existing `DomainResourceWriter` authority and requires a `Map`
+    result before constructing core `Meta`; invalid member names / non-object runtime values fail
+    with `INVALID_META_TARGET`. **Read** binds members under the mapped property's logical name.
+  - **PATCH:** the typed path binds `PatchPresence` meta through the KAZ-76 engine (recursive
+    presence-aware shapes, `{}` = present-with-all-omitted, atomic map targets) and rejects supplied
+    meta without a matching member; the low-level path binds `ResourceMetaChange` /
+    `RelationshipMetaChange` (structured beans recurse to `StructuredPatch`, maps stay atomic) and
+    skips unmapped meta. Relationship meta participates only when the relationship carries `data`.
+    `PatchCommand.changes()` order is deterministic: resource meta first, then attributes, then
+    relationships with their meta immediately after the linkage change.
 
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
@@ -256,6 +278,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-012 — Resource PATCH binding](../docs/adr/012-resource-patch-binding.md)
 - [ADR-013 — Direct typed PATCH DTO binding](../docs/adr/013-direct-typed-patch-dto-binding.md)
 - [ADR-014 — Recursive structured value PATCH semantics](../docs/adr/014-recursive-structured-value-patch-semantics.md)
+- [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -299,8 +322,9 @@ artifact; both majors share the neutral contracts of
   full when fieldsets are empty. Empty include paths omit `included`; a non-empty request that
   resolves to nothing emits `included: []`. Defaults are deny-all with finite depth/count limits.
 - **Sparse fieldsets:** `fieldsets` + `FieldPolicy` on the same context select attributes and
-  relationships by final JSON:API names (absent type key = unrestricted; present empty list =
-  identity-only). Applied only by `toMappedDocument` / `toMappedResourceCollection`; three-argument
+  relationships by final JSON:API names (absent type key = unrestricted; present empty list selects
+  no attributes/relationships, while non-field resource members such as mapped resource meta remain
+  independent). Applied only by `toMappedDocument` / `toMappedResourceCollection`; three-argument
   `toDocument` / `toResourceCollection` reject a non-empty fieldset map with
   `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`. Inclusion traversal may still follow fieldset-excluded
   relationships on validated include paths; `MappedDocument.sparseFieldsetException` is true only

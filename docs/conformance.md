@@ -87,6 +87,8 @@ deferred.
 | `@JsonApiId` marker on logical properties                    | supported | Fields, methods, parameters, and record components                    |
 | `@JsonApiAttribute(name)` optional attribute rename          | supported | Empty `name()` retains Jackson's logical property name                |
 | `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
+| `@JsonApiMeta` whole resource-side meta                      | supported | One property per resource; complete `ResourceObject.meta` object; read/write/PATCH (ADR-015) |
+| `@JsonApiRelationshipMeta(value)` relationship meta          | supported | Required wire-name reference to a mapped relationship; one per relationship; read/write/PATCH (ADR-015) |
 
 ## Codec / wire format (supported)
 
