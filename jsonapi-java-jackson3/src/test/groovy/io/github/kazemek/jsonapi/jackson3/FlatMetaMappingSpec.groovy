@@ -26,8 +26,15 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithBoxMeta
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithBoxMetaPatch
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithNullEmptyCityMeta
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithTypedContactMeta
+import io.github.kazemek.jsonapi.jackson3.testmodel.ConcreteTypedMeta
+import io.github.kazemek.jsonapi.jackson3.testmodel.ConcreteTypedMetaArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.EmailContact
 import io.github.kazemek.jsonapi.jackson3.testmodel.MetaBox
+import io.github.kazemek.jsonapi.jackson3.testmodel.ObjectMetaPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.PolyMetaArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.PolyMetaArticlePatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.RenamedNestedMetaPatch
+import io.github.kazemek.jsonapi.jackson3.testmodel.SourceMeta
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
@@ -640,6 +647,17 @@ class FlatMetaMappingSpec extends Specification {
         .meta() == PatchPresence.present(Optional.of(new ArticleMeta("cms", null)))
   }
 
+  def "explicit PatchPresence Object whole-meta target binds an object-shaped wire atomically"() {
+    given:
+    def json = '{"data":{"type":"articles","id":"1","meta":{"source":"cms"}}}'
+
+    when:
+    def patch = patchDtoReader().readValue(json, ObjectMetaPatch)
+
+    then: // the Object target is atomic, so the object-shaped wire binds as a plain map value
+    patch.meta() == PatchPresence.present([source: "cms"])
+  }
+
   // ============================== SPARSE FIELDSETS ==============================
 
   def "resource meta is emitted even for an empty fieldset selection"() {
@@ -787,6 +805,82 @@ class FlatMetaMappingSpec extends Specification {
         new StructuredMemberState.Atomic(new EmailContact("a@b.c")))
       ]))
     ]
+  }
+
+  def "concrete root-polymorphic whole-meta POJO is a valid declaration and binds"() {
+    given:
+    def json =
+        '{"data":{"type":"articles","id":"1","meta":{"kind":"concrete","value":"v"}}}'
+
+    when: // the root TypeDeserializer decoration must not disqualify the decorated POJO
+    def bound = binder().fromResource(mapper().toResource(new ConcreteTypedMetaArticle(
+        "1", new ConcreteTypedMeta("v"))), ConcreteTypedMetaArticle)
+    def command = patchReader().readValue(json, ConcreteTypedMetaArticle)
+
+    then:
+    bound.meta() == new ConcreteTypedMeta("v")
+    command.changes() == [
+      new PatchChange.ResourceMetaChange("meta", "meta", new ConcreteTypedMeta("v"))
+    ]
+  }
+
+  def "abstract polymorphic whole-meta base materializes the subtype on read and low-level patch"() {
+    given:
+    def json =
+        '{"data":{"type":"articles","id":"1","meta":{"kind":"source","source":"cms","note":"n"}}}'
+
+    when: // the TypeDeserializer selects the concrete subtype from the discriminator
+    def bound = binder().fromResource(mapper().toResource(new PolyMetaArticle(
+        "1", new SourceMeta("cms", "n"))), PolyMetaArticle)
+    def command = patchReader().readValue(json, PolyMetaArticle)
+
+    then:
+    bound.meta() == new SourceMeta("cms", "n")
+    command.changes() == [
+      new PatchChange.ResourceMetaChange("meta", "meta", new SourceMeta("cms", "n"))
+    ]
+  }
+
+  def "typed patch binds an abstract polymorphic whole-meta target through presence-aware recursion"() {
+    given:
+    def json =
+        '{"data":{"type":"articles","id":"1","meta":{"kind":"source","source":"cms","note":"n"}}}'
+
+    when:
+    def patch = patchDtoReader().readValue(json, PolyMetaArticlePatch)
+
+    then:
+    patch.meta() == PatchPresence.present(new SourceMeta("cms", "n"))
+  }
+
+  def "typed patch construction failure inside meta reports the nested wire pointer"() {
+    given:
+    // The nested member targets String while the wire supplies an object: the single-pass bean
+    // construction fails inside /meta, and the pointer must be the wire location, not the
+    // logical name, PresenceMarker internals, or the root
+    def json = '{"data":{"type":"articles","id":"1","meta":{"source":{"a":1}}}}'
+
+    when:
+    patchDtoReader().readValue(json, ArticleWithMetaPatch)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    e.propertyPath == "/meta/source"
+  }
+
+  def "typed patch construction failure inside meta reports the renamed nested wire name"() {
+    given:
+    // The nested member's wire name (w_source) differs from its logical name (source)
+    def json = '{"data":{"type":"articles","id":"1","meta":{"w_source":{"a":1}}}}'
+
+    when:
+    patchDtoReader().readValue(json, RenamedNestedMetaPatch)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    e.propertyPath == "/meta/w_source"
   }
 
   // ============================== FROM-DOCUMENT DATA-LESS RELATIONSHIP META ================

@@ -412,7 +412,13 @@ public final class DomainResourceWriter {
     }
   }
 
-  @SuppressWarnings("unchecked")
+  /**
+   * Rebuilds the converted meta value into a string-keyed member map. Today the conversion target
+   * {@code Object.class} always yields string keys (Jackson's untyped map representation), so the
+   * non-string branch is defensive: it keeps the stable {@link
+   * MappingDiagnostic#INVALID_META_TARGET} diagnostic instead of leaking a class cast or a
+   * core-validation failure if a future Jackson version ever emits non-string keys.
+   */
   private static Map<String, Object> castMembers(Map<?, ?> map) {
     Map<String, Object> members = new LinkedHashMap<>();
     for (Map.Entry<?, ?> entry : map.entrySet()) {

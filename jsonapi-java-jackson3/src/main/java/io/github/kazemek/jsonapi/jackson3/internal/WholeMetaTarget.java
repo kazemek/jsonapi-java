@@ -7,8 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.ValueDeserializer;
-import tools.jackson.databind.deser.bean.BeanDeserializerBase;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.type.LogicalType;
 
 /**
  * Whole-meta target-shape rules shared by the entry points that consume whole-meta mappings
@@ -23,12 +23,14 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Whether an effective target is a legal whole-meta object target is decided by Jackson, not a
  * manually maintained scalar taxonomy: after rejecting primitives, containers, and the already
  * unwrapped {@link Optional}/{@code PatchPresence} raws, a target is valid iff its root
- * deserializer is a property/creator-driven {@link BeanDeserializerBase} (records, POJOs,
- * constructor-bound beans), or it is {@code Object} or {@link Map}-like. This is the same
- * deserializer signal KAZ-76 uses for its structured-value boundary, so JDK scalars ({@code
- * String}, {@code Character}, {@code Boolean}, {@code Number}, {@code java.time}, {@code
- * java.math}, {@link java.util.UUID}, {@link java.net.URI}/{@link java.net.URL}) and custom scalar
- * deserializers resolve to non-bean deserializers and are rejected. Presence-aware recursion is a
+ * deserializer reports the POJO {@link LogicalType} — the same structured-value signal KAZ-76's
+ * bean boundary is built on, read through root-level decoration. This accepts records, POJOs,
+ * constructor-bound beans, and root-polymorphic POJOs whose deserializer is wrapped by a {@code
+ * TypeDeserializer} (concrete or abstract {@code @JsonTypeInfo} types), while rejecting JDK scalars
+ * ({@code String}, {@code Character}, {@code Boolean}, {@code Number}, {@code java.time}, {@code
+ * java.math}, {@link java.util.UUID}, {@link java.net.URI}/{@link java.net.URL}), enums,
+ * containers, and custom scalar deserializers (which report a non-POJO or null logical type).
+ * {@code Object} and {@link Map}-like targets are valid and atomic. Presence-aware recursion is a
  * separate {@link StructuredValueBinder} decision and is never required here.
  */
 final class WholeMetaTarget {
@@ -85,21 +87,24 @@ final class WholeMetaTarget {
         || raw == PatchPresence.Omitted.class) {
       return false;
     }
-    return isPropertyDrivenBean(type);
+    return isObjectShaped(type);
   }
 
   /**
-   * True when Jackson resolves a property/creator-driven bean deserializer ({@link
-   * BeanDeserializerBase}) for the type — the same structured-value boundary KAZ-76 uses, so a
-   * target is object-shaped only when Jackson itself treats it as a bean.
+   * True when Jackson's effective deserializer for the type reports the POJO {@link LogicalType}.
+   * This reads through root-level {@code TypeDeserializer} decoration ({@code
+   * TypeWrappedDeserializer} delegates {@code logicalType()} to its wrapped bean deserializer) and
+   * abstract POJO placeholders ({@code AbstractDeserializer}), so a root-polymorphic whole-meta
+   * POJO is not rejected merely because its root deserializer is decorated. Custom scalar
+   * deserializers report a non-POJO or {@code null} logical type and stay rejected.
    */
-  private boolean isPropertyDrivenBean(JavaType type) {
+  private boolean isObjectShaped(JavaType type) {
     return beanShapeCache.computeIfAbsent(
         type,
         ignored -> {
           DeserializationContext context = mapper._deserializationContext();
           ValueDeserializer<?> deserializer = context.findRootValueDeserializer(type);
-          return deserializer instanceof BeanDeserializerBase;
+          return deserializer != null && deserializer.logicalType() == LogicalType.POJO;
         });
   }
 
