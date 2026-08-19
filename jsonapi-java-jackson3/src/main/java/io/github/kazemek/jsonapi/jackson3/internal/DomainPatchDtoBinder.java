@@ -48,6 +48,7 @@ public final class DomainPatchDtoBinder {
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
   private final StructuredValueBinder structuredBinder;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainPatchDtoBinder(
       JsonMapper mapper,
@@ -58,6 +59,7 @@ public final class DomainPatchDtoBinder {
     this.cache = Objects.requireNonNull(cache, "cache");
     this.converter = new PatchMemberConverter(mapper, identifierConverter, linkageMappers);
     this.structuredBinder = new StructuredValueBinder(mapper);
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /** Binds one resource object into a PATCH DTO instance of {@code targetType}. */
@@ -72,14 +74,51 @@ public final class DomainPatchDtoBinder {
     bindIdentity(resource, mapping, properties, rawType);
     bindAttributes(resource, mapping, properties, rawType);
     bindRelationships(resource, mapping, properties, rawType);
-    Map<String, MappingProperty> attributesByLogicalName =
-        PatchMemberConverter.byLogicalName(mapping.attributes());
+    bindResourceMeta(resource, mapping, properties, rawType);
+    bindRelationshipMeta(resource, mapping, properties, rawType);
+    Map<String, ConstructionLocation> locationsByLogicalName =
+        constructionLocationsByLogicalName(mapping);
     return BeanConstruction.convertBean(
         mapper,
         properties,
         targetType,
         rawType,
-        (failure, ignored) -> translateConstructionPath(failure, attributesByLogicalName));
+        (failure, ignored) -> translateConstructionPath(failure, locationsByLogicalName));
+  }
+
+  /** One structured member's construction-translation location: wire prefix and declared type. */
+  private record ConstructionLocation(String prefix, JavaType declaredType) {}
+
+  /**
+   * Maps every structured member's Jackson logical name to its resource-relative wire prefix and
+   * declared type for construction-failure pointer translation (ADR-014/015): attributes under
+   * {@code /attributes/<name>}, resource meta under {@code /meta}, and relationship meta under
+   * {@code /relationships/<name>/meta}.
+   */
+  private static Map<String, ConstructionLocation> constructionLocationsByLogicalName(
+      ResourceMapping mapping) {
+    Map<String, ConstructionLocation> locations = new LinkedHashMap<>();
+    for (MappingProperty property : mapping.attributes()) {
+      locations.put(
+          property.logicalName(),
+          new ConstructionLocation(
+              ATTRIBUTE_PATH_PREFIX + "/" + property.jsonapiName(), property.accessor().getType()));
+    }
+    MappingProperty resourceMeta = mapping.resourceMeta();
+    if (resourceMeta != null) {
+      locations.put(
+          resourceMeta.logicalName(),
+          new ConstructionLocation(
+              RelationshipMetaSupport.resourceMetaPath(), resourceMeta.accessor().getType()));
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      locations.put(
+          property.logicalName(),
+          new ConstructionLocation(
+              RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName()),
+              property.accessor().getType()));
+    }
+    return locations;
   }
 
   private void validateResourceType(
@@ -121,6 +160,13 @@ public final class DomainPatchDtoBinder {
     for (MappingProperty property : mapping.relationships()) {
       validatePatchableProperty(property, rawType);
     }
+    MappingProperty resourceMeta = mapping.resourceMeta();
+    if (resourceMeta != null) {
+      validatePatchableMetaProperty(resourceMeta, rawType);
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      validatePatchableMetaProperty(property, rawType);
+    }
   }
 
   private void validatePatchableProperty(MappingProperty property, Class<?> rawType) {
@@ -136,6 +182,26 @@ public final class DomainPatchDtoBinder {
               + property.logicalName()
               + "' must be declared exactly as PatchPresence<T> without wrapper-level "
               + "@JsonDeserialize/@JsonSerialize customization on "
+              + rawType.getName());
+    }
+  }
+
+  /**
+   * Whole-meta member validation for the typed PATCH DTO role (ADR-015): the shared patchable
+   * member authority (exactly {@code PatchPresence<T>}, no wrapper-level customization) plus, after
+   * unwrapping one {@code PatchPresence} and at most one {@link java.util.Optional}, an effective
+   * Bean / Map / Object target.
+   */
+  private void validatePatchableMetaProperty(MappingProperty property, Class<?> rawType) {
+    validatePatchableProperty(property, rawType);
+    if (!wholeMetaTarget.validTypedPatchTarget(property.definition().getPrimaryType())) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_META_TARGET,
+          rawType,
+          "/" + property.logicalName(),
+          "PATCH DTO meta member '"
+              + property.logicalName()
+              + "' must be PatchPresence<Bean|Map|Object> (with at most one Optional inside) on "
               + rawType.getName());
     }
   }
@@ -207,7 +273,11 @@ public final class DomainPatchDtoBinder {
     if (supplied != null) {
       for (String name : supplied.keySet()) {
         if (!byJsonapiName.containsKey(name)) {
-          throw unknownPatchMember(rawType, "/relationships/" + name, "relationship", name);
+          throw unknownPatchMember(
+              rawType,
+              RelationshipMetaSupport.relationshipsPath() + "/" + name,
+              "relationship",
+              name);
         }
       }
     }
@@ -234,34 +304,108 @@ public final class DomainPatchDtoBinder {
         "Unknown supplied " + kind + " '" + name + "' for PATCH DTO " + rawType.getName());
   }
 
+  /**
+   * Binds supplied resource meta as a {@code PatchPresence} member. Supplied meta without a
+   * declared {@code @JsonApiMeta} member is rejected on the strict typed path (ADR-015).
+   */
+  private void bindResourceMeta(
+      ResourceObject resource,
+      ResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
+    MappingProperty property = mapping.resourceMeta();
+    if (property == null) {
+      if (resource.meta() != null) {
+        throw unknownPatchMember(
+            rawType, RelationshipMetaSupport.resourceMetaPath(), "meta", "meta");
+      }
+      return;
+    }
+    if (resource.meta() == null) {
+      properties.put(property.logicalName(), new PresenceMarker(false, null));
+      return;
+    }
+    Object value =
+        structuredBinder.typedMemberValue(
+            resource.meta().members(),
+            property.accessor().getType(),
+            RelationshipMetaSupport.resourceMetaPath(),
+            rawType);
+    properties.put(property.logicalName(), new PresenceMarker(true, value));
+  }
+
+  /**
+   * Binds supplied relationship meta for each mapped relationship-meta member. Meta participates
+   * only when the relationship carries {@code data}; supplied meta for a mapped relationship
+   * without a declared {@code @JsonApiRelationshipMeta} member is rejected on the strict typed path
+   * (ADR-015).
+   */
+  private void bindRelationshipMeta(
+      ResourceObject resource,
+      ResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
+    Relationships relationships = resource.relationships();
+    Map<String, Relationship> supplied =
+        relationships == null ? null : relationships.relationships();
+    Map<String, MappingProperty> metaByTarget =
+        RelationshipMetaSupport.byTarget(mapping.relationshipMetaProperties());
+    if (supplied != null) {
+      for (Map.Entry<String, Relationship> entry : supplied.entrySet()) {
+        Relationship relationship = entry.getValue();
+        if (relationship.data() != null
+            && relationship.meta() != null
+            && !metaByTarget.containsKey(entry.getKey())) {
+          throw unknownPatchMember(
+              rawType,
+              RelationshipMetaSupport.relationshipMetaPath(entry.getKey()),
+              "relationship meta",
+              entry.getKey());
+        }
+      }
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      Relationship relationship = supplied == null ? null : supplied.get(property.jsonapiName());
+      if (relationship == null || relationship.data() == null || relationship.meta() == null) {
+        properties.put(property.logicalName(), new PresenceMarker(false, null));
+        continue;
+      }
+      String pointer = RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName());
+      Object value =
+          structuredBinder.typedMemberValue(
+              relationship.meta().members(), property.accessor().getType(), pointer, rawType);
+      properties.put(property.logicalName(), new PresenceMarker(true, value));
+    }
+  }
+
   private static JavaType innerType(MappingProperty property) {
     return property.accessor().getType().containedType(0);
   }
 
   /**
    * Translates a failed single-pass bean-construction Jackson path into a resource-relative
-   * wire-name pointer for structured attributes (ADR-014).
+   * wire-name pointer for structured members (ADR-014/015).
    *
-   * <p>The path's first name is the top-level synthetic-map key (the attribute's Jackson logical
-   * name); it is mapped to the JSON:API wire name via the resolved mapping. Deeper names are walked
-   * through the already-resolved presence-aware shape metadata: each name that matches a nested
-   * member contributes that member's wire name, and the internal marker {@code value} member
-   * between two shape levels is skipped. Walking stops at the first name that is not a shape
-   * member, so Jackson-internal names below an atomic member are never leaked into the pointer.
+   * <p>The path's first name is the top-level synthetic-map key (the member's Jackson logical
+   * name); it is mapped to the member's resource-relative wire prefix via the resolved mapping.
+   * Deeper names are walked through the already-resolved presence-aware shape metadata: each name
+   * that matches a nested member contributes that member's wire name, and the internal marker
+   * {@code value} member between two shape levels is skipped. Walking stops at the first name that
+   * is not a shape member, so Jackson-internal names below an atomic member are never leaked into
+   * the pointer.
    */
   private String translateConstructionPath(
-      Throwable failure, Map<String, MappingProperty> attributesByLogicalName) {
+      Throwable failure, Map<String, ConstructionLocation> locationsByLogicalName) {
     List<String> names = BeanConstruction.pathNames(failure);
     if (names.isEmpty()) {
       return "/";
     }
-    MappingProperty top = attributesByLogicalName.get(names.getFirst());
-    if (top == null) {
+    ConstructionLocation location = locationsByLogicalName.get(names.getFirst());
+    if (location == null) {
       return BeanConstruction.propertyPath(failure);
     }
-    StringBuilder pointer =
-        new StringBuilder(ATTRIBUTE_PATH_PREFIX).append('/').append(top.jsonapiName());
-    JavaType current = top.accessor().getType();
+    JavaType current = location.declaredType();
+    StringBuilder pointer = new StringBuilder(location.prefix());
     int i = 1;
     boolean walking = true;
     while (i < names.size() && walking) {

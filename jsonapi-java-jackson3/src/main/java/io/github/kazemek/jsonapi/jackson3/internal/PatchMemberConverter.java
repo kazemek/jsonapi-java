@@ -158,6 +158,34 @@ final class PatchMemberConverter {
   }
 
   /**
+   * Converts one whole-meta value atomically on the low-level path (ADR-015). Reuses the same
+   * property-scoped Jackson authority as attribute conversion, but the caller supplies the
+   * location-specific meta pointer so failures never surface the attribute-oriented {@code
+   * "/<logicalName>"} pointer.
+   */
+  @Nullable Object convertWholeMeta(
+      MappingProperty property,
+      @Nullable Object rawValue,
+      JavaType declaredType,
+      JavaType beanType,
+      String pointer,
+      Class<?> rawType) {
+    try {
+      return convertAttributeViaJackson(property, rawValue, declaredType, beanType);
+    } catch (RuntimeException e) {
+      if (e instanceof JsonApiMappingException mappingException) {
+        throw mappingException;
+      }
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_META_TARGET,
+          rawType,
+          pointer,
+          "Failed to convert the meta value at '" + pointer + "'",
+          e);
+    }
+  }
+
+  /**
    * Converts one relationship linkage against {@code targetType} (the unwrapped inner type on the
    * DTO path).
    */

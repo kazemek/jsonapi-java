@@ -7,7 +7,8 @@ import java.util.Set;
  * Application allow-list over {@code (resourceType, fieldName)} pairs for sparse fieldsets.
  *
  * <p>Policy is consulted only for names in a present fieldset entry. A present empty fieldset list
- * means identity-only emission and does not consult per-field allows.
+ * selects no attributes/relationships and does not consult per-field allows; non-field resource
+ * members such as mapped resource meta remain independent (ADR-015).
  */
 public final class FieldPolicy {
 

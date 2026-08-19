@@ -31,7 +31,8 @@ contexts (`DocumentReadContext`, `CompoundSerializationContext`, `DocumentEnvelo
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`), identifier
 conversion (`IdentifierConverter`), domain envelope values (`DomainData`, `IncludedResources`), and
 presence-aware update contracts (`PatchCommand`, `PatchChange`, `PatchPresence`,
-`StructuredPatch`, `StructuredMember`, `StructuredMemberState`). No type in this
+`StructuredPatch`, `StructuredMember`, `StructuredMemberState`; `PatchChange` sealed variants also
+cover resource-meta and relationship-meta changes per [ADR-015](../docs/adr/015-flat-whole-object-meta-mapping.md)). No type in this
 package imports or exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories,
 readers, writers, binders, and mapping introspection stay in the major-specific adapter packages.
 

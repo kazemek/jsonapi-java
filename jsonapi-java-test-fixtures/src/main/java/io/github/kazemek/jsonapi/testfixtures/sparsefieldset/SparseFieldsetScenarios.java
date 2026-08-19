@@ -63,13 +63,13 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetExpectation.unmapped(
                   unrestrictedArticle(), List.of(unrestrictedPerson(dan())))),
           mappedDocument(
-              "present empty list emits identity-only primary",
+              "present empty list selects no attributes or relationships",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of())),
               SparseFieldsetExpectation.mapped(
                   FieldsetResourceState.identity(ARTICLES, "1"), null, true)),
           mappedDocument(
-              "present empty list emits identity-only included when that type appears",
+              "present empty list for included type selects no attributes or relationships",
               SparseFieldsetScenarios::article,
               includeAndFields(List.of(AUTHOR), Map.of(PEOPLE, List.of())),
               SparseFieldsetExpectation.mapped(

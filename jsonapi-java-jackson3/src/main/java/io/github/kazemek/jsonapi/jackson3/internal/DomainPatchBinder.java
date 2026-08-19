@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.Attributes;
+import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
@@ -43,6 +44,7 @@ public final class DomainPatchBinder {
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
   private final StructuredValueBinder structuredBinder;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainPatchBinder(
       JsonMapper mapper,
@@ -52,6 +54,7 @@ public final class DomainPatchBinder {
     this.cache = Objects.requireNonNull(cache, "cache");
     this.converter = new PatchMemberConverter(mapper, identifierConverter, linkageMappers);
     this.structuredBinder = new StructuredValueBinder(mapper);
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /** Binds one resource object into a presence-aware patch command for {@code targetType}. */
@@ -62,10 +65,12 @@ public final class DomainPatchBinder {
     Class<?> rawType = targetType.getRawClass();
     ResourceMapping mapping = cache.resolve(targetType);
     validateResourceType(resource, mapping, rawType);
+    validateMetaTargets(mapping, rawType);
     Object identity = convertIdentity(resource, mapping, rawType);
     List<PatchChange> changes = new ArrayList<>();
+    bindResourceMetaChange(resource, mapping, targetType, rawType, changes);
     bindAttributeChanges(resource, mapping, targetType, rawType, changes);
-    bindRelationshipChanges(resource, mapping, changes);
+    bindRelationshipChanges(resource, mapping, targetType, rawType, changes);
     @SuppressWarnings({"rawtypes", "unchecked"})
     PatchCommand<?> command = new PatchCommand(rawType, identity, changes);
     return command;
@@ -85,6 +90,14 @@ public final class DomainPatchBinder {
               + expectedType
               + "'");
     }
+  }
+
+  /**
+   * Whole-meta declared-target validation for the low-level domain-mapping role (read/write rule):
+   * Bean / Map / Object with at most one {@link Optional} wrapper (ADR-015).
+   */
+  private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
+    wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
   private Object convertIdentity(
@@ -158,24 +171,89 @@ public final class DomainPatchBinder {
         targetType);
   }
 
+  private void bindResourceMetaChange(
+      ResourceObject resource,
+      ResourceMapping mapping,
+      JavaType targetType,
+      Class<?> rawType,
+      List<PatchChange> changes) {
+    MappingProperty property = mapping.resourceMeta();
+    if (property == null || resource.meta() == null) {
+      return;
+    }
+    Object value =
+        bindMetaValue(
+            property,
+            resource.meta().members(),
+            RelationshipMetaSupport.resourceMetaPath(),
+            targetType,
+            rawType);
+    changes.add(
+        new PatchChange.ResourceMetaChange(JsonApiMembers.META, property.logicalName(), value));
+  }
+
+  private @Nullable Object bindMetaValue(
+      MappingProperty property,
+      @Nullable Object rawValue,
+      String pointer,
+      JavaType targetType,
+      Class<?> rawType) {
+    JavaType declaredType = property.accessor().getType();
+    StructuredValueBinder.LowLevelKind kind =
+        structuredBinder.lowLevelKind(
+            declaredType,
+            rawValue,
+            property.accessor(),
+            property.definition().getMutator(),
+            pointer,
+            rawType);
+    if (kind == StructuredValueBinder.LowLevelKind.RECURSE) {
+      return structuredBinder.bindLowLevelStructured(rawValue, declaredType, pointer, rawType);
+    }
+    return converter.convertWholeMeta(
+        property,
+        rawValue,
+        PatchMemberConverter.unwrapPatchPresence(declaredType),
+        targetType,
+        pointer,
+        rawType);
+  }
+
   private void bindRelationshipChanges(
-      ResourceObject resource, ResourceMapping mapping, List<PatchChange> changes) {
+      ResourceObject resource,
+      ResourceMapping mapping,
+      JavaType targetType,
+      Class<?> rawType,
+      List<PatchChange> changes) {
     Relationships relationships = resource.relationships();
     if (relationships == null || mapping.relationships().isEmpty()) {
       return;
     }
     Map<String, MappingProperty> byJsonapiName =
         PatchMemberConverter.byJsonapiName(mapping.relationships());
+    Map<String, MappingProperty> relationshipMetaByTarget =
+        RelationshipMetaSupport.byTarget(mapping.relationshipMetaProperties());
     for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
       MappingProperty property = byJsonapiName.get(entry.getKey());
       if (property != null) {
-        RelationshipData data = entry.getValue().data();
+        Relationship relationship = entry.getValue();
+        RelationshipData data = relationship.data();
         if (data != null) {
           Object value =
               converter.convertRelationship(property, data, property.accessor().getType());
           changes.add(
               new PatchChange.RelationshipChange(
                   property.jsonapiName(), property.logicalName(), value));
+          MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
+          if (metaProperty != null && relationship.meta() != null) {
+            String pointer = RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName());
+            Object metaValue =
+                bindMetaValue(
+                    metaProperty, relationship.meta().members(), pointer, targetType, rawType);
+            changes.add(
+                new PatchChange.RelationshipMetaChange(
+                    metaProperty.jsonapiName(), metaProperty.logicalName(), metaValue));
+          }
         }
       }
     }

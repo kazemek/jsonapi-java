@@ -35,6 +35,7 @@ public final class DomainResourceBinder {
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
   private final Map<Class<?>, RelationshipLinkageMapper> linkageMappers;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainResourceBinder(
       JsonMapper mapper,
@@ -45,6 +46,7 @@ public final class DomainResourceBinder {
     this.identifierConverter = Objects.requireNonNull(identifierConverter, "identifierConverter");
     this.cache = Objects.requireNonNull(cache, "cache");
     this.linkageMappers = Map.copyOf(Objects.requireNonNull(linkageMappers, "linkageMappers"));
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /** Binds one resource object to the given target type. */
@@ -54,10 +56,13 @@ public final class DomainResourceBinder {
     Class<?> rawType = targetType.getRawClass();
     ResourceMapping mapping = cache.resolve(targetType);
     validateResourceType(resource, mapping, rawType);
+    validateMetaTargets(mapping, rawType);
     Map<String, @Nullable Object> properties = new LinkedHashMap<>();
     bindIdentifier(resource, mapping, properties);
     bindAttributes(resource, mapping, properties);
     bindRelationships(resource, mapping, properties);
+    bindResourceMeta(resource, mapping, properties);
+    bindRelationshipMeta(resource, mapping, properties);
     return convertBean(properties, targetType, rawType);
   }
 
@@ -75,6 +80,11 @@ public final class DomainResourceBinder {
               + expectedType
               + "'");
     }
+  }
+
+  /** Whole-meta declared-target validation for the read/write domain-mapping role (ADR-015). */
+  private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
+    wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
   private void bindIdentifier(
@@ -179,6 +189,43 @@ public final class DomainResourceBinder {
         continue;
       }
       bindRelationship(properties, property, data);
+    }
+  }
+
+  /**
+   * Binds the resource-side {@code meta} members under the mapped resource-meta property's logical
+   * name when the resource carries meta. Absent meta leaves the property absent.
+   */
+  private void bindResourceMeta(
+      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
+    MappingProperty resourceMetaProperty = mapping.resourceMeta();
+    if (resourceMetaProperty == null || resource.meta() == null) {
+      return;
+    }
+    properties.put(resourceMetaProperty.logicalName(), resource.meta().members());
+  }
+
+  /**
+   * Binds relationship {@code meta} members under each mapped relationship-meta property's logical
+   * name when the referenced relationship is present and carries meta. Absent relationship or
+   * absent meta leaves the property absent. A valid meta-only relationship representation binds its
+   * meta here (read side); PATCH additionally requires {@code data} (ADR-015).
+   */
+  private void bindRelationshipMeta(
+      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
+    if (mapping.relationshipMetaProperties().isEmpty()) {
+      return;
+    }
+    Relationships relationships = resource.relationships();
+    if (relationships == null) {
+      return;
+    }
+    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+      Relationship relationship = relationships.relationships().get(property.jsonapiName());
+      if (relationship == null || relationship.meta() == null) {
+        continue;
+      }
+      properties.put(property.logicalName(), relationship.meta().members());
     }
   }
 

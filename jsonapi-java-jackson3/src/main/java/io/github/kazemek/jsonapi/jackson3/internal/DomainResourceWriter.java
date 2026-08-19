@@ -2,11 +2,13 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.Attributes;
+import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
+import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException;
 import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
 import io.github.kazemek.jsonapi.jackson.FieldPolicy;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
@@ -32,12 +34,14 @@ public final class DomainResourceWriter {
   private final JsonMapper mapper;
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
+  private final WholeMetaTarget wholeMetaTarget;
 
   public DomainResourceWriter(
       JsonMapper mapper, IdentifierConverter identifierConverter, MappingDefinitionCache cache) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.identifierConverter = Objects.requireNonNull(identifierConverter, "identifierConverter");
     this.cache = Objects.requireNonNull(cache, "cache");
+    this.wholeMetaTarget = new WholeMetaTarget(mapper);
   }
 
   /**
@@ -54,10 +58,12 @@ public final class DomainResourceWriter {
   public ResourceObject toResource(Object resource) {
     Objects.requireNonNull(resource, RESOURCE);
     ResourceMapping mapping = cache.resolve(resource.getClass());
+    validateMetaTargets(mapping, resource.getClass());
     String id = extractId(resource, mapping);
     Attributes attributes = buildAttributes(resource, mapping, null);
     Relationships relationships = buildRelationships(resource, mapping, null);
-    return buildResourceObject(mapping, id, attributes, relationships);
+    Meta meta = buildResourceMeta(resource, mapping);
+    return buildResourceObject(mapping, id, attributes, relationships, meta);
   }
 
   /**
@@ -77,9 +83,10 @@ public final class DomainResourceWriter {
   }
 
   /**
-   * Selective emission. {@code fields == null} means unrestricted; empty means identity-only;
-   * non-empty is an allow-list of JSON:API attribute and relationship names. Does not consult
-   * {@link FieldPolicy}; callers that need policy checks must validate first (or use {@link
+   * Selective emission. {@code fields == null} means unrestricted; empty selects no
+   * attributes/relationships (non-field resource members such as mapped resource meta remain
+   * independent); non-empty is an allow-list of JSON:API attribute and relationship names. Does not
+   * consult {@link FieldPolicy}; callers that need policy checks must validate first (or use {@link
    * #toResource(Object, CompoundSerializationContext)}).
    */
   public SelectiveResource toResource(Object resource, @Nullable List<String> fields) {
@@ -88,6 +95,7 @@ public final class DomainResourceWriter {
       return new SelectiveResource(toResource(resource), false);
     }
     ResourceMapping mapping = cache.resolve(resource.getClass());
+    validateMetaTargets(mapping, resource.getClass());
     String id = extractId(resource, mapping);
     Set<String> allowed = Set.copyOf(fields);
     boolean relationshipOmitted = false;
@@ -99,13 +107,15 @@ public final class DomainResourceWriter {
     }
     Attributes attributes = buildAttributes(resource, mapping, allowed);
     Relationships relationships = buildRelationships(resource, mapping, allowed);
+    Meta meta = buildResourceMeta(resource, mapping);
     return new SelectiveResource(
-        buildResourceObject(mapping, id, attributes, relationships), relationshipOmitted);
+        buildResourceObject(mapping, id, attributes, relationships, meta), relationshipOmitted);
   }
 
   /**
    * Resolves the fieldset list for {@code resourceType}: {@code null} when the type key is absent
-   * (unrestricted), otherwise the stored list (possibly empty for identity-only).
+   * (unrestricted), otherwise the stored list (possibly empty, selecting no
+   * attributes/relationships).
    */
   public static @Nullable List<String> fieldsFor(
       CompoundSerializationContext context, String resourceType) {
@@ -155,7 +165,8 @@ public final class DomainResourceWriter {
       ResourceMapping mapping,
       @Nullable String id,
       Attributes attributes,
-      Relationships relationships) {
+      Relationships relationships,
+      @Nullable Meta meta) {
     return new ResourceObject(
         mapping.resourceType(),
         id,
@@ -163,8 +174,17 @@ public final class DomainResourceWriter {
         attributes.isEmpty() ? null : attributes,
         relationships.isEmpty() ? null : relationships,
         null,
-        null,
+        meta,
         Map.of());
+  }
+
+  /**
+   * Whole-meta declared-target validation for the read/write domain-mapping role: Bean / Map /
+   * Object with at most one {@link Optional} wrapper. Validation lives at the consuming entry
+   * point, not the kind-agnostic resolver (ADR-015).
+   */
+  private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
+    wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
   @Nullable String extractId(Object resource, ResourceMapping mapping) {
@@ -289,24 +309,114 @@ public final class DomainResourceWriter {
     if (mapping.relationships().isEmpty()) {
       return Relationships.empty();
     }
+    Map<String, MappingProperty> relationshipMetaByTarget =
+        RelationshipMetaSupport.byTarget(mapping.relationshipMetaProperties());
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     for (MappingProperty property : mapping.relationships()) {
       if (allowedFields != null && !allowedFields.contains(property.jsonapiName())) {
         continue;
       }
-      relationships.put(property.jsonapiName(), buildRelationship(resource, property));
+      relationships.put(
+          property.jsonapiName(), buildRelationship(resource, property, relationshipMetaByTarget));
     }
     return Relationships.ofRelationships(relationships);
   }
 
-  private Relationship buildRelationship(Object resource, MappingProperty property) {
+  private Relationship buildRelationship(
+      Object resource,
+      MappingProperty property,
+      Map<String, MappingProperty> relationshipMetaByTarget) {
     Object value = readValue(resource, property, PropertyRole.RELATIONSHIP);
     JavaType propertyType = property.accessor().getType();
     RelationshipData linkage =
         isToManyType(propertyType)
             ? extractToManyLinkage(value, propertyType)
             : extractToOneLinkage(value);
-    return new Relationship(linkage, null, null, Map.of());
+    Meta meta = null;
+    MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
+    if (metaProperty != null) {
+      meta =
+          buildMetaValue(
+              resource,
+              metaProperty,
+              RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName()));
+    }
+    return new Relationship(linkage, null, meta, Map.of());
+  }
+
+  /** Builds the resource-side {@code meta} from the single mapped resource-meta property. */
+  private @Nullable Meta buildResourceMeta(Object resource, ResourceMapping mapping) {
+    MappingProperty resourceMetaProperty = mapping.resourceMeta();
+    if (resourceMetaProperty == null) {
+      return null;
+    }
+    return buildMetaValue(
+        resource, resourceMetaProperty, RelationshipMetaSupport.resourceMetaPath());
+  }
+
+  /**
+   * Converts one whole-meta property value into a core {@link Meta}. The converted result must be a
+   * {@link Map}; scalar/array/non-object runtime values fail with a stable meta diagnostic (never a
+   * leaked cast or core-validation failure). Failures report the location-specific {@code path}.
+   */
+  private @Nullable Meta buildMetaValue(Object resource, MappingProperty property, String path) {
+    Object rawValue = readValue(resource, property, property.role());
+    Object value = unwrapOptional(rawValue);
+    if (value == null) {
+      return null;
+    }
+    Object converted;
+    try {
+      converted = mapper.convertValue(value, Object.class);
+    } catch (RuntimeException e) {
+      throw metaValueFailure(resource, path, "Failed to convert meta value", e);
+    }
+    if (!(converted instanceof Map<?, ?> map)) {
+      throw metaValueFailure(
+          resource,
+          path,
+          "Converted meta value is not an object (expected a JSON object, got "
+              + (converted == null ? "null" : converted.getClass().getName())
+              + ")",
+          null);
+    }
+    try {
+      return Meta.of(castMembers(map));
+    } catch (JsonApiValidationException e) {
+      throw metaValueFailure(resource, path, "Invalid meta members", e);
+    }
+  }
+
+  /**
+   * Rebuilds the converted meta value into a string-keyed member map. Today the conversion target
+   * {@code Object.class} always yields string keys (Jackson's untyped map representation), so the
+   * non-string branch is defensive: it keeps the stable {@link
+   * MappingDiagnostic#INVALID_META_TARGET} diagnostic instead of leaking a class cast or a
+   * core-validation failure if a future Jackson version ever emits non-string keys.
+   */
+  private static Map<String, Object> castMembers(Map<?, ?> map) {
+    Map<String, Object> members = new LinkedHashMap<>();
+    for (Map.Entry<?, ?> entry : map.entrySet()) {
+      Object key = entry.getKey();
+      if (!(key instanceof String stringKey)) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.INVALID_META_TARGET,
+            null,
+            null,
+            "Meta object key is not a string: " + key);
+      }
+      members.put(stringKey, entry.getValue());
+    }
+    return members;
+  }
+
+  private JsonApiMappingException metaValueFailure(
+      Object resource, String path, String message, @Nullable Throwable cause) {
+    return cause == null
+        ? new JsonApiMappingException(
+            MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), path, message)
+        : new JsonApiMappingException(
+            MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), path, message, cause);
   }
 
   private RelationshipData extractToOneLinkage(@Nullable Object value) {
@@ -424,6 +534,7 @@ public final class DomainResourceWriter {
       case ID -> MappingDiagnostic.MISSING_IDENTIFIER;
       case ATTRIBUTE -> MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE;
       case RELATIONSHIP -> MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE;
+      case RESOURCE_META, RELATIONSHIP_META -> MappingDiagnostic.INVALID_META_TARGET;
     };
   }
 

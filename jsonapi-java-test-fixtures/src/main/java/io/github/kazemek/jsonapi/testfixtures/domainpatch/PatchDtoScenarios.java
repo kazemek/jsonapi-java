@@ -76,7 +76,12 @@ public final class PatchDtoScenarios {
           nestedDeclarationRaw(),
           nestedDeclarationDirectPresent(),
           nestedInvalidShapeOmitted(),
-          javabeanNestedPartial());
+          javabeanNestedPartial(),
+          metaRecursiveResourceAndRelationship(),
+          metaAtomicMap(),
+          metaOptionalObject(),
+          metaEmptyObject(),
+          metaOmitted());
 
   private static final FixtureCatalog<PatchDtoScenario> CATALOG =
       FixtureCatalog.of("patch-dto", SCENARIOS);
@@ -560,6 +565,111 @@ public final class PatchDtoScenarios {
   private static Map<String, PatchPresence<?>> boxPatchMembers(PatchPresence<?> box) {
     Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(1);
     members.put("box", box);
+    return members;
+  }
+
+  private static PatchDtoScenario metaRecursiveResourceAndRelationship() {
+    return scenario(
+        "patch-dto-meta-recursive-resource-and-relationship",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\","
+            + "\"attributes\":{\"title\":\"T\"},"
+            + "\"meta\":{\"source\":\"cms\",\"note\":\"n\"},"
+            + "\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"},\"meta\":{\"displayName\":\"Alice\"}}}}}",
+        ArticleWithMetaPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            metaPatchMembers(
+                PatchPresence.present("T"),
+                PatchPresence.present(
+                    new ArticleMetaPatch(PatchPresence.present("cms"), PatchPresence.present("n"))),
+                PatchPresence.present(ResourceIdentifier.of("people", "p1")),
+                PatchPresence.present(new AuthorMeta("Alice")))));
+  }
+
+  private static PatchDtoScenario metaAtomicMap() {
+    return scenario(
+        "patch-dto-meta-atomic-map",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\","
+            + "\"attributes\":{\"title\":\"T\"},"
+            + "\"meta\":{\"source\":\"cms\"},"
+            + "\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"},\"meta\":{\"displayName\":\"Alice\"}}}}}",
+        ArticleWithMapMetaPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            mapMetaPatchMembers(
+                PatchPresence.present("T"),
+                PatchPresence.present(Map.of("source", "cms")),
+                PatchPresence.present(ResourceIdentifier.of("people", "p1")),
+                PatchPresence.present(Map.of("displayName", "Alice")))));
+  }
+
+  private static PatchDtoScenario metaOptionalObject() {
+    return scenario(
+        "patch-dto-meta-optional-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"meta\":{\"source\":\"cms\",\"note\":\"n\"}}}",
+        ArticleWithOptionalMetaPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            optionalMetaPatchMembers(
+                PatchPresence.present("T"),
+                PatchPresence.present(Optional.of(new ArticleMeta("cms", "n"))))));
+  }
+
+  private static PatchDtoScenario metaEmptyObject() {
+    return scenario(
+        "patch-dto-meta-empty-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"meta\":{}}}",
+        ArticleWithMetaPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            metaPatchMembers(
+                PatchPresence.present("T"),
+                PatchPresence.present(
+                    new ArticleMetaPatch(PatchPresence.omitted(), PatchPresence.omitted())),
+                PatchPresence.omitted(),
+                PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario metaOmitted() {
+    return scenario(
+        "patch-dto-meta-omitted",
+        IDENTITY_ONLY_DOCUMENT,
+        ArticleWithMetaPatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            metaPatchMembers(
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.omitted())));
+  }
+
+  private static Map<String, PatchPresence<?>> metaPatchMembers(
+      PatchPresence<?> title,
+      PatchPresence<?> meta,
+      PatchPresence<?> author,
+      PatchPresence<?> authorMeta) {
+    Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(4);
+    members.put(TITLE, title);
+    members.put("meta", meta);
+    members.put(AUTHOR, author);
+    members.put("authorMeta", authorMeta);
+    return members;
+  }
+
+  private static Map<String, PatchPresence<?>> mapMetaPatchMembers(
+      PatchPresence<?> title,
+      PatchPresence<?> meta,
+      PatchPresence<?> author,
+      PatchPresence<?> authorMeta) {
+    return metaPatchMembers(title, meta, author, authorMeta);
+  }
+
+  private static Map<String, PatchPresence<?>> optionalMetaPatchMembers(
+      PatchPresence<?> title, PatchPresence<?> meta) {
+    Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(2);
+    members.put(TITLE, title);
+    members.put("meta", meta);
     return members;
   }
 

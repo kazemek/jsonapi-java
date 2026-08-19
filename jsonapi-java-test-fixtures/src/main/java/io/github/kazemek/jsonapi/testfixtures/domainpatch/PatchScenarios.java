@@ -75,7 +75,11 @@ public final class PatchScenarios {
           lowLevelPresenceScalar(),
           lowLevelPresenceOrdinaryDomain(),
           lowLevelPresenceShapeRejected(),
-          ordinaryDomainJavaBeanNestedPartial());
+          ordinaryDomainJavaBeanNestedPartial(),
+          resourceMetaStructuredWithOrdering(),
+          resourceMetaAtomicMap(),
+          relationshipMetaWithData(),
+          resourceMetaSuppliedUnmappedSkipped());
 
   private static final FixtureCatalog<PatchScenario> CATALOG =
       FixtureCatalog.of("patch", SCENARIOS);
@@ -568,6 +572,86 @@ public final class PatchScenarios {
                         List.of(
                             new StructuredMember(
                                 STREET, STREET, new StructuredMemberState.Atomic("S"))))))));
+  }
+
+  private static PatchScenario resourceMetaStructuredWithOrdering() {
+    return scenario(
+        "patch-resource-meta-structured-ordering",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\","
+            + "\"attributes\":{\"title\":\"T\"},"
+            + "\"meta\":{\"source\":\"cms\",\"note\":\"n\"},"
+            + "\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"},\"meta\":{\"displayName\":\"Alice\"}}}}}",
+        ArticleWithMeta.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.ResourceMetaChange(
+                    "meta",
+                    "meta",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "source", "source", new StructuredMemberState.Atomic("cms")),
+                            new StructuredMember(
+                                "note", "note", new StructuredMemberState.Atomic("n"))))),
+                new PatchChange.AttributeChange(TITLE, TITLE, "T"),
+                new PatchChange.RelationshipChange(
+                    AUTHOR, AUTHOR, ResourceIdentifier.of(PEOPLE, "p1")),
+                new PatchChange.RelationshipMetaChange(
+                    AUTHOR,
+                    "authorMeta",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "displayName",
+                                "displayName",
+                                new StructuredMemberState.Atomic("Alice"))))))));
+  }
+
+  private static PatchScenario resourceMetaAtomicMap() {
+    return scenario(
+        "patch-resource-meta-atomic-map",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"meta\":{\"source\":\"cms\"}}}",
+        ArticleWithMapMeta.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.ResourceMetaChange("meta", "meta", Map.of("source", "cms")),
+                new PatchChange.AttributeChange(TITLE, TITLE, "T"))));
+  }
+
+  private static PatchScenario relationshipMetaWithData() {
+    return scenario(
+        "patch-relationship-meta-with-data",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\","
+            + "\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"},\"meta\":{\"displayName\":\"Alice\"}}}}}",
+        ArticleWithMeta.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    AUTHOR, AUTHOR, ResourceIdentifier.of(PEOPLE, "p1")),
+                new PatchChange.RelationshipMetaChange(
+                    AUTHOR,
+                    "authorMeta",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "displayName",
+                                "displayName",
+                                new StructuredMemberState.Atomic("Alice"))))))));
+  }
+
+  private static PatchScenario resourceMetaSuppliedUnmappedSkipped() {
+    return scenario(
+        "patch-resource-meta-supplied-unmapped-skipped",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"meta\":{\"source\":\"cms\"}}}",
+        FlatArticle.class,
+        null,
+        PatchExpectation.success("1", List.of(new PatchChange.AttributeChange(TITLE, TITLE, "T"))));
   }
 
   private static PatchScenario scenario(

@@ -14,7 +14,8 @@ import java.util.Objects;
  * fieldsets ({@linkplain #fieldsets() empty map}) with {@link FieldPolicy#allowAll()}. An empty
  * path list means <em>no inclusion request</em> ({@code included} omitted). A non-empty path list
  * that resolves to zero resources emits {@code included: []}. An empty fieldset map means
- * unrestricted mapped fields; a present empty list for a type means identity-only emission.
+ * unrestricted mapped fields; a present empty list for a type selects no attributes/relationships
+ * (non-field resource members such as mapped resource meta remain independent; ADR-015).
  *
  * <p>This context does not carry a validation context; aggregate validation remains on the codec
  * writer. Callers that apply fieldsets must use the {@link MappedDocument} mapper overloads and
