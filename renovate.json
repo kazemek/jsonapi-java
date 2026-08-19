@@ -3,15 +3,5 @@
   "extends": [
     "config:recommended",
     "helpers:pinGitHubActionDigests"
-  ],
-  "packageRules": [
-    {
-      "description": "Spotless 8.6+ greclipse fails cold CI fingerprinting (diffplug/spotless#2950)",
-      "matchPackageNames": [
-        "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin",
-        "com.diffplug.spotless:spotless-plugin-gradle"
-      ],
-      "allowedVersions": "<=8.5.1"
-    }
   ]
 }
