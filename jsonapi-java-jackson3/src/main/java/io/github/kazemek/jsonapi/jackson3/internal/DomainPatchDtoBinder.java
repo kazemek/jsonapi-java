@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.Attributes;
-import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
@@ -43,9 +42,7 @@ import tools.jackson.databind.json.JsonMapper;
 public final class DomainPatchDtoBinder {
 
   private static final String IDENTIFIER_PATH_ID = "/id";
-  private static final String ATTRIBUTE_PATH_PREFIX = "/" + JsonApiMembers.ATTRIBUTES;
-  private static final String RESOURCE_META_PATH = "/" + JsonApiMembers.META;
-  private static final String RELATIONSHIP_PATH_PREFIX = "/" + JsonApiMembers.RELATIONSHIPS + "/";
+  private static final String ATTRIBUTE_PATH_PREFIX = "/attributes";
 
   private final JsonMapper mapper;
   private final MappingDefinitionCache cache;
@@ -109,13 +106,14 @@ public final class DomainPatchDtoBinder {
     if (resourceMeta != null) {
       locations.put(
           resourceMeta.logicalName(),
-          new ConstructionLocation(RESOURCE_META_PATH, resourceMeta.accessor().getType()));
+          new ConstructionLocation(
+              RelationshipMetaSupport.resourceMetaPath(), resourceMeta.accessor().getType()));
     }
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
       locations.put(
           property.logicalName(),
           new ConstructionLocation(
-              RELATIONSHIP_PATH_PREFIX + property.jsonapiName() + RESOURCE_META_PATH,
+              RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName()),
               property.accessor().getType()));
     }
     return locations;
@@ -286,7 +284,11 @@ public final class DomainPatchDtoBinder {
     if (supplied != null) {
       for (String name : supplied.keySet()) {
         if (!byJsonapiName.containsKey(name)) {
-          throw unknownPatchMember(rawType, RELATIONSHIP_PATH_PREFIX + name, "relationship", name);
+          throw unknownPatchMember(
+              rawType,
+              RelationshipMetaSupport.relationshipsPath() + "/" + name,
+              "relationship",
+              name);
         }
       }
     }
@@ -325,7 +327,8 @@ public final class DomainPatchDtoBinder {
     MappingProperty property = mapping.resourceMeta();
     if (property == null) {
       if (resource.meta() != null) {
-        throw unknownPatchMember(rawType, RESOURCE_META_PATH, "meta", "meta");
+        throw unknownPatchMember(
+            rawType, RelationshipMetaSupport.resourceMetaPath(), "meta", "meta");
       }
       return;
     }
@@ -335,7 +338,10 @@ public final class DomainPatchDtoBinder {
     }
     Object value =
         structuredBinder.typedMemberValue(
-            resource.meta().members(), property.accessor().getType(), RESOURCE_META_PATH, rawType);
+            resource.meta().members(),
+            property.accessor().getType(),
+            RelationshipMetaSupport.resourceMetaPath(),
+            rawType);
     properties.put(property.logicalName(), new PresenceMarker(true, value));
   }
 
@@ -363,9 +369,9 @@ public final class DomainPatchDtoBinder {
             && !metaByTarget.containsKey(entry.getKey())) {
           throw unknownPatchMember(
               rawType,
-              RELATIONSHIP_PATH_PREFIX + entry.getKey() + RESOURCE_META_PATH,
+              RelationshipMetaSupport.relationshipMetaPath(entry.getKey()),
               "relationship meta",
-              entry.getKey() + RESOURCE_META_PATH);
+              entry.getKey() + RelationshipMetaSupport.resourceMetaPath());
         }
       }
     }
@@ -375,7 +381,7 @@ public final class DomainPatchDtoBinder {
         properties.put(property.logicalName(), new PresenceMarker(false, null));
         continue;
       }
-      String pointer = RELATIONSHIP_PATH_PREFIX + property.jsonapiName() + RESOURCE_META_PATH;
+      String pointer = RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName());
       Object value =
           structuredBinder.typedMemberValue(
               relationship.meta().members(), property.accessor().getType(), pointer, rawType);

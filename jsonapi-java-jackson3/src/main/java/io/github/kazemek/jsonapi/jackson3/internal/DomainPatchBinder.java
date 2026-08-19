@@ -41,9 +41,6 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class DomainPatchBinder {
 
-  private static final String RESOURCE_META_PATH = "/" + JsonApiMembers.META;
-  private static final String RELATIONSHIP_PATH_PREFIX = "/" + JsonApiMembers.RELATIONSHIPS + "/";
-
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
   private final StructuredValueBinder structuredBinder;
@@ -206,7 +203,12 @@ public final class DomainPatchBinder {
       return;
     }
     Object value =
-        bindMetaValue(property, resource.meta().members(), RESOURCE_META_PATH, targetType, rawType);
+        bindMetaValue(
+            property,
+            resource.meta().members(),
+            RelationshipMetaSupport.resourceMetaPath(),
+            targetType,
+            rawType);
     changes.add(
         new PatchChange.ResourceMetaChange(JsonApiMembers.META, property.logicalName(), value));
   }
@@ -265,7 +267,7 @@ public final class DomainPatchBinder {
                   property.jsonapiName(), property.logicalName(), value));
           MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
           if (metaProperty != null && relationship.meta() != null) {
-            String pointer = RELATIONSHIP_PATH_PREFIX + property.jsonapiName() + RESOURCE_META_PATH;
+            String pointer = RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName());
             Object metaValue =
                 bindMetaValue(
                     metaProperty, relationship.meta().members(), pointer, targetType, rawType);

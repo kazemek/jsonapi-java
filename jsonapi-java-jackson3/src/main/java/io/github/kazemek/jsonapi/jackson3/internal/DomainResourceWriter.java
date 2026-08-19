@@ -2,7 +2,6 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.Attributes;
-import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
@@ -31,8 +30,6 @@ import tools.jackson.databind.json.JsonMapper;
 public final class DomainResourceWriter {
 
   private static final String RESOURCE = "resource";
-  private static final String RESOURCE_META_PATH = "/" + JsonApiMembers.META;
-  private static final String RELATIONSHIP_PATH_PREFIX = "/" + JsonApiMembers.RELATIONSHIPS + "/";
 
   private final JsonMapper mapper;
   private final IdentifierConverter identifierConverter;
@@ -365,7 +362,7 @@ public final class DomainResourceWriter {
           buildMetaValue(
               resource,
               metaProperty,
-              RELATIONSHIP_PATH_PREFIX + property.jsonapiName() + RESOURCE_META_PATH);
+              RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName()));
     }
     return new Relationship(linkage, null, meta, Map.of());
   }
@@ -376,7 +373,8 @@ public final class DomainResourceWriter {
     if (resourceMetaProperty == null) {
       return null;
     }
-    return buildMetaValue(resource, resourceMetaProperty, RESOURCE_META_PATH);
+    return buildMetaValue(
+        resource, resourceMetaProperty, RelationshipMetaSupport.resourceMetaPath());
   }
 
   /**
