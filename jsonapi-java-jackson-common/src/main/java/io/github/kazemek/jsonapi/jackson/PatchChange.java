@@ -19,9 +19,6 @@ public sealed interface PatchChange
         PatchChange.ResourceMetaChange,
         PatchChange.RelationshipMetaChange {
 
-  String JSONAPI_NAME = "jsonapiName";
-  String LOGICAL_NAME = "logicalName";
-
   /** Final JSON:API member name (including attribute/relationship renames). */
   String jsonapiName();
 
@@ -31,12 +28,16 @@ public sealed interface PatchChange
   /** Converted property value; {@code null} means explicit null / null linkage, not omission. */
   @Nullable Object value();
 
+  private static void requireNames(String jsonapiName, String logicalName) {
+    Objects.requireNonNull(jsonapiName, "jsonapiName");
+    Objects.requireNonNull(logicalName, "logicalName");
+  }
+
   /** A supplied mapped attribute change. */
   record AttributeChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public AttributeChange {
-      Objects.requireNonNull(jsonapiName, JSONAPI_NAME);
-      Objects.requireNonNull(logicalName, LOGICAL_NAME);
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
@@ -50,8 +51,7 @@ public sealed interface PatchChange
   record RelationshipChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public RelationshipChange {
-      Objects.requireNonNull(jsonapiName, JSONAPI_NAME);
-      Objects.requireNonNull(logicalName, LOGICAL_NAME);
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
@@ -74,8 +74,7 @@ public sealed interface PatchChange
   record ResourceMetaChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public ResourceMetaChange {
-      Objects.requireNonNull(jsonapiName, JSONAPI_NAME);
-      Objects.requireNonNull(logicalName, LOGICAL_NAME);
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
@@ -97,8 +96,7 @@ public sealed interface PatchChange
   record RelationshipMetaChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public RelationshipMetaChange {
-      Objects.requireNonNull(jsonapiName, JSONAPI_NAME);
-      Objects.requireNonNull(logicalName, LOGICAL_NAME);
+      requireNames(jsonapiName, logicalName);
       value = PatchValues.freeze(value);
     }
 
