@@ -5,6 +5,9 @@ import io.github.kazemek.jsonapi.core.validation.EndpointIdentity;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchChange;
+import io.github.kazemek.jsonapi.jackson.StructuredMember;
+import io.github.kazemek.jsonapi.jackson.StructuredMemberState;
+import io.github.kazemek.jsonapi.jackson.StructuredPatch;
 import io.github.kazemek.jsonapi.testfixtures.FixtureCatalog;
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCountedThing;
@@ -12,6 +15,9 @@ import io.github.kazemek.jsonapi.testfixtures.domainread.FlatIntIdArticle;
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatPersonArticle;
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThingWithIgnored;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import org.jspecify.annotations.Nullable;
 
@@ -29,6 +35,10 @@ public final class PatchScenarios {
   private static final String COMMENTS = "comments";
   private static final String TITLE = "title";
   private static final String AUTHOR = "author";
+  private static final String ADDRESS = "address";
+  private static final String STREET = "street";
+  private static final String ADDRESS_OBJECT_WITH_STREET_DOCUMENT =
+      "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\"}}}}";
 
   private static final List<PatchScenario> SCENARIOS =
       List.of(
@@ -48,7 +58,24 @@ public final class PatchScenarios {
           resourceTypeMismatch(),
           identifierConversionFailure(),
           attributeConversionFailure(),
-          unsupportedRelationshipTarget());
+          unsupportedRelationshipTarget(),
+          ordinaryDomainNestedPartial(),
+          ordinaryDomainNestedMultiLevel(),
+          ordinaryDomainOptionalObject(),
+          ordinaryDomainOptionalEmptyObject(),
+          ordinaryDomainOptionalNull(),
+          ordinaryDomainNestedOptionalMember(),
+          ordinaryDomainUnknownNestedSkip(),
+          ordinaryDomainNestedPrimitiveNull(),
+          ordinaryDomainContainerAtomic(),
+          ordinaryDomainGenericNestedJavaType(),
+          ordinaryDomainGenericNestedMultiLevelJavaType(),
+          ordinaryDomainContainerAtomicSet(),
+          ordinaryDomainContainerAtomicMap(),
+          lowLevelPresenceScalar(),
+          lowLevelPresenceOrdinaryDomain(),
+          lowLevelPresenceShapeRejected(),
+          ordinaryDomainJavaBeanNestedPartial());
 
   private static final FixtureCatalog<PatchScenario> CATALOG =
       FixtureCatalog.of("patch", SCENARIOS);
@@ -251,6 +278,296 @@ public final class PatchScenarios {
         null,
         PatchExpectation.binderFailure(
             MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, "/relationships/author/data"));
+  }
+
+  private static PatchScenario ordinaryDomainNestedPartial() {
+    return scenario(
+        "patch-ordinary-domain-nested-partial",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"New Street\"}}}}",
+        Article.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET,
+                                STREET,
+                                new StructuredMemberState.Atomic("New Street"))))))));
+  }
+
+  private static PatchScenario ordinaryDomainNestedMultiLevel() {
+    return scenario(
+        "patch-ordinary-domain-nested-multi-level",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"geo\":{\"lat\":\"1\"}}}}}",
+        ArticleWithGeoAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S")),
+                            new StructuredMember(
+                                "geo",
+                                "geo",
+                                new StructuredMemberState.Structured(
+                                    List.of(
+                                        new StructuredMember(
+                                            "lat",
+                                            "lat",
+                                            new StructuredMemberState.Atomic("1")))))))))));
+  }
+
+  private static PatchScenario ordinaryDomainOptionalObject() {
+    return scenario(
+        "patch-ordinary-domain-optional-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"New Street\"}}}}",
+        ArticleWithOptionalAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET,
+                                STREET,
+                                new StructuredMemberState.Atomic("New Street"))))))));
+  }
+
+  private static PatchScenario ordinaryDomainOptionalEmptyObject() {
+    return scenario(
+        "patch-ordinary-domain-optional-empty-object",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{}}}}",
+        ArticleWithOptionalAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS, ADDRESS, new StructuredPatch(List.of())))));
+  }
+
+  private static PatchScenario ordinaryDomainOptionalNull() {
+    return scenario(
+        "patch-ordinary-domain-optional-null",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":null}}}",
+        ArticleWithOptionalAddress.class,
+        null,
+        PatchExpectation.success(
+            "1", List.of(new PatchChange.AttributeChange(ADDRESS, ADDRESS, null))));
+  }
+
+  private static PatchScenario ordinaryDomainNestedOptionalMember() {
+    return scenario(
+        "patch-ordinary-domain-nested-optional-member",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"city\":null}}}}",
+        ArticleWithOptionalCity.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S")),
+                            new StructuredMember(
+                                "city",
+                                "city",
+                                new StructuredMemberState.Atomic(Optional.empty()))))))));
+  }
+
+  private static PatchScenario ordinaryDomainUnknownNestedSkip() {
+    return scenario(
+        "patch-ordinary-domain-unknown-nested-skip",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"bogus\":\"x\",\"street\":\"S\"}}}}",
+        Article.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S"))))))));
+  }
+
+  private static PatchScenario ordinaryDomainNestedPrimitiveNull() {
+    return scenario(
+        "patch-ordinary-domain-nested-primitive-null",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"dimensions\":{\"width\":null}}}}",
+        ArticleWithDimensions.class,
+        null,
+        PatchExpectation.binderFailure(
+            MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, "/attributes/dimensions/width"));
+  }
+
+  private static PatchScenario ordinaryDomainContainerAtomic() {
+    return scenario(
+        "patch-ordinary-domain-container-atomic",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"tags\":[\"a\",\"b\"]}}}",
+        ArticleWithTags.class,
+        null,
+        PatchExpectation.success(
+            "1", List.of(new PatchChange.AttributeChange("tags", "tags", List.of("a", "b")))));
+  }
+
+  private static PatchScenario ordinaryDomainGenericNestedJavaType() {
+    return scenario(
+        "patch-ordinary-domain-generic-nested-javatype",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"box\":{\"numbers\":[\"1\",\"2\"]}}}}",
+        ArticleWithBox.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "box",
+                    "box",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "numbers",
+                                "numbers",
+                                new StructuredMemberState.Atomic(List.of(1, 2)))))))));
+  }
+
+  private static PatchScenario ordinaryDomainGenericNestedMultiLevelJavaType() {
+    return scenario(
+        "patch-ordinary-domain-generic-nested-multilevel-javatype",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"box\":{\"numbers\":[[\"1\",\"2\"],[\"3\"]]}}}}",
+        ArticleWithBoxList.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "box",
+                    "box",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                "numbers",
+                                "numbers",
+                                new StructuredMemberState.Atomic(
+                                    List.of(List.of(1, 2), List.of(3))))))))));
+  }
+
+  private static PatchScenario ordinaryDomainContainerAtomicSet() {
+    return scenario(
+        "patch-ordinary-domain-container-atomic-set",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"aliases\":[\"a\",\"b\"]}}}}",
+        ArticleWithContainerAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "address",
+                    "address",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S")),
+                            new StructuredMember(
+                                "aliases",
+                                "aliases",
+                                new StructuredMemberState.Atomic(Set.of("a", "b")))))))));
+  }
+
+  private static PatchScenario ordinaryDomainContainerAtomicMap() {
+    return scenario(
+        "patch-ordinary-domain-container-atomic-map",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"scores\":{\"x\":\"1\",\"y\":\"2\"}}}}}",
+        ArticleWithContainerAddress.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    "address",
+                    "address",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S")),
+                            new StructuredMember(
+                                "scores",
+                                "scores",
+                                new StructuredMemberState.Atomic(Map.of("x", 1, "y", 2)))))))));
+  }
+
+  private static PatchScenario lowLevelPresenceScalar() {
+    return scenario(
+        "patch-lowlevel-presence-scalar",
+        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"}}}",
+        PatchPresenceTitleArticle.class,
+        null,
+        PatchExpectation.success("1", List.of(new PatchChange.AttributeChange(TITLE, TITLE, "T"))));
+  }
+
+  private static PatchScenario lowLevelPresenceOrdinaryDomain() {
+    return scenario(
+        "patch-lowlevel-presence-ordinary-domain",
+        ADDRESS_OBJECT_WITH_STREET_DOCUMENT,
+        PatchPresenceAddressArticle.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S"))))))));
+  }
+
+  private static PatchScenario lowLevelPresenceShapeRejected() {
+    return scenario(
+        "patch-lowlevel-presence-shape-rejected",
+        ADDRESS_OBJECT_WITH_STREET_DOCUMENT,
+        PatchPresenceAddressPatchArticle.class,
+        null,
+        PatchExpectation.binderFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/attributes/address"));
+  }
+
+  private static PatchScenario ordinaryDomainJavaBeanNestedPartial() {
+    return scenario(
+        "patch-ordinary-domain-javabean-nested-partial",
+        ADDRESS_OBJECT_WITH_STREET_DOCUMENT,
+        MutableArticle.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.AttributeChange(
+                    ADDRESS,
+                    ADDRESS,
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                STREET, STREET, new StructuredMemberState.Atomic("S"))))))));
   }
 
   private static PatchScenario scenario(

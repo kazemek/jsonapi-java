@@ -137,6 +137,7 @@ documents.
 | Independent typed binding of `included` resources       | supported    | Wire-ordered `IncludedResources` with dual id/lid lookup; no relationship injection                                                                                                                                            |
 | Presence-aware resource-update commands                 | supported    | Jackson 3 binding supported; Jackson 2 binding remains deferred                                |
 | Direct typed PATCH DTO binding                          | supported    | `PatchPresence` tri-state; Jackson 3 binding supported; Jackson 2 binding remains deferred     |
+| Recursive structured value PATCH semantics              | supported    | `StructuredPatch` payload for structured attributes on both PATCH paths (ADR-014); Jackson 3 binding supported; Jackson 2 binding remains deferred |
 | Automatic domain graph hydration                        | out of scope | Linkage resolution remains application policy                                                                                                                                                                                  |
 | Automatic mutation of domain or persistence objects     | out of scope | Applications apply authorized update commands                                                                                                                                                                                  |
 

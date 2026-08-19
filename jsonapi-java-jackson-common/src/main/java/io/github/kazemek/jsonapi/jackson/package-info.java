@@ -6,6 +6,7 @@
  * DocumentReadContext}, {@link DocumentEnvelope}, {@link MappedDocument}, {@link IncludePath},
  * {@link IncludePolicy}, {@link FieldPolicy}, {@link DomainData}, {@link IncludedResources}, {@link
  * IdentifierConverter}, {@link PatchCommand}, {@link PatchChange}, {@link PatchPresence}, {@link
+ * StructuredPatch}, {@link StructuredMember}, {@link StructuredMemberState}, {@link
  * JsonApiMappingException}, {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link
  * CodecFailureCategory}, {@link SourceLocation}, and the supporting allowance and kind types.
  *
@@ -19,8 +20,12 @@
  * PatchChange} entries in {@code changes()} are present and explicit attribute JSON {@code null} /
  * relationship NullLinkage use {@code @Nullable value == null} (no sealed attribute-null variant).
  * Direct PATCH DTO members declare presence through {@link PatchPresence}, whose {@link
- * PatchPresence.Present} with a {@code null} value is explicit null, never omission.
- * {@code @Nullable} marks intentionally null-bearing members per ADR-009.
+ * PatchPresence.Present} with a {@code null} value is explicit null, never omission. Recursive
+ * structured attributes use {@link StructuredPatch} / {@link StructuredMember(wireName,
+ * logicalName)} / {@link StructuredMemberState} (Atomic / Structured) as the neutral
+ * requested-change payload (ADR-014); an empty {@code StructuredPatch} is a supplied empty
+ * structured object, never a clear-all. {@code @Nullable} marks intentionally null-bearing members
+ * per ADR-009.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson;

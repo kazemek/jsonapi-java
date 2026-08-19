@@ -168,20 +168,59 @@ pointers. Pass optional `EndpointIdentity` on the factory `ValidationContext`. A
 authorization and command application.
 
 `patchDtoReader` uses the same validate-on-read contract and binds the update **directly** into an
-application-owned annotated PATCH DTO: every attribute and relationship member must be declared
-exactly as `PatchPresence<T>` (wrapper-level `@JsonDeserialize`/`@JsonSerialize` customization —
-`using`, `converter`, key/content/null customizers, typing, type refinement, and mix-ins — on such
-a member is rejected with `INVALID_PATCH_PROPERTY_TYPE`; inner-`T` customization stays supported),
-omitted members become `PatchPresence.omitted()`, supplied members become `PatchPresence.present(...)`
-(explicit JSON `null` / null linkage becomes `present(null)`, or `present(Optional.empty())` for an
-`Optional` inner type), and supplied members unknown to the PATCH DTO fail with
-`UNKNOWN_PATCH_MEMBER` (the low-level path silently ignores them — direct binding rejects).
-Parameterized `JavaType` targets (e.g. `GenericPatch<String>`) keep their type bindings through
-mapping, conversion, and construction. The caller mapper is never mutated; the binder mapper is
-derived via `rebuild()` plus an internal `PatchPresence` module whose internal marker always
-serializes with the exact `present`/`value` member names, so the tri-state is invariant to caller
-`JsonInclude` inclusion config **and** caller property naming strategies. See
-[ADR-013](../docs/adr/013-direct-typed-patch-dto-binding.md).
+ application-owned annotated PATCH DTO: every attribute and relationship member must be declared
+ exactly as `PatchPresence<T>` (wrapper-level `@JsonDeserialize`/`@JsonSerialize` customization —
+ `using`, `converter`, key/content/null customizers, typing, type refinement, and mix-ins — on such
+ a member is rejected with `INVALID_PATCH_PROPERTY_TYPE`; inner-`T` customization stays supported),
+ omitted members become `PatchPresence.omitted()`, supplied members become `PatchPresence.present(...)`
+ (explicit JSON `null` / null linkage becomes `present(null)`, or `present(Optional.empty())` for an
+ `Optional` inner type), and supplied members unknown to the PATCH DTO fail with
+ `UNKNOWN_PATCH_MEMBER` (the low-level path silently ignores them — direct binding rejects).
+ Parameterized `JavaType` targets (e.g. `GenericPatch<String>`) keep their type bindings through
+ mapping, conversion, and construction. The caller mapper is never mutated; the binder mapper is
+ derived via `rebuild()` plus an internal `PatchPresence` module whose internal marker always
+ serializes with the exact `present`/`value` member names, so the tri-state is invariant to caller
+ `JsonInclude` inclusion config **and** caller property naming strategies. See
+ [ADR-013](../docs/adr/013-direct-typed-patch-dto-binding.md).
+
+ Recursive structured attributes (see [ADR-014](../docs/adr/014-recursive-structured-value-patch-semantics.md))
+ work on **both** paths through a shared location-agnostic engine and the neutral `StructuredPatch`
+ payload:
+
+ - **Typed path (opt-in):** a nested member whose inner type is a presence-aware PATCH shape (every
+   visible member exactly `PatchPresence<T>`, no wrapper-level customization) recurses when its wire
+   value is a JSON object; nested `omitted` / `present(value)` / `present(null)` are preserved
+   recursively, `PatchPresence<Optional<X>>` unwraps/rewraps (`null` → `present(Optional.empty())`),
+   an explicit empty object binds to a shape with every member omitted, and containers
+   (`List`/`Set`/array/`Map`) stay atomic replacement values. Mixed, raw-`PatchPresence`,
+   direct-`Present`, and wrapper-customized nested shapes are invalid declarations, validated lazily
+   only when the nested member is actually bound.
+ - **Low-level path (ordinary domain):** a supplied attribute whose declared type is an ordinary
+   traversable structured domain bean (records, JavaBean-style getter/setter classes, or
+   constructor-bound types — not containers/scalars/custom-deserialized types) and whose wire value
+   is a JSON object binds to an `AttributeChange` whose `value` is a `StructuredPatch` of
+   supplied-only nested changes instead of a fully materialized replacement bean (a deliberate,
+   documented behavior change with migration guidance in ADR-014; there is no opt-out in KAZ-76).
+   `Optional<X>` is a transparent qualification wrapper for the traversal decision: members that
+   recurse produce an un-wrapped `StructuredPatch`, while atomic members keep the declared
+   `Optional` wrapper in their `Atomic` payload (e.g. nested `null` binds to
+   `Atomic(Optional.empty())`), a
+   single `PatchPresence<T>` wrapper is unwrapped, and nested unknown members are skipped (lossless).
+   A `PatchPresence<T>` member wrapping a presence-aware PATCH shape is rejected on this path with
+   `INVALID_PATCH_PROPERTY_TYPE` — presence-aware PATCH shapes are a typed-path concept.
+
+ Nested members bind by their Jackson-resolved **wire name** only. `wireName` is the document member
+ name used for lookup and diagnostics; `logicalName` is carried in each `StructuredMember` solely for
+ application-property correspondence and is never treated as an automatic JSON input alias (under a
+ naming strategy, the Java logical name does not bind). Nested atomic conversion preserves the
+ applicable configured Jackson deserialization semantics, including property-scoped customization
+ (`@JsonDeserialize using = ...`, converters, content/key deserializers, type refinement) — both
+ paths share one location-neutral property-scoped conversion collaborator, so a supplied nested
+ member converts through the same authority Jackson would use for that property.
+
+ Diagnostic pointers for nested failures are engine-accumulated wire-name pointers (e.g.
+ `/attributes/address/street`); final typed-path construction failures are shape-translated to the
+ wire-name pointer.
 
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
@@ -216,6 +255,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-011 — Flat DTO reads](../docs/adr/011-flat-dto-read-binding.md)
 - [ADR-012 — Resource PATCH binding](../docs/adr/012-resource-patch-binding.md)
 - [ADR-013 — Direct typed PATCH DTO binding](../docs/adr/013-direct-typed-patch-dto-binding.md)
+- [ADR-014 — Recursive structured value PATCH semantics](../docs/adr/014-recursive-structured-value-patch-semantics.md)
 - [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)

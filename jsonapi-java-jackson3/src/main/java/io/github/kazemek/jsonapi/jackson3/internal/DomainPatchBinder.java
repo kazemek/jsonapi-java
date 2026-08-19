@@ -29,11 +29,20 @@ import tools.jackson.databind.json.JsonMapper;
  * included} is never read. A relationship member without {@code data} produces no change; {@code
  * readValue} rejects that shape earlier with {@code RELATIONSHIP_DATA_REQUIRED}, while {@code
  * fromDocument} skips it without re-validation.
+ *
+ * <p>Recursive structured attributes (ADR-014) use the {@link StructuredValueBinder}: a supplied
+ * attribute whose declared type is an ordinary traversable structured domain value (or a single
+ * {@code PatchPresence} wrapper / transparent {@code Optional} around one) and whose wire value is
+ * an object binds to an {@link AttributeChange} carrying a {@link
+ * io.github.kazemek.jsonapi.jackson.StructuredPatch} of supplied-only nested changes instead of a
+ * fully materialized replacement bean. Presence-aware PATCH shapes remain a typed-path concept and
+ * are rejected on this path.
  */
 public final class DomainPatchBinder {
 
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
+  private final StructuredValueBinder structuredBinder;
 
   public DomainPatchBinder(
       JsonMapper mapper,
@@ -42,6 +51,7 @@ public final class DomainPatchBinder {
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     this.cache = Objects.requireNonNull(cache, "cache");
     this.converter = new PatchMemberConverter(mapper, identifierConverter, linkageMappers);
+    this.structuredBinder = new StructuredValueBinder(mapper);
   }
 
   /** Binds one resource object into a presence-aware patch command for {@code targetType}. */
@@ -54,7 +64,7 @@ public final class DomainPatchBinder {
     validateResourceType(resource, mapping, rawType);
     Object identity = convertIdentity(resource, mapping, rawType);
     List<PatchChange> changes = new ArrayList<>();
-    bindAttributeChanges(resource, mapping, rawType, changes);
+    bindAttributeChanges(resource, mapping, targetType, rawType, changes);
     bindRelationshipChanges(resource, mapping, changes);
     @SuppressWarnings({"rawtypes", "unchecked"})
     PatchCommand<?> command = new PatchCommand(rawType, identity, changes);
@@ -94,6 +104,7 @@ public final class DomainPatchBinder {
   private void bindAttributeChanges(
       ResourceObject resource,
       ResourceMapping mapping,
+      JavaType targetType,
       Class<?> rawType,
       List<PatchChange> changes) {
     Attributes attributes = resource.attributes();
@@ -108,16 +119,43 @@ public final class DomainPatchBinder {
         continue;
       }
       Object rawValue = entry.getValue();
-      Object value =
-          converter.convertAttribute(
-              property,
-              rawValue,
-              property.accessor().getType(),
-              PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
-              rawType);
+      Object value = bindAttributeValue(property, rawValue, targetType, rawType);
       changes.add(
           new PatchChange.AttributeChange(property.jsonapiName(), property.logicalName(), value));
     }
+  }
+
+  private @Nullable Object bindAttributeValue(
+      MappingProperty property, @Nullable Object rawValue, JavaType targetType, Class<?> rawType) {
+    JavaType declaredType = property.accessor().getType();
+    if (rawValue == null) {
+      return converter.convertAttribute(
+          property,
+          null,
+          declaredType,
+          PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
+          rawType,
+          targetType);
+    }
+    String pointer = "/attributes/" + property.jsonapiName();
+    StructuredValueBinder.LowLevelKind kind =
+        structuredBinder.lowLevelKind(
+            declaredType,
+            rawValue,
+            property.accessor(),
+            property.definition().getMutator(),
+            pointer,
+            rawType);
+    if (kind == StructuredValueBinder.LowLevelKind.RECURSE) {
+      return structuredBinder.bindLowLevelStructured(rawValue, declaredType, pointer, rawType);
+    }
+    return converter.convertAttribute(
+        property,
+        rawValue,
+        PatchMemberConverter.unwrapPatchPresence(declaredType),
+        PatchMemberConverter.AttributeNullPolicy.RAW_NULL,
+        rawType,
+        targetType);
   }
 
   private void bindRelationshipChanges(

@@ -16,7 +16,7 @@ Internal Java module holding the shared scenario catalogs, fixture builders, and
 | `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
 | `io.github.kazemek.jsonapi.testfixtures.sparsefieldset`        | Shared sparse-fieldset write fixtures: annotated models plus the `SparseFieldsetScenarios` catalog and the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
 | `io.github.kazemek.jsonapi.testfixtures.enveloperead`          | Shared typed-envelope read fixtures: envelope-only binding targets plus the `EnvelopeReadScenarios` catalog and the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
-| `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs), and the direct typed PATCH DTO `PatchDtoScenarios` catalog plus `PatchDtoScenario` / `PatchDtoExpectation` and the shared `ArticlePatch` / `OptionalPatch` / `IntIdPatch` PATCH DTOs (including declaration-invalid PATCH DTOs) |
+| `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs), and the direct typed PATCH DTO `PatchDtoScenarios` catalog plus `PatchDtoScenario` / `PatchDtoExpectation` and the shared `ArticlePatch` / `OptionalPatch` / `IntIdPatch` PATCH DTOs (including declaration-invalid PATCH DTOs). Recursive structured value fixtures (ADR-014): presence-aware nested PATCH shapes (`AddressPatch`, `GeoPatch`, `AddressWithGeoPatch`, `AddressWithOptionalCityPatch`, `AddressWithTagsPatch`, JavaBean-style `MutableAddressPatch`), their top-level DTOs, invalid nested declarations (`MixedAddressPatch`, `RawPresenceAddressPatch`, `DirectPresentAddressPatch`), and ordinary structured domain types for the low-level path (`Address`, `Geo`, `AddressWithGeo`, `AddressWithOptionalCity`, `Dimensions`, JavaBean-style `MutableAddress`, plus the low-level DTOs `Article`, `ArticleWithOptionalAddress`, `ArticleWithOptionalCity`, `ArticleWithGeoAddress`, `ArticleWithDimensions`, `ArticleWithTags`, `MutableArticle`, and the `PatchPresence<T>`-wrapped low-level DTOs `PatchPresenceTitleArticle`, `PatchPresenceAddressArticle`, `PatchPresenceAddressPatchArticle`) |
 
 ## Minimal usage
 
@@ -138,7 +138,8 @@ PATCH DTO catalogs are in this module.
   `PatchExpectation`, and resolvable target DTOs in `domainread` / `domainwrite` / `domainpatch`.
   Adapter suites run the whole catalog through their own patch reader and assert full-catalog
   coverage (`executedScenarioIds == catalogScenarioIds`). Adapter-local cases (custom deserializers,
-  linkage mappers, Optional attribute null, `fromDocument` missing id) stay in adapter specs only.
+  linkage mappers, Optional attribute null, `fromDocument` missing id, naming strategies, nested
+  wrapper customization, shape-translated construction-failure pointers) stay in adapter specs only.
 - **Typed PATCH DTO catalog:** `PatchDtoScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, exactly one JSON document
   and discriminated `PatchDtoExpectation`, resolvable PATCH DTOs in `domainpatch` (including the
@@ -149,6 +150,14 @@ PATCH DTO catalogs are in this module.
   accessor). Adapter-local cases (generics/`JavaType`, wrapper-level `@JsonDeserialize` /
   `@JsonSerialize` rejection, naming strategies, `fromDocument`, custom linkage mappers,
   `NON_ABSENT`/`NON_EMPTY` robustness) stay in adapter specs only.
+- **Structured PATCH coverage (ADR-014):** the catalogs grow by addition with nested structured
+  scenarios — typed nested partial / empty / explicit-null / multi-level / `Optional` / container /
+  non-object-wire / unknown-member / invalid-declaration (mixed, raw, direct-`Present`) / lazy
+  validation cases, and low-level ordinary-domain (record, JavaBean-style, `Optional`-wrapped,
+  nested-`Optional`, unknown-skip, nested-primitive-null, container-atomic, `PatchPresence`-wrapped
+  scalar/ordinary, `PatchPresence`-wrapped-presence-aware-rejected) cases. The matrix is not
+  record-only: JavaBean-style typed PATCH shapes and non-record low-level domain beans are covered
+  to prove the semantics are ordinary Jackson-bean semantics, not record-specific introspection.
 - **Capability selection:** Tests select by `FixtureCatalog.where` (and the retained
   `CodecScenarios` conveniences `writable`, `readable`, `schemaChecked`, `exactUtf8`,
   `hreflangArray`) instead of maintaining independent hard-coded id lists. Adapter write suites
@@ -191,6 +200,10 @@ PATCH DTO catalogs are in this module.
   `@Nullable` under the `@NullMarked` `enveloperead` package (ADR-009).
   `EnvelopeReadExpectation.BoundEnvelope` uses Java `null` for absent envelope members and a
   non-null empty `IncludedExpectation` for present-empty `included`.
+- **Null-bearing PATCH fixtures (ADR-014):** the JavaBean-style mutable fixtures
+  (`MutableAddressPatch`, `MutableAddress`, `MutableArticle`, `MutableArticleWithAddressPatch`) are
+  `@Nullable` on their fields and getters under the `@NullMarked` `domainpatch` package because the
+  no-arg constructors leave them unbound until Jackson property binding runs (ADR-009).
 - **Nullness:** Production packages are `@NullMarked` (JSpecify). Use `@Nullable` for catalog
   members that are absent (`CodecScenario.primaryDataKind`, `schemaKind`, `schemaDisagreement`,
   `exactUtf8Path`; `NegativeCodecScenario.pointer`, `ruleCode`;

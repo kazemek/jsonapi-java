@@ -11,14 +11,11 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.databind.AnnotationIntrospector;
-import tools.jackson.databind.DeserializationConfig;
 import tools.jackson.databind.JavaType;
-import tools.jackson.databind.SerializationConfig;
-import tools.jackson.databind.introspect.AnnotatedMember;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -35,14 +32,22 @@ import tools.jackson.databind.json.JsonMapper;
  * creators, deserializers, converters, and configured modules remain authoritative (ADR-004).
  * Omitted members bind to {@code PatchPresence.omitted()}; supplied unknown members fail with
  * {@link MappingDiagnostic#UNKNOWN_PATCH_MEMBER}. Document {@code included} is never read.
+ *
+ * <p>Recursive structured attributes (ADR-014) use the {@link StructuredValueBinder}: a nested
+ * member whose inner type is a deliberately presence-aware PATCH shape is bound as a complete
+ * nested {@link PresenceMarker} tree so the single whole-tree {@code convertValue} preserves the
+ * strict marker invariant. Deep Jackson construction-failure paths are translated to wire-name
+ * pointers through the resolved shape metadata.
  */
 public final class DomainPatchDtoBinder {
 
   private static final String IDENTIFIER_PATH_ID = "/id";
+  private static final String ATTRIBUTE_PATH_PREFIX = "/attributes";
 
   private final JsonMapper mapper;
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
+  private final StructuredValueBinder structuredBinder;
 
   public DomainPatchDtoBinder(
       JsonMapper mapper,
@@ -52,6 +57,7 @@ public final class DomainPatchDtoBinder {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.cache = Objects.requireNonNull(cache, "cache");
     this.converter = new PatchMemberConverter(mapper, identifierConverter, linkageMappers);
+    this.structuredBinder = new StructuredValueBinder(mapper);
   }
 
   /** Binds one resource object into a PATCH DTO instance of {@code targetType}. */
@@ -66,7 +72,14 @@ public final class DomainPatchDtoBinder {
     bindIdentity(resource, mapping, properties, rawType);
     bindAttributes(resource, mapping, properties, rawType);
     bindRelationships(resource, mapping, properties, rawType);
-    return BeanConstruction.convertBean(mapper, properties, targetType, rawType);
+    Map<String, MappingProperty> attributesByLogicalName =
+        PatchMemberConverter.byLogicalName(mapping.attributes());
+    return BeanConstruction.convertBean(
+        mapper,
+        properties,
+        targetType,
+        rawType,
+        (failure, ignored) -> translateConstructionPath(failure, attributesByLogicalName));
   }
 
   private void validateResourceType(
@@ -111,8 +124,10 @@ public final class DomainPatchDtoBinder {
   }
 
   private void validatePatchableProperty(MappingProperty property, Class<?> rawType) {
-    JavaType type = property.accessor().getType();
-    if (!isPatchPresenceType(type) || hasWrapperCustomization(property)) {
+    JavaType type = property.definition().getPrimaryType();
+    if (!isPatchPresenceType(type)
+        || WrapperCustomization.has(
+            mapper, type, property.accessor(), property.definition().getMutator())) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
           rawType,
@@ -123,50 +138,6 @@ public final class DomainPatchDtoBinder {
               + "@JsonDeserialize/@JsonSerialize customization on "
               + rawType.getName());
     }
-  }
-
-  /**
-   * True when the effective property metadata carries any wrapper-level Jackson serialization or
-   * deserialization customization (including mix-ins surfaced through the annotation introspector)
-   * that could replace or alter the internal presence representation. Inner-{@code T} customization
-   * (type-level serializers/deserializers, converters, modules) lives on the inner type, not on the
-   * property, so it is not detected here.
-   */
-  private boolean hasWrapperCustomization(MappingProperty property) {
-    AnnotatedMember accessor = property.accessor();
-    return hasSerializationCustomization(accessor) || hasDeserializationCustomization(accessor);
-  }
-
-  private boolean hasSerializationCustomization(AnnotatedMember accessor) {
-    SerializationConfig config = mapper.serializationConfig();
-    AnnotationIntrospector introspector = config.getAnnotationIntrospector();
-    JavaType declaredType = accessor.getType();
-    return introspector.findSerializer(config, accessor) != null
-        || introspector.findKeySerializer(config, accessor) != null
-        || introspector.findContentSerializer(config, accessor) != null
-        || introspector.findNullSerializer(config, accessor) != null
-        || introspector.findSerializationConverter(config, accessor) != null
-        || introspector.findSerializationContentConverter(config, accessor) != null
-        || introspector.findSerializationTyping(config, accessor) != null
-        || typeRefined(
-            introspector.refineSerializationType(config, accessor, declaredType), declaredType);
-  }
-
-  private boolean hasDeserializationCustomization(AnnotatedMember accessor) {
-    DeserializationConfig config = mapper.deserializationConfig();
-    AnnotationIntrospector introspector = config.getAnnotationIntrospector();
-    JavaType declaredType = accessor.getType();
-    return introspector.findDeserializer(config, accessor) != null
-        || introspector.findKeyDeserializer(config, accessor) != null
-        || introspector.findContentDeserializer(config, accessor) != null
-        || introspector.findDeserializationConverter(config, accessor) != null
-        || introspector.findDeserializationContentConverter(config, accessor) != null
-        || typeRefined(
-            introspector.refineDeserializationType(config, accessor, declaredType), declaredType);
-  }
-
-  private static boolean typeRefined(@Nullable JavaType refined, JavaType declared) {
-    return refined != null && !refined.equals(declared);
   }
 
   private static boolean isPatchPresenceType(JavaType type) {
@@ -204,18 +175,17 @@ public final class DomainPatchDtoBinder {
     if (supplied != null) {
       for (String name : supplied.keySet()) {
         if (!byJsonapiName.containsKey(name)) {
-          throw unknownPatchMember(rawType, "/attributes/" + name, "attribute", name);
+          throw unknownPatchMember(rawType, ATTRIBUTE_PATH_PREFIX + "/" + name, "attribute", name);
         }
       }
     }
     for (MappingProperty property : mapping.attributes()) {
       if (supplied != null && supplied.containsKey(property.jsonapiName())) {
         Object value =
-            converter.convertAttribute(
-                property,
+            structuredBinder.typedMemberValue(
                 supplied.get(property.jsonapiName()),
-                innerType(property),
-                PatchMemberConverter.AttributeNullPolicy.CONVERT_THROUGH,
+                property.accessor().getType(),
+                ATTRIBUTE_PATH_PREFIX + "/" + property.jsonapiName(),
                 rawType);
         properties.put(property.logicalName(), new PresenceMarker(true, value));
       } else {
@@ -266,5 +236,50 @@ public final class DomainPatchDtoBinder {
 
   private static JavaType innerType(MappingProperty property) {
     return property.accessor().getType().containedType(0);
+  }
+
+  /**
+   * Translates a failed single-pass bean-construction Jackson path into a resource-relative
+   * wire-name pointer for structured attributes (ADR-014).
+   *
+   * <p>The path's first name is the top-level synthetic-map key (the attribute's Jackson logical
+   * name); it is mapped to the JSON:API wire name via the resolved mapping. Deeper names are walked
+   * through the already-resolved presence-aware shape metadata: each name that matches a nested
+   * member contributes that member's wire name, and the internal marker {@code value} member
+   * between two shape levels is skipped. Walking stops at the first name that is not a shape
+   * member, so Jackson-internal names below an atomic member are never leaked into the pointer.
+   */
+  private String translateConstructionPath(
+      Throwable failure, Map<String, MappingProperty> attributesByLogicalName) {
+    List<String> names = BeanConstruction.pathNames(failure);
+    if (names.isEmpty()) {
+      return "/";
+    }
+    MappingProperty top = attributesByLogicalName.get(names.getFirst());
+    if (top == null) {
+      return BeanConstruction.propertyPath(failure);
+    }
+    StringBuilder pointer =
+        new StringBuilder(ATTRIBUTE_PATH_PREFIX).append('/').append(top.jsonapiName());
+    JavaType current = top.accessor().getType();
+    int i = 1;
+    boolean walking = true;
+    while (i < names.size() && walking) {
+      String name = names.get(i);
+      StructuredValueBinder.Shape shape = structuredBinder.shapeOfStructured(current);
+      StructuredValueBinder.Member member = shape == null ? null : shape.memberByWire(name);
+      if (member == null) {
+        if (shape != null && "value".equals(name)) {
+          i++;
+          continue;
+        }
+        walking = false;
+      } else {
+        pointer.append('/').append(PointerEscapes.escape(member.wireName()));
+        current = member.type();
+        i++;
+      }
+    }
+    return pointer.toString();
   }
 }

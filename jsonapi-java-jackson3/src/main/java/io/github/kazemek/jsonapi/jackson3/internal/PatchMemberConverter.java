@@ -15,18 +15,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
-import tools.jackson.core.JsonParser;
-import tools.jackson.databind.BeanProperty;
-import tools.jackson.databind.DeserializationConfig;
-import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JavaType;
-import tools.jackson.databind.PropertyMetadata;
-import tools.jackson.databind.PropertyName;
-import tools.jackson.databind.ValueDeserializer;
-import tools.jackson.databind.deser.DeserializationContextExt;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.ser.SerializationContextExt;
-import tools.jackson.databind.util.TokenBuffer;
 
 /**
  * Shared per-member conversion for the low-level {@link PatchCommand} path and the direct typed
@@ -54,6 +44,7 @@ final class PatchMemberConverter {
   }
 
   private final JsonMapper mapper;
+  private final PropertyScopedValueConverter propertyScoped;
   private final IdentifierConverter identifierConverter;
   private final Map<Class<?>, RelationshipLinkageMapper> linkageMappers;
 
@@ -62,6 +53,7 @@ final class PatchMemberConverter {
       IdentifierConverter identifierConverter,
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
+    this.propertyScoped = new PropertyScopedValueConverter(mapper);
     this.identifierConverter = Objects.requireNonNull(identifierConverter, "identifierConverter");
     this.linkageMappers = Map.copyOf(Objects.requireNonNull(linkageMappers, "linkageMappers"));
   }
@@ -118,7 +110,8 @@ final class PatchMemberConverter {
       @Nullable Object rawValue,
       JavaType targetType,
       AttributeNullPolicy nullPolicy,
-      Class<?> rawType) {
+      Class<?> rawType,
+      JavaType beanType) {
     if (rawValue == null && targetType.isPrimitive()) {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
@@ -133,7 +126,7 @@ final class PatchMemberConverter {
       if (rawValue == null && nullPolicy == AttributeNullPolicy.RAW_NULL) {
         return null;
       }
-      return convertAttributeViaJackson(property, rawValue, targetType);
+      return convertAttributeViaJackson(property, rawValue, targetType, beanType);
     } catch (RuntimeException e) {
       if (e instanceof JsonApiMappingException mappingException) {
         throw mappingException;
@@ -148,72 +141,20 @@ final class PatchMemberConverter {
   }
 
   /**
-   * Uses {@code convertValue} unless the property declares {@code @JsonDeserialize}, in which case
-   * Jackson's TokenBuffer conversion helpers run that deserializer with a real context (same
-   * machinery as {@code convertValue}, property-scoped). A null {@code rawValue} converts through
-   * the target type's null value (for example {@code Optional.empty()} for an {@link Optional}
-   * target).
+   * Uses {@code convertValue} unless the property carries property-scoped Jackson deserialization
+   * customization, in which case the shared {@link PropertyScopedValueConverter} runs the
+   * property's fully-contextualized deserializer with a real context (same machinery as {@code
+   * convertValue}, property-scoped). A null {@code rawValue} converts through the target type's
+   * null value (for example {@code Optional.empty()} for an {@link Optional} target).
    */
   private @Nullable Object convertAttributeViaJackson(
-      MappingProperty property, @Nullable Object rawValue, JavaType targetType) {
-    DeserializationConfig config = mapper.deserializationConfig();
-    Object deserializerDef =
-        config.getAnnotationIntrospector().findDeserializer(config, property.accessor());
-    if (deserializerDef == null || rawValue == null) {
-      return mapper.convertValue(rawValue, targetType);
-    }
-    DeserializationContextExt context = mapper._deserializationContext();
-    ValueDeserializer<Object> deserializer =
-        contextualPropertyDeserializer(context, property, targetType, deserializerDef);
-    if (deserializer == null) {
-      return mapper.convertValue(rawValue, targetType);
-    }
-    try (JsonParser parser = conversionParser(context, rawValue)) {
-      return deserializer.deserialize(parser, context);
-    }
-  }
-
-  private static @Nullable ValueDeserializer<Object> contextualPropertyDeserializer(
-      DeserializationContextExt context,
-      MappingProperty property,
-      JavaType targetType,
-      Object deserializerDef) {
-    ValueDeserializer<Object> created =
-        context.deserializerInstance(property.accessor(), deserializerDef);
-    if (created == null) {
-      return null;
-    }
-    @SuppressWarnings("unchecked")
-    ValueDeserializer<Object> contextual =
-        (ValueDeserializer<Object>)
-            context.handlePrimaryContextualization(
-                created, asBeanProperty(property, targetType), targetType);
-    return contextual;
-  }
-
-  private static BeanProperty asBeanProperty(MappingProperty property, JavaType targetType) {
-    return new BeanProperty.Std(
-        PropertyName.construct(property.logicalName()),
+      MappingProperty property, @Nullable Object rawValue, JavaType targetType, JavaType beanType) {
+    return propertyScoped.convert(
+        beanType,
+        property.definition().getFullName().getSimpleName(),
+        property.accessor().getType(),
         targetType,
-        null,
-        property.accessor(),
-        PropertyMetadata.STD_OPTIONAL);
-  }
-
-  /**
-   * TokenBuffer-backed parser positioned on the first value token (Jackson {@code convertValue}).
-   */
-  private JsonParser conversionParser(DeserializationContextExt context, Object rawValue) {
-    SerializationContextExt serializationContext = mapper._serializationContext();
-    TokenBuffer buffer = serializationContext.bufferForValueConversion();
-    if (mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
-      buffer = buffer.forceUseOfBigDecimal(true);
-    }
-    serializationContext.serializeValue(buffer, rawValue);
-    JsonParser parser = buffer.asParser(context);
-    context.assignParser(parser);
-    parser.nextToken();
-    return parser;
+        rawValue);
   }
 
   /**
@@ -307,5 +248,20 @@ final class PatchMemberConverter {
       byName.put(property.jsonapiName(), property);
     }
     return byName;
+  }
+
+  static Map<String, MappingProperty> byLogicalName(List<MappingProperty> properties) {
+    Map<String, MappingProperty> byName = new LinkedHashMap<>();
+    for (MappingProperty property : properties) {
+      byName.put(property.logicalName(), property);
+    }
+    return byName;
+  }
+
+  /** Unwraps a single exact {@code PatchPresence<T>} wrapper, leaving other types unchanged. */
+  static JavaType unwrapPatchPresence(JavaType type) {
+    return type.getRawClass() == PatchPresence.class && type.containedTypeCount() == 1
+        ? type.containedType(0)
+        : type;
   }
 }
