@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.introspect.AnnotatedClass;
 import tools.jackson.databind.introspect.AnnotatedMember;
 import tools.jackson.databind.introspect.BeanPropertyDefinition;
 
@@ -25,9 +26,9 @@ final class MappingDefinitionResolver {
 
   private MappingDefinitionResolver() {}
 
-  static ResourceMapping resolve(BeanDescription beanDescription, Class<?> rawType) {
-    JsonApiResource resourceAnnotation = validateResourceAnnotation(rawType);
-    String resourceType = validateResourceType(resourceAnnotation, rawType);
+  static ResourceMapping resolve(
+      BeanDescription beanDescription, Class<?> rawType, AnnotatedClass resourceMetadata) {
+    String resourceType = validateResourceTypeName(resourceTypeName(resourceMetadata), rawType);
 
     List<BeanPropertyDefinition> propertyDefinitions = beanDescription.findProperties();
     List<MappingProperty> identifierProperties = new ArrayList<>();
@@ -66,35 +67,51 @@ final class MappingDefinitionResolver {
         beanDescription.getType());
   }
 
-  private static JsonApiResource validateResourceAnnotation(Class<?> rawType) {
-    JsonApiResource resourceAnnotation = rawType.getAnnotation(JsonApiResource.class);
-    if (resourceAnnotation == null) {
+  /**
+   * Reads the configured class-level resource type name from the mapper-introspected direct class
+   * annotations, or {@code null} when absent. This is the single interpretation of class-level
+   * {@link JsonApiResource} metadata: the direct {@link AnnotatedClass} carries the configured
+   * mapper's view of the target class, including a target-specific class-level mix-in, without
+   * importing annotations from supertypes or interfaces.
+   */
+  static @Nullable String resourceTypeName(AnnotatedClass annotatedClass) {
+    // Jackson's getAnnotation is not @Nullable-annotated; use hasAnnotation as the presence check.
+    if (!annotatedClass.hasAnnotation(JsonApiResource.class)) {
+      return null;
+    }
+    return annotatedClass.getAnnotation(JsonApiResource.class).type();
+  }
+
+  /**
+   * Validates a class-level resource type name resolved by {@link #resourceTypeName}.
+   *
+   * @throws JsonApiMappingException {@link MappingDiagnostic#MISSING_RESOURCE_ANNOTATION} when the
+   *     name is absent, or {@link MappingDiagnostic#INVALID_RESOURCE_TYPE} when it is empty or not
+   *     a valid JSON:API member name
+   */
+  static String validateResourceTypeName(@Nullable String resourceTypeName, Class<?> rawType) {
+    if (resourceTypeName == null) {
       throw new JsonApiMappingException(
           MappingDiagnostic.MISSING_RESOURCE_ANNOTATION,
           rawType,
           null,
           "Missing @JsonApiResource on " + rawType.getName());
     }
-    return resourceAnnotation;
-  }
-
-  private static String validateResourceType(JsonApiResource resourceAnnotation, Class<?> rawType) {
-    String resourceType = resourceAnnotation.type();
-    if (resourceType.isEmpty()) {
+    if (resourceTypeName.isEmpty()) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_RESOURCE_TYPE,
           rawType,
           null,
           "@JsonApiResource.type() must not be empty on " + rawType.getName());
     }
-    if (!MemberNames.isValid(resourceType)) {
+    if (!MemberNames.isValid(resourceTypeName)) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_RESOURCE_TYPE,
           rawType,
           null,
-          "Invalid resource type name: " + resourceType);
+          "Invalid resource type name: " + resourceTypeName);
     }
-    return resourceType;
+    return resourceTypeName;
   }
 
   private static void classifyProperties(

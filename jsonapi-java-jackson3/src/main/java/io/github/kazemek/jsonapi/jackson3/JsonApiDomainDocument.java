@@ -143,9 +143,21 @@ public final class JsonApiDomainDocument {
       @Nullable IncludedResources included,
       Map<String, @Nullable Object> additionalMembers) {
 
-    Components {
-      errors = errors == null ? null : List.copyOf(errors);
-      additionalMembers = copyAdditionalMembers(additionalMembers);
+    Components(
+        @Nullable DomainData data,
+        @Nullable List<ErrorObject> errors,
+        @Nullable Meta meta,
+        @Nullable JsonApiObject jsonapi,
+        @Nullable Links links,
+        @Nullable IncludedResources included,
+        Map<String, @Nullable Object> additionalMembers) {
+      this.data = data;
+      this.errors = errors == null ? null : List.copyOf(errors);
+      this.meta = meta;
+      this.jsonapi = jsonapi;
+      this.links = links;
+      this.included = included;
+      this.additionalMembers = copyAdditionalMembers(additionalMembers);
     }
 
     private static Map<String, @Nullable Object> copyAdditionalMembers(

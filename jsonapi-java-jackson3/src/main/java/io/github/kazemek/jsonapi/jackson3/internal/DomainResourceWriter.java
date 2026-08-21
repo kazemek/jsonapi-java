@@ -1,6 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.Attributes;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.Relationship;
@@ -490,7 +489,7 @@ public final class DomainResourceWriter {
           null,
           "Cannot resolve collection content type");
     }
-    checkResourceAnnotation(contentType.getRawClass());
+    checkDeclaredTargetHasResourceMetadata(contentType.getRawClass());
     List<ResourceIdentifier> identifiers = new ArrayList<>(items.size());
     for (Object item : items) {
       identifiers.add(extractIdentifier(item));
@@ -552,8 +551,13 @@ public final class DomainResourceWriter {
     return mapper.convertValue(value, Object.class);
   }
 
-  private static void checkResourceAnnotation(Class<?> rawType) {
-    if (rawType.getAnnotation(JsonApiResource.class) == null) {
+  /**
+   * Declared to-many target validation through the canonical configured-Jackson metadata authority:
+   * the declared element type must carry resource metadata as the configured mapper sees it
+   * (including class-level mix-ins). Presence-only, so absence keeps this path's stable diagnostic.
+   */
+  private void checkDeclaredTargetHasResourceMetadata(Class<?> rawType) {
+    if (cache.findResourceTypeName(rawType) == null) {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
           rawType,
