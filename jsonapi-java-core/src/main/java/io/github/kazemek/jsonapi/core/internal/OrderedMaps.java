@@ -21,14 +21,14 @@ public final class OrderedMaps {
     if (source == null || source.isEmpty()) {
       return Map.of();
     }
-    return Collections.unmodifiableMap(new LinkedHashMap<>(source));
+    return Collections.<K, @Nullable V>unmodifiableMap(new LinkedHashMap<>(source));
   }
 
   public static <E> List<@Nullable E> copyOfNullableElements(@Nullable List<@Nullable E> source) {
     if (source == null || source.isEmpty()) {
       return List.of();
     }
-    return Collections.unmodifiableList(new ArrayList<>(source));
+    return Collections.<@Nullable E>unmodifiableList(new ArrayList<>(source));
   }
 
   public static <K> void requireNoCollisions(
