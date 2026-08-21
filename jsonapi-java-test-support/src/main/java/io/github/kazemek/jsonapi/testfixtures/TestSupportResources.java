@@ -7,6 +7,7 @@ import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Classpath access to the shared JSON:API corpus and vendored schema resources owned by this
@@ -98,7 +99,7 @@ public final class TestSupportResources {
     }
   }
 
-  private static URL resourceUrl(String resourcePath) {
+  private static @Nullable URL resourceUrl(String resourcePath) {
     ClassLoader loader = TestSupportResources.class.getClassLoader();
     if (loader != null) {
       URL url = loader.getResource(resourcePath);
