@@ -10,8 +10,8 @@ import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
 import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
+import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
@@ -30,9 +30,6 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Stepwise
@@ -57,8 +54,6 @@ class DomainDocumentReaderSpec extends Specification {
 
   @Shared
   List<String> executedScenarioIds = []
-
-  private final Path fixturesDir = FixtureDirectory.jsonApiFixtures()
 
   @Unroll
   def "envelope read #scenario.id from the shared catalog"() {
@@ -483,13 +478,13 @@ class DomainDocumentReaderSpec extends Specification {
     throw new IllegalArgumentException("No wire text for " + input)
   }
 
-  private String fixtureText(String id) {
+  private static String fixtureText(String id) {
     CodecScenario fixture = CodecScenarios.byId(id)
-    Files.readString(fixturesDir.resolve(fixture.expectedPath), StandardCharsets.UTF_8)
+    TestSupportResources.readCorpusUtf8(fixture.expectedPath)
   }
 
-  private String bindingText(EnvelopeBindingDocument document) {
-    Files.readString(fixturesDir.resolve(document.relativePath()), StandardCharsets.UTF_8)
+  private static String bindingText(EnvelopeBindingDocument document) {
+    TestSupportResources.readCorpusUtf8(document.relativePath())
   }
 
   private static ResourceTypeRegistry registry(Class<?>... targetClasses) {

@@ -1,5 +1,6 @@
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
+import java.io.File
 
 plugins {
     `java-library`
@@ -48,18 +49,6 @@ tasks.named<JavaCompile>("compileJava").configure {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
-    // Centralized fixture wiring: every module's tests resolve the shared JSON:API 1.1 document
-    // corpus and the pinned draft-schema fixtures from these two root-relative directories.
-    // Contents are fingerprinted as relocatable inputs; absolute -D paths are supplied only at
-    // execution time.
-    jvmArgumentProviders.add(
-        objects.newInstance<FixtureDirectoryArgumentProvider>().apply {
-            fixturesDir.set(rootProject.layout.projectDirectory.dir("fixtures/jsonapi-1.1"))
-            schemaFixturesDir.set(
-                rootProject.layout.projectDirectory.dir("fixtures/jsonapi-schema/1.1-pr1603"),
-            )
-        },
-    )
 }
 
 tasks.jacocoTestReport {
@@ -76,7 +65,37 @@ tasks.jacocoTestReport {
 data class JacocoCoverageFloors(
     val instructionMinimum: java.math.BigDecimal,
     val branchMinimum: java.math.BigDecimal,
+    val includePatterns: List<String> = emptyList(),
 )
+
+// Test-support coverage is limited to executable catalog/resource/invariant types. Inert fixture
+// POJO/record accessors are excluded so they do not require synthetic tests solely for JaCoCo.
+// Production-module floors do not use includePatterns and remain unchanged.
+val testSupportJacocoIncludes =
+    listOf(
+        "io/github/kazemek/jsonapi/testfixtures/FixtureCatalog.class",
+        "io/github/kazemek/jsonapi/testfixtures/ImmutableFixtureCatalog.class",
+        "io/github/kazemek/jsonapi/testfixtures/JsonApiFixtures.class",
+        "io/github/kazemek/jsonapi/testfixtures/Scenario.class",
+        "io/github/kazemek/jsonapi/testfixtures/TestSupportResources.class",
+        "io/github/kazemek/jsonapi/testfixtures/codec/**",
+        "io/github/kazemek/jsonapi/testfixtures/domainwrite/DomainWrite*.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainread/DomainRead*.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainread/ConverterBehavior.class",
+        "io/github/kazemek/jsonapi/testfixtures/compoundwrite/CompoundWrite*.class",
+        "io/github/kazemek/jsonapi/testfixtures/compoundwrite/IncludedResourceRef.class",
+        "io/github/kazemek/jsonapi/testfixtures/sparsefieldset/SparseFieldset*.class",
+        "io/github/kazemek/jsonapi/testfixtures/sparsefieldset/FieldsetResourceState.class",
+        "io/github/kazemek/jsonapi/testfixtures/sparsefieldset/ZeroReadGuarantee.class",
+        "io/github/kazemek/jsonapi/testfixtures/enveloperead/Envelope*.class",
+        "io/github/kazemek/jsonapi/testfixtures/enveloperead/IncludedExpectation.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchScenarios.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchDtoScenarios.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchScenario.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchDtoScenario.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchExpectation*.class",
+        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchDtoExpectation*.class",
+    )
 
 val jacocoCoverageFloorsByProject =
     mapOf(
@@ -86,8 +105,12 @@ val jacocoCoverageFloorsByProject =
             JacocoCoverageFloors("0.83".toBigDecimal(), "0.78".toBigDecimal()),
         "jsonapi-java-jackson3" to
             JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),
-        "jsonapi-java-test-fixtures" to
-            JacocoCoverageFloors("0.97".toBigDecimal(), "0.87".toBigDecimal()),
+        "jsonapi-java-test-support" to
+            JacocoCoverageFloors(
+                "0.98".toBigDecimal(),
+                "0.87".toBigDecimal(),
+                testSupportJacocoIncludes,
+            ),
     )
 
 // Annotation-only classfiles produce no instruction/branch counters; do not attach minima.
@@ -112,6 +135,29 @@ when {
     }
 
     jacocoFloors != null -> {
+        if (jacocoFloors.includePatterns.isNotEmpty()) {
+            val filteredClasses =
+                files(
+                    sourceSets.named("main").get().output.classesDirs.map { dir ->
+                        fileTree(dir) {
+                            include(jacocoFloors.includePatterns)
+                        }
+                    },
+                )
+            // Floor verification excludes inert fixture carriers. The published JaCoCo XML report
+            // stays complete for local HTML inspection; Sonar coverage uses the derived
+            // sonar.coverage.exclusions list so carriers cannot fail new_coverage after their
+            // synthetic tests are removed.
+            tasks.jacocoTestCoverageVerification {
+                classDirectories.setFrom(filteredClasses)
+            }
+            extra["sonarCoverageExclusions"] =
+                sonarCoverageExclusionsFromIncludes(
+                    layout.projectDirectory.dir("src/main/java").asFile,
+                    rootProject.projectDir,
+                    jacocoFloors.includePatterns,
+                )
+        }
         tasks.jacocoTestCoverageVerification {
             violationRules {
                 rule {
@@ -130,4 +176,24 @@ when {
             dependsOn(tasks.jacocoTestCoverageVerification)
         }
     }
+}
+
+fun Project.sonarCoverageExclusionsFromIncludes(
+    srcRoot: File,
+    repoRoot: File,
+    includePatterns: List<String>,
+): String {
+    val sourceIncludes = includePatterns.map { it.replace(Regex("\\.class$"), ".java") }
+    val included =
+        fileTree(srcRoot) {
+            sourceIncludes.forEach { include(it) }
+        }.files
+    val allJava =
+        fileTree(srcRoot) {
+            include("**/*.java")
+        }.files
+    return (allJava - included)
+        .map { it.relativeTo(repoRoot).invariantSeparatorsPath }
+        .sorted()
+        .joinToString(",")
 }

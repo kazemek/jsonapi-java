@@ -11,7 +11,7 @@ DTOs). `jsonapi-java-jackson-common` owns
 Jackson-major-neutral policy, diagnostics, contexts, envelope values, and presence-aware update
 contracts. Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
 evidence only. The capability-tagged document corpus, closed negative corpus, and dual-success
-ambiguous primary-data cases under `fixtures/jsonapi-1.1/` are the shared codec contract for every
+ambiguous primary-data cases in `jsonapi-java-test-support` (`jsonapi/corpus/1.1/`) are the shared codec contract for every
 Jackson major. Jackson 2 presence-aware PATCH binding, query parsing, and Spring adapters remain
 deferred.
 
@@ -96,7 +96,7 @@ deferred.
 |--------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------|
 | JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write                                                           |
 | Canonical member ordering                        | supported | Standard members in model accessor order; additional members insertion order; `hreflang` always array |
-| Golden fixture write comparisons                 | supported | `fixtures/jsonapi-1.1/` capability-selected catalog (`CodecScenario` metadata); stable ids and paths    |
+| Golden fixture write comparisons                 | supported | `jsonapi-java-test-support` corpus catalog (`CodecScenario` metadata); stable ids and paths |
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind`                          |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location                              |
 | Shared read-only negative corpus                 | supported | `negative-manifest.json`: closed reader-failure inventory with version-neutral expectations          |
@@ -105,7 +105,7 @@ deferred.
 ## Draft-schema cross-check (supplemental)
 
 Writer-generated fixture bytes are cross-checked against the JSON:API 1.1 **draft-PR schemas**
-pinned under `fixtures/jsonapi-schema/1.1-pr1603/` (PR
+pinned under `jsonapi-java-test-support` (`jsonapi/schema/vendor/1.1-pr1603/`, PR
 [json-api/json-api#1603](https://github.com/json-api/json-api/pull/1603), fork `VGirol/json-api`
 commit `4ee1c644fcc273044ecec39a6b8c0f0485abdc0e`). These are unreleased draft schemas, not an
 official conformance oracle; the cross-check is **supplemental evidence only**. A schema result

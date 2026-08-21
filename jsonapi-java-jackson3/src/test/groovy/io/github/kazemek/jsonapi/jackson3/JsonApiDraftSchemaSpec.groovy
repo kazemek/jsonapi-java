@@ -1,15 +1,10 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
-import java.security.MessageDigest
-
 import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.dialect.Dialects
 
-import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
+import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind
 
@@ -18,8 +13,9 @@ import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * Supplemental cross-check of writer-generated documents against the pinned JSON:API 1.1 draft
- * schemas from PR json-api/json-api#1603 (see fixtures/jsonapi-schema/1.1-pr1603/README.md).
+ * Adapter-local cross-check of writer-generated documents against the pinned JSON:API 1.1 draft
+ * schemas owned by {@code jsonapi-java-test-support}. Pin/integrity of those resources lives in
+ * the test-support module; this spec only executes output-versus-schema checks.
  *
  * The draft schemas are unreleased and not an official conformance oracle: a schema result never
  * changes a conformance status in docs/conformance.md. Fixtures that fail the draft only because
@@ -30,14 +26,6 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   private static final String DRAFT_URI = "https://jsonapi.org/schemas/spec/v1.1/draft"
   private static final String META_SCHEMA_ORIGIN = "https://json-schema.org/"
-  private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
-
-  private static final List<String> SCHEMA_FILES = [
-    "schema.json",
-    "schema_create_resource.json",
-    "schema_update_resource.json",
-    "schema_update_relationship.json",
-  ]
 
   private static final Map<SchemaKind, String> SCHEMA_FILE_BY_KIND = [
     (SchemaKind.RESPONSE): "schema.json",
@@ -54,9 +42,6 @@ class JsonApiDraftSchemaSpec extends Specification {
   ]
 
   @Shared
-  Path schemaDir = FixtureDirectory.schemaFixtures()
-
-  @Shared
   JsonMapper mapper = JsonMapper.builder().build()
 
   @Shared
@@ -65,25 +50,6 @@ class JsonApiDraftSchemaSpec extends Specification {
   @Shared
   Map<SchemaKind, Schema> schemas = SCHEMA_FILE_BY_KIND.collectEntries { kind, file ->
     [(kind): loadSchema(file)]
-  }
-
-  def "vendored draft schemas match the recorded sha256 pin"() {
-    given:
-    def checksums = sha256sums()
-
-    expect:
-    checksums.keySet() == SCHEMA_FILES.toSet()
-    SCHEMA_FILES.every { file ->
-      digest(readBytes(file)) == checksums[file]
-    }
-  }
-
-  def "vendored schemas declare the Draft 2020-12 dialect and the draft URI"() {
-    expect:
-    SCHEMA_FILES.every { file ->
-      mapper.readTree(readBytes(file)).get("\$schema").asString() == META_SCHEMA_URI
-    }
-    mapper.readTree(readBytes("schema.json")).get("\$id").asString() == DRAFT_URI
   }
 
   def "every schema-checked fixture declares a known schema kind"() {
@@ -120,7 +86,7 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   def "invalid control #control.file fails the #control.kind schema at #control.path with #control.keyword"() {
     given:
-    def json = mapper.readTree(readText("invalid-controls/" + control.file))
+    def json = mapper.readTree(TestSupportResources.readSchemaBytes("invalid-controls/" + control.file))
     def errors = schemas[schemaKindFor(control.kind)].validate(json)
 
     expect:
@@ -158,28 +124,10 @@ class JsonApiDraftSchemaSpec extends Specification {
             value == DRAFT_URI || value.startsWith(META_SCHEMA_ORIGIN)
           }
         }
-        .schemas([(DRAFT_URI): readText("schema.json")])
+        .schemas([(DRAFT_URI): TestSupportResources.readSchemaUtf8("schema.json")])
   }
 
   private Schema loadSchema(String file) {
-    return registry.getSchema(readText(file))
-  }
-
-  private Map<String, String> sha256sums() {
-    return readText("sha256.sum").readLines()
-        .findAll { !it.trim().isEmpty() }
-        .collectEntries { def parts = it.tokenize(); [(parts[1]): parts[0]] }
-  }
-
-  private static String digest(byte[] bytes) {
-    return MessageDigest.getInstance("SHA-256").digest(bytes).collect { String.format("%02x", it) }.join()
-  }
-
-  private String readText(String relativePath) {
-    return Files.readString(schemaDir.resolve(relativePath), StandardCharsets.UTF_8)
-  }
-
-  private byte[] readBytes(String relativePath) {
-    return Files.readAllBytes(schemaDir.resolve(relativePath))
+    return registry.getSchema(TestSupportResources.readSchemaUtf8(file))
   }
 }

@@ -1,22 +1,17 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
 
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 
-import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
+import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 
 import spock.lang.Shared
 import spock.lang.Specification
 
 class DocumentWriterContractSpec extends Specification {
-
-  @Shared
-  Path fixturesDir = FixtureDirectory.jsonApiFixtures()
 
   @Shared
   JsonMapper mapper = JsonMapper.builder().build()
@@ -65,10 +60,14 @@ class DocumentWriterContractSpec extends Specification {
   }
 
   private JsonNode readFixtureJson(String relativePath) {
-    return mapper.readTree(readFixtureText(relativePath))
+    return mapper.readTree(readFixtureBytes(relativePath))
   }
 
-  private String readFixtureText(String relativePath) {
-    return Files.readString(fixturesDir.resolve(relativePath), StandardCharsets.UTF_8)
+  private static String readFixtureText(String relativePath) {
+    return TestSupportResources.readCorpusUtf8(relativePath)
+  }
+
+  private static byte[] readFixtureBytes(String relativePath) {
+    return TestSupportResources.readCorpusBytes(relativePath)
   }
 }

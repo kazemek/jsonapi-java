@@ -27,11 +27,11 @@
   test fixtures under `src/test/java/`.
 - `build-logic/` owns shared Java/test/nullness/coverage and Spotless configuration. Dependency
   versions are in `gradle/libs.versions.toml`; there is no code-generation step.
-- `jsonapi-java-test-fixtures` is an internal, unpublished module. The version-neutral wire corpus
-  is under `fixtures/jsonapi-1.1/`; pinned draft schemas are under
-  `fixtures/jsonapi-schema/1.1-pr1603/`.
-- Before changing shared fixtures, catalogs, or corpora, read `jsonapi-java-test-fixtures/README.md`
-  and the affected documentation under `fixtures/`; those files own fixture-specific invariants.
+- `jsonapi-java-test-support` is an internal, unpublished module. The version-neutral wire corpus
+  is on its classpath under `src/main/resources/jsonapi/corpus/1.1/`; pinned draft schemas are
+  vendored under `src/main/resources/jsonapi/schema/vendor/1.1-pr1603/`.
+- Before changing shared fixtures, catalogs, or corpora, read `jsonapi-java-test-support/README.md`
+  and the affected corpus/schema resource READMEs; those files own fixture-specific invariants.
 
 # Task Routing
 
