@@ -1,7 +1,9 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.BeanDescription;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.SerializationConfig;
@@ -9,10 +11,17 @@ import tools.jackson.databind.introspect.AnnotatedClass;
 import tools.jackson.databind.introspect.ClassIntrospector;
 import tools.jackson.databind.json.JsonMapper;
 
+/**
+ * Canonical configured-Jackson authority for class-level JSON:API resource metadata and full {@link
+ * ResourceMapping} definitions. All class-level {@code @JsonApiResource} interpretation flows
+ * through {@link MappingDefinitionResolver} against mapper-introspected class annotations, so
+ * configured mix-ins are authoritative exactly as for ordinary Jackson serialization.
+ */
 public final class MappingDefinitionCache {
 
   private final JsonMapper mapper;
   private final Map<CacheKey, ResourceMapping> cache = new ConcurrentHashMap<>();
+  private final Map<CacheKey, Optional<String>> resourceTypeNames = new ConcurrentHashMap<>();
 
   public MappingDefinitionCache(JsonMapper mapper) {
     this.mapper = mapper;
@@ -38,6 +47,41 @@ public final class MappingDefinitionCache {
     }
     Class<?> rawType = javaType.getRawClass();
     return cache.computeIfAbsent(key, cacheKey -> computeMapping(rawType, javaType, config));
+  }
+
+  /**
+   * Resolves the configured class-level resource type name for {@code rawType} through mapper-aware
+   * introspection (class-level mix-ins honored), or {@code null} when the type carries no
+   * configured {@code @JsonApiResource} metadata. Presence-only: the name is returned without
+   * member-name validation so callers can keep their own absence diagnostics.
+   */
+  public @Nullable String findResourceTypeName(Class<?> rawType) {
+    JavaType javaType = mapper.constructType(rawType);
+    CacheKey key = new CacheKey(javaType, configHash(mapper.serializationConfig()));
+    Optional<String> existing =
+        resourceTypeNames.computeIfAbsent(
+            key, cacheKey -> Optional.ofNullable(computeResourceTypeName(javaType)));
+    return existing.orElse(null);
+  }
+
+  /**
+   * Resolves and validates the configured class-level resource type name for {@code rawType}
+   * through mapper-aware introspection (class-level mix-ins honored).
+   *
+   * @throws io.github.kazemek.jsonapi.jackson.JsonApiMappingException {@link
+   *     io.github.kazemek.jsonapi.jackson.MappingDiagnostic#MISSING_RESOURCE_ANNOTATION} when no
+   *     configured metadata exists, or {@code INVALID_RESOURCE_TYPE} when the name is empty or
+   *     invalid
+   */
+  public String requireResourceTypeName(Class<?> rawType) {
+    return MappingDefinitionResolver.validateResourceTypeName(
+        findResourceTypeName(rawType), rawType);
+  }
+
+  private @Nullable String computeResourceTypeName(JavaType javaType) {
+    ClassIntrospector introspector = mapper.serializationConfig().classIntrospectorInstance();
+    AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
+    return MappingDefinitionResolver.resourceTypeName(annotatedClass);
   }
 
   private ResourceMapping computeMapping(

@@ -105,7 +105,7 @@ signatures):
 
 ```java
 ResourceTypeRegistry registry =
-    ResourceTypeRegistry.builder()
+    ResourceTypeRegistry.builder(callerMapper)
         .register(FlatArticleDto.class)
         .register(AuthorDto.class)
         .build();
@@ -291,11 +291,16 @@ artifact; both majors share the neutral contracts of
   expose the codec mapper publicly.
 - **Map then write:** `JsonApiResourceMapper` produces core model objects; feed them to a writer
   for serialization. Mapping uses Jackson's logical property model and caches `ResourceMapping`
-  by type and mapper config identity. Mapping diagnostics use `MappingDiagnostic` + domain class
-  rather than core validation codes.
+  by type and mapper config identity. Configured Jackson is the single authority for class-level
+  resource metadata: `@JsonApiResource` is read through mapper introspection, so class-level
+  mix-ins provide or override it exactly as for ordinary Jackson serialization — across domain
+  write, flat binding, both PATCH paths, registry key derivation, and declared to-many element
+  types. Mapping diagnostics use `MappingDiagnostic` + domain class rather than core validation
+  codes.
 - **Validate then bind:** `JsonApiResourceBinder` binds already-validated `ResourceObject` values
   to flat DTOs; it never parses JSON, never reads document `included`, and assembles no domain
-  graph. `fromResource`/`fromResources` validate `type` against `@JsonApiResource.type()` and
+  graph. `fromResource`/`fromResources` validate `type` against the target's configured
+  `@JsonApiResource` metadata (mix-ins honored) and
   report `MappingDiagnostic` + a resource-relative pointer (`/type`, `/id`, `/lid`,
   `/relationships/<name>/data`, and the Jackson property name, e.g. `/count`, for bulk
   construction failures). Missing members are omitted; explicit JSON
@@ -304,7 +309,8 @@ artifact; both majors share the neutral contracts of
   Bind failures throw `JsonApiMappingException`, never `JsonApiDocumentReadException`.
 - **Typed domain envelope:** `JsonApiDomainDocumentReader` composes the document reader with the
   flat DTO binder. Primary and included resources bind only through the `ResourceTypeRegistry`
-  (keyed by `@JsonApiResource.type()` on the registered raw class; annotation lookup only);
+  (keyed by each registered raw class's configured class-level resource metadata; build it with
+  `ResourceTypeRegistry.builder(callerMapper)` so keys and binding agree on configured metadata);
   unregistered types fail with `UNREGISTERED_RESOURCE_TYPE` at the document pointer
   (`/data`, `/data/n`, `/included/n`), duplicate type registrations fail at `build()` with
   `CONFLICTING_TYPE_REGISTRATION`. Identifier primary data never binds; absent `included` stays

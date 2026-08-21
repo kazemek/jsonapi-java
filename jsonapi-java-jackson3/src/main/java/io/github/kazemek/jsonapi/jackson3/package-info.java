@@ -10,16 +10,22 @@
  * <p>Domain-to-resource mapping uses {@link JsonApiJackson3#resourceMapper} to derive a {@link
  * JsonApiResourceMapper} from a caller's {@link tools.jackson.databind.json.JsonMapper} or builder.
  * Mapping is explicit, respects Jackson's logical property model, and never mutates the caller's
- * mapper. Mapping diagnostics use {@link MappingDiagnostic} stable codes; identifier conversion is
- * pluggable through {@link IdentifierConverter}. Read-side flat DTO binding uses {@link
- * JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder}; relationship linkage
- * conversion is pluggable through {@link RelationshipLinkageMapper}.
+ * mapper. Configured Jackson is authoritative for class-level resource metadata: {@code
+ * JsonApiResource} is resolved through mapper introspection, so class-level mix-ins provide or
+ * override it across domain write, flat binding, PATCH binding, registry key derivation, and
+ * declared to-many element types. Mapping diagnostics use {@link MappingDiagnostic} stable codes;
+ * identifier conversion is pluggable through {@link IdentifierConverter}. Read-side flat DTO
+ * binding uses {@link JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder};
+ * relationship linkage conversion is pluggable through {@link RelationshipLinkageMapper}.
  *
  * <p>Typed domain envelopes use {@link JsonApiJackson3#domainDocumentReader} with an explicit
- * {@link ResourceTypeRegistry}: a {@link JsonApiDomainDocument} carries flat primary DTOs and
- * independently bound {@code included} DTOs (wire-ordered, dual id/lid identity lookup, never
- * injected into relationships). Identifier primary data stays as core {@link
- * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} values and error documents never bind.
+ * {@link ResourceTypeRegistry}: a dispatch-only registry keyed by each registered target's
+ * configured class-level resource metadata (build via {@link
+ * ResourceTypeRegistry#builder(tools.jackson.databind.json.JsonMapper)}); a {@link
+ * JsonApiDomainDocument} carries flat primary DTOs and independently bound {@code included} DTOs
+ * (wire-ordered, dual id/lid identity lookup, never injected into relationships). Identifier
+ * primary data stays as core {@link io.github.kazemek.jsonapi.core.model.ResourceIdentifier} values
+ * and error documents never bind.
  *
  * <p>Presence-aware resource updates use {@link JsonApiJackson3#patchReader} to derive a {@link
  * JsonApiPatchReader} that applies validate-on-read with {@code DocumentUsage.UPDATE_REQUEST} and
