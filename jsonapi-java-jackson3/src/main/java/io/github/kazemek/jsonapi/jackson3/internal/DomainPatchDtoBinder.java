@@ -29,9 +29,11 @@ import tools.jackson.databind.json.JsonMapper;
  * against the unwrapped inner {@code T} type (converting explicit JSON {@code null} through it
  * first) and are placed into a synthetic property map as an internal {@link PresenceMarker}, then
  * the bean is constructed with a single {@link JsonMapper#convertValue(Object, JavaType)} so
- * creators, deserializers, converters, and configured modules remain authoritative (ADR-004).
- * Omitted members bind to {@code PatchPresence.omitted()}; supplied unknown members fail with
- * {@link MappingDiagnostic#UNKNOWN_PATCH_MEMBER}. Document {@code included} is never read.
+ * creators, deserializers, converters, and configured modules remain authoritative (ADR-004). The
+ * JSON:API identifier is parsed first and then follows the same target-property deserialization at
+ * construction time. Omitted members bind to {@code PatchPresence.omitted()}; supplied unknown
+ * members fail with {@link MappingDiagnostic#UNKNOWN_PATCH_MEMBER}. Document {@code included} is
+ * never read.
  *
  * <p>Recursive structured attributes (ADR-014) use the {@link StructuredValueBinder}: a nested
  * member whose inner type is a deliberately presence-aware PATCH shape is bound as a complete
@@ -78,12 +80,28 @@ public final class DomainPatchDtoBinder {
     bindRelationshipMeta(resource, mapping, properties, rawType);
     Map<String, ConstructionLocation> locationsByLogicalName =
         constructionLocationsByLogicalName(mapping);
-    return BeanConstruction.convertBean(
-        mapper,
-        properties,
-        targetType,
-        rawType,
-        (failure, ignored) -> translateConstructionPath(failure, locationsByLogicalName));
+    try {
+      return BeanConstruction.convertBean(
+          mapper,
+          properties,
+          targetType,
+          rawType,
+          (failure, ignored) -> translateConstructionPath(failure, locationsByLogicalName));
+    } catch (JsonApiMappingException e) {
+      if (isIdentifierConstructionFailure(e, mapping.identifierProperty())) {
+        Throwable cause = e.getCause() == null ? e : e.getCause();
+        throw new JsonApiMappingException(
+            MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED,
+            rawType,
+            IDENTIFIER_PATH_ID,
+            "Failed to convert the wire identifier at '"
+                + IDENTIFIER_PATH_ID
+                + "' for "
+                + rawType.getName(),
+            cause);
+      }
+      throw e;
+    }
   }
 
   /** One structured member's construction-translation location: wire prefix and declared type. */
@@ -223,10 +241,19 @@ public final class DomainPatchDtoBinder {
           IDENTIFIER_PATH_ID,
           "Resource update identity requires a non-null id at '" + IDENTIFIER_PATH_ID + "'");
     }
-    Object identity =
-        converter.convertIdentity(
-            Objects.requireNonNull(resource.id()), identifierProperty, rawType);
+    Object identity = converter.parseIdentity(Objects.requireNonNull(resource.id()), rawType);
     properties.put(identifierProperty.logicalName(), identity);
+  }
+
+  private static boolean isIdentifierConstructionFailure(
+      JsonApiMappingException failure, @Nullable MappingProperty identifierProperty) {
+    if (identifierProperty == null) {
+      return false;
+    }
+    String propertyPath = failure.propertyPath();
+    return ("/" + identifierProperty.logicalName()).equals(propertyPath)
+        || ("/" + identifierProperty.definition().getFullName().getSimpleName())
+            .equals(propertyPath);
   }
 
   private void bindAttributes(

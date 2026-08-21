@@ -23,8 +23,9 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Identifier, attribute, and relationship values are placed into a synthetic property map keyed
  * by Jackson logical property names, then the bean is constructed with a single {@link
  * JsonMapper#convertValue(Object, JavaType)} so creators, deserializers, converters, and configured
- * modules remain authoritative (ADR-004). Document {@code included} is never read; relationships
- * bind from linkage only (ADR-011).
+ * modules remain authoritative (ADR-004). The JSON:API identifier is parsed before it enters the
+ * map, so its target property's configured deserializer still applies during construction. Document
+ * {@code included} is never read; relationships bind from linkage only (ADR-011).
  */
 public final class DomainResourceBinder {
 
@@ -58,12 +59,13 @@ public final class DomainResourceBinder {
     validateResourceType(resource, mapping, rawType);
     validateMetaTargets(mapping, rawType);
     Map<String, @Nullable Object> properties = new LinkedHashMap<>();
-    bindIdentifier(resource, mapping, properties);
+    String identifierPath = bindIdentifier(resource, mapping, properties);
     bindAttributes(resource, mapping, properties);
     bindRelationships(resource, mapping, properties);
     bindResourceMeta(resource, mapping, properties);
     bindRelationshipMeta(resource, mapping, properties);
-    return convertBean(properties, targetType, rawType);
+    return convertBean(
+        properties, targetType, rawType, mapping.identifierProperty(), identifierPath);
   }
 
   private void validateResourceType(
@@ -87,11 +89,11 @@ public final class DomainResourceBinder {
     wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
-  private void bindIdentifier(
+  private @Nullable String bindIdentifier(
       ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
     MappingProperty identifierProperty = mapping.identifierProperty();
     if (identifierProperty == null) {
-      return;
+      return null;
     }
     if (resource.hasId()) {
       bindIdentifierValue(
@@ -99,12 +101,14 @@ public final class DomainResourceBinder {
           IDENTIFIER_PATH_ID,
           identifierProperty,
           properties);
-      return;
+      return IDENTIFIER_PATH_ID;
     }
     String localIdentifier = resource.lid();
     if (localIdentifier != null) {
       bindIdentifierValue(localIdentifier, IDENTIFIER_PATH_LID, identifierProperty, properties);
+      return IDENTIFIER_PATH_LID;
     }
+    return null;
   }
 
   private void bindIdentifierValue(
@@ -121,13 +125,10 @@ public final class DomainResourceBinder {
     if (parsed == null) {
       throw identifierConversionFailed(rawTypeOf(identifierProperty), identifierPath, null);
     }
-    Object converted;
-    try {
-      converted = mapper.convertValue(parsed, identifierProperty.accessor().getType());
-    } catch (RuntimeException e) {
-      throw identifierConversionFailed(rawTypeOf(identifierProperty), identifierPath, e);
-    }
-    properties.put(identifierProperty.logicalName(), converted);
+    // Keep the parsed JSON:API intermediate in the synthetic property map. The final bean
+    // construction then applies the target property's fully contextualized Jackson deserializer
+    // exactly once, rather than converting the detached identifier as a root value first.
+    properties.put(identifierProperty.logicalName(), parsed);
   }
 
   private JsonApiMappingException identifierConversionFailed(
@@ -263,7 +264,32 @@ public final class DomainResourceBinder {
   }
 
   private Object convertBean(
-      Map<String, @Nullable Object> properties, JavaType targetType, Class<?> rawType) {
-    return BeanConstruction.convertBean(mapper, properties, targetType, rawType);
+      Map<String, @Nullable Object> properties,
+      JavaType targetType,
+      Class<?> rawType,
+      @Nullable MappingProperty identifierProperty,
+      @Nullable String identifierPath) {
+    try {
+      return BeanConstruction.convertBean(mapper, properties, targetType, rawType);
+    } catch (JsonApiMappingException e) {
+      if (isIdentifierConstructionFailure(e, identifierProperty, identifierPath)) {
+        Throwable cause = e.getCause() == null ? e : e.getCause();
+        throw identifierConversionFailed(rawType, Objects.requireNonNull(identifierPath), cause);
+      }
+      throw e;
+    }
+  }
+
+  private static boolean isIdentifierConstructionFailure(
+      JsonApiMappingException failure,
+      @Nullable MappingProperty identifierProperty,
+      @Nullable String identifierPath) {
+    if (identifierProperty == null || identifierPath == null) {
+      return false;
+    }
+    String propertyPath = failure.propertyPath();
+    return ("/" + identifierProperty.logicalName()).equals(propertyPath)
+        || ("/" + identifierProperty.definition().getFullName().getSimpleName())
+            .equals(propertyPath);
   }
 }

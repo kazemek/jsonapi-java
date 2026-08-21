@@ -30,17 +30,17 @@ public final class DomainResourceWriter {
 
   private static final String RESOURCE = "resource";
 
-  private final JsonMapper mapper;
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
   private final WholeMetaTarget wholeMetaTarget;
+  private final PropertyScopedValueConverter propertyScoped;
 
   public DomainResourceWriter(
       JsonMapper mapper, IdentifierConverter identifierConverter, MappingDefinitionCache cache) {
-    this.mapper = Objects.requireNonNull(mapper, "mapper");
     this.identifierConverter = Objects.requireNonNull(identifierConverter, "identifierConverter");
     this.cache = Objects.requireNonNull(cache, "cache");
     this.wholeMetaTarget = new WholeMetaTarget(mapper);
+    this.propertyScoped = new PropertyScopedValueConverter(mapper);
   }
 
   /**
@@ -296,7 +296,8 @@ public final class DomainResourceWriter {
       if (allowedFields == null || allowedFields.contains(property.jsonapiName())) {
         Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
         if (!(rawValue instanceof Optional<?> optional) || optional.isPresent()) {
-          attributes.put(property.jsonapiName(), convertAttributeValue(unwrapOptional(rawValue)));
+          attributes.put(
+              property.jsonapiName(), convertAttributeValue(resource, mapping, property, rawValue));
         }
       }
     }
@@ -316,13 +317,15 @@ public final class DomainResourceWriter {
         continue;
       }
       relationships.put(
-          property.jsonapiName(), buildRelationship(resource, property, relationshipMetaByTarget));
+          property.jsonapiName(),
+          buildRelationship(resource, mapping, property, relationshipMetaByTarget));
     }
     return Relationships.ofRelationships(relationships);
   }
 
   private Relationship buildRelationship(
       Object resource,
+      ResourceMapping mapping,
       MappingProperty property,
       Map<String, MappingProperty> relationshipMetaByTarget) {
     Object value = readValue(resource, property, PropertyRole.RELATIONSHIP);
@@ -337,6 +340,7 @@ public final class DomainResourceWriter {
       meta =
           buildMetaValue(
               resource,
+              mapping,
               metaProperty,
               RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName()));
     }
@@ -350,7 +354,7 @@ public final class DomainResourceWriter {
       return null;
     }
     return buildMetaValue(
-        resource, resourceMetaProperty, RelationshipMetaSupport.resourceMetaPath());
+        resource, mapping, resourceMetaProperty, RelationshipMetaSupport.resourceMetaPath());
   }
 
   /**
@@ -358,7 +362,8 @@ public final class DomainResourceWriter {
    * {@link Map}; scalar/array/non-object runtime values fail with a stable meta diagnostic (never a
    * leaked cast or core-validation failure). Failures report the location-specific {@code path}.
    */
-  private @Nullable Meta buildMetaValue(Object resource, MappingProperty property, String path) {
+  private @Nullable Meta buildMetaValue(
+      Object resource, ResourceMapping mapping, MappingProperty property, String path) {
     Object rawValue = readValue(resource, property, property.role());
     Object value = unwrapOptional(rawValue);
     if (value == null) {
@@ -366,7 +371,12 @@ public final class DomainResourceWriter {
     }
     Object converted;
     try {
-      converted = mapper.convertValue(value, Object.class);
+      converted =
+          propertyScoped.serialize(
+              mapping.domainType(),
+              property.definition().getFullName().getSimpleName(),
+              rawValue,
+              value);
     } catch (RuntimeException e) {
       throw metaValueFailure(resource, path, "Failed to convert meta value", e);
     }
@@ -541,14 +551,25 @@ public final class DomainResourceWriter {
     };
   }
 
-  private @Nullable Object convertAttributeValue(@Nullable Object value) {
-    if (value == null) {
-      return null;
+  private @Nullable Object convertAttributeValue(
+      Object resource,
+      ResourceMapping mapping,
+      MappingProperty property,
+      @Nullable Object rawValue) {
+    try {
+      return propertyScoped.serialize(
+          mapping.domainType(),
+          property.definition().getFullName().getSimpleName(),
+          rawValue,
+          unwrapOptional(rawValue));
+    } catch (RuntimeException e) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
+          resource.getClass(),
+          property.logicalName(),
+          "Failed to serialize attribute '" + property.logicalName() + "'",
+          e);
     }
-    if (value instanceof String || value instanceof Number || value instanceof Boolean) {
-      return value;
-    }
-    return mapper.convertValue(value, Object.class);
   }
 
   /**
