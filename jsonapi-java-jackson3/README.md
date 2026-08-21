@@ -279,7 +279,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-013 — Direct typed PATCH DTO binding](../docs/adr/013-direct-typed-patch-dto-binding.md)
 - [ADR-014 — Recursive structured value PATCH semantics](../docs/adr/014-recursive-structured-value-patch-semantics.md)
 - [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
-- [Canonical fixtures](../fixtures/jsonapi-1.1/README.md)
+- [Canonical fixtures](../jsonapi-java-test-support/src/main/resources/jsonapi/corpus/1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
 

@@ -4,8 +4,6 @@ import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
 
 import tools.jackson.databind.json.JsonMapper
 
@@ -19,7 +17,7 @@ import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
 import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.testfixtures.FixtureDirectory
+import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
 import io.github.kazemek.jsonapi.testfixtures.codec.AmbiguousPrimaryDataScenarios
 import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenarios
@@ -28,9 +26,6 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 class DocumentReaderSpec extends Specification {
-
-  @Shared
-  Path fixturesDir = FixtureDirectory.jsonApiFixtures()
 
   @Shared
   JsonMapper mapper = JsonMapper.builder().build()
@@ -288,8 +283,8 @@ class DocumentReaderSpec extends Specification {
         mapper.readTree(writer.writeValueAsString(expected))
   }
 
-  private String readFixtureText(String relativePath) {
-    return Files.readString(fixturesDir.resolve(relativePath), StandardCharsets.UTF_8)
+  private static String readFixtureText(String relativePath) {
+    return TestSupportResources.readCorpusUtf8(relativePath)
   }
 
   private static final class CloseTrackingInputStream extends FilterInputStream {

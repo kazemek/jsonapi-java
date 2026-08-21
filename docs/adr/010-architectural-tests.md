@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P)
+**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-21 (test-support module rename; package allowlist unchanged)
 
 ## Context
 
