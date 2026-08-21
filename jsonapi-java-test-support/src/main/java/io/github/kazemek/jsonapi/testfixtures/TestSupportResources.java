@@ -77,13 +77,16 @@ public final class TestSupportResources {
 
   private static String requireRelative(String relativePath) {
     Objects.requireNonNull(relativePath, "relativePath");
-    if (relativePath.isEmpty()
-        || relativePath.charAt(0) == '/'
-        || relativePath.charAt(0) == '\\'
-        || relativePath.contains("..")) {
+    String normalized = relativePath.replace('\\', '/');
+    if (normalized.isEmpty() || normalized.charAt(0) == '/') {
       throw new IllegalArgumentException("Invalid test-support resource path: " + relativePath);
     }
-    return relativePath.replace('\\', '/');
+    for (String segment : normalized.split("/", -1)) {
+      if (segment.equals("..")) {
+        throw new IllegalArgumentException("Invalid test-support resource path: " + relativePath);
+      }
+    }
+    return normalized;
   }
 
   private static byte[] readResource(String resourcePath) {

@@ -68,7 +68,17 @@ class TestSupportResourcesSpec extends Specification {
       "\\manifest.json",
       "",
       "../manifest.json",
-      "documents/../manifest.json"
+      "documents/../manifest.json",
+      "documents\\..\\manifest.json"
     ]
+  }
+
+  def "relative paths allow a filename containing two dots that is not a traversal segment"() {
+    when:
+    TestSupportResources.readCorpusBytes("version..json")
+
+    then:
+    def ex = thrown(IllegalStateException)
+    ex.message == "Missing test-support classpath resource: jsonapi/corpus/1.1/version..json"
   }
 }
