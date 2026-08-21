@@ -52,6 +52,22 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
     String title
   }
 
+  @JsonApiResource(type = "resource-bases")
+  static class ResourceBase {
+    String id
+  }
+
+  static class ResourceChild extends ResourceBase {
+    String title
+  }
+
+  @JsonApiResource(type = "interface-resources")
+  interface ResourceTypeInterface {}
+
+  static class InterfaceResource implements ResourceTypeInterface {
+    String id
+  }
+
   @JsonApiResource(type = "override-articles")
   interface OverridingTypeMixin {}
 
@@ -161,6 +177,32 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
     ex.resourceClass() == MixinOnlyArticle
+  }
+
+  def "resource metadata does not inherit from an annotated superclass"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+
+    when:
+    mapper.toResource(new ResourceChild(id: "1", title: "Child"))
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
+    ex.resourceClass() == ResourceChild
+  }
+
+  def "resource metadata does not inherit from an annotated interface"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+
+    when:
+    mapper.toResource(new InterfaceResource(id: "1"))
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
+    ex.resourceClass() == InterfaceResource
   }
 
   // ---- 2. ordinary flat read / binding ------------------------------------
@@ -278,6 +320,28 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
     ex.resourceClass() == MixinFlatArticle
+  }
+
+  def "registry metadata lookup does not inherit resource annotations"() {
+    when:
+    ResourceTypeRegistry.builder(JsonMapper.builder().build())
+        .register(ResourceChild)
+        .build()
+
+    then:
+    def childEx = thrown(JsonApiMappingException)
+    childEx.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
+    childEx.resourceClass() == ResourceChild
+
+    when:
+    ResourceTypeRegistry.builder(JsonMapper.builder().build())
+        .register(InterfaceResource)
+        .build()
+
+    then:
+    def interfaceEx = thrown(JsonApiMappingException)
+    interfaceEx.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
+    interfaceEx.resourceClass() == InterfaceResource
   }
 
   def "the same class registers under different keys for different configured mappers"() {

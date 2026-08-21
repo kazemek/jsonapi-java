@@ -26,9 +26,9 @@ final class MappingDefinitionResolver {
 
   private MappingDefinitionResolver() {}
 
-  static ResourceMapping resolve(BeanDescription beanDescription, Class<?> rawType) {
-    String resourceType =
-        validateResourceTypeName(resourceTypeName(beanDescription.getClassInfo()), rawType);
+  static ResourceMapping resolve(
+      BeanDescription beanDescription, Class<?> rawType, AnnotatedClass resourceMetadata) {
+    String resourceType = validateResourceTypeName(resourceTypeName(resourceMetadata), rawType);
 
     List<BeanPropertyDefinition> propertyDefinitions = beanDescription.findProperties();
     List<MappingProperty> identifierProperties = new ArrayList<>();
@@ -68,12 +68,11 @@ final class MappingDefinitionResolver {
   }
 
   /**
-   * Reads the configured class-level resource type name for {@code rawType} from the
-   * mapper-introspected class annotations, or {@code null} when absent. This is the single
-   * interpretation of class-level {@link JsonApiResource} metadata: the {@link AnnotatedClass}
-   * carries the configured mapper's view of the type, including class-level mix-ins, so a mix-in
-   * can provide or override the resource type exactly as it would for ordinary Jackson
-   * serialization.
+   * Reads the configured class-level resource type name from the mapper-introspected direct class
+   * annotations, or {@code null} when absent. This is the single interpretation of class-level
+   * {@link JsonApiResource} metadata: the direct {@link AnnotatedClass} carries the configured
+   * mapper's view of the target class, including a target-specific class-level mix-in, without
+   * importing annotations from supertypes or interfaces.
    */
   static @Nullable String resourceTypeName(AnnotatedClass annotatedClass) {
     // Jackson's getAnnotation is not @Nullable-annotated; use hasAnnotation as the presence check.

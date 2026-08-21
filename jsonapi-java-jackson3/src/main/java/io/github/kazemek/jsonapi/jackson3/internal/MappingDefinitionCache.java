@@ -14,8 +14,10 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Canonical configured-Jackson authority for class-level JSON:API resource metadata and full {@link
  * ResourceMapping} definitions. All class-level {@code @JsonApiResource} interpretation flows
- * through {@link MappingDefinitionResolver} against mapper-introspected class annotations, so
- * configured mix-ins are authoritative exactly as for ordinary Jackson serialization.
+ * through {@link MappingDefinitionResolver} against mapper-introspected direct class annotations,
+ * so configured target-specific mix-ins are authoritative without importing resource metadata from
+ * supertypes or interfaces. Full Jackson property introspection remains separate and continues to
+ * use the ordinary class view.
  */
 public final class MappingDefinitionCache {
 
@@ -80,7 +82,7 @@ public final class MappingDefinitionCache {
 
   private @Nullable String computeResourceTypeName(JavaType javaType) {
     ClassIntrospector introspector = mapper.serializationConfig().classIntrospectorInstance();
-    AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
+    AnnotatedClass annotatedClass = introspector.introspectDirectClassAnnotations(javaType);
     return MappingDefinitionResolver.resourceTypeName(annotatedClass);
   }
 
@@ -88,9 +90,10 @@ public final class MappingDefinitionCache {
       Class<?> rawType, JavaType javaType, SerializationConfig config) {
     ClassIntrospector introspector = config.classIntrospectorInstance();
     AnnotatedClass annotatedClass = introspector.introspectClassAnnotations(javaType);
+    AnnotatedClass resourceMetadata = introspector.introspectDirectClassAnnotations(javaType);
     BeanDescription beanDescription =
         introspector.introspectForSerialization(javaType, annotatedClass);
-    return MappingDefinitionResolver.resolve(beanDescription, rawType);
+    return MappingDefinitionResolver.resolve(beanDescription, rawType, resourceMetadata);
   }
 
   private static int configHash(SerializationConfig config) {
