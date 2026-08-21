@@ -216,8 +216,10 @@ PATCH DTO catalogs are in this module.
 - **Resources:** Read corpus and vendored schema files only through `TestSupportResources`. Exact
   UTF-8 bytes are `readCorpusBytes` / `readSchemaBytes`. Schema pin/integrity lives in this
   module; adapter output-versus-schema execution stays in each Jackson-major suite.
-- **Coverage:** JaCoCo floors cover catalog, resource-loader, and invariant types. Inert fixture
-  POJO/record accessors do not require direct tests solely for coverage; production-module floors
+- **Coverage:** JaCoCo floors and Sonar `new_coverage` cover catalog, resource-loader, and
+  invariant types. Inert fixture POJO/record accessors are excluded from both the JaCoCo
+  verification class set and Sonar coverage (`sonar.coverage.exclusions` derived from that same
+  include list) so they do not require direct tests solely for coverage; production-module floors
   are unchanged.
 - **Negative corpus:** `NegativeCodecScenarios` loads `negative-manifest.json` with JSON-P (Jakarta
   JSON Processing + Parsson); the closed case set is enforced by `NegativeCodecScenariosCatalogSpec`.

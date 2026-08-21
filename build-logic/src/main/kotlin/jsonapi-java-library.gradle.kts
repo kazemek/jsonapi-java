@@ -1,5 +1,6 @@
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
+import java.io.File
 
 plugins {
     `java-library`
@@ -143,11 +144,19 @@ when {
                         }
                     },
                 )
-            // Floor verification excludes inert fixture carriers. The published JaCoCo report stays
-            // complete so Sonar still sees coverage from remaining carrier tests until KAZ-91.
+            // Floor verification excludes inert fixture carriers. The published JaCoCo XML report
+            // stays complete for local HTML inspection; Sonar coverage uses the derived
+            // sonar.coverage.exclusions list so carriers cannot fail new_coverage after their
+            // synthetic tests are removed.
             tasks.jacocoTestCoverageVerification {
                 classDirectories.setFrom(filteredClasses)
             }
+            extra["sonarCoverageExclusions"] =
+                sonarCoverageExclusionsFromIncludes(
+                    layout.projectDirectory.dir("src/main/java").asFile,
+                    rootProject.projectDir,
+                    jacocoFloors.includePatterns,
+                )
         }
         tasks.jacocoTestCoverageVerification {
             violationRules {
@@ -167,4 +176,24 @@ when {
             dependsOn(tasks.jacocoTestCoverageVerification)
         }
     }
+}
+
+fun Project.sonarCoverageExclusionsFromIncludes(
+    srcRoot: File,
+    repoRoot: File,
+    includePatterns: List<String>,
+): String {
+    val sourceIncludes = includePatterns.map { it.replace(Regex("\\.class$"), ".java") }
+    val included =
+        fileTree(srcRoot) {
+            sourceIncludes.forEach { include(it) }
+        }.files
+    val allJava =
+        fileTree(srcRoot) {
+            include("**/*.java")
+        }.files
+    return (allJava - included)
+        .map { it.relativeTo(repoRoot).invariantSeparatorsPath }
+        .sorted()
+        .joinToString(",")
 }
