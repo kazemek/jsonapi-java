@@ -100,43 +100,67 @@ final class RawValueBeanPropertyWriter extends BeanPropertyWriter {
           "Property-scoped serialization does not support custom BeanPropertyWriter replacements");
     }
     if (value == null) {
-      if (delegate.isUnwrapping()) {
-        return;
-      }
-      if (_suppressableValue != null && context.includeFilterSuppressNulls(_suppressableValue)) {
-        return;
-      }
-      if (_nullSerializer != null) {
-        generator.writeName(_name);
-        _nullSerializer.serialize(null, generator, context);
-      }
+      serializeSuppressedNullProperty(generator, context);
       return;
     }
 
+    ValueSerializer<Object> serializer = resolveSerializer(value, context);
+    if (isValueSuppressed(context, value, serializer)) {
+      return;
+    }
+
+    writePropertyValue(bean, value, generator, context, serializer);
+  }
+
+  private void serializeSuppressedNullProperty(
+      JsonGenerator generator, SerializationContext context) {
+    if (delegate.isUnwrapping()) {
+      return;
+    }
+    if (_suppressableValue != null && context.includeFilterSuppressNulls(_suppressableValue)) {
+      return;
+    }
+    if (_nullSerializer == null) {
+      return;
+    }
+    generator.writeName(_name);
+    _nullSerializer.serialize(null, generator, context);
+  }
+
+  private ValueSerializer<Object> resolveSerializer(Object value, SerializationContext context) {
     ValueSerializer<Object> serializer = delegate.getSerializer();
-    if (serializer == null) {
-      if (delegate instanceof UnwrappingBeanPropertyWriter unwrappingProperty) {
-        serializer = unwrappingProperty.findUnwrappingSerializer(context);
-      } else {
-        Class<?> rawType = value.getClass();
-        PropertySerializerMap serializers = _dynamicSerializers;
-        serializer = serializers.serializerFor(rawType);
-        if (serializer == null) {
-          serializer = _findAndAddDynamic(serializers, rawType, context);
-        }
-      }
+    if (serializer != null) {
+      return serializer;
     }
-
-    if (_suppressableValue != null) {
-      if (MARKER_FOR_EMPTY == _suppressableValue) {
-        if (serializer.isEmpty(context, value)) {
-          return;
-        }
-      } else if (_suppressableValue.equals(value)) {
-        return;
-      }
+    if (delegate instanceof UnwrappingBeanPropertyWriter unwrappingProperty) {
+      return unwrappingProperty.findUnwrappingSerializer(context);
     }
+    Class<?> rawType = value.getClass();
+    PropertySerializerMap serializers = _dynamicSerializers;
+    ValueSerializer<Object> dynamicSerializer = serializers.serializerFor(rawType);
+    if (dynamicSerializer == null) {
+      return _findAndAddDynamic(serializers, rawType, context);
+    }
+    return dynamicSerializer;
+  }
 
+  private boolean isValueSuppressed(
+      SerializationContext context, Object value, ValueSerializer<Object> serializer) {
+    if (_suppressableValue == null) {
+      return false;
+    }
+    if (MARKER_FOR_EMPTY == _suppressableValue) {
+      return serializer.isEmpty(context, value);
+    }
+    return _suppressableValue.equals(value);
+  }
+
+  private void writePropertyValue(
+      Object bean,
+      Object value,
+      JsonGenerator generator,
+      SerializationContext context,
+      ValueSerializer<Object> serializer) {
     if (value == bean && _handleSelfReference(bean, generator, context, serializer)) {
       return;
     }
