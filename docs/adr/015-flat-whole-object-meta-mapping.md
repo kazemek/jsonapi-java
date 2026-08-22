@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
-**Amendment:** 2026-08-22
+**Amendment:** 2026-08-22 — write-side Jackson authority
 
 ## Context
 
@@ -167,5 +167,4 @@ tests.
   branch). Documented compatibility consideration.
 - Document-level meta remains document-owned; no resource annotation ambiguously means document
   meta.
-- `ResourceIdentifier.meta` remains unmapped; that separate problem stays out of scope for this
-  ADR and its successors.
+- `ResourceIdentifier.meta` remains unmapped and outside this ADR's scope.
