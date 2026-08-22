@@ -9,6 +9,7 @@ import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,17 +27,25 @@ import tools.jackson.databind.json.JsonMapper;
  * modules remain authoritative (ADR-004). The JSON:API identifier is parsed before it enters the
  * map, so its target property's configured deserializer still applies during construction. Document
  * {@code included} is never read; relationships bind from linkage only (ADR-011).
+ *
+ * <p>Diagnostic locations follow the shared mapping-location contract: resource-relative pointers
+ * over wire names ({@code /type}, {@code /id}, {@code /lid}, {@code /attributes/<name>}, {@code
+ * /relationships/<name>/data}, meta locations). Bean-construction failures translate their Jackson
+ * failure paths through this mapping; unmappable paths carry an absent location instead of a
+ * logical property name.
  */
 public final class DomainResourceBinder {
 
-  private static final String IDENTIFIER_PATH_ID = "/id";
-  private static final String IDENTIFIER_PATH_LID = "/lid";
+  private static final MappingLocation TYPE_LOCATION = MappingLocation.of("type");
+  private static final MappingLocation ID_LOCATION = MappingLocation.of("id");
+  private static final MappingLocation LID_LOCATION = MappingLocation.of("lid");
 
   private final JsonMapper mapper;
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
   private final Map<Class<?>, RelationshipLinkageMapper> linkageMappers;
   private final WholeMetaTarget wholeMetaTarget;
+  private final StructuredValueBinder structuredBinder;
 
   public DomainResourceBinder(
       JsonMapper mapper,
@@ -48,6 +57,7 @@ public final class DomainResourceBinder {
     this.cache = Objects.requireNonNull(cache, "cache");
     this.linkageMappers = Map.copyOf(Objects.requireNonNull(linkageMappers, "linkageMappers"));
     this.wholeMetaTarget = new WholeMetaTarget(mapper);
+    this.structuredBinder = new StructuredValueBinder(mapper);
   }
 
   /** Binds one resource object to the given target type. */
@@ -59,13 +69,23 @@ public final class DomainResourceBinder {
     validateResourceType(resource, mapping, rawType);
     validateMetaTargets(mapping, rawType);
     Map<String, @Nullable Object> properties = new LinkedHashMap<>();
-    String identifierPath = bindIdentifier(resource, mapping, properties);
+    MappingLocation identifierLocation = null;
+    MappingProperty identifierProperty = mapping.identifierProperty();
+    if (identifierProperty != null) {
+      if (resource.hasId()) {
+        identifierLocation = ID_LOCATION;
+        bindIdentifierValue(
+            Objects.requireNonNull(resource.id()), ID_LOCATION, identifierProperty, properties);
+      } else if (resource.lid() != null) {
+        identifierLocation = LID_LOCATION;
+        bindIdentifierValue(resource.lid(), LID_LOCATION, identifierProperty, properties);
+      }
+    }
     bindAttributes(resource, mapping, properties);
     bindRelationships(resource, mapping, properties);
     bindResourceMeta(resource, mapping, properties);
     bindRelationshipMeta(resource, mapping, properties);
-    return convertBean(
-        properties, targetType, rawType, mapping.identifierProperty(), identifierPath);
+    return convertBean(properties, targetType, rawType, mapping, identifierLocation);
   }
 
   private void validateResourceType(
@@ -75,7 +95,7 @@ public final class DomainResourceBinder {
       throw new JsonApiMappingException(
           MappingDiagnostic.RESOURCE_TYPE_MISMATCH,
           rawType,
-          "/type",
+          TYPE_LOCATION,
           "Resource object type '"
               + resource.type()
               + "' does not match expected type '"
@@ -89,41 +109,19 @@ public final class DomainResourceBinder {
     wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
-  private @Nullable String bindIdentifier(
-      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
-    MappingProperty identifierProperty = mapping.identifierProperty();
-    if (identifierProperty == null) {
-      return null;
-    }
-    if (resource.hasId()) {
-      bindIdentifierValue(
-          Objects.requireNonNull(resource.id()),
-          IDENTIFIER_PATH_ID,
-          identifierProperty,
-          properties);
-      return IDENTIFIER_PATH_ID;
-    }
-    String localIdentifier = resource.lid();
-    if (localIdentifier != null) {
-      bindIdentifierValue(localIdentifier, IDENTIFIER_PATH_LID, identifierProperty, properties);
-      return IDENTIFIER_PATH_LID;
-    }
-    return null;
-  }
-
   private void bindIdentifierValue(
       String wireIdentifier,
-      String identifierPath,
+      MappingLocation identifierLocation,
       MappingProperty identifierProperty,
       Map<String, @Nullable Object> properties) {
     Object parsed;
     try {
       parsed = identifierConverter.parse(wireIdentifier);
     } catch (RuntimeException e) {
-      throw identifierConversionFailed(rawTypeOf(identifierProperty), identifierPath, e);
+      throw identifierConversionFailed(rawTypeOf(identifierProperty), identifierLocation, e);
     }
     if (parsed == null) {
-      throw identifierConversionFailed(rawTypeOf(identifierProperty), identifierPath, null);
+      throw identifierConversionFailed(rawTypeOf(identifierProperty), identifierLocation, null);
     }
     // Keep the parsed JSON:API intermediate in the synthetic property map. The final bean
     // construction then applies the target property's fully contextualized Jackson deserializer
@@ -132,23 +130,23 @@ public final class DomainResourceBinder {
   }
 
   private JsonApiMappingException identifierConversionFailed(
-      Class<?> rawType, String identifierPath, @Nullable Throwable cause) {
+      Class<?> rawType, MappingLocation identifierLocation, @Nullable Throwable cause) {
     String message =
         cause == null
             ? "Identifier converter returned null for the wire identifier at '"
-                + identifierPath
+                + identifierLocation
                 + "'"
             : "Failed to convert the wire identifier at '"
-                + identifierPath
+                + identifierLocation
                 + "' for "
                 + rawType.getName();
     return cause == null
         ? new JsonApiMappingException(
-            MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED, rawType, identifierPath, message)
+            MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED, rawType, identifierLocation, message)
         : new JsonApiMappingException(
             MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED,
             rawType,
-            identifierPath,
+            identifierLocation,
             message,
             cause);
   }
@@ -267,26 +265,29 @@ public final class DomainResourceBinder {
       Map<String, @Nullable Object> properties,
       JavaType targetType,
       Class<?> rawType,
-      @Nullable MappingProperty identifierProperty,
-      @Nullable String identifierPath) {
+      ResourceMapping mapping,
+      @Nullable MappingLocation identifierLocation) {
+    Map<String, StructuredValueBinder.ConstructionStart> startsByLogicalName =
+        mapping.constructionStartsByLogicalName(identifierLocation);
     try {
-      return BeanConstruction.convertBean(mapper, properties, targetType, rawType);
+      return BeanConstruction.convertBean(
+          mapper,
+          properties,
+          targetType,
+          rawType,
+          (failure, ignored) ->
+              structuredBinder.translateConstructionPath(
+                  BeanConstruction.pathNames(failure), startsByLogicalName, true));
     } catch (JsonApiMappingException e) {
-      if (isIdentifierConstructionFailure(e, identifierProperty, identifierPath)) {
+      MappingProperty identifierProperty = mapping.identifierProperty();
+      if (identifierProperty != null
+          && identifierLocation != null
+          && BeanConstruction.isConstructionFailureForProperty(
+              e, identifierProperty, identifierLocation)) {
         Throwable cause = e.getCause() == null ? e : e.getCause();
-        throw identifierConversionFailed(rawType, Objects.requireNonNull(identifierPath), cause);
+        throw identifierConversionFailed(rawType, identifierLocation, cause);
       }
       throw e;
     }
-  }
-
-  private static boolean isIdentifierConstructionFailure(
-      JsonApiMappingException failure,
-      @Nullable MappingProperty identifierProperty,
-      @Nullable String identifierPath) {
-    if (identifierProperty == null || identifierPath == null) {
-      return false;
-    }
-    return BeanConstruction.isConstructionFailureForProperty(failure, identifierProperty);
   }
 }

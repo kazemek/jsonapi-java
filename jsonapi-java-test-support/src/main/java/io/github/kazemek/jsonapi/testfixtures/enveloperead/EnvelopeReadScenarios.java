@@ -412,7 +412,7 @@ public final class EnvelopeReadScenarios {
                 new EnvelopeReadVariant.RegistryAttempt(
                     List.of(FlatArticle.class, FlatLidArticle.class),
                     MappingDiagnostic.CONFLICTING_TYPE_REGISTRATION,
-                    ARTICLES,
+                    null,
                     FlatLidArticle.class))));
   }
 
@@ -459,7 +459,7 @@ public final class EnvelopeReadScenarios {
             EnvelopeBindingDocument.BINDER_FAILURE_INCLUDED,
             EnvelopeReadExpectation.failure(
                 MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
-                "/included/1/title",
+                "/included/1/attributes/title",
                 FlatStrictArticle.class)));
   }
 

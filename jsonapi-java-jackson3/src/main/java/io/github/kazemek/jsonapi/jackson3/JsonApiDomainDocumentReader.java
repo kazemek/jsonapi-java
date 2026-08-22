@@ -12,6 +12,7 @@ import io.github.kazemek.jsonapi.jackson.IncludedResources;
 import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import java.io.InputStream;
@@ -40,8 +41,11 @@ import tools.jackson.databind.json.JsonMapper;
  * ResourceTypeRegistry}; identifier primary data and error documents never attempt DTO binding.
  * Resource types absent from the registry fail with {@link
  * MappingDiagnostic#UNREGISTERED_RESOURCE_TYPE} at the document pointer before any envelope
- * escapes; other binder failures are rethrown with the document pointer joined to the binder path.
- * Relationship properties stay linkage-only and {@code included} is never injected.
+ * escapes; other binder failures compose structurally with the document pointer ({@code /data},
+ * {@code /data/<index>}, {@code /included/<index>}) per the mapping-location contract: a
+ * resource-relative binder location joins under the prefix, and a locationless binder failure
+ * reports just the prefix. Relationship properties stay linkage-only and {@code included} is never
+ * injected.
  *
  * <p>Construct instances via {@link JsonApiJackson3#domainDocumentReader(JsonMapper,
  * DocumentReadContext, ResourceTypeRegistry)} or its overloads, never directly. The reader is safe
@@ -123,11 +127,12 @@ public final class JsonApiDomainDocumentReader {
     return switch (data) {
       case DocumentData.NullData() -> DomainData.NullData.INSTANCE;
       case DocumentData.SingleResource(ResourceObject resource) ->
-          new DomainData.SingleResource(bindResource(resource, "/data"));
+          new DomainData.SingleResource(bindResource(resource, MappingLocation.of("data")));
       case DocumentData.ResourceCollection(List<ResourceObject> resources) -> {
         List<Object> bound = new ArrayList<>(resources.size());
         for (int i = 0; i < resources.size(); i++) {
-          bound.add(bindResource(resources.get(i), "/data/" + i));
+          bound.add(
+              bindResource(resources.get(i), MappingLocation.of("data", Integer.toString(i))));
         }
         yield new DomainData.ResourceCollection(bound);
       }
@@ -147,7 +152,7 @@ public final class JsonApiDomainDocumentReader {
     Set<ResourceIdentity> seen = new LinkedHashSet<>();
     for (int i = 0; i < included.size(); i++) {
       ResourceObject resource = included.get(i);
-      String pointer = "/included/" + i;
+      MappingLocation pointer = MappingLocation.of("included", Integer.toString(i));
       Object dto = bindResource(resource, pointer);
       bound.add(dto);
       Set<ResourceIdentity> identities = new LinkedHashSet<>();
@@ -169,7 +174,7 @@ public final class JsonApiDomainDocumentReader {
   }
 
   private static void putIdentity(
-      Set<ResourceIdentity> seen, ResourceIdentity identity, String pointer) {
+      Set<ResourceIdentity> seen, ResourceIdentity identity, MappingLocation pointer) {
     if (!seen.add(identity)) {
       throw new JsonApiMappingException(
           MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION,
@@ -179,14 +184,21 @@ public final class JsonApiDomainDocumentReader {
     }
   }
 
-  private Object bindResource(ResourceObject resource, String documentPointer) {
+  /**
+   * Binds one resource under the given document-relative prefix. Registry misses fail at the prefix
+   * itself; binder failures compose structurally: the document prefix joins the binder's
+   * resource-relative location ({@code /data/2} + {@code /attributes/title} = {@code
+   * /data/2/attributes/title}), and a binder failure without a location reports just the document
+   * prefix rather than inventing a member.
+   */
+  private Object bindResource(ResourceObject resource, MappingLocation documentPrefix) {
     ResourceObject checkedResource = Objects.requireNonNull(resource, "resource");
     ResourceTypeRegistry.RegisteredType registered = registry.resolve(checkedResource.type());
     if (registered == null) {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE,
           null,
-          documentPointer,
+          documentPrefix,
           "No DTO target registered for JSON:API resource type '" + checkedResource.type() + "'");
     }
     JavaType registeredType = registered.javaType();
@@ -196,19 +208,9 @@ public final class JsonApiDomainDocumentReader {
       return binder.fromResource(checkedResource, targetType);
     } catch (JsonApiMappingException ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.diagnostic().name();
-      throw new JsonApiMappingException(
-          ex.diagnostic(),
-          ex.resourceClass(),
-          joinPointer(documentPointer, ex.propertyPath()),
-          message,
-          ex);
+      MappingLocation composed =
+          ex.location() == null ? documentPrefix : documentPrefix.append(ex.location());
+      throw new JsonApiMappingException(ex.diagnostic(), ex.resourceClass(), composed, message, ex);
     }
-  }
-
-  private static String joinPointer(String documentPointer, @Nullable String binderPath) {
-    if (binderPath == null || binderPath.equals("/")) {
-      return documentPointer;
-    }
-    return documentPointer + binderPath;
   }
 }

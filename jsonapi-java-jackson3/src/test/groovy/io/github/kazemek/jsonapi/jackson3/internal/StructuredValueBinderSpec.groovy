@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal
 
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.MappingLocation
 import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.StructuredMember
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState
@@ -29,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper
  */
 class StructuredValueBinderSpec extends Specification {
 
-  private static final String META = "/meta"
+  private static final MappingLocation META = MappingLocation.parse("/meta")
 
   private static JsonMapper mapper() {
     JsonMapper.builder().addModule(new PatchPresenceModule()).build()
@@ -92,7 +93,7 @@ class StructuredValueBinderSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
-    ex.propertyPath() == META
+    ex.location() == META
   }
 
   def "typed engine converts a non-object wire against a presence-aware shape at a non-attribute pointer"() {
@@ -106,7 +107,7 @@ class StructuredValueBinderSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    ex.propertyPath() == META
+    ex.location() == META
   }
 
   def "low-level engine binds an ordinary domain bean from a non-attribute pointer"() {

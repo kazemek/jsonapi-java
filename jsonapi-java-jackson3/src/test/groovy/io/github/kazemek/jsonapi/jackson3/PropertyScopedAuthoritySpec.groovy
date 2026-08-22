@@ -182,7 +182,9 @@ class PropertyScopedAuthoritySpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    ex.propertyPath() == "/id"
+    // The nested failure keeps its nested wire location under the attribute; it is not rewritten
+    // to the identifier pointer /id.
+    ex.propertyPath() == "/attributes/details/id"
   }
 
   def "flat lid-only identifier construction failures retain the lid diagnostic pointer"() {

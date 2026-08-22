@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import java.util.Map;
 import java.util.Optional;
@@ -55,30 +56,35 @@ final class WholeMetaTarget {
 
   /**
    * Validates every declared whole-meta target of {@code mapping} for the read/write and low-level
-   * domain-mapping roles, throwing {@link MappingDiagnostic#INVALID_META_TARGET} at the property
-   * path when a declared target is not Bean / Map / Object with at most one {@link Optional}
-   * wrapper. The mapping cache/resolver stays kind-agnostic; each consuming entry point invokes
-   * this shared rule itself (ADR-015).
+   * domain-mapping roles, throwing {@link MappingDiagnostic#INVALID_META_TARGET} at the property's
+   * resource-relative wire location when a declared target is not Bean / Map / Object with at most
+   * one {@link Optional} wrapper. The mapping cache/resolver stays kind-agnostic; each consuming
+   * entry point invokes this shared rule itself (ADR-015).
    */
   void validateReadWriteTargets(ResourceMapping mapping, Class<?> rawType) {
     MappingProperty resourceMeta = mapping.resourceMeta();
     if (resourceMeta != null
         && invalidReadWriteTarget(resourceMeta.definition().getPrimaryType())) {
-      throw invalidTarget("Resource meta", resourceMeta, rawType);
+      throw invalidTarget(
+          "Resource meta", resourceMeta, rawType, RelationshipMetaSupport.resourceMetaLocation());
     }
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
       if (invalidReadWriteTarget(property.definition().getPrimaryType())) {
-        throw invalidTarget("Relationship meta", property, rawType);
+        throw invalidTarget(
+            "Relationship meta",
+            property,
+            rawType,
+            RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
       }
     }
   }
 
   private static JsonApiMappingException invalidTarget(
-      String kind, MappingProperty property, Class<?> rawType) {
+      String kind, MappingProperty property, Class<?> rawType, MappingLocation metaLocation) {
     return new JsonApiMappingException(
         MappingDiagnostic.INVALID_META_TARGET,
         rawType,
-        "/" + property.logicalName(),
+        metaLocation,
         kind
             + " property '"
             + property.logicalName()

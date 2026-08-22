@@ -1,9 +1,11 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
+import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,7 +32,7 @@ final class RelationshipLinkageSupport {
         throw new JsonApiMappingException(
             MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
             rawTypeOf(property),
-            relationshipPath(property),
+            relationshipLocation(property),
             "Cannot resolve collection content type for relationship '"
                 + property.logicalName()
                 + "'");
@@ -124,7 +126,7 @@ final class RelationshipLinkageSupport {
       throw new JsonApiMappingException(
           MappingDiagnostic.LINKAGE_MAPPING_FAILED,
           rawTypeOf(property),
-          relationshipPath(property),
+          relationshipLocation(property),
           "Relationship linkage mapper failed for relationship '" + property.logicalName() + "'",
           e);
     }
@@ -154,15 +156,15 @@ final class RelationshipLinkageSupport {
     return new JsonApiMappingException(
         MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
         rawTypeOf(property),
-        relationshipPath(property),
+        relationshipLocation(property),
         "Relationship '"
             + property.logicalName()
             + "' targets unsupported type "
             + targetClass.getName());
   }
 
-  static String relationshipPath(MappingProperty property) {
-    return "/relationships/" + property.jsonapiName() + "/data";
+  static MappingLocation relationshipLocation(MappingProperty property) {
+    return MappingLocation.of(JsonApiMembers.RELATIONSHIPS, property.jsonapiName(), "data");
   }
 
   private static JsonApiMappingException cardinalityMismatch(
@@ -170,7 +172,7 @@ final class RelationshipLinkageSupport {
     return new JsonApiMappingException(
         MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
         rawTypeOf(property),
-        relationshipPath(property),
+        relationshipLocation(property),
         "Cardinality mismatch for relationship '" + property.logicalName() + "': " + detail);
   }
 }

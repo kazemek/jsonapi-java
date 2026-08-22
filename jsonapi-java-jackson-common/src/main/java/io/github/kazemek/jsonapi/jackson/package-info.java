@@ -10,6 +10,12 @@
  * JsonApiMappingException}, {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link
  * CodecFailureCategory}, {@link SourceLocation}, and the supporting allowance and kind types.
  *
+ * <p>Mapping-diagnostic locations are major-neutral: a mapping failure carries either an absent
+ * location or a valid JSON Pointer built through {@link MappingLocation}. Producers address one
+ * resource object with resource-relative pointers over JSON:API member names; absence is {@code
+ * null}, never {@code ""} or {@code /}; segments are individually RFC 6901-escaped. See {@link
+ * JsonApiMappingException} for the full coordinate contract.
+ *
  * <p>The package is deliberately Jackson-import-free: no {@code tools.jackson.*} or {@code
  * com.fasterxml.jackson.*} type appears in any production signature. Jackson-bound readers,
  * writers, mapping introspection, serializers, binders, module registration, and mapper factories

@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import io.github.kazemek.jsonapi.jackson.StructuredMember;
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState;
@@ -86,7 +87,10 @@ final class StructuredValueBinder {
    * invariant).
    */
   @Nullable Object typedMemberValue(
-      @Nullable Object wire, JavaType declaredPatchPresenceType, String pointer, Class<?> rawType) {
+      @Nullable Object wire,
+      JavaType declaredPatchPresenceType,
+      MappingLocation pointer,
+      Class<?> rawType) {
     JavaType inner = declaredPatchPresenceType.containedType(0);
     JavaType effective = unwrapOptional(inner);
     if (wire == null) {
@@ -123,12 +127,12 @@ final class StructuredValueBinder {
   }
 
   private Map<String, Object> bindTypedShape(
-      Map<?, ?> wire, Shape shape, String pointer, Class<?> rawType) {
+      Map<?, ?> wire, Shape shape, MappingLocation pointer, Class<?> rawType) {
     validateTypedShape(shape, pointer, rawType);
     for (Object key : wire.keySet()) {
       String name = key instanceof String string ? string : String.valueOf(key);
       if (shape.memberByWire(name) == null) {
-        throw unknownPatchMember(rawType, pointer + "/" + PointerEscapes.escape(name), name);
+        throw unknownPatchMember(rawType, pointer.append(name), name);
       }
     }
     Map<String, Object> markerMap = LinkedHashMap.newLinkedHashMap(shape.members().size());
@@ -140,10 +144,7 @@ final class StructuredValueBinder {
             new PresenceMarker(
                 true,
                 typedMemberValue(
-                    wire.get(wireName),
-                    member.type(),
-                    pointer + "/" + PointerEscapes.escape(wireName),
-                    rawType)));
+                    wire.get(wireName), member.type(), pointer.append(wireName), rawType)));
       } else {
         markerMap.put(wireName, new PresenceMarker(false, null));
       }
@@ -152,13 +153,13 @@ final class StructuredValueBinder {
   }
 
   /** On shape entry, every visible member must satisfy the strict presence-aware contract. */
-  private void validateTypedShape(Shape shape, String pointer, Class<?> rawType) {
+  private void validateTypedShape(Shape shape, MappingLocation pointer, Class<?> rawType) {
     for (Member member : shape.members()) {
       if (WrapperCustomization.has(
           mapper, member.type(), member.serializationMember(), member.deserializationMember())) {
         throw invalidPatchPropertyType(
             rawType,
-            pointer + "/" + PointerEscapes.escape(member.wireName()),
+            pointer.append(member.wireName()),
             "nested PATCH member '"
                 + member.wireName()
                 + "' must not carry wrapper-level @JsonDeserialize/@JsonSerialize customization");
@@ -178,7 +179,7 @@ final class StructuredValueBinder {
       @Nullable Object wire,
       @Nullable AnnotatedMember serializationMember,
       @Nullable AnnotatedMember deserializationMember,
-      String pointer,
+      MappingLocation pointer,
       Class<?> rawType) {
     if (!(wire instanceof Map<?, ?>)) {
       return LowLevelKind.ATOMIC;
@@ -212,7 +213,7 @@ final class StructuredValueBinder {
    * skipped (lossless change-list contract).
    */
   Object bindLowLevelStructured(
-      @Nullable Object wire, JavaType declaredType, String pointer, Class<?> rawType) {
+      @Nullable Object wire, JavaType declaredType, MappingLocation pointer, Class<?> rawType) {
     JavaType beanType = unwrapLowLevel(declaredType);
     Shape shape = Objects.requireNonNull(shapeOf(beanType), "shape");
     Map<?, ?> wireMap = (Map<?, ?>) Objects.requireNonNull(wire, "wire");
@@ -222,18 +223,18 @@ final class StructuredValueBinder {
       if (wireMap.containsKey(wireName)) {
         members.add(
             bindLowLevelMember(
-                wireMap.get(wireName),
-                member,
-                beanType,
-                pointer + "/" + PointerEscapes.escape(wireName),
-                rawType));
+                wireMap.get(wireName), member, beanType, pointer.append(wireName), rawType));
       }
     }
     return new StructuredPatch(members);
   }
 
   private StructuredMember bindLowLevelMember(
-      @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
+      @Nullable Object wire,
+      Member member,
+      JavaType beanType,
+      MappingLocation pointer,
+      Class<?> rawType) {
     LowLevelKind kind =
         lowLevelKind(
             member.type(),
@@ -257,7 +258,11 @@ final class StructuredValueBinder {
   }
 
   private @Nullable Object atomicLowLevel(
-      @Nullable Object wire, Member member, JavaType beanType, String pointer, Class<?> rawType) {
+      @Nullable Object wire,
+      Member member,
+      JavaType beanType,
+      MappingLocation pointer,
+      Class<?> rawType) {
     JavaType target = unwrapPatchPresence(member.type());
     if (wire == null && target.isPrimitive()) {
       throw unsupported(
@@ -301,11 +306,62 @@ final class StructuredValueBinder {
   }
 
   /**
-   * Presence-aware structured shape of a typed member's inner type, or null. For path translation.
+   * Translation start for one top-level synthetic-map key: the member's resource-relative location
+   * prefix plus its declared type for nested walking.
    */
-  @Nullable Shape shapeOfStructured(JavaType declaredType) {
-    Shape shape = shapeOf(unwrapOptional(unwrapPatchPresence(declaredType)));
-    return shape != null && shape.presenceAware() ? shape : null;
+  record ConstructionStart(MappingLocation location, JavaType declaredType) {}
+
+  /**
+   * Translates a failed bean-construction Jackson path into a resource-relative mapping location
+   * (ADR-014). The path's first name selects the member's start through {@code startsByLogicalName}
+   * (Jackson logical name to wire prefix); deeper names are walked through resolved shape metadata,
+   * each matching member contributing its escaped wire-name segment. Walking stops at the first
+   * name that is not a shape member, so Jackson-internal names below an atomic member are never
+   * leaked into the location. The internal presence-marker {@code value} member between two
+   * presence-aware shape levels is skipped.
+   *
+   * <p>{@code walkPlainShapes} extends walking beyond presence-aware shapes: the flat DTO binder
+   * uses it to follow ordinary structured attribute types, while the typed PATCH DTO path keeps the
+   * stricter presence-aware-only walk. Returns {@code null} when the path is empty or its first
+   * name matches no mapped member — an absent location per the mapping-location contract, never a
+   * Jackson logical property name.
+   */
+  @Nullable MappingLocation translateConstructionPath(
+      List<String> names,
+      Map<String, ConstructionStart> startsByLogicalName,
+      boolean walkPlainShapes) {
+    if (names.isEmpty()) {
+      return null;
+    }
+    ConstructionStart start = startsByLogicalName.get(names.getFirst());
+    if (start == null) {
+      return null;
+    }
+    MappingLocation pointer = start.location();
+    JavaType current = start.declaredType();
+    for (int i = 1; i < names.size(); i++) {
+      String name = names.get(i);
+      Shape shape = walkShape(current, walkPlainShapes);
+      if (shape == null) {
+        break;
+      }
+      Member member = shape.memberByWire(name);
+      if (member != null) {
+        pointer = pointer.append(member.wireName());
+        current = member.type();
+      } else if (!shape.presenceAware() || !"value".equals(name)) {
+        break;
+      }
+    }
+    return pointer;
+  }
+
+  private @Nullable Shape walkShape(JavaType type, boolean includePlainShapes) {
+    Shape shape = shapeOf(unwrapOptional(unwrapPatchPresence(type)));
+    if (shape == null) {
+      return null;
+    }
+    return includePlainShapes || shape.presenceAware() ? shape : null;
   }
 
   private @Nullable Shape computeShape(JavaType type, DeserializationConfig config) {
@@ -357,7 +413,7 @@ final class StructuredValueBinder {
   // ============================== SHARED CONVERSION ==============================
 
   private @Nullable Object convertAtomic(
-      @Nullable Object wire, JavaType targetType, String pointer, Class<?> rawType) {
+      @Nullable Object wire, JavaType targetType, MappingLocation pointer, Class<?> rawType) {
     try {
       return mapper.convertValue(wire, targetType);
     } catch (RuntimeException e) {
@@ -370,7 +426,7 @@ final class StructuredValueBinder {
     }
   }
 
-  private @Nullable Object nullValue(JavaType type, String pointer, Class<?> rawType) {
+  private @Nullable Object nullValue(JavaType type, MappingLocation pointer, Class<?> rawType) {
     DeserializationContext context = mapper._deserializationContext();
     ValueDeserializer<Object> deserializer = context.findRootValueDeserializer(type);
     if (deserializer == null) {
@@ -430,7 +486,7 @@ final class StructuredValueBinder {
   }
 
   private static JsonApiMappingException unknownPatchMember(
-      Class<?> rawType, String path, String name) {
+      Class<?> rawType, MappingLocation path, String name) {
     return new JsonApiMappingException(
         MappingDiagnostic.UNKNOWN_PATCH_MEMBER,
         rawType,
@@ -439,7 +495,7 @@ final class StructuredValueBinder {
   }
 
   private static JsonApiMappingException invalidPatchPropertyType(
-      Class<?> rawType, String path, String detail) {
+      Class<?> rawType, MappingLocation path, String detail) {
     return new JsonApiMappingException(
         MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
         rawType,
@@ -448,7 +504,7 @@ final class StructuredValueBinder {
   }
 
   private static JsonApiMappingException unsupported(
-      Class<?> rawType, String path, String message) {
+      Class<?> rawType, MappingLocation path, String message) {
     return new JsonApiMappingException(
         MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, rawType, path, message);
   }

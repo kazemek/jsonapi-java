@@ -84,12 +84,12 @@ public sealed interface CompoundWriteExpectation
     return new Failure(diagnostic, null, null);
   }
 
-  static Failure failure(MappingDiagnostic diagnostic, String propertyPath) {
+  static Failure failure(MappingDiagnostic diagnostic, @Nullable String propertyPath) {
     return new Failure(diagnostic, propertyPath, null);
   }
 
   static Failure failure(
-      MappingDiagnostic diagnostic, String propertyPath, Class<?> resourceClass) {
+      MappingDiagnostic diagnostic, @Nullable String propertyPath, Class<?> resourceClass) {
     return new Failure(diagnostic, propertyPath, resourceClass);
   }
 

@@ -8,6 +8,7 @@ import io.github.kazemek.jsonapi.jackson.DomainData;
 import io.github.kazemek.jsonapi.jackson.IncludedResources;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -111,7 +112,7 @@ public final class JsonApiDomainDocument {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
           null,
-          "/meta",
+          MappingLocation.of("meta"),
           "Failed to convert meta members to " + targetType,
           ex);
     }

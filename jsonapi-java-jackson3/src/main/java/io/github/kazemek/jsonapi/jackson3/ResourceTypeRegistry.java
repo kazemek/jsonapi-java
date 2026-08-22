@@ -108,10 +108,11 @@ public final class ResourceTypeRegistry {
       for (RegisteredType registration : registrations) {
         RegisteredType existing = resolved.putIfAbsent(registration.type(), registration);
         if (existing != null) {
-          throw new JsonApiMappingException(
+          // Registry conflicts have no document or member location; the conflicting type name and
+          // classes stay in the message per the mapping-location contract.
+          throw JsonApiMappingException.withoutLocation(
               MappingDiagnostic.CONFLICTING_TYPE_REGISTRATION,
               registration.rawClass(),
-              registration.type(),
               "Conflicting JSON:API type '"
                   + registration.type()
                   + "' registered by "

@@ -193,7 +193,7 @@ class PatchBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    ex.propertyPath() == "/count"
+    ex.propertyPath() == "/attributes/count"
   }
 
   def "Builder and JavaType factory overloads bind successfully"() {

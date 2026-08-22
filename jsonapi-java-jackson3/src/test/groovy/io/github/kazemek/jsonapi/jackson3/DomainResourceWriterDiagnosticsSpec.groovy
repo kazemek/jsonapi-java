@@ -4,8 +4,12 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import java.util.Arrays
+import java.util.Iterator
+import java.util.List
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
@@ -93,6 +97,8 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
+    // The wire identifier coordinate, not the Jackson logical property identity.
+    ex.propertyPath() == "/id"
   }
 
   @JsonApiResource(type = "dup")
@@ -194,6 +200,32 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/attributes/badAttr"
+  }
+
+  @JsonApiResource(type = "renamed-failing-attr")
+  static class RenamedFailingAttrEntity {
+    @JsonApiId String id
+    @JsonApiAttribute(name = "body-text") String badAttr
+
+    String getBadAttr() throws IOException {
+      throw new IOException("attribute read failure")
+    }
+  }
+
+  def "renamed attribute getter failure reports the wire name, never the logical name"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new RenamedFailingAttrEntity(id: "1", badAttr: "anything")
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    // Wire member body-text; the Jackson/logical name badAttr must not leak into the location.
+    ex.propertyPath() == "/attributes/body-text"
   }
 
   @JsonApiResource(type = "failing-id")
@@ -216,6 +248,7 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
+    ex.propertyPath() == "/id"
   }
 
   @JsonApiResource(type = "dup-attrs")
@@ -236,6 +269,8 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NAME_COLLISION
+    // The duplicated attribute container coordinate.
+    ex.propertyPath() == "/attributes/same"
   }
 
   @JsonApiResource(type = "dup-rels")
@@ -256,6 +291,7 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NAME_COLLISION
+    ex.propertyPath() == "/relationships/same/data"
   }
 
   @JsonApiResource(type = "reserved-attr")
@@ -319,5 +355,114 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_ACCESSOR
+    ex.propertyPath() == "/attributes/secret"
+  }
+
+  // ==================== TO-MANY RELATIONSHIP LOCATION PRESERVATION ====================
+  //
+  // To-many serialization failures belong to the relationship being serialized and keep its
+  // resource-relative /relationships/<wire-name>/data location; the renamed members prove the
+  // location carries the JSON:API wire name, never the Jackson logical name.
+
+  @JsonApiResource(type = "raw-array-rel")
+  static class RenamedArrayRelEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "ext-values") long[] values
+  }
+
+  def "unsupported runtime collection shape keeps the relationship location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new RenamedArrayRelEntity(id: "1", values: [1L, 2L] as long[])
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE
+    ex.propertyPath() == "/relationships/ext-values/data"
+  }
+
+  @JsonApiResource(type = "mixed-rel")
+  static class RenamedMixedRelEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "ext-items") List<Object> items
+  }
+
+  def "mixed to-many elements keep the relationship location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def ri = new ResourceIdentifier("comments", "1", null, null, Map.of())
+    def entity = new RenamedMixedRelEntity(id: "1", items: [ri, new Object()])
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE
+    ex.propertyPath() == "/relationships/ext-items/data"
+  }
+
+  /** Raw erased iterable: to-many by declaration, but no resolvable collection content type. */
+  static class RawBag implements Iterable<Object> {
+    private final List<Object> items
+
+    RawBag(Object... items) {
+      this.items = Arrays.asList(items)
+    }
+
+    @Override
+    Iterator<Object> iterator() {
+      return items.iterator()
+    }
+  }
+
+  @JsonApiResource(type = "bag-rel")
+  static class RenamedBagRelEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "ext-bag") RawBag things
+  }
+
+  def "unresolvable declared collection content keeps the relationship location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new RenamedBagRelEntity(id: "1", things: new RawBag(new Object()))
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE
+    ex.propertyPath() == "/relationships/ext-bag/data"
+  }
+
+  // ============================== NO-LOCATION DIAGNOSTICS ==============================
+  //
+  // Class-level and specification failures have no document member coordinate; the identifying
+  // names stay in the message and the location is absent (never "", "/", or a logical name).
+
+  def "class-level declaration failures carry no location"() {
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == diagnostic
+    ex.location() == null
+
+    where:
+    diagnostic                              | entity
+    MappingDiagnostic.MISSING_RESOURCE_ANNOTATION | new Object()
+    MappingDiagnostic.INVALID_RESOURCE_TYPE  | new EmptyTypeEntity(id: "1")
+    MappingDiagnostic.INVALID_RESOURCE_TYPE  | new InvalidTypeEntity(id: "1")
+    MappingDiagnostic.MISSING_IDENTIFIER     | new NoIdEntity(name: "test")
+    MappingDiagnostic.DUPLICATE_ROLE         | new DuplicateRoleEntity(id: "1")
+    MappingDiagnostic.NAME_COLLISION         | new NameCollisionEntity(id: "1", fieldA: "a", fieldB: "b")
+    MappingDiagnostic.INVALID_ATTRIBUTE_NAME | new InvalidAttrNameEntity(id: "1", value: "v")
+    MappingDiagnostic.INVALID_RELATIONSHIP_NAME | new InvalidRelNameEntity(id: "1", other: "o")
+    mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
   }
 }
