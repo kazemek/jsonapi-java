@@ -23,7 +23,7 @@ record ResourceMapping(
    * {@code /attributes/<wire-name>}, relationships at {@code /relationships/<wire-name>/data},
    * resource meta at {@code /meta}, and relationship meta at {@code
    * /relationships/<wire-name>/meta}. Shared by the flat binder and the typed PATCH DTO binder so
-   * construction-failure translation cannot drift (KAZ-83).
+   * construction-failure translation cannot drift.
    */
   Map<String, StructuredValueBinder.ConstructionStart> constructionStartsByLogicalName(
       @Nullable MappingLocation identifierLocation) {

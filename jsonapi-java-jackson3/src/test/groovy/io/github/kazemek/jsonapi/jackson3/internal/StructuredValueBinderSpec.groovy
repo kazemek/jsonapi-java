@@ -25,8 +25,8 @@ import tools.jackson.databind.json.JsonMapper
 /**
  * Drives the {@link StructuredValueBinder} engine directly from non-attribute starting pointers
  * (e.g. a structured {@code meta} location) with no {@code ResourceMapping} / {@code MappingProperty}
- * / {@code @JsonApiAttribute} / {@code AttributeChange} in scope, proving the KAZ-77 reuse boundary
- * (ADR-014): the engine is location-neutral and outer-state-policy-free.
+ * / {@code @JsonApiAttribute} / {@code AttributeChange} in scope, proving the ADR-014 reuse
+ * boundary: the engine is location-neutral and outer-state-policy-free.
  */
 class StructuredValueBinderSpec extends Specification {
 
@@ -154,7 +154,7 @@ class StructuredValueBinderSpec extends Specification {
     def declared = JsonMapper.builder().build()
         .constructType(AddressWithLoudNote)
 
-    when: // the same location-neutral machinery a structured meta mapping (KAZ-77) would reuse
+    when: // the same location-neutral machinery a structured meta mapping would reuse
     def patch = binder.bindLowLevelStructured(
         [note: "n"], declared, META, AddressWithLoudNote)
 

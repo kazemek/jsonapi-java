@@ -19,7 +19,7 @@ request carries meaningful nested omission state.
 
 The capability is first consumed by structured JSON:API attributes, but the recursive machinery must
 be structured-value-oriented rather than attribute-hardcoded: a follow-up flat JSON:API meta-mapping
-feature (KAZ-77) will need the same omission/null/value semantics for structured resource and
+feature will need the same omission/null/value semantics for structured resource and
 relationship meta values, and must not introduce a second recursive engine.
 
 ## Decision
@@ -205,14 +205,14 @@ low-level path represents requested changes independently of a PATCH DTO.
 - The low-level path's bean-typed attribute values change: a supplied object for a traversable
   structured bean now binds to a `StructuredPatch` of supplied-only nested changes instead of a fully
   materialized replacement bean. This is intentional and necessary to preserve nested omission
-  information; there is **no opt-out in KAZ-76**. Migration: scalar/atomic values continue to receive
+  information; there is **no opt-out for this behavior**. Migration: scalar/atomic values continue to receive
   converted application values; recursively structured values are inspected through `StructuredPatch`.
   Scalar attributes, containers under the atomic boundary, identifiers, and relationships keep their
   existing behavior.
 - Typed recursion is opt-in through presence-aware nested PATCH shapes; mixed shapes, raw
   `PatchPresence`, direct `Present<T>`, and wrapper-level customization are rejected declarations,
   validated lazily when the nested shape is bound.
-- The engine is location-neutral and reusable: KAZ-77 structured `meta` mapping applies the same
+- The engine is location-neutral and reusable: structured `meta` mapping (ADR-015) applies the same
   `StructuredPatch` payload and engine entry points at its own location with a stricter outer-state
   policy, without a second recursion model.
 - Recursive structured values are not recursive JSON:API relationship graph mutation; relationships

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
-**Amendment:** 2026-08-22 (KAZ-82)
+**Amendment:** 2026-08-22
 
 ## Context
 
@@ -13,7 +13,7 @@ document-owned through `DocumentEnvelope` on write and `JsonApiDomainDocument.me
 on read. Resource-side meta is different: applications may treat it as application-relevant
 information, persist it, and need to update it.
 
-ADR-014 (KAZ-76) delivered recursive structured-value PATCH semantics through a location-agnostic
+ADR-014 delivered recursive structured-value PATCH semantics through a location-agnostic
 engine (`StructuredValueBinder`) and a neutral `StructuredPatch` payload, and explicitly reserved
 the reuse boundary for a follow-up flat meta mapping: "a later structured JSON:API meta mapping can
 reuse the same machinery at its own location with a stricter outer-state policy." This ADR delivers
@@ -36,7 +36,7 @@ record Article(
 ```
 
 `ResourceIdentifier.meta` is deliberately out of scope; it is a separate per-linkage-element
-cardinality/ownership problem tracked separately (KAZ-79).
+cardinality/ownership problem outside this ADR's scope.
 
 ### Public API
 
@@ -64,7 +64,7 @@ wrapper-chain validation belongs to the consuming binder/writer:
   `PatchPresence<?>` is invalid in these models and nested `Optional<Optional<...>>` is invalid.
 - **Typed PATCH DTO mappings:** the meta property must be declared exactly `PatchPresence<T>`
   (consistent with the ADR-013 declaration contract); unwrap exactly one `PatchPresence`, then at
-  most one `Optional`, then the effective target must be Bean / `Map` / `Object`. All KAZ-76
+   most one `Optional`, then the effective target must be Bean / `Map` / `Object`. All ADR-014
   wrapper-customization restrictions apply unchanged.
 
 ### Whole-meta ownership and uniqueness
@@ -90,13 +90,13 @@ code).
   construction binds the application-owned type.
 - Absent meta omits the property (constructor default / null); a supplied empty object binds an
   empty value (for a bean with defaults or a `Map`).
-- **Write-side Jackson authority (KAZ-82 amendment):** Mapped attributes and whole-meta properties
+- **Write-side Jackson authority:** Mapped attributes and whole-meta properties
   use the same location-neutral property-scoped serialization authority. The adapter supplies the
   already-read property value, so mapped accessors are not read twice; `Optional` omission and
   unwrapping remain adapter policy, and whole-meta object-shape validation remains mandatory after
   serialization. The conversion buffer retains `convertValue`'s root-unwrapped semantics. This
-  supersedes KAZ-77's type-level-only write statement and resolves the KAZ-78 Jackson 3
-  architecture/consistency question.
+  supersedes this ADR's original type-level-only write statement and aligns whole-meta writes with
+  the mapped-attribute write semantics on the Jackson 3 adapter.
 
 ### PATCH semantics
 
@@ -106,8 +106,8 @@ requirement); it can never become an outer `Present(null)`. Outer presence is th
 omitted or a supplied object.
 
 - **Typed path (strict):** `@JsonApiMeta PatchPresence<MetaPatchType>` and
-  `@JsonApiRelationshipMeta("author") PatchPresence<AuthorMetaPatch>` bind through the KAZ-76
-  engine. Recursive presence-aware nested shapes preserve nested omitted / explicit-null /
+  `@JsonApiRelationshipMeta("author") PatchPresence<AuthorMetaPatch>` bind through the recursive
+  structured-value engine defined by ADR-014. Recursive presence-aware nested shapes preserve nested omitted / explicit-null /
   supplied-value state. `{}` on a recursively patchable bean target binds a present shape with every
   member omitted; `{}` on an atomic map-like target is an atomic empty-map replacement. Supplied
   meta without a matching meta member is rejected with an `UNKNOWN_PATCH_MEMBER`-style diagnostic
@@ -129,11 +129,11 @@ omitted or a supplied object.
 
 ADR-014 stated "There is no `PatchChange` sealed-hierarchy change; the new public payload types are
 additive," and rejected a structured-value-specific variant because it would couple the hierarchy to
-one representation. This ADR amends/supersedes that statement for KAZ-77: the new variants are
+one representation. This ADR amends/supersedes that statement: the new variants are
 **location-specific**, not representation-specific — resource meta and relationship meta are
 distinct JSON:API change locations, and `jsonapiName = "meta"` alone cannot discriminate resource
 meta from a legal attribute named `meta` (an attribute member named `meta` is wire-legal under
-`MemberNames`). The variants carry a `StructuredPatch` only where KAZ-76 recursion applies on the
+`MemberNames`). The variants carry a `StructuredPatch` only where ADR-014 recursion applies on the
 low-level path; the structured-value payload itself is unchanged. Sealed additions have
 source/binary compatibility implications for consumers switching exhaustively over `PatchChange`;
 this is documented as part of the public API change.
@@ -144,7 +144,7 @@ this is documented as part of the public API change.
 participates in fieldset validation. Resource meta is emitted unconditionally, even for an empty
 (attribute/relationship-less) fieldset selection; relationship meta rides its owning relationship
 and is absent when that relationship is fieldset-excluded. Existing wording that calls an empty
-fieldset "identity-only" is clarified: after KAZ-77 it means no attributes/relationships are
+fieldset "identity-only" is clarified: it means no attributes/relationships are
 emitted; non-field resource members such as mapped resource meta remain independent.
 
 ### Relationship asymmetry
@@ -167,4 +167,5 @@ tests.
   branch). Documented compatibility consideration.
 - Document-level meta remains document-owned; no resource annotation ambiguously means document
   meta.
-- `ResourceIdentifier.meta` remains unmapped; KAZ-79 owns that separate problem.
+- `ResourceIdentifier.meta` remains unmapped; that separate problem stays out of scope for this
+  ADR and its successors.
