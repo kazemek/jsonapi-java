@@ -7,9 +7,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Discriminated sparse-fieldset expectation: a mapped success carrying resource states and the
- * full-linkage exception flag, an unmapped three-argument success without that flag, a concurrent
- * isolation of two mapped successes, an identity-preservation check, or a failure carrying a shared
- * mapping diagnostic.
+ * expected sparse-fieldset linkage-exemption provenance, an unmapped three-argument success without
+ * that expectation, a concurrent isolation of two mapped successes, an identity-preservation
+ * check, or a failure carrying a shared mapping diagnostic.
  *
  * <p>{@code included == null} is an absent {@code included} member; an empty list is a present
  * empty array. {@code propertyPath} and {@code resourceClass} are {@code null} for {@link
@@ -26,13 +26,15 @@ public sealed interface SparseFieldsetExpectation
    * Successful {@code MappedDocument} outcome.
    *
    * @param included {@code null} when {@code included} is omitted; empty when {@code included: []}
+   * @param expectsLinkageExemptions whether the mapping yields sparse-fieldset linkage-exemption
+   *     provenance (at least one included resource whose linking relationship a fieldset removed)
    * @param zeroReads shared unread-getter guarantee, when the input observes access; otherwise
    *     {@code null}
    */
   record MappedSuccess(
       FieldsetResourceState primary,
       @Nullable List<FieldsetResourceState> included,
-      boolean sparseFieldsetException,
+      boolean expectsLinkageExemptions,
       @Nullable ZeroReadGuarantee zeroReads)
       implements SparseFieldsetExpectation {
 
@@ -46,7 +48,7 @@ public sealed interface SparseFieldsetExpectation
 
   /**
    * Successful three-argument {@code toDocument}/{@code toResourceCollection} outcome (empty
-   * fieldset map, Phase 2.3 equivalent) without a sparse-fieldset exception flag.
+   * fieldset map, Phase 2.3 equivalent) without linkage-exemption provenance.
    */
   record UnmappedSuccess(
       FieldsetResourceState primary, @Nullable List<FieldsetResourceState> included)
@@ -88,16 +90,16 @@ public sealed interface SparseFieldsetExpectation
   static MappedSuccess mapped(
       FieldsetResourceState primary,
       @Nullable List<FieldsetResourceState> included,
-      boolean sparseFieldsetException) {
-    return new MappedSuccess(primary, included, sparseFieldsetException, null);
+      boolean expectsLinkageExemptions) {
+    return new MappedSuccess(primary, included, expectsLinkageExemptions, null);
   }
 
   static MappedSuccess mappedWithZeroReads(
       FieldsetResourceState primary,
       @Nullable List<FieldsetResourceState> included,
-      boolean sparseFieldsetException,
+      boolean expectsLinkageExemptions,
       ZeroReadGuarantee zeroReads) {
-    return new MappedSuccess(primary, included, sparseFieldsetException, zeroReads);
+    return new MappedSuccess(primary, included, expectsLinkageExemptions, zeroReads);
   }
 
   static UnmappedSuccess unmapped(

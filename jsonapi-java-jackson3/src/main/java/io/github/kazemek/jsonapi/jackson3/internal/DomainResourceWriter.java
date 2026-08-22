@@ -44,17 +44,6 @@ public final class DomainResourceWriter {
     this.propertyScoped = new PropertyScopedValueConverter(mapper);
   }
 
-  /**
-   * Selective emission result: the mapped resource plus whether any relationship member was omitted
-   * because a present fieldset for that resource's type did not include that relationship name.
-   */
-  public record SelectiveResource(ResourceObject resource, boolean relationshipOmittedByFieldset) {
-
-    public SelectiveResource {
-      Objects.requireNonNull(resource, RESOURCE);
-    }
-  }
-
   public ResourceObject toResource(Object resource) {
     Objects.requireNonNull(resource, RESOURCE);
     ResourceMapping mapping = cache.resolve(resource.getClass());
@@ -71,7 +60,7 @@ public final class DomainResourceWriter {
    * present fieldset entry for the resource's mapped type before any selective attribute or
    * relationship reads.
    */
-  public SelectiveResource toResource(Object resource, CompoundSerializationContext context) {
+  public ResourceObject toResource(Object resource, CompoundSerializationContext context) {
     Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(context, "context");
     ResourceMapping mapping = cache.resolve(resource.getClass());
@@ -79,37 +68,21 @@ public final class DomainResourceWriter {
     if (fields != null) {
       validateFieldset(resource.getClass(), mapping, fields, context.fieldPolicy());
     }
-    return toResource(resource, fields);
+    return toResourceSelective(resource, fields);
   }
 
-  /**
-   * Selective emission. {@code fields == null} means unrestricted; empty selects no
-   * attributes/relationships (non-field resource members such as mapped resource meta remain
-   * independent); non-empty is an allow-list of JSON:API attribute and relationship names. Does not
-   * consult {@link FieldPolicy}; callers that need policy checks must validate first (or use {@link
-   * #toResource(Object, CompoundSerializationContext)}).
-   */
-  public SelectiveResource toResource(Object resource, @Nullable List<String> fields) {
-    Objects.requireNonNull(resource, RESOURCE);
+  private ResourceObject toResourceSelective(Object resource, @Nullable List<String> fields) {
     if (fields == null) {
-      return new SelectiveResource(toResource(resource), false);
+      return toResource(resource);
     }
     ResourceMapping mapping = cache.resolve(resource.getClass());
     validateMetaTargets(mapping, resource.getClass());
     String id = extractId(resource, mapping);
     Set<String> allowed = Set.copyOf(fields);
-    boolean relationshipOmitted = false;
-    for (MappingProperty property : mapping.relationships()) {
-      if (!allowed.contains(property.jsonapiName())) {
-        relationshipOmitted = true;
-        break;
-      }
-    }
     Attributes attributes = buildAttributes(resource, mapping, allowed);
     Relationships relationships = buildRelationships(resource, mapping, allowed);
     Meta meta = buildResourceMeta(resource, mapping);
-    return new SelectiveResource(
-        buildResourceObject(mapping, id, attributes, relationships, meta), relationshipOmitted);
+    return buildResourceObject(mapping, id, attributes, relationships, meta);
   }
 
   /**

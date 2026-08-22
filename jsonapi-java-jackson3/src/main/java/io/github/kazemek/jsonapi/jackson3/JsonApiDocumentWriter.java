@@ -1,11 +1,14 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import io.github.kazemek.jsonapi.core.validation.JsonApiDocumentValidator;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
+import io.github.kazemek.jsonapi.jackson.MappedDocument;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.util.Objects;
+import java.util.Set;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -15,10 +18,17 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Aggregate validation always runs before generator output starts, so validation failure cannot
  * leave a partially written document.
+ *
+ * <p>Writing a {@link MappedDocument} is provenance-aware: this writer composes its bound context
+ * with the mapping's sparse-fieldset linkage exemptions before validation, so callers never
+ * translate mapping provenance into validation policy themselves. Every other bound setting is
+ * preserved; an empty exemption set validates exactly like plain document writing. All output forms
+ * share one composition path.
  */
 public final class JsonApiDocumentWriter {
 
   private static final String DOCUMENT_PARAM = "document";
+  private static final String MAPPED_PARAM = "mapped";
 
   private final JsonMapper mapper;
   private final ValidationContext context;
@@ -29,7 +39,7 @@ public final class JsonApiDocumentWriter {
     this.context = Objects.requireNonNull(context, "context");
   }
 
-  /** Validation context bound to this writer. */
+  /** Validation context bound to this writer (before mapped-document provenance composition). */
   public ValidationContext context() {
     return context;
   }
@@ -70,5 +80,62 @@ public final class JsonApiDocumentWriter {
     Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
     mapper.writeValue(generator, document);
+  }
+
+  /**
+   * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
+   * sparse-fieldset linkage exemptions, then returns the JSON string.
+   */
+  public String writeValueAsString(MappedDocument mapped) {
+    return mapper.writeValueAsString(validatedDocument(mapped));
+  }
+
+  /**
+   * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
+   * sparse-fieldset linkage exemptions, then returns the UTF-8 JSON bytes.
+   */
+  public byte[] writeValueAsBytes(MappedDocument mapped) {
+    return mapper.writeValueAsBytes(validatedDocument(mapped));
+  }
+
+  /**
+   * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
+   * sparse-fieldset linkage exemptions, then writes it to {@code out}.
+   */
+  public void writeValue(OutputStream out, MappedDocument mapped) {
+    Objects.requireNonNull(out, "out");
+    mapper.writeValue(out, validatedDocument(mapped));
+  }
+
+  /**
+   * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
+   * sparse-fieldset linkage exemptions, then writes it to {@code out}.
+   */
+  public void writeValue(Writer out, MappedDocument mapped) {
+    Objects.requireNonNull(out, "out");
+    mapper.writeValue(out, validatedDocument(mapped));
+  }
+
+  /**
+   * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
+   * sparse-fieldset linkage exemptions, then writes it through {@code generator}.
+   */
+  public void writeValue(JsonGenerator generator, MappedDocument mapped) {
+    Objects.requireNonNull(generator, "generator");
+    mapper.writeValue(generator, validatedDocument(mapped));
+  }
+
+  /**
+   * Single provenance-composition path shared by every output form: derive the effective context
+   * from the bound base plus the mapping's sparse-fieldset linkage exemptions, validate first, and
+   * only then emit.
+   */
+  private JsonApiDocument validatedDocument(MappedDocument mapped) {
+    Objects.requireNonNull(mapped, MAPPED_PARAM);
+    Set<ResourceIdentity> exemptions = mapped.sparseFieldsetLinkageExemptions();
+    ValidationContext effective =
+        exemptions.isEmpty() ? context : context.withSparseFieldsetLinkageExemptions(exemptions);
+    validator.validate(mapped.document(), effective);
+    return mapped.document();
   }
 }

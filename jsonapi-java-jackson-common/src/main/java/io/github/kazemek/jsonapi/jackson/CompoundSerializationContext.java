@@ -19,8 +19,8 @@ import java.util.Objects;
  *
  * <p>This context does not carry a validation context; aggregate validation remains on the codec
  * writer. Callers that apply fieldsets must use the {@link MappedDocument} mapper overloads and
- * pass {@link MappedDocument#applyTo(io.github.kazemek.jsonapi.core.validation.ValidationContext)}
- * into the writer factory.
+ * write the returned {@link MappedDocument} through a document writer, which composes its bound
+ * validation context with the mapped sparse-fieldset linkage exemptions.
  *
  * <p>{@code maxDepth == 0} rejects any non-empty include path at pre-validation with {@link
  * MappingDiagnostic#INCLUDE_DEPTH_EXCEEDED}. {@code maxIncluded == 0} fails with {@link

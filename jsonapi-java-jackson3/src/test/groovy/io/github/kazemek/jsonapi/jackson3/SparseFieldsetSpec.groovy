@@ -1,17 +1,30 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
+import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.Relationship
+import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.core.validation.DocumentUsage
 import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
+import io.github.kazemek.jsonapi.core.validation.LinksContext
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.FieldAllowance
 import io.github.kazemek.jsonapi.jackson.FieldPolicy
+import io.github.kazemek.jsonapi.jackson.IncludePath
+import io.github.kazemek.jsonapi.jackson.IncludePolicy
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappedDocument
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.AccessCountingFieldsetArticle
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.FieldsetResourceState
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetExpectation
@@ -20,6 +33,9 @@ import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetReque
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenario
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenarios
 import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetSide
+import java.io.ByteArrayOutputStream
+import java.io.StringWriter
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -35,7 +51,7 @@ import tools.jackson.databind.json.JsonMapper
 // the same. Adapter-local scenario content remains empty unless a major-mapper-only case appears;
 // suite-local harness assertions (fieldset-map and FieldAllowance mutation isolation, duplicate
 // collapse, FIELDSETS_REQUIRE_MAPPED_DOCUMENT message composition, exact single-read counts, and
-// applyTo/writer-validation) stay here.
+// writer-owned provenance composition/validation) stay here.
 // @Stepwise pins the declared feature order so the coverage feature always runs after the
 // parameterized catalog iterations (Spock does not guarantee feature order otherwise).
 @Stepwise
@@ -175,7 +191,7 @@ class SparseFieldsetSpec extends Specification {
     counting.commentsReads == 0
   }
 
-  def "applyTo enables full-linkage exception for omitted relationships"() {
+  def "writer composes sparse-fieldset provenance without caller choreography"() {
     given:
     def scenario = SparseFieldsetScenarios.byId(
         "include author with fields articles title omits linkage and sets exception")
@@ -183,32 +199,148 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
 
     when:
-    JsonApiJackson3.writer(jackson, mapped.applyTo(ValidationContext.defaults()))
-        .writeValueAsString(mapped.document())
+    JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
 
     then:
     noExceptionThrown()
 
     when:
-    JsonApiJackson3.writer(jackson, ValidationContext.defaults())
-        .writeValueAsString(mapped.document())
+    JsonApiJackson3.writer(jackson).writeValueAsString(mapped.document())
 
     then:
     def ex = thrown(JsonApiValidationException)
     ex.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
   }
 
-  def "applyTo returns the same ValidationContext instance when the exception flag is false"() {
+  def "mapped writing preserves unrelated caller validation settings"() {
+    given:
+    def article = new Article("1", "Title", "Body", List.of(), new Person("9", "Dan"))
+    def envelope = new DocumentEnvelope(
+        null,
+        Meta.of(["myext:version": "1.0"]),
+        null)
+    def mapped = mapper.toMappedDocument(
+        article,
+        envelope,
+        CompoundSerializationContext.defaults()
+        .withIncludePaths(List.of(IncludePath.of("author")))
+        .withIncludePolicy(IncludePolicy.allowAll())
+        .withFieldsets([articles: ["title"]]))
+    def base = new ValidationContext(
+        DocumentUsage.RESPONSE_OR_OTHER,
+        Set.of("myext"),
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        LinksContext.TOP_LEVEL,
+        Map.of(),
+        null)
+
+    when:
+    JsonApiJackson3.writer(jackson, base).writeValueAsString(mapped)
+
+    then:
+    noExceptionThrown()
+
+    when:
+    JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+  }
+
+  def "exempted sparse-fieldset orphans stay valid while unrelated full-linkage defects fail"() {
+    given:
+    def fieldsetOrphanArticle = ResourceObject.of("articles", "1")
+    def exemptedAuthor = ResourceObject.of("people", "9")
+    def unrelatedOrphan = ResourceObject.of("tags", "7")
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(fieldsetOrphanArticle),
+        null, null, null, null,
+        [
+          exemptedAuthor,
+          unrelatedOrphan
+        ],
+        [:])
+    def mapped = new MappedDocument(
+        document, Set.of(ResourceIdentity.ofId("people", "9")))
+
+    when:
+    JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when:
+    def subtreeAuthor = new ResourceObject(
+        "people", "9", null, null,
+        Relationships.ofRelationships([
+          editor: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "10")))
+        ]),
+        null, null, [:])
+    def childOfExempted = ResourceObject.of("people", "10")
+    def subtreeDocument = new JsonApiDocument(
+        new DocumentData.SingleResource(fieldsetOrphanArticle),
+        null, null, null, null,
+        [
+          subtreeAuthor,
+          childOfExempted
+        ],
+        [:])
+    JsonApiJackson3.writer(jackson).writeValueAsString(
+        new MappedDocument(subtreeDocument, Set.of(ResourceIdentity.ofId("people", "9"))))
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "all output variants compose provenance consistently"() {
+    given:
+    def scenario = SparseFieldsetScenarios.byId(
+        "include author with fields articles title omits linkage and sets exception")
+    def request = (SparseFieldsetRequest.Single) scenario.request()
+    def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
+    def writer = JsonApiJackson3.writer(jackson)
+    def manualWriter = JsonApiJackson3.writer(
+        jackson,
+        ValidationContext.defaults()
+        .withSparseFieldsetLinkageExemptions(mapped.sparseFieldsetLinkageExemptions()))
+
+    expect:
+    def composedJson = writer.writeValueAsString(mapped)
+    composedJson == manualWriter.writeValueAsString(mapped.document())
+    writer.writeValueAsBytes(mapped) ==
+        composedJson.getBytes(StandardCharsets.UTF_8)
+    with(new ByteArrayOutputStream()) { stream ->
+      writer.writeValue(stream, mapped)
+      stream.toByteArray() == writer.writeValueAsBytes(mapped)
+    }
+    with(new StringWriter()) { out ->
+      writer.writeValue(out, mapped)
+      out.toString() == composedJson
+    }
+    with(new ByteArrayOutputStream()) { stream ->
+      def generator = jackson.createGenerator(stream)
+      writer.writeValue(generator, mapped)
+      generator.close()
+      stream.toByteArray() == writer.writeValueAsBytes(mapped)
+    }
+  }
+
+  def "no-provenance mappings write under the unchanged base context"() {
     given:
     def scenario = SparseFieldsetScenarios.byId(
         "full field list keeps the unrestricted resource state")
     def request = (SparseFieldsetRequest.Single) scenario.request()
     def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
-    def base = ValidationContext.defaults()
 
     expect:
-    !mapped.sparseFieldsetException()
-    mapped.applyTo(base).is(base)
+    mapped.sparseFieldsetLinkageExemptions().isEmpty()
+    JsonApiJackson3.writer(jackson).writeValueAsString(mapped) ==
+        JsonApiJackson3.writer(jackson).writeValueAsString(mapped.document())
   }
 
   private Object execute(SparseFieldsetScenario scenario) {
@@ -347,7 +479,7 @@ class SparseFieldsetSpec extends Specification {
   private static void verifyMapped(
       SparseFieldsetExpectation.MappedSuccess success, MappedDocument mapped) {
     assert mapped != null
-    assert mapped.sparseFieldsetException() == success.sparseFieldsetException()
+    assert mapped.sparseFieldsetLinkageExemptions().isEmpty() == !success.expectsLinkageExemptions()
     def resource = primaryResource(mapped.document().data())
     assertResource(success.primary(), resource)
     assertIncluded(mapped.document().included(), success.included())

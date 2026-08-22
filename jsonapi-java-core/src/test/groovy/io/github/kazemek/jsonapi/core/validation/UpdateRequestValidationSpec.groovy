@@ -11,6 +11,7 @@ import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import spock.lang.Specification
 
@@ -27,7 +28,7 @@ class UpdateRequestValidationSpec extends Specification {
     def context = new ValidationContext(
         DocumentUsage.UPDATE_REQUEST,
         Set.of("ext"), Set.of(), Set.of(),
-        false, LinksContext.TOP_LEVEL, Map.of(), null)
+        Set.of(), LinksContext.TOP_LEVEL, Map.of(), null)
 
     when:
     validator.validate(doc, context)
@@ -192,7 +193,7 @@ class UpdateRequestValidationSpec extends Specification {
     def context = new ValidationContext(
         DocumentUsage.UPDATE_REQUEST,
         Set.of("ext"), Set.of(), Set.of(),
-        false, LinksContext.TOP_LEVEL, Map.of(), null)
+        Set.of(), LinksContext.TOP_LEVEL, Map.of(), null)
 
     when:
     validator.validate(doc, context)
@@ -300,7 +301,8 @@ class UpdateRequestValidationSpec extends Specification {
     expect:
     base.withDocumentUsage(DocumentUsage.UPDATE_REQUEST).expectedEndpointIdentity() == identity
     base.withLinksContext(LinksContext.RESOURCE).expectedEndpointIdentity() == identity
-    base.withSparseFieldsetException(true).expectedEndpointIdentity() == identity
+    base.withSparseFieldsetLinkageExemptions(
+        Set.of(ResourceIdentity.ofId("comments", "99"))).expectedEndpointIdentity() == identity
   }
 
   def "update request rejects type mismatch with expected endpoint identity"() {
@@ -369,7 +371,7 @@ class UpdateRequestValidationSpec extends Specification {
     def context = new ValidationContext(
         DocumentUsage.UPDATE_REQUEST,
         Set.of("ext"), Set.of(), Set.of(),
-        false, LinksContext.TOP_LEVEL, Map.of(), null)
+        Set.of(), LinksContext.TOP_LEVEL, Map.of(), null)
 
     when:
     validator.validate(doc, context)

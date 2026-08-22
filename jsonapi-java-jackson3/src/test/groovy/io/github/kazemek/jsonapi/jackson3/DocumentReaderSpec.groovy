@@ -230,7 +230,7 @@ class DocumentReaderSpec extends Specification {
         Set.of('ext'),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)

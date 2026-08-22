@@ -520,10 +520,11 @@ public final class JsonApiDocumentValidator {
       }
     }
     ensureCanonicalUniqueIdentifierCollections(primaryData, included, registry);
-    if (included == null || context.sparseFieldsetException()) {
+    if (included == null) {
       return;
     }
-    Set<ResourceIdentity> linked = collectLinkedIdentities(primaryData, registry);
+    Set<ResourceIdentity> linked =
+        collectLinkedIdentities(primaryData, registry, context.sparseFieldsetLinkageExemptions());
     for (ResourceIdentity identity : registry.includedIdentities()) {
       if (!linked.contains(identity)) {
         throw new JsonApiValidationException(
@@ -631,9 +632,17 @@ public final class JsonApiDocumentValidator {
   }
 
   private Set<ResourceIdentity> collectLinkedIdentities(
-      @Nullable DocumentData primaryData, IdentityRegistry registry) {
+      @Nullable DocumentData primaryData,
+      IdentityRegistry registry,
+      Set<ResourceIdentity> linkageExemptions) {
     Set<ResourceIdentity> linked = new HashSet<>();
     Queue<ResourceIdentity> queue = new ArrayDeque<>();
+    // Sparse-fieldset exemptions are legitimate linkage roots: seeding them keeps their own
+    // outbound relationships reachable so exempted subtrees stay valid while unrelated included
+    // resources still require full linkage.
+    for (ResourceIdentity exemption : linkageExemptions) {
+      addLinked(exemption, linked, queue, registry);
+    }
     collectFromPrimaryData(primaryData, linked, queue, registry);
     while (!queue.isEmpty()) {
       expandIncludedRelationships(queue.poll(), linked, queue, registry);

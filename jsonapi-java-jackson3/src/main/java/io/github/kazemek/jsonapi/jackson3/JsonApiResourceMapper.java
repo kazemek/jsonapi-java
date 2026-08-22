@@ -38,9 +38,10 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Sparse fieldsets are applied only by {@link #toMappedDocument(Object, DocumentEnvelope,
  * CompoundSerializationContext)} and {@link #toMappedResourceCollection(Iterable, DocumentEnvelope,
- * CompoundSerializationContext)}. Those overloads return a {@link MappedDocument} whose {@link
- * MappedDocument#applyTo} hint coordinates full-linkage validation. The three-argument {@code
- * toDocument} / {@code toResourceCollection} overloads reject a non-empty fieldset map with {@link
+ * CompoundSerializationContext)}. Those overloads return a {@link MappedDocument} carrying the
+ * identities of included resources whose inbound linkage was removed by an applied fieldset; a
+ * document writer composes that provenance into validation. The three-argument {@code toDocument} /
+ * {@code toResourceCollection} overloads reject a non-empty fieldset map with {@link
  * MappingDiagnostic#FIELDSETS_REQUIRE_MAPPED_DOCUMENT}.
  *
  * <p>For custom identifier conversion, supply an {@link IdentifierConverter} at construction time.
@@ -92,26 +93,23 @@ public final class JsonApiResourceMapper {
 
   /**
    * Maps a domain object with optional envelope members, compound inclusion, and sparse fieldsets
-   * from {@code context}. Returns a {@link MappedDocument} whose exception flag is true only when
-   * at least one relationship was omitted by an applied fieldset.
+   * from {@code context}. Returns a {@link MappedDocument} whose linkage exemptions name included
+   * resources whose linking relationship was omitted by an applied fieldset while inclusion still
+   * traversed it.
    */
   public MappedDocument toMappedDocument(
       Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = List.of(resource);
-    DomainResourceWriter.SelectiveResource selective = writer.toResource(resource, context);
-    boolean relationshipOmitted = selective.relationshipOmittedByFieldset();
-    List<ResourceObject> primary = List.of(selective.resource());
+    ResourceObject resourceObject = writer.toResource(resource, context);
+    List<ResourceObject> primary = List.of(resourceObject);
     IncludedResourcesResult includedResult =
         inclusionEngine.collectIncluded(snapshot, primary, context);
-    relationshipOmitted |= includedResult.relationshipOmittedByFieldset();
     JsonApiDocument document =
         buildDocument(
-            new DocumentData.SingleResource(selective.resource()),
-            envelope,
-            includedResult.included());
-    return new MappedDocument(document, relationshipOmitted);
+            new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
+    return new MappedDocument(document, includedResult.sparseFieldsetLinkageExemptions());
   }
 
   public JsonApiDocument toResourceCollection(Iterable<?> resources) {
@@ -157,8 +155,8 @@ public final class JsonApiResourceMapper {
   /**
    * Maps a primary collection with optional envelope members, compound inclusion, and sparse
    * fieldsets from {@code context}. The iterable is materialized once. Returns a {@link
-   * MappedDocument} whose exception flag folds relationship omissions across primary and included
-   * selective writes.
+   * MappedDocument} whose linkage exemptions fold fieldset-removed linking relationships across
+   * primary and included selective writes.
    */
   public MappedDocument toMappedResourceCollection(
       Iterable<?> resources,
@@ -168,20 +166,16 @@ public final class JsonApiResourceMapper {
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
-    boolean relationshipOmitted = false;
     for (Object resource : snapshot) {
-      DomainResourceWriter.SelectiveResource selective = writer.toResource(resource, context);
-      relationshipOmitted |= selective.relationshipOmittedByFieldset();
-      resourceObjects.add(selective.resource());
+      resourceObjects.add(writer.toResource(resource, context));
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     IncludedResourcesResult includedResult =
         inclusionEngine.collectIncluded(snapshot, primary, context);
-    relationshipOmitted |= includedResult.relationshipOmittedByFieldset();
     JsonApiDocument document =
         buildDocument(
             new DocumentData.ResourceCollection(primary), envelope, includedResult.included());
-    return new MappedDocument(document, relationshipOmitted);
+    return new MappedDocument(document, includedResult.sparseFieldsetLinkageExemptions());
   }
 
   private static void rejectNonEmptyFieldsets(CompoundSerializationContext context) {

@@ -12,6 +12,7 @@ import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import spock.lang.Specification
 
@@ -86,7 +87,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
     ex.jsonPointer() == "/included"
   }
 
-  def "sparse fieldset exception skips full linkage"() {
+  def "sparse-fieldset linkage exemptions treat only the exempted included resource as reachable"() {
     given:
     def article = ResourceObject.of("articles", "1")
     def orphan = ResourceObject.of("comments", "99")
@@ -95,7 +96,61 @@ class JsonApiDocumentValidatorSpec extends Specification {
         null, null, null, null,
         [orphan],
         [:])
-    def context = ValidationContext.defaults().withSparseFieldsetException(true)
+    def context = ValidationContext.defaults()
+        .withSparseFieldsetLinkageExemptions(Set.of(ResourceIdentity.ofId("comments", "99")))
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "an unrelated unlinked included resource still violates full linkage beside an exemption"() {
+    given:
+    def article = ResourceObject.of("articles", "1")
+    def fieldsetOrphan = ResourceObject.of("comments", "99")
+    def unrelatedOrphan = ResourceObject.of("tags", "7")
+    def doc = new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null, null, null, null,
+        [
+          fieldsetOrphan,
+          unrelatedOrphan
+        ],
+        [:])
+    def context = ValidationContext.defaults()
+        .withSparseFieldsetLinkageExemptions(Set.of(ResourceIdentity.ofId("comments", "99")))
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+  }
+
+  def "exempted included resources extend reachability to their own subtrees"() {
+    given:
+    def article = ResourceObject.of("articles", "1")
+    def exemptedAuthor = new ResourceObject(
+        "people", "9", null, null,
+        Relationships.ofRelationships([
+          editor: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "10")))
+        ]),
+        null, null, [:])
+    def childOfExempted = ResourceObject.of("people", "10")
+    def doc = new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null, null, null, null,
+        [
+          exemptedAuthor,
+          childOfExempted
+        ],
+        [:])
+    def context = ValidationContext.defaults()
+        .withSparseFieldsetLinkageExemptions(Set.of(ResourceIdentity.ofId("people", "9")))
 
     when:
     validator.validate(doc, context)
@@ -128,7 +183,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("myext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -178,7 +233,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("articles", "comments"),
@@ -209,7 +264,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("articles", "comments"),
@@ -241,7 +296,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("articles", "comments"),
@@ -272,7 +327,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(
         RelationshipPaginationKey.of("people", "comments"),
@@ -300,7 +355,6 @@ class JsonApiDocumentValidatorSpec extends Specification {
         [:])
     def context = ValidationContext.defaults()
         .withDocumentUsage(DocumentUsage.CREATE_REQUEST)
-        .withSparseFieldsetException(true)
 
     when:
     validator.validate(doc, context)
@@ -335,7 +389,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of("custom"),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -449,7 +503,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of("https://example.com/profiles/b"),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -554,7 +608,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("ext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -582,7 +636,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of("canonical"),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -660,7 +714,6 @@ class JsonApiDocumentValidatorSpec extends Specification {
         [:])
     def context = ValidationContext.defaults()
         .withDocumentUsage(DocumentUsage.CREATE_REQUEST)
-        .withSparseFieldsetException(true)
 
     when:
     validator.validate(doc, context)
@@ -859,7 +912,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("ext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -904,7 +957,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of("canonical"),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -948,7 +1001,6 @@ class JsonApiDocumentValidatorSpec extends Specification {
         null, null, null, null, null, [:])
     def context = ValidationContext.defaults()
         .withDocumentUsage(DocumentUsage.CREATE_REQUEST)
-        .withSparseFieldsetException(true)
 
     when:
     validator.validate(doc, context)
@@ -965,10 +1017,9 @@ class JsonApiDocumentValidatorSpec extends Specification {
     def doc = new JsonApiDocument(
         new DocumentData.ResourceCollection([first, second]),
         null, null, null, null, null, [:])
-    def context = ValidationContext.defaults().withSparseFieldsetException(true)
 
     when:
-    validator.validate(doc, context)
+    validator.validate(doc, ValidationContext.defaults())
 
     then:
     noExceptionThrown()
@@ -1014,7 +1065,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of("ext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -1039,7 +1090,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         namespaces,
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         hints,
         null)
@@ -1079,7 +1130,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         hints,
         null)
@@ -1101,7 +1152,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         hints,
         null)
@@ -1119,7 +1170,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -1137,7 +1188,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         null,
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -1159,7 +1210,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         namespaces,
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -1177,7 +1228,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         null,
         null)

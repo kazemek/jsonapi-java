@@ -41,8 +41,9 @@ public final class CompoundInclusionEngine {
   /**
    * Collects included resources for the given primary domain snapshot and context.
    *
-   * @return included list {@code null} when no inclusion was requested (empty path list), plus an
-   *     aggregated bit for relationships omitted by fieldsets during included selective writes
+   * @return included list {@code null} when no inclusion was requested (empty path list), plus the
+   *     identities of included resources whose inbound linkage was removed by an applied fieldset
+   *     while inclusion still traversed the linking relationship
    */
   public IncludedResourcesResult collectIncluded(
       List<?> primarySnapshot,
@@ -57,7 +58,7 @@ public final class CompoundInclusionEngine {
 
     List<IncludePath> paths = context.includePaths();
     if (paths.isEmpty()) {
-      return new IncludedResourcesResult(null, false);
+      return new IncludedResourcesResult(null, Set.of());
     }
 
     List<Class<?>> distinctTypes = distinctTypesInOrder(primarySnapshot);
@@ -174,7 +175,7 @@ public final class CompoundInclusionEngine {
     private final Set<ResourceIdentity> primaryIdentities = new HashSet<>();
     private final Map<ResourceIdentity, ResourceObject> includedByIdentity = new LinkedHashMap<>();
     private final Set<VisitKey> visited = new HashSet<>();
-    private boolean relationshipOmittedByFieldset;
+    private final Set<ResourceIdentity> linkageExemptions = new LinkedHashSet<>();
 
     Traversal(
         CompoundSerializationContext context,
@@ -200,7 +201,7 @@ public final class CompoundInclusionEngine {
         }
       }
       return new IncludedResourcesResult(
-          List.copyOf(includedByIdentity.values()), relationshipOmittedByFieldset);
+          List.copyOf(includedByIdentity.values()), linkageExemptions);
     }
 
     private void walkPath(Object primaryDomain, IncludePath path, int pathIndex) {
@@ -258,6 +259,11 @@ public final class CompoundInclusionEngine {
       List<Object> related = readRelatedDomainObjects(domain, property);
       int nextSegment = current.segmentIndex() + 1;
       boolean lastSegment = nextSegment >= path.segments().size();
+      // When the owning resource's fieldset omits this segment, the traversed relationship is
+      // absent from its wire representation while inclusion still follows it; resources reached
+      // through such an edge legitimately lack inbound linkage in the produced document.
+      List<String> ownerFields = DomainResourceWriter.fieldsFor(context, mapping.resourceType());
+      boolean edgeOmittedByFieldset = ownerFields != null && !ownerFields.contains(segment);
       for (Object relatedDomain : related) {
         ResourceIdentity relatedIdentity = identityOf(relatedDomain);
         if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
@@ -266,10 +272,11 @@ public final class CompoundInclusionEngine {
           }
           continue;
         }
-        DomainResourceWriter.SelectiveResource selective =
-            writer.toResource(relatedDomain, context);
-        relationshipOmittedByFieldset |= selective.relationshipOmittedByFieldset();
-        offerIncluded(selective.resource(), path.dottedThrough(current.segmentIndex()));
+        if (edgeOmittedByFieldset && relatedIdentity != null) {
+          linkageExemptions.add(relatedIdentity);
+        }
+        ResourceObject relatedResource = writer.toResource(relatedDomain, context);
+        offerIncluded(relatedResource, path.dottedThrough(current.segmentIndex()));
         if (!lastSegment) {
           queue.add(new DomainAtSegment(relatedDomain, nextSegment));
         }

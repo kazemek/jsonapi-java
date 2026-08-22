@@ -163,11 +163,12 @@ PATCH DTO catalogs are in this module.
 - **Sparse-fieldset catalog:** `SparseFieldsetScenariosCatalogSpec` enforces the local invariants
   that hold for every entry regardless of catalog size: unique stable ids, exactly one
   operation/request variant/discriminated expectation, resolvable resource states or known
-  diagnostics, and the absent-`included` versus present-list distinction. Adapter suites run the
-  whole catalog through their own mapper and assert full-catalog coverage
+  diagnostics, and the absent-`included` versus present-list distinction. The mapped-success
+  expectation pins whether the mapping yields sparse-fieldset linkage-exemption provenance.
+  Adapter suites run the whole catalog through their own mapper and assert full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`). Exact single-read access counts, fieldset-map
-  and `FieldAllowance` mutation isolation, duplicate-name collapse, and `applyTo`/writer
-  validation stay in adapter-local specs, not enumerated in a manifest.
+  and `FieldAllowance` mutation isolation, duplicate-name collapse, and writer-owned provenance
+  composition/validation stay in adapter-local specs, not enumerated in a manifest.
 - **Envelope-read catalog:** `EnvelopeReadScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, resolvable codec scenario ids
   and named `envelope-binding/` documents, the per-variant field invariants (document-binding

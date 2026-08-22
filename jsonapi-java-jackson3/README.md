@@ -83,9 +83,10 @@ CompoundSerializationContext fieldsets =
         .withFieldPolicy(FieldPolicy.allowAll());
 
 MappedDocument mapped = mapper.toMappedDocument(article, null, fieldsets);
-String json =
-    JsonApiJackson3.writer(callerMapper, mapped.applyTo(ValidationContext.defaults()))
-        .writeValueAsString(mapped.document());
+
+// The writer composes its validation policy with the mapping's linkage exemptions;
+// callers never translate provenance into a ValidationContext themselves.
+String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(mapped);
 ```
 
 Bare resource (inspect or compose a document yourself; not a top-level wire payload):
@@ -359,9 +360,14 @@ artifact; both majors share the neutral contracts of
   independent). Applied only by `toMappedDocument` / `toMappedResourceCollection`; three-argument
   `toDocument` / `toResourceCollection` reject a non-empty fieldset map with
   `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`. Inclusion traversal may still follow fieldset-excluded
-  relationships on validated include paths; `MappedDocument.sparseFieldsetException` is true only
-  after an actual relationship omission, and `mapped.applyTo(ValidationContext)` enables the core
-  full-linkage exception for that write.
+  relationships on validated include paths; the resulting `MappedDocument` carries sparse-fieldset
+  linkage-exemption provenance — the identities of included resources whose linking relationship an
+  applied fieldset removed. Writing a `MappedDocument` through any `JsonApiDocumentWriter` output
+  form composes that provenance into the writer's bound validation context before validation, so
+  callers never translate mapping provenance into validation policy themselves. Exemptions are
+  scoped: exempted included resources count as reachable (their own relationships still extend
+  reachability to their subtrees), while every other included resource still requires full linkage,
+  so unrelated linkage defects keep failing validation.
 - **Primary-data kind:** Ambiguous `{"type","id"}` and `[]` require explicit `PrimaryDataKind` on
   `DocumentReadContext`; never guess from object members.
 - **Wire states:** Omit members for Java `null` components; emit/decode JSON `null` for sealed
@@ -403,7 +409,8 @@ artifact; both majors share the neutral contracts of
   `CompoundWriteScenarios`; `CompoundSerializationSpec` asserts full-catalog coverage.
   Sparse-fieldset contract cases come from `SparseFieldsetScenarios`; `SparseFieldsetSpec`
   asserts full-catalog coverage and keeps harness-level assertions (mutation isolation,
-  duplicate collapse, exact access counts, `applyTo`/writer validation) local. Typed
+  duplicate collapse, exact access counts, writer-owned provenance composition and validation)
+  local. Typed
   envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
   full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
   registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,

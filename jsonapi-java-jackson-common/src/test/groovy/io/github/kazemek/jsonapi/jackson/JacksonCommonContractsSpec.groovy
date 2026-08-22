@@ -6,6 +6,8 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import spock.lang.Specification
 
+import java.util.Collections
+
 class JacksonCommonContractsSpec extends Specification {
 
   // CompoundSerializationContext
@@ -310,16 +312,34 @@ class JacksonCommonContractsSpec extends Specification {
 
   // MappedDocument
 
-  def "applyTo enables the sparse-fieldset exception only when flagged"() {
+  def "mapped document carries defensive-copy linkage exemptions"() {
     given:
-    def base = ValidationContext.defaults()
     def document =
         new JsonApiDocument(DocumentData.NullData.INSTANCE, null, null, null, null, null, Map.of())
+    def mutable = new LinkedHashSet<ResourceIdentity>([
+      ResourceIdentity.ofId("people", "9")
+    ])
 
-    expect:
-    new MappedDocument(document, false).applyTo(base).is(base)
-    new MappedDocument(document, true).applyTo(base) != base
-    new MappedDocument(document, true).applyTo(base).sparseFieldsetException()
+    when:
+    def mapped = new MappedDocument(document, mutable)
+    mutable.add(ResourceIdentity.ofId("people", "10"))
+
+    then:
+    mapped.document().is(document)
+    mapped.sparseFieldsetLinkageExemptions() ==
+        Set.of(ResourceIdentity.ofId("people", "9")) as Set
+
+    when:
+    new MappedDocument(document, null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new MappedDocument(document, Collections.singleton(null))
+
+    then:
+    thrown(NullPointerException)
   }
 
   // IdentifierConverter
