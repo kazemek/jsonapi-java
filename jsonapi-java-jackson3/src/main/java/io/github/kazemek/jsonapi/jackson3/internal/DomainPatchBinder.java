@@ -66,7 +66,7 @@ public final class DomainPatchBinder {
     ResourceMapping mapping = cache.resolve(targetType);
     validateResourceType(resource, mapping, rawType);
     validateMetaTargets(mapping, rawType);
-    Object identity = convertIdentity(resource, mapping, rawType);
+    Object identity = convertIdentity(resource, mapping, targetType, rawType);
     List<PatchChange> changes = new ArrayList<>();
     bindResourceMetaChange(resource, mapping, targetType, rawType, changes);
     bindAttributeChanges(resource, mapping, targetType, rawType, changes);
@@ -101,7 +101,7 @@ public final class DomainPatchBinder {
   }
 
   private Object convertIdentity(
-      ResourceObject resource, ResourceMapping mapping, Class<?> rawType) {
+      ResourceObject resource, ResourceMapping mapping, JavaType targetType, Class<?> rawType) {
     MappingProperty identifierProperty = mapping.identifierProperty();
     if (identifierProperty == null || !resource.hasId()) {
       throw new JsonApiMappingException(
@@ -111,7 +111,7 @@ public final class DomainPatchBinder {
           "Resource update identity requires a non-null id at '/id'");
     }
     return converter.convertIdentity(
-        Objects.requireNonNull(resource.id()), identifierProperty, rawType);
+        Objects.requireNonNull(resource.id()), identifierProperty, targetType, rawType);
   }
 
   private void bindAttributeChanges(

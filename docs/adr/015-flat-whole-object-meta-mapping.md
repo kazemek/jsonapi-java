@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
+**Amendment:** 2026-08-22 (KAZ-82)
 
 ## Context
 
@@ -76,22 +77,26 @@ code).
 
 ### Read and write
 
-- Write converts the whole-meta property value through the existing `DomainResourceWriter`
-  value-conversion authority (`convertValue(value, Object.class)`), then requires the result to be a
-  `Map` before constructing core `Meta`. Scalar/array/non-object runtime results fail with a stable
-  `JsonApiMappingException` + meta diagnostic. Invalid meta member-name or non-open-value failures
-  from `Meta.of(...)` are translated to the same stable meta diagnostic, never leaked as raw core
-  validation exceptions.
+- Write converts the whole-meta property value through the mapped property's fully contextualized
+  Jackson property serializer, then requires the result to be a `Map` before constructing core
+  `Meta`. Direct property serializers, mix-ins, contextual/content serializers, type serializers,
+  and mapper modules remain configured-Jackson authority. When no mapped property writer can be
+  resolved, the existing `convertValue(value, Object.class)` type/module fallback applies.
+  Scalar/array/non-object runtime results fail with a stable `JsonApiMappingException` + meta
+  diagnostic. Invalid meta member-name or non-open-value failures from `Meta.of(...)` are
+  translated to the same stable meta diagnostic, never leaked as raw core validation exceptions.
 - Read places `resource.meta().members()` (or a relationship's meta members) under the mapped
   meta property's logical name in the synthetic property map so the single `convertValue`
   construction binds the application-owned type.
 - Absent meta omits the property (constructor default / null); a supplied empty object binds an
   empty value (for a bean with defaults or a `Map`).
-- **Write-side Jackson authority:** KAZ-77 introduces no new property-scoped serialization engine.
-  Meta write follows the existing `DomainResourceWriter` value-conversion authority exactly
-  (type-level/module authority only). Whether enclosing-property serialization customization for
-  meta properties should be honored is a question for the Jackson 3 architecture/consistency
-  assessment (KAZ-78), not this issue.
+- **Write-side Jackson authority (KAZ-82 amendment):** Mapped attributes and whole-meta properties
+  use the same location-neutral property-scoped serialization authority. The adapter supplies the
+  already-read property value, so mapped accessors are not read twice; `Optional` omission and
+  unwrapping remain adapter policy, and whole-meta object-shape validation remains mandatory after
+  serialization. The conversion buffer retains `convertValue`'s root-unwrapped semantics. This
+  supersedes KAZ-77's type-level-only write statement and resolves the KAZ-78 Jackson 3
+  architecture/consistency question.
 
 ### PATCH semantics
 

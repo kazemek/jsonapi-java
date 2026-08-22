@@ -3,28 +3,35 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.PropertyName;
+import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.ValueSerializer;
 import tools.jackson.databind.deser.DeserializationContextExt;
 import tools.jackson.databind.deser.SettableBeanProperty;
 import tools.jackson.databind.deser.bean.BeanDeserializerBase;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ser.BeanPropertyWriter;
+import tools.jackson.databind.ser.PropertyWriter;
 import tools.jackson.databind.ser.SerializationContextExt;
+import tools.jackson.databind.ser.bean.BeanSerializerBase;
 import tools.jackson.databind.util.TokenBuffer;
 
 /**
- * Location-neutral property-scoped Jackson deserialization authority for one member value.
+ * Location-neutral property-scoped Jackson conversion authority for one member value.
  *
- * <p>Shared by {@link PatchMemberConverter} (top-level attributes) and {@link
- * StructuredValueBinder} (low-level nested atomic members) so the two cannot silently drift on
- * which configured Jackson authority applies to a supplied member. It has no {@link
- * ResourceMapping} / {@link MappingProperty} / {@code @JsonApiAttribute} / {@link
- * io.github.kazemek.jsonapi.jackson.PatchChange} / location dependency: callers supply the
- * containing bean's {@link JavaType}, the member's Jackson-resolved wire name, the
- * conversion-target {@link JavaType}, and the raw wire value, so a later structured JSON:API {@code
- * meta} mapping can reuse the same machinery at its own location (ADR-014, KAZ-77 reuse boundary).
+ * <p>Shared by {@link DomainResourceWriter} (ordinary mapped writes), {@link PatchMemberConverter}
+ * (top-level attributes and identifiers), and {@link StructuredValueBinder} (low-level nested
+ * atomic members) so the locations cannot silently drift on which configured Jackson authority
+ * applies to a supplied member. It has no {@link ResourceMapping} / {@link MappingProperty} /
+ * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.PatchChange} / location
+ * dependency: callers supply the containing bean's {@link JavaType}, the member's Jackson-resolved
+ * wire name, the conversion-target {@link JavaType}, and the raw wire value, so a later structured
+ * JSON:API {@code meta} mapping can reuse the same machinery at its own location (ADR-014, KAZ-77
+ * reuse boundary).
  *
  * <p>The member's fully-contextualized property is resolved from the containing bean's {@link
  * BeanDeserializerBase} (the same {@link SettableBeanProperty} Jackson would use during normal
@@ -37,13 +44,31 @@ import tools.jackson.databind.util.TokenBuffer;
  * {@code convertValue}, which still applies type-level and module authority. A null {@code
  * rawValue} converts through the property's null value (for example {@code Optional.empty()} for an
  * {@link java.util.Optional} target).
+ *
+ * <p>On write, the member's fully-contextualized {@link BeanPropertyWriter} is resolved from the
+ * containing bean's {@link BeanSerializerBase}. Its inclusion and null handling remain
+ * writer-owned; unsuppressed values use that writer's contextual serializer against the
+ * already-read value. The resulting tokens are read back as an untyped JSON-compatible value, with
+ * property omission kept distinct from an emitted JSON {@code null}.
  */
 final class PropertyScopedValueConverter {
 
   private final JsonMapper mapper;
+  private final JsonMapper serializationMapper;
+
+  record SerializationResult(boolean emitted, @Nullable Object value) {}
 
   PropertyScopedValueConverter(JsonMapper mapper) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
+    JsonMapper derivedSerializationMapper =
+        mapper.rebuild().addModule(new RawValuePropertyModule()).build();
+    this.serializationMapper =
+        derivedSerializationMapper.isEnabled(SerializationFeature.WRAP_ROOT_VALUE)
+            ? derivedSerializationMapper
+                .rebuild()
+                .disable(SerializationFeature.WRAP_ROOT_VALUE)
+                .build()
+            : derivedSerializationMapper;
   }
 
   /**
@@ -68,9 +93,83 @@ final class PropertyScopedValueConverter {
       return mapper.convertValue(rawValue, targetType);
     }
     DeserializationContextExt context = mapper._deserializationContext();
-    try (JsonParser parser = conversionParser(context, rawValue)) {
-      return property.deserialize(parser, context);
+    SerializationContextExt serializationContext = serializationMapper._serializationContext();
+    try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
+      serializationContext.serializeValue(buffer, rawValue);
+      try (JsonParser parser = buffer.asParser(context)) {
+        context.assignParser(parser);
+        parser.nextToken();
+        return property.deserialize(parser, context);
+      }
     }
+  }
+
+  /**
+   * Serializes one mapped property through its configured Jackson property writer.
+   *
+   * <p>{@code fallbackValue} is used only when no property writer can be resolved; callers pass the
+   * JSON:API-unwrapped value there to preserve the adapter's existing Optional semantics. When a
+   * writer is available, its inclusion and assigned null serializer are preserved. Unsuppressed
+   * values use the writer's contextual serializer against the already-read value. The result
+   * records whether the writer emitted the property.
+   */
+  SerializationResult serialize(
+      JavaType beanType,
+      String wireName,
+      Object sourceBean,
+      @Nullable Object rawValue,
+      @Nullable Object fallbackValue) {
+    SerializerPropertyResolution resolution = matchingSerializerProperty(beanType, wireName);
+    if (!resolution.beanSerializerAvailable()) {
+      return new SerializationResult(true, mapper.convertValue(fallbackValue, Object.class));
+    }
+    if (resolution.property() == null) {
+      return new SerializationResult(false, null);
+    }
+    BeanPropertyWriter property = Objects.requireNonNull(resolution.property());
+    SerializationContextExt serializationContext = serializationMapper._serializationContext();
+    try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
+      serializePropertyValue(property, sourceBean, rawValue, buffer, serializationContext);
+      DeserializationContextExt deserializationContext = mapper._deserializationContext();
+      try (JsonParser parser = buffer.asParser(deserializationContext)) {
+        deserializationContext.assignParser(parser);
+        JsonToken token = parser.nextToken();
+        if (token == JsonToken.PROPERTY_NAME) {
+          token = parser.nextToken();
+        }
+        if (token == null) {
+          return new SerializationResult(false, null);
+        }
+        return new SerializationResult(
+            true, deserializationContext.readValue(parser, Object.class));
+      }
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IllegalStateException(
+          "Failed to serialize property '" + wireName + "' through Jackson", e);
+    }
+  }
+
+  private static void serializePropertyValue(
+      BeanPropertyWriter property,
+      Object sourceBean,
+      @Nullable Object rawValue,
+      TokenBuffer buffer,
+      SerializationContextExt context) {
+    RawValueBeanPropertyWriter rawValueProperty =
+        property instanceof RawValueBeanPropertyWriter rawProperty
+            ? rawProperty
+            : new RawValueBeanPropertyWriter(property);
+    rawValueProperty.serializeAsRawProperty(sourceBean, rawValue, buffer, context);
+  }
+
+  @SuppressWarnings("resource")
+  private TokenBuffer conversionBuffer(SerializationContextExt context) {
+    TokenBuffer buffer = context.bufferForValueConversion();
+    return mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+        ? buffer.forceUseOfBigDecimal(true)
+        : buffer;
   }
 
   /**
@@ -88,21 +187,26 @@ final class PropertyScopedValueConverter {
   }
 
   /**
-   * TokenBuffer-backed parser positioned on the first value token (Jackson {@code convertValue}). A
-   * {@code null} {@code rawValue} serializes to a {@link tools.jackson.core.JsonToken#VALUE_NULL}
-   * token so the property deserializer's null handling applies.
+   * Resolves the fully-contextualized property writer from the containing bean. A bean serializer
+   * without the requested writer means Jackson intentionally omitted the property; only a non-bean
+   * serializer uses the ordinary conversion fallback.
    */
-  private JsonParser conversionParser(
-      DeserializationContextExt context, @Nullable Object rawValue) {
-    SerializationContextExt serializationContext = mapper._serializationContext();
-    TokenBuffer buffer = serializationContext.bufferForValueConversion();
-    if (mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
-      buffer = buffer.forceUseOfBigDecimal(true);
+  private SerializerPropertyResolution matchingSerializerProperty(
+      JavaType beanType, String wireName) {
+    SerializationContextExt context = serializationMapper._serializationContext();
+    ValueSerializer<Object> root = context.findRootValueSerializer(beanType);
+    if (!(root instanceof BeanSerializerBase bean)) {
+      return new SerializerPropertyResolution(false, null);
     }
-    serializationContext.serializeValue(buffer, rawValue);
-    JsonParser parser = buffer.asParser(context);
-    context.assignParser(parser);
-    parser.nextToken();
-    return parser;
+    for (var iterator = bean.properties(); iterator.hasNext(); ) {
+      PropertyWriter writer = iterator.next();
+      if (writer instanceof BeanPropertyWriter property && property.getName().equals(wireName)) {
+        return new SerializerPropertyResolution(true, property);
+      }
+    }
+    return new SerializerPropertyResolution(true, null);
   }
+
+  private record SerializerPropertyResolution(
+      boolean beanSerializerAvailable, @Nullable BeanPropertyWriter property) {}
 }

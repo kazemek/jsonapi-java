@@ -49,7 +49,28 @@ final class PatchMemberConverter {
 
   /** Converts a wire identifier into the identifier property's converted value (never null). */
   Object convertIdentity(
-      String wireIdentifier, MappingProperty identifierProperty, Class<?> rawType) {
+      String wireIdentifier,
+      MappingProperty identifierProperty,
+      JavaType beanType,
+      Class<?> rawType) {
+    Object parsed = parseIdentity(wireIdentifier, rawType);
+    try {
+      JavaType identifierType = identifierProperty.definition().getPrimaryType();
+      Object converted =
+          propertyScoped.convert(
+              beanType,
+              identifierProperty.definition().getFullName().getSimpleName(),
+              identifierType,
+              identifierType,
+              parsed);
+      return Objects.requireNonNull(converted, "identity");
+    } catch (RuntimeException e) {
+      throw identifierConversionFailed(rawType, e);
+    }
+  }
+
+  /** Parses a JSON:API wire identifier without applying the target property's conversion yet. */
+  Object parseIdentity(String wireIdentifier, Class<?> rawType) {
     Object parsed;
     try {
       parsed = identifierConverter.parse(wireIdentifier);
@@ -65,12 +86,7 @@ final class PatchMemberConverter {
               + IDENTIFIER_PATH_ID
               + "'");
     }
-    try {
-      Object converted = mapper.convertValue(parsed, identifierProperty.accessor().getType());
-      return Objects.requireNonNull(converted, "identity");
-    } catch (RuntimeException e) {
-      throw identifierConversionFailed(rawType, e);
-    }
+    return parsed;
   }
 
   private static JsonApiMappingException identifierConversionFailed(

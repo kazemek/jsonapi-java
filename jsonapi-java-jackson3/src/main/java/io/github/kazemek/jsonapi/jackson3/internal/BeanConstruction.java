@@ -116,6 +116,29 @@ final class BeanConstruction {
     return List.of();
   }
 
+  /** Returns whether the outermost Jackson path member identifies the supplied mapping property. */
+  static boolean pathStartsWithProperty(Throwable failure, MappingProperty property) {
+    List<String> names = pathNames(failure);
+    if (names.isEmpty()) {
+      return false;
+    }
+    String first = names.getFirst();
+    return first.equals(property.logicalName())
+        || first.equals(property.definition().getFullName().getSimpleName());
+  }
+
+  /** Returns whether a mapped bean-construction failure belongs to the supplied property. */
+  static boolean isConstructionFailureForProperty(
+      JsonApiMappingException failure, MappingProperty property) {
+    Throwable constructionFailure = failure.getCause() == null ? failure : failure.getCause();
+    if (!pathNames(constructionFailure).isEmpty()) {
+      return pathStartsWithProperty(constructionFailure, property);
+    }
+    String propertyPath = failure.propertyPath();
+    return ("/" + property.logicalName()).equals(propertyPath)
+        || ("/" + property.definition().getFullName().getSimpleName()).equals(propertyPath);
+  }
+
   static String propertyPath(Throwable failure) {
     if (failure instanceof JacksonException jackson) {
       List<JacksonException.Reference> path = jackson.getPath();

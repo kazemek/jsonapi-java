@@ -233,9 +233,10 @@ Diagnostic pointers for nested failures are engine-accumulated wire-name pointer
     and low-level PATCH); typed PATCH DTOs declare exactly `PatchPresence<T>` with at most one
     `Optional` inside. Scalars, containers, and nested wrapper chains are rejected with a stable
     meta diagnostic at the consuming entry point.
-  - **Write** converts through the existing `DomainResourceWriter` authority and requires a `Map`
-    result before constructing core `Meta`; invalid member names / non-object runtime values fail
-    with `INVALID_META_TARGET`. **Read** binds members under the mapped property's logical name.
+  - **Write** converts through the mapped property's fully contextualized Jackson property writer
+    (including property serializers and mix-ins) and requires a `Map` result before constructing
+    core `Meta`; invalid member names / non-object runtime values fail with `INVALID_META_TARGET`.
+    **Read** binds members under the mapped property's logical name.
   - **PATCH:** the typed path binds `PatchPresence` meta through the KAZ-76 engine (recursive
     presence-aware shapes, `{}` = present-with-all-omitted, atomic map targets) and rejects supplied
     meta without a matching member; the low-level path binds `ResourceMetaChange` /
@@ -247,6 +248,14 @@ Diagnostic pointers for nested failures are engine-accumulated wire-name pointer
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
 when you need a different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
+
+Mapped ordinary values use configured Jackson at the property boundary: resource attributes and
+mapped resource/relationship meta write through their contextualized property serializers, while
+flat reads and supplied PATCH values use the contextualized property deserializer after any
+JSON:API-specific conversion. JSON:API remains authoritative for the identifier wire string,
+relationship linkage, and `PatchPresence` state; those adapter-owned states are not replaced by a
+property serializer or deserializer. If no mapped property can be resolved, the adapter retains its
+ordinary type/module conversion fallback.
 
 `JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` /
 `patchDtoReader` always derive a **new** mapper via `rebuild()`; the caller's mapper or builder is
@@ -320,8 +329,10 @@ artifact; both majors share the neutral contracts of
   reuses the reader-derived binder mapper (never a fresh default mapper). No relationship
   injection: `included` DTOs are independently listed/indexed only.
 - **Identifier round-trip:** read binding calls `IdentifierConverter.parse(String)` on the wire
-  identifier and coerces the result to the identifier property type via `convertValue`; custom
-  write converters must override `parse` to invert their wire form.
+  identifier, then applies the target property's configured Jackson deserializer to the parsed
+  intermediate (normal flat reads and typed PATCH construction use the synthetic property map;
+  low-level PATCH uses the shared property-scoped converter). Custom write converters must override
+  `parse` to invert their wire form.
 - **Opt-in inclusion:** Compound `included` resources require a `CompoundSerializationContext` on
   the three-argument mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
   context). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
