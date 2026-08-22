@@ -3,6 +3,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.PropertyName;
@@ -46,11 +47,11 @@ import tools.jackson.databind.util.TokenBuffer;
  *
  * <p>On write, the member's fully-contextualized {@link BeanPropertyWriter} is resolved from the
  * containing bean's {@link BeanSerializerBase}. Its configured serializer writes the already-read
- * value into a conversion buffer without a property name, and the resulting tokens are read back as
- * an untyped JSON-compatible value. This is deliberately the normal property serializer path rather
+ * non-null value into a conversion buffer without a property name, while nulls delegate to the
+ * writer so its resolved null serializer is retained. The resulting tokens are read back as an
+ * untyped JSON-compatible value. This is deliberately the normal property serializer path rather
  * than manual annotation extraction, so property serializers, mix-ins, contextual serializers, type
- * serializers, content serializers, and mapper modules remain configured-Jackson authority without
- * reading an accessor twice.
+ * serializers, content serializers, and mapper modules remain configured-Jackson authority.
  */
 final class PropertyScopedValueConverter {
 
@@ -87,8 +88,14 @@ final class PropertyScopedValueConverter {
       return mapper.convertValue(rawValue, targetType);
     }
     DeserializationContextExt context = mapper._deserializationContext();
-    try (JsonParser parser = conversionParser(context, rawValue)) {
-      return property.deserialize(parser, context);
+    SerializationContextExt serializationContext = serializationMapper._serializationContext();
+    try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
+      serializationContext.serializeValue(buffer, rawValue);
+      try (JsonParser parser = buffer.asParser(context)) {
+        context.assignParser(parser);
+        parser.nextToken();
+        return property.deserialize(parser, context);
+      }
     }
   }
 
@@ -98,12 +105,14 @@ final class PropertyScopedValueConverter {
    * <p>{@code rawValue} is the value already read from the mapped property. {@code fallbackValue}
    * is used only when no property writer can be resolved; callers pass the JSON:API-unwrapped value
    * there to preserve the adapter's existing Optional semantics. When a writer is available, its
-   * fully contextualized serializer writes {@code rawValue} without reading the bean accessor a
-   * second time.
+   * fully contextualized serializer writes non-null {@code rawValue} without reading the bean
+   * accessor a second time; null values use the writer itself so its assigned null serializer is
+   * preserved.
    */
   @Nullable Object serialize(
       JavaType beanType,
       String wireName,
+      Object sourceBean,
       @Nullable Object rawValue,
       @Nullable Object fallbackValue) {
     BeanPropertyWriter property = matchingSerializerProperty(beanType, wireName);
@@ -111,16 +120,16 @@ final class PropertyScopedValueConverter {
       return mapper.convertValue(fallbackValue, Object.class);
     }
     SerializationContextExt serializationContext = serializationMapper._serializationContext();
-    TokenBuffer buffer = serializationContext.bufferForValueConversion();
-    if (mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
-      buffer = buffer.forceUseOfBigDecimal(true);
-    }
-    try {
-      serializePropertyValue(property, rawValue, buffer, serializationContext);
+    try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
+      serializePropertyValue(property, sourceBean, rawValue, buffer, serializationContext);
       DeserializationContextExt deserializationContext = mapper._deserializationContext();
       try (JsonParser parser = buffer.asParser(deserializationContext)) {
         deserializationContext.assignParser(parser);
-        if (parser.nextToken() == null) {
+        JsonToken token = parser.nextToken();
+        if (token == JsonToken.PROPERTY_NAME) {
+          token = parser.nextToken();
+        }
+        if (token == null) {
           return null;
         }
         return deserializationContext.readValue(parser, Object.class);
@@ -133,33 +142,24 @@ final class PropertyScopedValueConverter {
     }
   }
 
-  @SuppressWarnings("DataFlowIssue")
   private static void serializePropertyValue(
       BeanPropertyWriter property,
+      Object sourceBean,
       @Nullable Object rawValue,
       TokenBuffer buffer,
-      SerializationContextExt context) {
+      SerializationContextExt context)
+      throws Exception {
     if (rawValue == null) {
-      Object nullSerializerDefinition =
-          context
-              .getAnnotationIntrospector()
-              .findNullSerializer(context.getConfig(), property.getMember());
-      ValueSerializer<Object> nullSerializer =
-          nullSerializerDefinition == null
-              ? context.findNullValueSerializer(property)
-              : context.serializerInstance(property.getMember(), nullSerializerDefinition);
-      nullSerializer.serialize(null, buffer, context);
+      property.serializeAsProperty(sourceBean, buffer, context);
       return;
     }
     ValueSerializer<Object> serializer = property.getSerializer();
     if (serializer == null || context.isUnknownTypeSerializer(serializer)) {
-      JavaType type = property.getType();
-      if (type.getRawClass() == Object.class
-          || type.isAbstract()
-          || type.isInterface()
-          || !type.getRawClass().isInstance(rawValue)) {
-        type = context.constructSpecializedType(type, rawValue.getClass());
+      JavaType baseType = property.getSerializationType();
+      if (baseType == null) {
+        baseType = property.getType();
       }
+      JavaType type = dynamicSerializationType(baseType, rawValue, context);
       serializer = context.findPrimaryPropertySerializer(type, property);
     }
     if (property.getTypeSerializer() == null) {
@@ -167,6 +167,22 @@ final class PropertyScopedValueConverter {
     } else {
       serializer.serializeWithType(rawValue, buffer, context, property.getTypeSerializer());
     }
+  }
+
+  private static JavaType dynamicSerializationType(
+      JavaType baseType, Object value, SerializationContextExt context) {
+    if (!baseType.isFinal() && (baseType.isContainerType() || baseType.hasGenericTypes())) {
+      return context.constructSpecializedType(baseType, value.getClass());
+    }
+    return context.constructType(value.getClass());
+  }
+
+  @SuppressWarnings("resource")
+  private TokenBuffer conversionBuffer(SerializationContextExt context) {
+    TokenBuffer buffer = context.bufferForValueConversion();
+    return mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+        ? buffer.forceUseOfBigDecimal(true)
+        : buffer;
   }
 
   /**
@@ -201,24 +217,5 @@ final class PropertyScopedValueConverter {
       }
     }
     return null;
-  }
-
-  /**
-   * TokenBuffer-backed parser positioned on the first value token (Jackson {@code convertValue}). A
-   * {@code null} {@code rawValue} serializes to a {@link tools.jackson.core.JsonToken#VALUE_NULL}
-   * token so the property deserializer's null handling applies.
-   */
-  private JsonParser conversionParser(
-      DeserializationContextExt context, @Nullable Object rawValue) {
-    SerializationContextExt serializationContext = serializationMapper._serializationContext();
-    TokenBuffer buffer = serializationContext.bufferForValueConversion();
-    if (mapper.isEnabled(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)) {
-      buffer = buffer.forceUseOfBigDecimal(true);
-    }
-    serializationContext.serializeValue(buffer, rawValue);
-    JsonParser parser = buffer.asParser(context);
-    context.assignParser(parser);
-    parser.nextToken();
-    return parser;
   }
 }

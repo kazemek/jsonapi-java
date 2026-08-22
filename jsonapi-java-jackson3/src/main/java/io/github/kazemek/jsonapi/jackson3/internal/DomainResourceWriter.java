@@ -375,6 +375,7 @@ public final class DomainResourceWriter {
           propertyScoped.serialize(
               mapping.domainType(),
               property.definition().getFullName().getSimpleName(),
+              resource,
               rawValue,
               value);
     } catch (RuntimeException e) {
@@ -560,6 +561,7 @@ public final class DomainResourceWriter {
       return propertyScoped.serialize(
           mapping.domainType(),
           property.definition().getFullName().getSimpleName(),
+          resource,
           rawValue,
           unwrapOptional(rawValue));
     } catch (RuntimeException e) {

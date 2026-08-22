@@ -11,13 +11,15 @@ import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.jackson.PatchPresence
+import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import spock.lang.Specification
 import tools.jackson.core.JsonGenerator
 import tools.jackson.core.JsonParser
+import tools.jackson.databind.BeanDescription
 import tools.jackson.databind.DeserializationContext
 import tools.jackson.databind.SerializationContext
+import tools.jackson.databind.SerializationConfig
 import tools.jackson.databind.SerializationFeature
 import tools.jackson.databind.ValueSerializer
 import tools.jackson.databind.annotation.JsonDeserialize
@@ -25,6 +27,9 @@ import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.deser.std.StdDeserializer
 import tools.jackson.databind.exc.ValueInstantiationException
 import tools.jackson.databind.json.JsonMapper
+import tools.jackson.databind.module.SimpleModule
+import tools.jackson.databind.ser.BeanPropertyWriter
+import tools.jackson.databind.ser.ValueSerializerModifier
 
 class PropertyScopedAuthoritySpec extends Specification {
 
@@ -61,6 +66,18 @@ class PropertyScopedAuthoritySpec extends Specification {
     resource.attributes().attributes() == [title: "title"]
   }
 
+  def "property-scoped writes retain runtime subtype fields for concrete base values"() {
+    given:
+    def article = new RuntimeSubtypeArticle(
+        "1", new ConcreteSubtypeValue("base", "subclass"))
+
+    when:
+    def resource = JsonApiJackson3.resourceMapper(JsonMapper.builder().build()).toResource(article)
+
+    then:
+    resource.attributes().attributes() == [details: [base: "base", extra: "subclass"]]
+  }
+
   def "ordinary null attributes use their contextual null serializer"() {
     given:
     def article = new NullSerializedArticle("1", null)
@@ -70,6 +87,20 @@ class PropertyScopedAuthoritySpec extends Specification {
 
     then:
     resource.attributes().attributes() == [title: "property:null"]
+  }
+
+  def "ordinary null attributes use a module-assigned property null serializer"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .addModule(new ModuleNullSerializerModule())
+        .build()
+    def article = new ModuleNullSerializedArticle("1", null)
+
+    when:
+    def resource = JsonApiJackson3.resourceMapper(mapper).toResource(article)
+
+    then:
+    resource.attributes().attributes() == [title: "module:null"]
   }
 
   def "custom identifier target is deserialized in property context without root coercion"() {
@@ -91,6 +122,20 @@ class PropertyScopedAuthoritySpec extends Specification {
 
     when:
     binder.fromResource(resourceWithId("articles", "1"), FailingIdArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
+    ex.propertyPath() == "/id"
+  }
+
+  def "nested flat identifier construction failures retain the identifier diagnostic"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(
+        JsonMapper.builder().build(), nestedIdentifierConverter())
+
+    when:
+    binder.fromResource(resourceWithId("nested-articles", "1"), NestedFailingIdArticle)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -187,6 +232,27 @@ class PropertyScopedAuthoritySpec extends Specification {
     command.changes()[0].value() == "property:title"
   }
 
+  def "root wrapping does not leak into property-scoped writes"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .enable(SerializationFeature.WRAP_ROOT_VALUE)
+        .build()
+    def article = new DirectPropertyArticle(
+        "1",
+        "title",
+        new StructuredValue("detail"),
+        new MetaValue("resource"),
+        ResourceIdentifier.of("people", "p1"),
+        new MetaValue("relationship"))
+
+    when:
+    def resource = JsonApiJackson3.resourceMapper(mapper).toResource(article)
+
+    then:
+    resource.attributes().attributes() == [title: "property:title", details: [encoded: "detail"]]
+    resource.meta().members() == [encoded: "resource"]
+  }
+
   def "low-level PATCH honors an identifier deserializer supplied by a mix-in"() {
     given:
     def mapper = JsonMapper.builder()
@@ -264,6 +330,22 @@ class PropertyScopedAuthoritySpec extends Specification {
     ex.propertyPath() == "/id"
   }
 
+  def "nested typed PATCH identifier construction failures retain the identifier diagnostic"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(
+        JsonMapper.builder().build(),
+        ValidationContext.defaults(),
+        nestedIdentifierConverter())
+
+    when:
+    reader.readValue('{"data":{"type":"nested-articles","id":"1"}}', NestedFailingIdPatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
+    ex.propertyPath() == "/id"
+  }
+
   def "typed PATCH normalizes identifier converter mapping exceptions"() {
     given:
     def reader = JsonApiJackson3.patchDtoReader(
@@ -316,6 +398,20 @@ class PropertyScopedAuthoritySpec extends Specification {
         }
   }
 
+  private static IdentifierConverter nestedIdentifierConverter() {
+    new IdentifierConverter() {
+          @Override
+          String convert(Object value) {
+            value.toString()
+          }
+
+          @Override
+          Object parse(String wire) {
+            [part: "parsed-" + wire]
+          }
+        }
+  }
+
   private static IdentifierConverter mappingThrowingConverter() {
     new IdentifierConverter() {
           @Override
@@ -356,6 +452,13 @@ class PropertyScopedAuthoritySpec extends Specification {
     }
   }
 
+  static class ModuleNullPropertySerializer extends ValueSerializer<Object> {
+    @Override
+    void serialize(Object value, JsonGenerator generator, SerializationContext context) {
+      generator.writeString("module:null")
+    }
+  }
+
   static class MixinPropertySerializer extends ValueSerializer<Object> {
     @Override
     void serialize(Object value, JsonGenerator generator, SerializationContext context) {
@@ -387,6 +490,27 @@ class PropertyScopedAuthoritySpec extends Specification {
     @Override
     void serialize(MetaValue value, JsonGenerator generator, SerializationContext context) {
       generator.writeString(value.value)
+    }
+  }
+
+  static class ModuleNullSerializerModule extends SimpleModule {
+    ModuleNullSerializerModule() {
+      super("property-null-test")
+      setSerializerModifier(new ModuleNullSerializerModifier())
+    }
+  }
+
+  static class ModuleNullSerializerModifier extends ValueSerializerModifier {
+    @Override
+    List<BeanPropertyWriter> changeProperties(
+        SerializationConfig config,
+        BeanDescription.Supplier beanDesc,
+        List<BeanPropertyWriter> properties) {
+      def title = properties.find { it.name == "title" }
+      if (title != null) {
+        title.assignNullSerializer(new ModuleNullPropertySerializer())
+      }
+      properties
     }
   }
 
@@ -460,12 +584,51 @@ class PropertyScopedAuthoritySpec extends Specification {
     }
   }
 
+  @JsonApiResource(type = "runtime-articles")
+  static class RuntimeSubtypeArticle {
+    @JsonApiId String id
+    @JsonApiAttribute ConcreteBaseValue details
+
+    RuntimeSubtypeArticle(String id, ConcreteBaseValue details) {
+      this.id = id
+      this.details = details
+    }
+  }
+
+  static class ConcreteBaseValue {
+    String base
+
+    ConcreteBaseValue(String base) {
+      this.base = base
+    }
+  }
+
+  static class ConcreteSubtypeValue extends ConcreteBaseValue {
+    String extra
+
+    ConcreteSubtypeValue(String base, String extra) {
+      super(base)
+      this.extra = extra
+    }
+  }
+
   @JsonApiResource(type = "articles")
   static class NullSerializedArticle {
     @JsonApiId String id
     @JsonApiAttribute @JsonSerialize(nullsUsing = NullPropertySerializer) String title
 
     NullSerializedArticle(String id, String title) {
+      this.id = id
+      this.title = title
+    }
+  }
+
+  @JsonApiResource(type = "articles")
+  static class ModuleNullSerializedArticle {
+    @JsonApiId String id
+    @JsonApiAttribute String title
+
+    ModuleNullSerializedArticle(String id, String title) {
       this.id = id
       this.title = title
     }
@@ -554,6 +717,15 @@ class PropertyScopedAuthoritySpec extends Specification {
     String title
   }
 
+  static class NestedFailingIdentifier {
+    @JsonDeserialize(using = FailingIdentifierDeserializer) String part
+  }
+
+  @JsonApiResource(type = "nested-articles")
+  static class NestedFailingIdArticle {
+    @JsonApiId NestedFailingIdentifier id
+  }
+
   @JsonApiResource(type = "articles")
   static class ScalarSerializedMetaArticle {
     @JsonApiId String id
@@ -580,6 +752,12 @@ class PropertyScopedAuthoritySpec extends Specification {
   @JsonApiResource(type = "articles")
   static class FailingIdPatch {
     @JsonApiId @JsonDeserialize(using = FailingIdentifierDeserializer) String id
+    @JsonApiAttribute PatchPresence<String> title
+  }
+
+  @JsonApiResource(type = "nested-articles")
+  static class NestedFailingIdPatch {
+    @JsonApiId NestedFailingIdentifier id
     @JsonApiAttribute PatchPresence<String> title
   }
 

@@ -250,10 +250,7 @@ public final class DomainPatchDtoBinder {
     if (identifierProperty == null) {
       return false;
     }
-    String propertyPath = failure.propertyPath();
-    return ("/" + identifierProperty.logicalName()).equals(propertyPath)
-        || ("/" + identifierProperty.definition().getFullName().getSimpleName())
-            .equals(propertyPath);
+    return BeanConstruction.isConstructionFailureForProperty(failure, identifierProperty);
   }
 
   private void bindAttributes(

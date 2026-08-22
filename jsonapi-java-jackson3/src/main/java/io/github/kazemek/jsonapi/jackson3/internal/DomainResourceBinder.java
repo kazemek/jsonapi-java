@@ -287,9 +287,6 @@ public final class DomainResourceBinder {
     if (identifierProperty == null || identifierPath == null) {
       return false;
     }
-    String propertyPath = failure.propertyPath();
-    return ("/" + identifierProperty.logicalName()).equals(propertyPath)
-        || ("/" + identifierProperty.definition().getFullName().getSimpleName())
-            .equals(propertyPath);
+    return BeanConstruction.isConstructionFailureForProperty(failure, identifierProperty);
   }
 }
