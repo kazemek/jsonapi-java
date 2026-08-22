@@ -17,7 +17,7 @@ import io.github.kazemek.jsonapi.jackson.PatchPresence
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
-// Adapter-specific regression coverage for the KAZ-81 configured-Jackson resource metadata
+// Adapter-specific regression coverage for the configured-Jackson resource metadata
 // authority: class-level @JsonApiResource metadata is resolved through the configured mapper's
 // introspection (so class-level mix-ins provide or override it) everywhere — direct domain write,
 // flat read/binding, low-level PATCH, typed PATCH DTO, registry key derivation, and declared

@@ -37,7 +37,7 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.PatchChange} dependency:
  * callers supply the declared {@link JavaType}, wire value, starting pointer, and (low-level)
  * accessor, so a later structured JSON:API {@code meta} mapping can reuse the same machinery at its
- * own location with a stricter outer-state policy (ADR-014, KAZ-77 reuse boundary).
+ * own location with a stricter outer-state policy (ADR-014).
  *
  * <p>Two modes (ADR-014): the typed mode recurses only through deliberately presence-aware nested
  * PATCH shapes (every visible member exactly {@code PatchPresence<T>}, no wrapper-level

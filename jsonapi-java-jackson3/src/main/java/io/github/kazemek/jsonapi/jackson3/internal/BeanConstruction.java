@@ -134,7 +134,7 @@ final class BeanConstruction {
    * Returns whether a mapped bean-construction failure belongs to the supplied property. The
    * decision reads the raw Jackson failure path from the cause chain; the translated location on
    * the exception itself is only used as an exact-match signal so failures whose path was fully
-   * translated to the property's own wire location still classify correctly (KAZ-82 semantics).
+   * translated to the property's own wire location still classify correctly.
    */
   static boolean isConstructionFailureForProperty(
       JsonApiMappingException failure,

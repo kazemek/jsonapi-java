@@ -477,7 +477,7 @@ class DomainDocumentReaderSpec extends Specification {
     }
   }
 
-  // ============================== MAPPING-LOCATION COMPOSITION (KAZ-83) ==============================
+  // ============================== MAPPING-LOCATION COMPOSITION ==============================
   //
   // Binder failures compose structurally with the document prefix: a resource-relative binder
   // location joins under /data, /data/<index>, or /included/<index>; a binder failure without a

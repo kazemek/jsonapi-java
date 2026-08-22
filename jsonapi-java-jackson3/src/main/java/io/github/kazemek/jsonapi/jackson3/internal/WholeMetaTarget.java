@@ -26,7 +26,7 @@ import tools.jackson.databind.type.LogicalType;
  * <p>Whether an effective target is a legal whole-meta object target is decided by Jackson, not a
  * manually maintained scalar taxonomy: after rejecting primitives, containers, and the already
  * unwrapped {@link Optional}/{@code PatchPresence} raws, a target is valid iff its root
- * deserializer reports the POJO {@link LogicalType} — the same structured-value signal KAZ-76's
+ * deserializer reports the POJO {@link LogicalType} — the same structured-value signal ADR-014's
  * bean boundary is built on, read through root-level decoration. This accepts records, POJOs,
  * constructor-bound beans, and root-polymorphic POJOs whose deserializer is wrapped by a {@code
  * TypeDeserializer} (concrete or abstract {@code @JsonTypeInfo} types), while rejecting JDK scalars

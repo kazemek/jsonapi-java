@@ -200,7 +200,8 @@ authorization and command application.
    constructor-bound types — not containers/scalars/custom-deserialized types) and whose wire value
    is a JSON object binds to an `AttributeChange` whose `value` is a `StructuredPatch` of
    supplied-only nested changes instead of a fully materialized replacement bean (a deliberate,
-   documented behavior change with migration guidance in ADR-014; there is no opt-out in KAZ-76).
+    documented behavior change with migration guidance in ADR-014; there is no opt-out for this
+    behavior).
    `Optional<X>` is a transparent qualification wrapper for the traversal decision: members that
    recurse produce an un-wrapped `StructuredPatch`, while atomic members keep the declared
    `Optional` wrapper in their `Atomic` payload (e.g. nested `null` binds to
@@ -237,8 +238,9 @@ Diagnostic locations for nested failures are engine-accumulated wire-name locati
     (including property serializers and mix-ins) and requires a `Map` result before constructing
     core `Meta`; invalid member names / non-object runtime values fail with `INVALID_META_TARGET`.
     **Read** binds members under the mapped property's logical name.
-  - **PATCH:** the typed path binds `PatchPresence` meta through the KAZ-76 engine (recursive
-    presence-aware shapes, `{}` = present-with-all-omitted, atomic map targets) and rejects supplied
+  - **PATCH:** the typed path binds `PatchPresence` meta through the recursive structured-value
+    PATCH engine defined by ADR-014 (presence-aware nested shapes, `{}` = present-with-all-omitted,
+    atomic map targets) and rejects supplied
     meta without a matching member; the low-level path binds `ResourceMetaChange` /
     `RelationshipMetaChange` (structured beans recurse to `StructuredPatch`, maps stay atomic) and
     skips unmapped meta. Relationship meta participates only when the relationship carries `data`.
@@ -306,7 +308,7 @@ artifact; both majors share the neutral contracts of
   write, flat binding, both PATCH paths, registry key derivation, and declared to-many element
   types. Mapping diagnostics use `MappingDiagnostic` + domain class rather than core validation
   codes.
-- **Mapping-location contract (KAZ-83):** every `JsonApiMappingException` carries an optional
+- **Mapping-location contract:** every `JsonApiMappingException` carries an optional
   location that is either absent (`null`) or a valid RFC 6901 JSON Pointer built through
   `MappingLocation`, whose segments are individually escaped (`~` to `~0`, `/` to `~1`). Producers
   mapping one resource object emit resource-relative pointers over JSON:API member names:
