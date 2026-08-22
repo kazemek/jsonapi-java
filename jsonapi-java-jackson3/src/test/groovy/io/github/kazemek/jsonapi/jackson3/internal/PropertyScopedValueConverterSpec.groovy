@@ -42,7 +42,7 @@ class PropertyScopedValueConverterSpec extends Specification {
         .value() == "fallback"
   }
 
-  def "property writes preserve a replaced property writer's behavior"() {
+  def "property writes reject a replaced property writer without rereading"() {
     given:
     def mapper = JsonMapper.builder()
         .addModule(new ReplacementPropertyModule())
@@ -50,12 +50,11 @@ class PropertyScopedValueConverterSpec extends Specification {
     def converter = new PropertyScopedValueConverter(mapper)
 
     when:
-    def result = converter.serialize(
+    converter.serialize(
         mapper.constructType(WriteBean), "value", new WriteBean("raw"), "raw", "fallback")
 
     then:
-    result.emitted()
-    result.value() == "replacement"
+    thrown(UnsupportedOperationException)
   }
 
   def "raw property writer delegates ordinary writer lifecycle methods"() {

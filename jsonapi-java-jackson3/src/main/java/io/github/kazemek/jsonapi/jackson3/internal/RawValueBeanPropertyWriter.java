@@ -18,7 +18,9 @@ import tools.jackson.databind.util.NameTransformer;
  * JSON:API mapping has already read the accessor to establish the value to map, so reading it again
  * could make inclusion and the mapped value disagree. This adapter keeps the normal writer's
  * resolved suppression, serializer, null serializer, and type serializer state while replacing the
- * accessor read with the supplied value.
+ * accessor read with the supplied value. Arbitrary custom writer replacements are rejected because
+ * they have no raw-value contract; rejecting them keeps a custom override from silently rereading
+ * the bean accessor.
  */
 final class RawValueBeanPropertyWriter extends BeanPropertyWriter {
 
@@ -92,11 +94,10 @@ final class RawValueBeanPropertyWriter extends BeanPropertyWriter {
   }
 
   void serializeAsRawProperty(
-      Object bean, @Nullable Object value, JsonGenerator generator, SerializationContext context)
-      throws Exception {
+      Object bean, @Nullable Object value, JsonGenerator generator, SerializationContext context) {
     if (usesCustomSerializationBehavior()) {
-      delegate.serializeAsProperty(bean, generator, context);
-      return;
+      throw new UnsupportedOperationException(
+          "Property-scoped serialization does not support custom BeanPropertyWriter replacements");
     }
     if (value == null) {
       if (delegate.isUnwrapping()) {

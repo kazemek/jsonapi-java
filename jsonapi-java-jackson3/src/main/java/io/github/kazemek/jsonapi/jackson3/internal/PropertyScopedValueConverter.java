@@ -156,8 +156,7 @@ final class PropertyScopedValueConverter {
       Object sourceBean,
       @Nullable Object rawValue,
       TokenBuffer buffer,
-      SerializationContextExt context)
-      throws Exception {
+      SerializationContextExt context) {
     RawValueBeanPropertyWriter rawValueProperty =
         property instanceof RawValueBeanPropertyWriter rawProperty
             ? rawProperty
