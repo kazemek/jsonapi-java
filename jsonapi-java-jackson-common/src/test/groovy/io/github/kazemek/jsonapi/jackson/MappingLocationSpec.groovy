@@ -73,4 +73,18 @@ class MappingLocationSpec extends Specification {
     then:
     thrown(IllegalArgumentException)
   }
+
+  def "null segments fail fast as NullPointerException"() {
+    when:
+    MappingLocation.of("attributes", (String) null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    MappingLocation.of("attributes").append((String) null)
+
+    then:
+    thrown(NullPointerException)
+  }
 }

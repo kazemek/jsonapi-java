@@ -4,8 +4,12 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import java.util.Arrays
+import java.util.Iterator
+import java.util.List
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
@@ -352,6 +356,87 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_ACCESSOR
     ex.propertyPath() == "/attributes/secret"
+  }
+
+  // ==================== TO-MANY RELATIONSHIP LOCATION PRESERVATION ====================
+  //
+  // To-many serialization failures belong to the relationship being serialized and keep its
+  // resource-relative /relationships/<wire-name>/data location; the renamed members prove the
+  // location carries the JSON:API wire name, never the Jackson logical name.
+
+  @JsonApiResource(type = "raw-array-rel")
+  static class RenamedArrayRelEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "ext-values") long[] values
+  }
+
+  def "unsupported runtime collection shape keeps the relationship location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new RenamedArrayRelEntity(id: "1", values: [1L, 2L] as long[])
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE
+    ex.propertyPath() == "/relationships/ext-values/data"
+  }
+
+  @JsonApiResource(type = "mixed-rel")
+  static class RenamedMixedRelEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "ext-items") List<Object> items
+  }
+
+  def "mixed to-many elements keep the relationship location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def ri = new ResourceIdentifier("comments", "1", null, null, Map.of())
+    def entity = new RenamedMixedRelEntity(id: "1", items: [ri, new Object()])
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE
+    ex.propertyPath() == "/relationships/ext-items/data"
+  }
+
+  /** Raw erased iterable: to-many by declaration, but no resolvable collection content type. */
+  static class RawBag implements Iterable<Object> {
+    private final List<Object> items
+
+    RawBag(Object... items) {
+      this.items = Arrays.asList(items)
+    }
+
+    @Override
+    Iterator<Object> iterator() {
+      return items.iterator()
+    }
+  }
+
+  @JsonApiResource(type = "bag-rel")
+  static class RenamedBagRelEntity {
+    @JsonApiId String id
+    @JsonApiRelationship(name = "ext-bag") RawBag things
+  }
+
+  def "unresolvable declared collection content keeps the relationship location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new RenamedBagRelEntity(id: "1", things: new RawBag(new Object()))
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE
+    ex.propertyPath() == "/relationships/ext-bag/data"
   }
 
   // ============================== NO-LOCATION DIAGNOSTICS ==============================

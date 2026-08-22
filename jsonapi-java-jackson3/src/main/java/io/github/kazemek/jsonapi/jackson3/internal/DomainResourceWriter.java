@@ -255,7 +255,13 @@ public final class DomainResourceWriter {
     return value;
   }
 
-  static List<Object> convertToCollection(Object value) {
+  /**
+   * Converts an already-read to-many value into a list of elements. Serialization callers supply
+   * the failing relationship's resource-relative location; inclusion traversal, which has no
+   * JSON:API member coordinate for this value, uses {@link #convertToCollection(Object)}.
+   */
+  static List<Object> convertToCollection(
+      Object value, @Nullable MappingLocation relationshipLocation) {
     return switch (value) {
       case List<?> list -> {
         List<Object> result = new ArrayList<>(list.size());
@@ -274,13 +280,30 @@ public final class DomainResourceWriter {
         }
         yield result;
       }
-      default ->
-          throw JsonApiMappingException.withoutLocation(
-              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
-              value.getClass(),
-              "To-many relationship value is not a supported collection type: "
-                  + value.getClass().getName());
+      default -> throw relationshipShapeFailure(value, relationshipLocation);
     };
+  }
+
+  /**
+   * Locationless variant for callers without a JSON:API member coordinate (inclusion traversal).
+   */
+  static List<Object> convertToCollection(Object value) {
+    return convertToCollection(value, null);
+  }
+
+  private static JsonApiMappingException relationshipShapeFailure(
+      Object value, @Nullable MappingLocation relationshipLocation) {
+    String message =
+        "To-many relationship value is not a supported collection type: "
+            + value.getClass().getName();
+    return relationshipLocation == null
+        ? JsonApiMappingException.withoutLocation(
+            MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE, value.getClass(), message)
+        : new JsonApiMappingException(
+            MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+            value.getClass(),
+            relationshipLocation,
+            message);
   }
 
   private Attributes buildAttributes(
@@ -330,9 +353,11 @@ public final class DomainResourceWriter {
       Map<String, MappingProperty> relationshipMetaByTarget) {
     Object value = readValue(resource, property, PropertyRole.RELATIONSHIP);
     JavaType propertyType = property.accessor().getType();
+    MappingLocation relationshipLocation =
+        RelationshipLinkageSupport.relationshipLocation(property);
     RelationshipData linkage =
         isToManyType(propertyType)
-            ? extractToManyLinkage(value, propertyType)
+            ? extractToManyLinkage(value, propertyType, relationshipLocation)
             : extractToOneLinkage(value);
     Meta meta = null;
     MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
@@ -398,7 +423,7 @@ public final class DomainResourceWriter {
           null);
     }
     try {
-      return Meta.of(castMembers(map));
+      return Meta.of(castMembers(map, resource, metaLocation));
     } catch (JsonApiValidationException e) {
       throw metaValueFailure(resource, metaLocation, "Invalid meta members", e);
     }
@@ -412,16 +437,21 @@ public final class DomainResourceWriter {
    * Rebuilds the converted meta value into a string-keyed member map. Today the conversion target
    * {@code Object.class} always yields string keys (Jackson's untyped map representation), so the
    * non-string branch is defensive: it keeps the stable {@link
-   * MappingDiagnostic#INVALID_META_TARGET} diagnostic instead of leaking a class cast or a
-   * core-validation failure if a future Jackson version ever emits non-string keys.
+   * MappingDiagnostic#INVALID_META_TARGET} diagnostic at the known {@code metaLocation} instead of
+   * leaking a class cast or a core-validation failure if a future Jackson version ever emits
+   * non-string keys.
    */
-  private static Map<String, Object> castMembers(Map<?, ?> map) {
+  private static Map<String, Object> castMembers(
+      Map<?, ?> map, Object resource, MappingLocation metaLocation) {
     Map<String, Object> members = new LinkedHashMap<>();
     for (Map.Entry<?, ?> entry : map.entrySet()) {
       Object key = entry.getKey();
       if (!(key instanceof String stringKey)) {
-        throw JsonApiMappingException.withoutLocation(
-            MappingDiagnostic.INVALID_META_TARGET, null, "Meta object key is not a string: " + key);
+        throw new JsonApiMappingException(
+            MappingDiagnostic.INVALID_META_TARGET,
+            resource.getClass(),
+            metaLocation,
+            "Meta object key is not a string: " + key);
       }
       members.put(stringKey, entry.getValue());
     }
@@ -453,11 +483,12 @@ public final class DomainResourceWriter {
     };
   }
 
-  private RelationshipData extractToManyLinkage(@Nullable Object value, JavaType propType) {
+  private RelationshipData extractToManyLinkage(
+      @Nullable Object value, JavaType propType, MappingLocation relationshipLocation) {
     if (value == null) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
     }
-    List<Object> items = convertToCollection(value);
+    List<Object> items = convertToCollection(value, relationshipLocation);
     if (items.isEmpty()) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
     }
@@ -465,9 +496,9 @@ public final class DomainResourceWriter {
       case ResourceIdentifiers(List<ResourceIdentifier> identifiers) ->
           new RelationshipData.IdentifierCollectionLinkage(identifiers);
       case DomainObjects(List<?> domainItems) ->
-          toManyLinkageFromDomainObjects(domainItems, propType);
+          toManyLinkageFromDomainObjects(domainItems, propType, relationshipLocation);
       case Mixed(Object firstNonResourceIdentifier) ->
-          throw mixedToManyElements(firstNonResourceIdentifier);
+          throw mixedToManyElements(firstNonResourceIdentifier, relationshipLocation);
     };
   }
 
@@ -499,15 +530,17 @@ public final class DomainResourceWriter {
     return new DomainObjects(domainItems);
   }
 
-  private RelationshipData toManyLinkageFromDomainObjects(List<?> items, JavaType propType) {
+  private RelationshipData toManyLinkageFromDomainObjects(
+      List<?> items, JavaType propType, MappingLocation relationshipLocation) {
     JavaType contentType = resolveContentType(propType);
     if (contentType == null) {
-      throw JsonApiMappingException.withoutLocation(
+      throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
           null,
+          relationshipLocation,
           "Cannot resolve collection content type");
     }
-    checkDeclaredTargetHasResourceMetadata(contentType.getRawClass());
+    checkDeclaredTargetHasResourceMetadata(contentType.getRawClass(), relationshipLocation);
     List<ResourceIdentifier> identifiers = new ArrayList<>(items.size());
     for (Object item : items) {
       identifiers.add(extractIdentifier(item));
@@ -520,10 +553,12 @@ public final class DomainResourceWriter {
         MappingDiagnostic.MISSING_IDENTIFIER, type, MappingLocation.of("id"), message);
   }
 
-  private static JsonApiMappingException mixedToManyElements(Object firstNonResourceIdentifier) {
-    return JsonApiMappingException.withoutLocation(
+  private static JsonApiMappingException mixedToManyElements(
+      Object firstNonResourceIdentifier, MappingLocation relationshipLocation) {
+    return new JsonApiMappingException(
         MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
         firstNonResourceIdentifier.getClass(),
+        relationshipLocation,
         "Mixed element types in to-many relationship collection: expected ResourceIdentifier, got "
             + firstNonResourceIdentifier.getClass().getName());
   }
@@ -599,11 +634,13 @@ public final class DomainResourceWriter {
    * the declared element type must carry resource metadata as the configured mapper sees it
    * (including class-level mix-ins). Presence-only, so absence keeps this path's stable diagnostic.
    */
-  private void checkDeclaredTargetHasResourceMetadata(Class<?> rawType) {
+  private void checkDeclaredTargetHasResourceMetadata(
+      Class<?> rawType, MappingLocation relationshipLocation) {
     if (cache.findResourceTypeName(rawType) == null) {
-      throw JsonApiMappingException.withoutLocation(
+      throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
           rawType,
+          relationshipLocation,
           "Collection element type " + rawType.getName() + " lacks @JsonApiResource");
     }
   }

@@ -38,7 +38,8 @@ public final class MappingLocation {
    * composition. For example {@code of("attributes", "external/name")} yields {@code
    * /attributes/external~1name}.
    *
-   * @throws IllegalArgumentException when any segment is null or empty
+   * @throws NullPointerException when any segment is null
+   * @throws IllegalArgumentException when any segment is empty
    */
   public static MappingLocation of(String firstSegment, String... moreSegments) {
     StringJoiner joiner =
@@ -118,7 +119,8 @@ public final class MappingLocation {
    * Returns a location addressing {@code segment} inside this location, escaping the segment. The
    * structural equivalent of appending one member without ever concatenating unvalidated input.
    *
-   * @throws IllegalArgumentException when the segment is null or empty
+   * @throws NullPointerException when the segment is null
+   * @throws IllegalArgumentException when the segment is empty
    */
   public MappingLocation append(String segment) {
     return new MappingLocation(pointer + "/" + escape(requireSegment(segment, "segment")));
