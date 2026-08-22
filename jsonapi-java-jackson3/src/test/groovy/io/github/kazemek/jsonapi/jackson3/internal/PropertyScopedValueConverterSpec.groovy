@@ -18,8 +18,8 @@ class PropertyScopedValueConverterSpec extends Specification {
 
     expect:
     converter.serialize(
-        mapper.constructType(WriteBean), "missing", new WriteBean("value"), "raw", "fallback") ==
-        "fallback"
+        mapper.constructType(WriteBean), "missing", new WriteBean("value"), "raw", "fallback")
+        .value() == "fallback"
   }
 
   def "property writes return null when the assigned null serializer emits no value"() {
@@ -27,9 +27,13 @@ class PropertyScopedValueConverterSpec extends Specification {
     def mapper = JsonMapper.builder().build()
     def converter = new PropertyScopedValueConverter(mapper)
 
-    expect:
-    converter.serialize(
-        mapper.constructType(EmptyNullBean), "value", new EmptyNullBean(null), null, null) == null
+    when:
+    def result = converter.serialize(
+        mapper.constructType(EmptyNullBean), "value", new EmptyNullBean(null), null, null)
+
+    then:
+    !result.emitted()
+    result.value() == null
   }
 
   def "property writes preserve configured BigDecimal parsing for numeric values"() {
@@ -42,7 +46,7 @@ class PropertyScopedValueConverterSpec extends Specification {
     when:
     def value = converter.serialize(
         mapper.constructType(DecimalBean), "amount", new DecimalBean(new BigDecimal("1.50")),
-        new BigDecimal("1.50"), null)
+        new BigDecimal("1.50"), null).value()
 
     then:
     value == new BigDecimal("1.50")

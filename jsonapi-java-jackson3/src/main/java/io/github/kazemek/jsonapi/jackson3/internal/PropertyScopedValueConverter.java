@@ -46,17 +46,17 @@ import tools.jackson.databind.util.TokenBuffer;
  * {@link java.util.Optional} target).
  *
  * <p>On write, the member's fully-contextualized {@link BeanPropertyWriter} is resolved from the
- * containing bean's {@link BeanSerializerBase}. Its configured serializer writes the already-read
- * non-null value into a conversion buffer without a property name, while nulls delegate to the
- * writer so its resolved null serializer is retained. The resulting tokens are read back as an
- * untyped JSON-compatible value. This is deliberately the normal property serializer path rather
- * than manual annotation extraction, so property serializers, mix-ins, contextual serializers, type
- * serializers, content serializers, and mapper modules remain configured-Jackson authority.
+ * containing bean's {@link BeanSerializerBase}. Its inclusion and null handling remain
+ * writer-owned; unsuppressed values use that writer's contextual serializer against the
+ * already-read value. The resulting tokens are read back as an untyped JSON-compatible value, with
+ * property omission kept distinct from an emitted JSON {@code null}.
  */
 final class PropertyScopedValueConverter {
 
   private final JsonMapper mapper;
   private final JsonMapper serializationMapper;
+
+  record SerializationResult(boolean emitted, @Nullable Object value) {}
 
   PropertyScopedValueConverter(JsonMapper mapper) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
@@ -102,14 +102,13 @@ final class PropertyScopedValueConverter {
   /**
    * Serializes one mapped property through its configured Jackson property writer.
    *
-   * <p>{@code rawValue} is the value already read from the mapped property. {@code fallbackValue}
-   * is used only when no property writer can be resolved; callers pass the JSON:API-unwrapped value
-   * there to preserve the adapter's existing Optional semantics. When a writer is available, its
-   * fully contextualized serializer writes non-null {@code rawValue} without reading the bean
-   * accessor a second time; null values use the writer itself so its assigned null serializer is
-   * preserved.
+   * <p>{@code fallbackValue} is used only when no property writer can be resolved; callers pass the
+   * JSON:API-unwrapped value there to preserve the adapter's existing Optional semantics. When a
+   * writer is available, its inclusion and assigned null serializer are preserved. Unsuppressed
+   * values use the writer's contextual serializer against the already-read value. The result
+   * records whether the writer emitted the property.
    */
-  @Nullable Object serialize(
+  SerializationResult serialize(
       JavaType beanType,
       String wireName,
       Object sourceBean,
@@ -117,7 +116,7 @@ final class PropertyScopedValueConverter {
       @Nullable Object fallbackValue) {
     BeanPropertyWriter property = matchingSerializerProperty(beanType, wireName);
     if (property == null) {
-      return mapper.convertValue(fallbackValue, Object.class);
+      return new SerializationResult(true, mapper.convertValue(fallbackValue, Object.class));
     }
     SerializationContextExt serializationContext = serializationMapper._serializationContext();
     try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
@@ -130,9 +129,10 @@ final class PropertyScopedValueConverter {
           token = parser.nextToken();
         }
         if (token == null) {
-          return null;
+          return new SerializationResult(false, null);
         }
-        return deserializationContext.readValue(parser, Object.class);
+        return new SerializationResult(
+            true, deserializationContext.readValue(parser, Object.class));
       }
     } catch (RuntimeException e) {
       throw e;
@@ -150,6 +150,13 @@ final class PropertyScopedValueConverter {
       SerializationContextExt context)
       throws Exception {
     if (rawValue == null) {
+      if (property.willSuppressNulls()) {
+        return;
+      }
+      property.serializeAsProperty(sourceBean, buffer, context);
+      return;
+    }
+    if (property.willSuppressNulls()) {
       property.serializeAsProperty(sourceBean, buffer, context);
       return;
     }

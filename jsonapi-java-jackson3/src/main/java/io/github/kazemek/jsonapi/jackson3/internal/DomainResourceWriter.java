@@ -296,8 +296,11 @@ public final class DomainResourceWriter {
       if (allowedFields == null || allowedFields.contains(property.jsonapiName())) {
         Object rawValue = readValue(resource, property, PropertyRole.ATTRIBUTE);
         if (!(rawValue instanceof Optional<?> optional) || optional.isPresent()) {
-          attributes.put(
-              property.jsonapiName(), convertAttributeValue(resource, mapping, property, rawValue));
+          PropertyScopedValueConverter.SerializationResult converted =
+              convertAttributeValue(resource, mapping, property, rawValue);
+          if (converted.emitted()) {
+            attributes.put(property.jsonapiName(), converted.value());
+          }
         }
       }
     }
@@ -371,13 +374,17 @@ public final class DomainResourceWriter {
     }
     Object converted;
     try {
-      converted =
+      PropertyScopedValueConverter.SerializationResult serialized =
           propertyScoped.serialize(
               mapping.domainType(),
               property.definition().getFullName().getSimpleName(),
               resource,
               rawValue,
               value);
+      if (!serialized.emitted()) {
+        return null;
+      }
+      converted = serialized.value();
     } catch (RuntimeException e) {
       throw metaValueFailure(resource, path, "Failed to convert meta value", e);
     }
@@ -552,7 +559,7 @@ public final class DomainResourceWriter {
     };
   }
 
-  private @Nullable Object convertAttributeValue(
+  private PropertyScopedValueConverter.SerializationResult convertAttributeValue(
       Object resource,
       ResourceMapping mapping,
       MappingProperty property,

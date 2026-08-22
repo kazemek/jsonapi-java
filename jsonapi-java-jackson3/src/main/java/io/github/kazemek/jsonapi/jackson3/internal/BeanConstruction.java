@@ -131,8 +131,8 @@ final class BeanConstruction {
   static boolean isConstructionFailureForProperty(
       JsonApiMappingException failure, MappingProperty property) {
     Throwable constructionFailure = failure.getCause() == null ? failure : failure.getCause();
-    if (pathStartsWithProperty(constructionFailure, property)) {
-      return true;
+    if (!pathNames(constructionFailure).isEmpty()) {
+      return pathStartsWithProperty(constructionFailure, property);
     }
     String propertyPath = failure.propertyPath();
     return ("/" + property.logicalName()).equals(propertyPath)

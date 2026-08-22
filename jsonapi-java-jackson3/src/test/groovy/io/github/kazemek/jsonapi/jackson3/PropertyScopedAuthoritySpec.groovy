@@ -6,6 +6,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiMeta
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta
+import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
@@ -14,6 +15,7 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import spock.lang.Specification
+import com.fasterxml.jackson.annotation.JsonInclude
 import tools.jackson.core.JsonGenerator
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.BeanDescription
@@ -25,6 +27,7 @@ import tools.jackson.databind.ValueSerializer
 import tools.jackson.databind.annotation.JsonDeserialize
 import tools.jackson.databind.annotation.JsonSerialize
 import tools.jackson.databind.deser.std.StdDeserializer
+import tools.jackson.databind.exc.MismatchedInputException
 import tools.jackson.databind.exc.ValueInstantiationException
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.module.SimpleModule
@@ -103,6 +106,17 @@ class PropertyScopedAuthoritySpec extends Specification {
     resource.attributes().attributes() == [title: "module:null"]
   }
 
+  def "property inclusion preserves omission separately from explicit null"() {
+    given:
+    def article = new IncludedPropertyArticle("1", "", null, null)
+
+    when:
+    def resource = JsonApiJackson3.resourceMapper(JsonMapper.builder().build()).toResource(article)
+
+    then:
+    resource.attributes().attributes() == [explicitNull: null]
+  }
+
   def "custom identifier target is deserialized in property context without root coercion"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(
@@ -140,6 +154,22 @@ class PropertyScopedAuthoritySpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
+    ex.propertyPath() == "/id"
+  }
+
+  def "nested attribute failures with an inner id are not identifier failures"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(
+        JsonMapper.builder().build(), identifierConverter())
+
+    when:
+    binder.fromResource(
+        resourceWithAttributes("nested-attribute-articles", "1", [details: [id: "bad"]]),
+        NestedAttributeIdArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
     ex.propertyPath() == "/id"
   }
 
@@ -438,6 +468,10 @@ class PropertyScopedAuthoritySpec extends Specification {
     new ResourceObject(type, null, lid, null, null, null, null, [:])
   }
 
+  private static ResourceObject resourceWithAttributes(String type, String id, Map attributes) {
+    new ResourceObject(type, id, null, Attributes.ofAttributes(attributes), null, null, null, [:])
+  }
+
   static class PropertySerializer extends ValueSerializer<Object> {
     @Override
     void serialize(Object value, JsonGenerator generator, SerializationContext context) {
@@ -548,6 +582,17 @@ class PropertyScopedAuthoritySpec extends Specification {
     }
   }
 
+  static class FailingAttributeDeserializer extends StdDeserializer<String> {
+    FailingAttributeDeserializer() {
+      super(String)
+    }
+
+    @Override
+    String deserialize(JsonParser parser, DeserializationContext context) {
+      throw MismatchedInputException.from(parser, String, "attribute conversion failed")
+    }
+  }
+
   @JsonApiResource(type = "articles")
   static class DirectPropertyArticle {
     @JsonApiId String id
@@ -631,6 +676,21 @@ class PropertyScopedAuthoritySpec extends Specification {
     ModuleNullSerializedArticle(String id, String title) {
       this.id = id
       this.title = title
+    }
+  }
+
+  @JsonApiResource(type = "included-articles")
+  static class IncludedPropertyArticle {
+    @JsonApiId String id
+    @JsonApiAttribute @JsonInclude(JsonInclude.Include.NON_EMPTY) String empty
+    @JsonApiAttribute @JsonInclude(JsonInclude.Include.NON_NULL) String missing
+    @JsonApiAttribute String explicitNull
+
+    IncludedPropertyArticle(String id, String empty, String missing, String explicitNull) {
+      this.id = id
+      this.empty = empty
+      this.missing = missing
+      this.explicitNull = explicitNull
     }
   }
 
@@ -721,9 +781,19 @@ class PropertyScopedAuthoritySpec extends Specification {
     @JsonDeserialize(using = FailingIdentifierDeserializer) String part
   }
 
+  static class NestedAttributeValue {
+    @JsonDeserialize(using = FailingAttributeDeserializer) String id
+  }
+
   @JsonApiResource(type = "nested-articles")
   static class NestedFailingIdArticle {
     @JsonApiId NestedFailingIdentifier id
+  }
+
+  @JsonApiResource(type = "nested-attribute-articles")
+  static class NestedAttributeIdArticle {
+    @JsonApiId String id
+    @JsonApiAttribute NestedAttributeValue details
   }
 
   @JsonApiResource(type = "articles")
