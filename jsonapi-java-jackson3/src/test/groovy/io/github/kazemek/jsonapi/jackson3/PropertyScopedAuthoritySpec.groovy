@@ -117,6 +117,18 @@ class PropertyScopedAuthoritySpec extends Specification {
     resource.attributes().attributes() == [explicitNull: null]
   }
 
+  def "property inclusion evaluates the already-read value once"() {
+    given:
+    def article = new SingleReadIncludedArticle("1")
+
+    when:
+    def resource = JsonApiJackson3.resourceMapper(JsonMapper.builder().build()).toResource(article)
+
+    then:
+    article.titleReads() == 1
+    resource.attributes() == null
+  }
+
   def "custom identifier target is deserialized in property context without root coercion"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(
@@ -691,6 +703,26 @@ class PropertyScopedAuthoritySpec extends Specification {
       this.empty = empty
       this.missing = missing
       this.explicitNull = explicitNull
+    }
+  }
+
+  @JsonApiResource(type = "single-read-articles")
+  static class SingleReadIncludedArticle {
+    @JsonApiId String id
+    private int titleReadCount
+
+    SingleReadIncludedArticle(String id) {
+      this.id = id
+    }
+
+    @JsonApiAttribute @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    String getTitle() {
+      titleReadCount += 1
+      titleReadCount == 1 ? "" : "second-read-value"
+    }
+
+    int titleReads() {
+      titleReadCount
     }
   }
 

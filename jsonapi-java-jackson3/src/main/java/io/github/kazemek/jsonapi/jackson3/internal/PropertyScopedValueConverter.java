@@ -60,10 +60,15 @@ final class PropertyScopedValueConverter {
 
   PropertyScopedValueConverter(JsonMapper mapper) {
     this.mapper = Objects.requireNonNull(mapper, "mapper");
+    JsonMapper derivedSerializationMapper =
+        mapper.rebuild().addModule(new RawValuePropertyModule()).build();
     this.serializationMapper =
-        mapper.isEnabled(SerializationFeature.WRAP_ROOT_VALUE)
-            ? mapper.rebuild().disable(SerializationFeature.WRAP_ROOT_VALUE).build()
-            : mapper;
+        derivedSerializationMapper.isEnabled(SerializationFeature.WRAP_ROOT_VALUE)
+            ? derivedSerializationMapper
+                .rebuild()
+                .disable(SerializationFeature.WRAP_ROOT_VALUE)
+                .build()
+            : derivedSerializationMapper;
   }
 
   /**
@@ -147,41 +152,12 @@ final class PropertyScopedValueConverter {
       Object sourceBean,
       @Nullable Object rawValue,
       TokenBuffer buffer,
-      SerializationContextExt context)
-      throws Exception {
-    if (rawValue == null) {
-      if (property.willSuppressNulls()) {
-        return;
-      }
-      property.serializeAsProperty(sourceBean, buffer, context);
-      return;
-    }
-    if (property.willSuppressNulls()) {
-      property.serializeAsProperty(sourceBean, buffer, context);
-      return;
-    }
-    ValueSerializer<Object> serializer = property.getSerializer();
-    if (serializer == null || context.isUnknownTypeSerializer(serializer)) {
-      JavaType baseType = property.getSerializationType();
-      if (baseType == null) {
-        baseType = property.getType();
-      }
-      JavaType type = dynamicSerializationType(baseType, rawValue, context);
-      serializer = context.findPrimaryPropertySerializer(type, property);
-    }
-    if (property.getTypeSerializer() == null) {
-      serializer.serialize(rawValue, buffer, context);
-    } else {
-      serializer.serializeWithType(rawValue, buffer, context, property.getTypeSerializer());
-    }
-  }
-
-  private static JavaType dynamicSerializationType(
-      JavaType baseType, Object value, SerializationContextExt context) {
-    if (!baseType.isFinal() && (baseType.isContainerType() || baseType.hasGenericTypes())) {
-      return context.constructSpecializedType(baseType, value.getClass());
-    }
-    return context.constructType(value.getClass());
+      SerializationContextExt context) {
+    RawValueBeanPropertyWriter rawValueProperty =
+        property instanceof RawValueBeanPropertyWriter rawProperty
+            ? rawProperty
+            : new RawValueBeanPropertyWriter(property);
+    rawValueProperty.serializeAsRawProperty(sourceBean, rawValue, buffer, context);
   }
 
   @SuppressWarnings("resource")
