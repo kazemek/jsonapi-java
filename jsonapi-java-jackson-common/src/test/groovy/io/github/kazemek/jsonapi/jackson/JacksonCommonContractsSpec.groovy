@@ -55,7 +55,7 @@ class JacksonCommonContractsSpec extends Specification {
 
   // IncludePath
 
-  def "factory-time malformed paths fail with raw input"() {
+  def "factory-time malformed paths fail with raw input in the message and no location"() {
     when:
     IncludePath.of(input)
 
@@ -63,7 +63,8 @@ class JacksonCommonContractsSpec extends Specification {
     def e = thrown(JsonApiMappingException)
     e.diagnostic() == MappingDiagnostic.INVALID_INCLUDE_PATH
     e.resourceClass() == null
-    e.propertyPath() == input
+    e.location() == null
+    e.message.contains(input)
 
     where:
     input << [
@@ -336,16 +337,73 @@ class JacksonCommonContractsSpec extends Specification {
 
   // Diagnostics and source location
 
-  def "mapping exception carries stable diagnostic, class, and property path"() {
+  def "mapping exception carries stable diagnostic, class, and pointer-form location"() {
     when:
     def e = new JsonApiMappingException(
-        MappingDiagnostic.MISSING_IDENTIFIER, String, "id", "message", null)
+        MappingDiagnostic.MISSING_IDENTIFIER,
+        String,
+        MappingLocation.of("id"),
+        "message")
 
     then:
     e.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
     e.resourceClass() == String
-    e.propertyPath() == "id"
+    e.location() == MappingLocation.parse("/id")
+    e.propertyPath() == "/id"
     e.message == "message"
+  }
+
+  def "mapping exception represents absent location as null, never empty or root"() {
+    when:
+    def e = JsonApiMappingException.withoutLocation(
+        MappingDiagnostic.MISSING_RESOURCE_ANNOTATION, String, "message")
+
+    then:
+    e.location() == null
+    e.propertyPath() == null
+    e.resourceClass() == String
+
+    when:
+    new JsonApiMappingException(
+        MappingDiagnostic.INVALID_RESOURCE_TYPE,
+        null,
+        MappingLocation.parse("/"),
+        "root")
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
+  def "mapping locations escape and compose structurally"() {
+    expect:
+    MappingLocation.of("attributes", "external/name").pointer() == "/attributes/external~1name"
+    MappingLocation.of("attributes", "a~b").pointer() == "/attributes/a~0b"
+    MappingLocation.parse("/data/2").append(MappingLocation.parse("/attributes/a~1b"))
+        .pointer() == "/data/2/attributes/a~1b"
+
+    when:
+    MappingLocation.parse("attributes/title")
+
+    then:
+    thrown(IllegalArgumentException)
+
+    when:
+    MappingLocation.parse("/data//title")
+
+    then:
+    thrown(IllegalArgumentException)
+
+    when:
+    MappingLocation.parse("/data/title~2")
+
+    then:
+    thrown(IllegalArgumentException)
+
+    when:
+    MappingLocation.of("attributes", "")
+
+    then:
+    thrown(IllegalArgumentException)
   }
 
   def "read exception carries category, pointer, location, and rule code"() {

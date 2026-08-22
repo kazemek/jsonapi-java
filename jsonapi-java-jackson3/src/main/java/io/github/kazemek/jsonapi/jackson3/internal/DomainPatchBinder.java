@@ -9,6 +9,7 @@ import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.PatchChange;
 import io.github.kazemek.jsonapi.jackson.PatchCommand;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
@@ -40,6 +41,9 @@ import tools.jackson.databind.json.JsonMapper;
  * are rejected on this path.
  */
 public final class DomainPatchBinder {
+
+  private static final MappingLocation TYPE_LOCATION = MappingLocation.of("type");
+  private static final MappingLocation ID_LOCATION = MappingLocation.of("id");
 
   private final MappingDefinitionCache cache;
   private final PatchMemberConverter converter;
@@ -83,7 +87,7 @@ public final class DomainPatchBinder {
       throw new JsonApiMappingException(
           MappingDiagnostic.RESOURCE_TYPE_MISMATCH,
           rawType,
-          "/type",
+          TYPE_LOCATION,
           "Resource object type '"
               + resource.type()
               + "' does not match expected type '"
@@ -107,8 +111,8 @@ public final class DomainPatchBinder {
       throw new JsonApiMappingException(
           MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED,
           rawType,
-          "/id",
-          "Resource update identity requires a non-null id at '/id'");
+          ID_LOCATION,
+          "Resource update identity requires a non-null id at '" + ID_LOCATION + "'");
     }
     return converter.convertIdentity(
         Objects.requireNonNull(resource.id()), identifierProperty, targetType, rawType);
@@ -142,26 +146,33 @@ public final class DomainPatchBinder {
       MappingProperty property, @Nullable Object rawValue, JavaType targetType, Class<?> rawType) {
     JavaType declaredType = property.accessor().getType();
     if (rawValue == null) {
-      return converter.convertAttribute(property, null, declaredType, rawType, targetType);
+      return converter.convertAttribute(
+          property, null, declaredType, rawType, targetType, attributeLocation(property));
     }
-    String pointer = "/attributes/" + property.jsonapiName();
+    MappingLocation location = attributeLocation(property);
     StructuredValueBinder.LowLevelKind kind =
         structuredBinder.lowLevelKind(
             declaredType,
             rawValue,
             property.accessor(),
             property.definition().getMutator(),
-            pointer,
+            location,
             rawType);
     if (kind == StructuredValueBinder.LowLevelKind.RECURSE) {
-      return structuredBinder.bindLowLevelStructured(rawValue, declaredType, pointer, rawType);
+      return structuredBinder.bindLowLevelStructured(rawValue, declaredType, location, rawType);
     }
     return converter.convertAttribute(
         property,
         rawValue,
         PatchMemberConverter.unwrapPatchPresence(declaredType),
         rawType,
-        targetType);
+        targetType,
+        location);
+  }
+
+  /** Resource-relative wire location of one top-level PATCH attribute, escaped per RFC 6901. */
+  private static MappingLocation attributeLocation(MappingProperty property) {
+    return MappingLocation.of("attributes", property.jsonapiName());
   }
 
   private void bindResourceMetaChange(
@@ -178,7 +189,7 @@ public final class DomainPatchBinder {
         bindMetaValue(
             property,
             resource.meta().members(),
-            RelationshipMetaSupport.resourceMetaPath(),
+            RelationshipMetaSupport.resourceMetaLocation(),
             targetType,
             rawType);
     changes.add(
@@ -188,7 +199,7 @@ public final class DomainPatchBinder {
   private @Nullable Object bindMetaValue(
       MappingProperty property,
       @Nullable Object rawValue,
-      String pointer,
+      MappingLocation pointer,
       JavaType targetType,
       Class<?> rawType) {
     JavaType declaredType = property.accessor().getType();
@@ -239,7 +250,8 @@ public final class DomainPatchBinder {
                   property.jsonapiName(), property.logicalName(), value));
           MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
           if (metaProperty != null && relationship.meta() != null) {
-            String pointer = RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName());
+            MappingLocation pointer =
+                RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName());
             Object metaValue =
                 bindMetaValue(
                     metaProperty, relationship.meta().members(), pointer, targetType, rawType);

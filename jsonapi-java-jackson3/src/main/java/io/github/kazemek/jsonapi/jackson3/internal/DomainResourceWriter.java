@@ -13,6 +13,7 @@ import io.github.kazemek.jsonapi.jackson.FieldPolicy;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -144,17 +145,17 @@ public final class DomainResourceWriter {
     }
     for (String name : fields) {
       if (!mappedNames.contains(name)) {
-        throw new JsonApiMappingException(
+        // Fieldset specification failures have no document member location; the offending field
+        // name stays in the message per the mapping-location contract.
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INVALID_FIELDSET_FIELD,
             resourceClass,
-            name,
             "Unknown fieldset field '" + name + "' on " + mapping.resourceType());
       }
       if (!fieldPolicy.allows(mapping.resourceType(), name)) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.DENIED_FIELDSET_FIELD,
             resourceClass,
-            name,
             "Fieldset field denied for " + mapping.resourceType() + "." + name);
       }
     }
@@ -199,15 +200,12 @@ public final class DomainResourceWriter {
   private String requireIdentifierString(
       Class<?> type, MappingProperty property, @Nullable Object identifierValue) {
     if (identifierValue == null) {
-      throw missingIdentifier(
-          type, property, "Identifier property '" + property.logicalName() + "' is null");
+      throw missingIdentifier(type, "Identifier property '" + property.logicalName() + "' is null");
     }
     String identifierString = identifierConverter.convert(identifierValue);
     if (identifierString == null) {
       throw missingIdentifier(
-          type,
-          property,
-          "Identifier converter returned null for property '" + property.logicalName() + "'");
+          type, "Identifier converter returned null for property '" + property.logicalName() + "'");
     }
     return identifierString;
   }
@@ -277,10 +275,9 @@ public final class DomainResourceWriter {
         yield result;
       }
       default ->
-          throw new JsonApiMappingException(
+          throw JsonApiMappingException.withoutLocation(
               MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
               value.getClass(),
-              null,
               "To-many relationship value is not a supported collection type: "
                   + value.getClass().getName());
     };
@@ -345,7 +342,7 @@ public final class DomainResourceWriter {
               resource,
               mapping,
               metaProperty,
-              RelationshipMetaSupport.relationshipMetaPath(property.jsonapiName()));
+              RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
     }
     return new Relationship(linkage, null, meta, Map.of());
   }
@@ -357,7 +354,7 @@ public final class DomainResourceWriter {
       return null;
     }
     return buildMetaValue(
-        resource, mapping, resourceMetaProperty, RelationshipMetaSupport.resourceMetaPath());
+        resource, mapping, resourceMetaProperty, RelationshipMetaSupport.resourceMetaLocation());
   }
 
   /**
@@ -366,7 +363,10 @@ public final class DomainResourceWriter {
    * leaked cast or core-validation failure). Failures report the location-specific {@code path}.
    */
   private @Nullable Meta buildMetaValue(
-      Object resource, ResourceMapping mapping, MappingProperty property, String path) {
+      Object resource,
+      ResourceMapping mapping,
+      MappingProperty property,
+      MappingLocation metaLocation) {
     Object rawValue = readValue(resource, property, property.role());
     Object value = unwrapOptional(rawValue);
     if (value == null) {
@@ -386,12 +386,12 @@ public final class DomainResourceWriter {
       }
       converted = serialized.value();
     } catch (RuntimeException e) {
-      throw metaValueFailure(resource, path, "Failed to convert meta value", e);
+      throw metaValueFailure(resource, metaLocation, "Failed to convert meta value", e);
     }
     if (!(converted instanceof Map<?, ?> map)) {
       throw metaValueFailure(
           resource,
-          path,
+          metaLocation,
           "Converted meta value is not an object (expected a JSON object, got "
               + convertedTypeName(converted)
               + ")",
@@ -400,7 +400,7 @@ public final class DomainResourceWriter {
     try {
       return Meta.of(castMembers(map));
     } catch (JsonApiValidationException e) {
-      throw metaValueFailure(resource, path, "Invalid meta members", e);
+      throw metaValueFailure(resource, metaLocation, "Invalid meta members", e);
     }
   }
 
@@ -420,11 +420,8 @@ public final class DomainResourceWriter {
     for (Map.Entry<?, ?> entry : map.entrySet()) {
       Object key = entry.getKey();
       if (!(key instanceof String stringKey)) {
-        throw new JsonApiMappingException(
-            MappingDiagnostic.INVALID_META_TARGET,
-            null,
-            null,
-            "Meta object key is not a string: " + key);
+        throw JsonApiMappingException.withoutLocation(
+            MappingDiagnostic.INVALID_META_TARGET, null, "Meta object key is not a string: " + key);
       }
       members.put(stringKey, entry.getValue());
     }
@@ -432,12 +429,16 @@ public final class DomainResourceWriter {
   }
 
   private JsonApiMappingException metaValueFailure(
-      Object resource, String path, String message, @Nullable Throwable cause) {
+      Object resource, MappingLocation metaLocation, String message, @Nullable Throwable cause) {
     return cause == null
         ? new JsonApiMappingException(
-            MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), path, message)
+            MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), metaLocation, message)
         : new JsonApiMappingException(
-            MappingDiagnostic.INVALID_META_TARGET, resource.getClass(), path, message, cause);
+            MappingDiagnostic.INVALID_META_TARGET,
+            resource.getClass(),
+            metaLocation,
+            message,
+            cause);
   }
 
   private RelationshipData extractToOneLinkage(@Nullable Object value) {
@@ -501,9 +502,8 @@ public final class DomainResourceWriter {
   private RelationshipData toManyLinkageFromDomainObjects(List<?> items, JavaType propType) {
     JavaType contentType = resolveContentType(propType);
     if (contentType == null) {
-      throw new JsonApiMappingException(
+      throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
-          null,
           null,
           "Cannot resolve collection content type");
     }
@@ -515,17 +515,15 @@ public final class DomainResourceWriter {
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
   }
 
-  private static JsonApiMappingException missingIdentifier(
-      Class<?> type, MappingProperty property, String message) {
+  private static JsonApiMappingException missingIdentifier(Class<?> type, String message) {
     return new JsonApiMappingException(
-        MappingDiagnostic.MISSING_IDENTIFIER, type, property.logicalName(), message);
+        MappingDiagnostic.MISSING_IDENTIFIER, type, MappingLocation.of("id"), message);
   }
 
   private static JsonApiMappingException mixedToManyElements(Object firstNonResourceIdentifier) {
-    return new JsonApiMappingException(
+    return JsonApiMappingException.withoutLocation(
         MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
         firstNonResourceIdentifier.getClass(),
-        null,
         "Mixed element types in to-many relationship collection: expected ResourceIdentifier, got "
             + firstNonResourceIdentifier.getClass().getName());
   }
@@ -540,7 +538,7 @@ public final class DomainResourceWriter {
       throw new JsonApiMappingException(
           diagnosticFor(role),
           resource.getClass(),
-          property.logicalName(),
+          memberLocation(property, role),
           "Failed to read property '"
               + property.logicalName()
               + "' ("
@@ -548,6 +546,21 @@ public final class DomainResourceWriter {
               + ")",
           e);
     }
+  }
+
+  /**
+   * Resource-relative wire location of one mapped member, per the mapping-location contract: the
+   * JSON:API member name is escaped as pointer segments, never the Jackson logical name.
+   */
+  private static MappingLocation memberLocation(MappingProperty property, PropertyRole role) {
+    return switch (role) {
+      case ID -> MappingLocation.of("id");
+      case ATTRIBUTE -> MappingLocation.of("attributes", property.jsonapiName());
+      case RELATIONSHIP -> MappingLocation.of("relationships", property.jsonapiName(), "data");
+      case RESOURCE_META -> RelationshipMetaSupport.resourceMetaLocation();
+      case RELATIONSHIP_META ->
+          RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName());
+    };
   }
 
   private static MappingDiagnostic diagnosticFor(PropertyRole role) {
@@ -575,7 +588,7 @@ public final class DomainResourceWriter {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
           resource.getClass(),
-          property.logicalName(),
+          memberLocation(property, PropertyRole.ATTRIBUTE),
           "Failed to serialize attribute '" + property.logicalName() + "'",
           e);
     }
@@ -588,10 +601,9 @@ public final class DomainResourceWriter {
    */
   private void checkDeclaredTargetHasResourceMetadata(Class<?> rawType) {
     if (cache.findResourceTypeName(rawType) == null) {
-      throw new JsonApiMappingException(
+      throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
           rawType,
-          null,
           "Collection element type " + rawType.getName() + " lacks @JsonApiResource");
     }
   }

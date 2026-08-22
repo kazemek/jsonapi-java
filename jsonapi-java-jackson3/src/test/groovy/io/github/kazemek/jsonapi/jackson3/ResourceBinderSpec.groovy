@@ -427,29 +427,31 @@ class ResourceBinderSpec extends Specification {
     assert actual == expected
   }
 
-  // Jackson-derived property-name paths and cause types stay adapter-local until Jackson 2 proves
-  // them portable. Dispatch uses target type, diagnostic, and input shape - never scenario id.
+  // Jackson-derived failure-path shapes and cause types stay adapter-local until Jackson 2 proves
+  // them portable; locations themselves are wire-coordinate pointers per the mapping-location
+  // contract. Dispatch uses target type, diagnostic, and input shape - never scenario id.
   private static void assertAdapterLocalFailureDetails(
       DomainReadScenario scenario, JsonApiMappingException ex) {
     def expectation = (DomainReadExpectation.Failure) scenario.expectation()
     def target = scenario.targetType()
     if (expectation.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
         && target == FlatRequiredThing) {
-      assert ex.propertyPath() == "/required"
+      assert ex.propertyPath() == "/attributes/required"
       return
     }
     if (expectation.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
         && target == FlatThrowingCreatorThing) {
       assert ex.cause instanceof ValueInstantiationException
-      // Observed Jackson 3 path: ValueInstantiationException has no named databind property.
-      assert ex.propertyPath() == "/"
+      // Observed Jackson 3 path: ValueInstantiationException has no named databind property, so
+      // the location is absent rather than a fabricated member pointer.
+      assert ex.location() == null
       return
     }
     if (expectation.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
         && target == FlatCountedThing) {
       // Observed Jackson 3 databind path for both the nested-map coercion failure and the
       // explicit-null-into-primitive failure.
-      assert ex.propertyPath() == "/count"
+      assert ex.propertyPath() == "/attributes/count"
     }
   }
 

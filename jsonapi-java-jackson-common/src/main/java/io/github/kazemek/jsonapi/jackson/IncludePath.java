@@ -17,8 +17,6 @@ public record IncludePath(List<String> segments) {
     if (segments.isEmpty()) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_INCLUDE_PATH,
-          null,
-          "",
           "Include path must contain at least one relationship name");
     }
     for (String segment : segments) {
@@ -37,10 +35,7 @@ public record IncludePath(List<String> segments) {
     for (String part : parts) {
       if (part.isEmpty() || isWhitespaceOnly(part)) {
         throw new JsonApiMappingException(
-            MappingDiagnostic.INVALID_INCLUDE_PATH,
-            null,
-            path,
-            "Malformed include path: '" + path + "'");
+            MappingDiagnostic.INVALID_INCLUDE_PATH, "Malformed include path: '" + path + "'");
       }
     }
     return new IncludePath(List.of(parts));
@@ -51,9 +46,7 @@ public record IncludePath(List<String> segments) {
     if (segment.isEmpty() || isWhitespaceOnly(segment) || segment.indexOf('.') >= 0) {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_INCLUDE_PATH,
-          null,
-          propertyPath,
-          "Invalid include path segment: '" + segment + "'");
+          "Invalid include path segment: '" + segment + "' in '" + propertyPath + "'");
     }
   }
 

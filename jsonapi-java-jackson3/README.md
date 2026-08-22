@@ -218,9 +218,9 @@ authorization and command application.
  paths share one location-neutral property-scoped conversion collaborator, so a supplied nested
  member converts through the same authority Jackson would use for that property.
 
-Diagnostic pointers for nested failures are engine-accumulated wire-name pointers (e.g.
-  `/attributes/address/street`); final typed-path construction failures are shape-translated to the
-  wire-name pointer.
+Diagnostic locations for nested failures are engine-accumulated wire-name locations (e.g.
+  `/attributes/address/street`), escaped per RFC 6901 through `MappingLocation`; final typed-path
+  construction failures are shape-translated to the wire-name location.
 
  Whole-object resource-side meta mapping (see [ADR-015](../docs/adr/015-flat-whole-object-meta-mapping.md))
   maps the complete `ResourceObject.meta` / `Relationship.meta` object to one application-owned
@@ -306,28 +306,41 @@ artifact; both majors share the neutral contracts of
   write, flat binding, both PATCH paths, registry key derivation, and declared to-many element
   types. Mapping diagnostics use `MappingDiagnostic` + domain class rather than core validation
   codes.
+- **Mapping-location contract (KAZ-83):** every `JsonApiMappingException` carries an optional
+  location that is either absent (`null`) or a valid RFC 6901 JSON Pointer built through
+  `MappingLocation`, whose segments are individually escaped (`~` to `~0`, `/` to `~1`). Producers
+  mapping one resource object emit resource-relative pointers over JSON:API member names:
+  `/type`, `/id`, `/lid`, `/attributes/<wire-name>`, `/relationships/<wire-name>/data`,
+  `/meta`, `/relationships/<wire-name>/meta`. Jackson logical property names are translated
+  through the mapping before they appear in a location — a logical name is never reinterpreted as
+  pointer syntax. Failures without a meaningful member coordinate (missing annotations, invalid
+  type names, registry conflicts, include-path and fieldset specification errors) carry an absent
+  location; the identifying names stay in the message. Absence is never encoded as `""` or `/`.
 - **Validate then bind:** `JsonApiResourceBinder` binds already-validated `ResourceObject` values
   to flat DTOs; it never parses JSON, never reads document `included`, and assembles no domain
   graph. `fromResource`/`fromResources` validate `type` against the target's configured
-  `@JsonApiResource` metadata (mix-ins honored) and
-  report `MappingDiagnostic` + a resource-relative pointer (`/type`, `/id`, `/lid`,
-  `/relationships/<name>/data`, and the Jackson property name, e.g. `/count`, for bulk
-  construction failures). Missing members are omitted; explicit JSON
-  `null` binds null; relationship linkage binds `ResourceIdentifier` (plus Optional/List/Set/array
-  shapes) directly, and any other target class needs a registered `RelationshipLinkageMapper`.
-  Bind failures throw `JsonApiMappingException`, never `JsonApiDocumentReadException`.
+  `@JsonApiResource` metadata (mix-ins honored) and report `MappingDiagnostic` plus a
+  resource-relative pointer per the mapping-location contract above. Bean-construction failures
+  translate their Jackson failure path into the mapped member's wire pointer (deeply, through
+  resolved shape metadata); unmappable paths carry no location. Missing members are omitted;
+  explicit JSON `null` binds null; relationship linkage binds `ResourceIdentifier` (plus
+  Optional/List/Set/array shapes) directly, and any other target class needs a registered
+  `RelationshipLinkageMapper`. Bind failures throw `JsonApiMappingException`, never
+  `JsonApiDocumentReadException`.
 - **Typed domain envelope:** `JsonApiDomainDocumentReader` composes the document reader with the
   flat DTO binder. Primary and included resources bind only through the `ResourceTypeRegistry`
   (keyed by each registered raw class's configured class-level resource metadata; build it with
   `ResourceTypeRegistry.builder(callerMapper)` so keys and binding agree on configured metadata);
   unregistered types fail with `UNREGISTERED_RESOURCE_TYPE` at the document pointer
   (`/data`, `/data/n`, `/included/n`), duplicate type registrations fail at `build()` with
-  `CONFLICTING_TYPE_REGISTRATION`. Identifier primary data never binds; absent `included` stays
-  null while `included: []` is a non-null empty `IncludedResources` with dual id/lid identity
-  lookup. Binder failures are rethrown with document pointer + binder path joined by a single
-  `/`. Envelope collections are defensively copied at construction and unmodifiable; `metaAs`
-  reuses the reader-derived binder mapper (never a fresh default mapper). No relationship
-  injection: `included` DTOs are independently listed/indexed only.
+  `CONFLICTING_TYPE_REGISTRATION` and no location. Identifier primary data never binds; absent
+  `included` stays null while `included: []` is a non-null empty `IncludedResources` with dual
+  id/lid identity lookup. Binder failures compose structurally with the document prefix via
+  `MappingLocation.append`: `/data/2` + `/attributes/title` = `/data/2/attributes/title`; a binder
+  failure without a location reports just the prefix. Envelope collections are defensively copied
+  at construction and unmodifiable; `metaAs` reuses the reader-derived binder mapper (never a
+  fresh default mapper) and reports the document-relative `/meta` on conversion failure. No
+  relationship injection: `included` DTOs are independently listed/indexed only.
 - **Identifier round-trip:** read binding calls `IdentifierConverter.parse(String)` on the wire
   identifier, then applies the target property's configured Jackson deserializer to the parsed
   intermediate (normal flat reads and typed PATCH construction use the synthetic property map;

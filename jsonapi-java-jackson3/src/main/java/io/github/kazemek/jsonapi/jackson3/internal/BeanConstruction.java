@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,18 +18,21 @@ import tools.jackson.databind.json.JsonMapper;
  * JsonMapper#convertValue(Object, JavaType)}, plus stable creator/coercion failure classification
  * used by the flat DTO binder and the typed PATCH DTO binder.
  *
- * <p>The typed PATCH DTO path may supply a {@link FailurePathTranslator} so deep Jackson
- * construction-failure paths are translated to wire-name pointers through the structured-value
- * shape metadata (ADR-014); the flat DTO path keeps the innermost-property path.
+ * <p>Both binders supply a {@link FailurePathTranslator} so deep Jackson construction-failure paths
+ * are translated into resource-relative {@link MappingLocation} pointers through the resource
+ * mapping (and, for nested structured members, through the resolved shape metadata per ADR-014).
+ * Translators never emit Jackson logical property names as locations: unmappable paths translate to
+ * an absent location.
  */
 final class BeanConstruction {
 
   /**
-   * Translates a failed bean construction's Jackson path into a resource-relative property path.
+   * Translates a failed bean-construction's Jackson path into a resource-relative mapping location,
+   * or {@code null} when no member of the mapping matches the path.
    */
   @FunctionalInterface
   interface FailurePathTranslator {
-    String translate(Throwable failure, Class<?> rawType);
+    @Nullable MappingLocation translate(Throwable failure, Class<?> rawType);
   }
 
   private BeanConstruction() {}
@@ -55,12 +59,11 @@ final class BeanConstruction {
           isCreatorInputFailure(failure)
               ? MappingDiagnostic.MISSING_CREATOR_INPUT
               : MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE;
-      String path =
-          translator != null ? translator.translate(failure, rawType) : propertyPath(failure);
+      MappingLocation location = translator != null ? translator.translate(failure, rawType) : null;
       throw new JsonApiMappingException(
           diagnostic,
           rawType,
-          path,
+          location,
           "Failed to construct " + rawType.getName() + " from resource values",
           failure);
     }
@@ -127,30 +130,23 @@ final class BeanConstruction {
         || first.equals(property.definition().getFullName().getSimpleName());
   }
 
-  /** Returns whether a mapped bean-construction failure belongs to the supplied property. */
+  /**
+   * Returns whether a mapped bean-construction failure belongs to the supplied property. The
+   * decision reads the raw Jackson failure path from the cause chain; the translated location on
+   * the exception itself is only used as an exact-match signal so failures whose path was fully
+   * translated to the property's own wire location still classify correctly (KAZ-82 semantics).
+   */
   static boolean isConstructionFailureForProperty(
-      JsonApiMappingException failure, MappingProperty property) {
+      JsonApiMappingException failure,
+      MappingProperty property,
+      @Nullable MappingLocation propertyLocation) {
     Throwable constructionFailure = failure.getCause() == null ? failure : failure.getCause();
     if (!pathNames(constructionFailure).isEmpty()) {
       return pathStartsWithProperty(constructionFailure, property);
     }
-    String propertyPath = failure.propertyPath();
-    return ("/" + property.logicalName()).equals(propertyPath)
-        || ("/" + property.definition().getFullName().getSimpleName()).equals(propertyPath);
-  }
-
-  static String propertyPath(Throwable failure) {
-    if (failure instanceof JacksonException jackson) {
-      List<JacksonException.Reference> path = jackson.getPath();
-      if (path != null) {
-        for (int i = path.size() - 1; i >= 0; i--) {
-          String name = path.get(i).getPropertyName();
-          if (name != null && !name.isEmpty()) {
-            return "/" + name;
-          }
-        }
-      }
-    }
-    return "/";
+    MappingLocation failureLocation = failure.location();
+    return propertyLocation != null
+        && failureLocation != null
+        && propertyLocation.pointer().equals(failureLocation.pointer());
   }
 }

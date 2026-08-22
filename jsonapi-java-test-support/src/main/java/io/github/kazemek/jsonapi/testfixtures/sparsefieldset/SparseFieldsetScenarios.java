@@ -140,9 +140,7 @@ public final class SparseFieldsetScenarios {
               () -> new ArticleWithRenamedAuthor("1", TITLE_VALUE, dan()),
               fieldsets(Map.of(ARTICLES, List.of(AUTHOR))),
               SparseFieldsetExpectation.failure(
-                  MappingDiagnostic.INVALID_FIELDSET_FIELD,
-                  AUTHOR,
-                  ArticleWithRenamedAuthor.class)),
+                  MappingDiagnostic.INVALID_FIELDSET_FIELD, null, ArticleWithRenamedAuthor.class)),
           mappedDocument(
               "per-type fieldsets do not strip unrelated included types",
               SparseFieldsetScenarios::article,
@@ -189,28 +187,28 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of("nope"))),
               SparseFieldsetExpectation.failure(
-                  MappingDiagnostic.INVALID_FIELDSET_FIELD, "nope", Article.class)),
+                  MappingDiagnostic.INVALID_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
               "denyAll rejects first present fieldset name",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR)))
                   .withFieldPolicy(FieldPolicy.denyAll()),
               SparseFieldsetExpectation.failure(
-                  MappingDiagnostic.DENIED_FIELDSET_FIELD, TITLE, Article.class)),
+                  MappingDiagnostic.DENIED_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
               "missing FieldAllowance denies with DENIED_FIELDSET_FIELD",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR)))
                   .withFieldPolicy(TITLE_ONLY_ALLOWANCE),
               SparseFieldsetExpectation.failure(
-                  MappingDiagnostic.DENIED_FIELDSET_FIELD, AUTHOR, Article.class)),
+                  MappingDiagnostic.DENIED_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
               "unmapped name wins over policy denial",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of("nope", TITLE)))
                   .withFieldPolicy(FieldPolicy.denyAll()),
               SparseFieldsetExpectation.failure(
-                  MappingDiagnostic.INVALID_FIELDSET_FIELD, "nope", Article.class)),
+                  MappingDiagnostic.INVALID_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
               "unused fieldset type keys are ignored",
               SparseFieldsetScenarios::article,
@@ -231,7 +229,7 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(AUTHOR))).withFieldPolicy(TITLE_ONLY_ALLOWANCE),
               SparseFieldsetExpectation.failure(
-                  MappingDiagnostic.DENIED_FIELDSET_FIELD, AUTHOR, Article.class)),
+                  MappingDiagnostic.DENIED_FIELDSET_FIELD, null, Article.class)),
           new SparseFieldsetScenario(
               "identity preserved under every fieldset shape",
               SparseFieldsetOperation.TO_MAPPED_DOCUMENT,

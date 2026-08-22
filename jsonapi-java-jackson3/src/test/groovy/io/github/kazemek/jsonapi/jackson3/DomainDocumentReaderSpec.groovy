@@ -1,6 +1,13 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
+import io.github.kazemek.jsonapi.annotation.JsonApiId
+import io.github.kazemek.jsonapi.annotation.JsonApiResource
+import io.github.kazemek.jsonapi.core.model.Attributes
+import io.github.kazemek.jsonapi.core.model.DocumentData
+import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
 import io.github.kazemek.jsonapi.jackson.DocumentReadContext
@@ -17,6 +24,7 @@ import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.testfixtures.domainread.FlatLidArticle
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeBindingDocument
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeEntryPoint
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadCase
@@ -25,6 +33,7 @@ import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadInput
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadScenario
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadVariant
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReaderContext
+import io.github.kazemek.jsonapi.testfixtures.enveloperead.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
 import java.io.ByteArrayInputStream
@@ -466,6 +475,179 @@ class DomainDocumentReaderSpec extends Specification {
     if (exp.sharedInstanceAcrossPresentProbes() && present.size() > 1) {
       present.tail().each { assert it.is(present.head()) }
     }
+  }
+
+  // ============================== MAPPING-LOCATION COMPOSITION (KAZ-83) ==============================
+  //
+  // Binder failures compose structurally with the document prefix: a resource-relative binder
+  // location joins under /data, /data/<index>, or /included/<index>; a binder failure without a
+  // location reports just the document prefix. Locations carry wire names, never Jackson logical
+  // names, and segments are RFC 6901-escaped.
+
+  def "single primary data composes to /data plus the resource-local pointer"() {
+    given:
+    def reader = newReader(LocationArticle)
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"loc-articles","id":"1","attributes":{"title":"oops"}}}')
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/data/attributes/title"
+  }
+
+  def "collection primary data composes the element index"() {
+    given:
+    def reader = newReader(LocationArticle)
+
+    when:
+    reader.readValue(
+        '{"data":[' +
+        '{"type":"loc-articles","id":"1","attributes":{"title":"1"}},' +
+        '{"type":"loc-articles","id":"2","attributes":{"title":"oops"}}]}')
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/data/1/attributes/title"
+  }
+
+  def "included resources compose the included index"() {
+    given:
+    def reader = newReader(LocationArticle)
+    // fromDocument skips aggregate validation, so the included element can be reached directly.
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(ResourceObject.of("loc-articles", "1")),
+        null,
+        null,
+        null,
+        null,
+        List.of(
+        new ResourceObject(
+        "loc-articles",
+        "9",
+        null,
+        Attributes.ofAttributes(Map.of("title", "oops")),
+        null,
+        null,
+        null,
+        Map.of())),
+        Map.of())
+
+    when:
+    reader.fromDocument(document)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/included/0/attributes/title"
+  }
+
+  def "nested resource-local locations compose deeply under the document prefix"() {
+    given:
+    def reader = newReader(NestedLocationArticle)
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"loc-nested","id":"1","attributes":{"address":{"city":"oops"}}}}')
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/data/attributes/address/city"
+  }
+
+  def "renamed wire members report the JSON:API name, never the logical name"() {
+    given:
+    def reader = newReader(RenamedLocationArticle)
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"loc-renamed","id":"1","attributes":{"headline":"oops"}}}')
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    // Wire coordinate headline; the Jackson/logical property name title must not leak.
+    ex.propertyPath() == "/data/attributes/headline"
+  }
+
+  def "locationless binder failures report only the document prefix"() {
+    given:
+    def reader = newReader(FlatThrowingArticle)
+    // fromDocument skips aggregate validation, so the included element can be reached directly.
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(ResourceObject.of("throwing-articles", "1")),
+        null,
+        null,
+        null,
+        null,
+        List.of(
+        new ResourceObject(
+        "throwing-articles",
+        "2",
+        null,
+        Attributes.ofAttributes(Map.of("title", "boom")),
+        null,
+        null,
+        null,
+        Map.of())),
+        Map.of())
+
+    when:
+    reader.fromDocument(document)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
+    // No member location exists on the failure path; composition keeps the meaningful document
+    // location instead of inventing one.
+    ex.location().pointer() == "/included/0"
+  }
+
+  def "registry declaration failures carry no member location"() {
+    when:
+    ResourceTypeRegistry.builder()
+        .register(FlatArticle)
+        .register(FlatLidArticle)
+        .build()
+
+    then:
+    def conflicting = thrown(JsonApiMappingException)
+    conflicting.diagnostic() == MappingDiagnostic.CONFLICTING_TYPE_REGISTRATION
+    conflicting.location() == null
+
+    when:
+    ResourceTypeRegistry.builder().register(Object.class).build()
+
+    then:
+    def missing = thrown(JsonApiMappingException)
+    missing.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
+    missing.location() == null
+  }
+
+  @JsonApiResource(type = "loc-articles")
+  static class LocationArticle {
+    @JsonApiId String id
+    @JsonApiAttribute int title
+  }
+
+  @JsonApiResource(type = "loc-renamed")
+  static class RenamedLocationArticle {
+    @JsonApiId String id
+    @JsonApiAttribute(name = "headline") int title
+  }
+
+  static class NestedAddress {
+    int city
+  }
+
+  @JsonApiResource(type = "loc-nested")
+  static class NestedLocationArticle {
+    @JsonApiId String id
+    @JsonApiAttribute NestedAddress address
   }
 
   private String wireText(EnvelopeReadInput input) {

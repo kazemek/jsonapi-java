@@ -110,7 +110,7 @@ public final class CompoundWriteScenarios {
               "conflicting representations fail",
               () -> new ConflictArticle("10", new Person("1", "Alice"), new Person("1", "Bob")),
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION, REVIEWER),
+                  MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION),
               AUTHOR,
               REVIEWER),
           document(
@@ -123,7 +123,7 @@ public final class CompoundWriteScenarios {
               "heterogeneous collection fails on later type",
               () -> List.of(article(), new Tag("java")),
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INVALID_INCLUDE_PATH, AUTHOR, Tag.class),
+                  MappingDiagnostic.INVALID_INCLUDE_PATH, null, Tag.class),
               AUTHOR),
           collection(
               "one-shot iterable is materialized once",
@@ -145,7 +145,7 @@ public final class CompoundWriteScenarios {
               CompoundWriteScenarios::article,
               ARTICLES_OWNED_RELATIONSHIPS_ONLY,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE, COMMENTS_AUTHOR, Comment.class),
+                  MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE, null, Comment.class),
               COMMENTS_AUTHOR),
           document(
               "maxDepth zero rejects non-empty path",
@@ -154,7 +154,7 @@ public final class CompoundWriteScenarios {
               0,
               DEFAULT_MAX_INCLUDED,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, AUTHOR, Article.class),
+                  MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, null, Article.class),
               AUTHOR),
           document(
               "path longer than maxDepth fails",
@@ -163,7 +163,7 @@ public final class CompoundWriteScenarios {
               1,
               DEFAULT_MAX_INCLUDED,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, COMMENTS_AUTHOR, Article.class),
+                  MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, null, Article.class),
               COMMENTS_AUTHOR),
           document(
               "maxIncluded zero fails on first included resource",
@@ -171,7 +171,7 @@ public final class CompoundWriteScenarios {
               IncludePolicy.allowAll(),
               DEFAULT_MAX_DEPTH,
               0,
-              CompoundWriteExpectation.failure(MappingDiagnostic.INCLUDE_COUNT_EXCEEDED, AUTHOR),
+              CompoundWriteExpectation.failure(MappingDiagnostic.INCLUDE_COUNT_EXCEEDED),
               AUTHOR),
           document(
               "maxIncluded exceeded fails",
@@ -179,21 +179,20 @@ public final class CompoundWriteScenarios {
               IncludePolicy.allowAll(),
               DEFAULT_MAX_DEPTH,
               2,
-              CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INCLUDE_COUNT_EXCEEDED, COMMENTS_AUTHOR),
+              CompoundWriteExpectation.failure(MappingDiagnostic.INCLUDE_COUNT_EXCEEDED),
               COMMENTS_AUTHOR),
           document(
               "mapper-time unknown relationship fails",
               CompoundWriteScenarios::article,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INVALID_INCLUDE_PATH, UNKNOWN, Article.class),
+                  MappingDiagnostic.INVALID_INCLUDE_PATH, null, Article.class),
               UNKNOWN),
           document(
               "denied relationship fails before traversal",
               CompoundWriteScenarios::article,
               IncludePolicy.denyAll(),
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE, AUTHOR, Article.class),
+                  MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE, null, Article.class),
               AUTHOR),
           document(
               "multi-failure precedence is depth then mapping then policy in path order",
@@ -202,7 +201,7 @@ public final class CompoundWriteScenarios {
               1,
               DEFAULT_MAX_INCLUDED,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, COMMENTS_AUTHOR, Article.class),
+                  MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, null, Article.class),
               COMMENTS_AUTHOR,
               UNKNOWN),
           document(
@@ -210,14 +209,14 @@ public final class CompoundWriteScenarios {
               CompoundWriteScenarios::article,
               IncludePolicy.denyAll(),
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INVALID_INCLUDE_PATH, UNKNOWN, Article.class),
+                  MappingDiagnostic.INVALID_INCLUDE_PATH, null, Article.class),
               UNKNOWN),
           document(
               "multi-failure request-list order prefers first path mapping over later policy",
               CompoundWriteScenarios::article,
               IncludePolicy.denyAll(),
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INVALID_INCLUDE_PATH, UNKNOWN, Article.class),
+                  MappingDiagnostic.INVALID_INCLUDE_PATH, null, Article.class),
               UNKNOWN,
               AUTHOR),
           document(
@@ -225,16 +224,14 @@ public final class CompoundWriteScenarios {
               CompoundWriteScenarios::article,
               ARTICLES_COMMENTS_ONLY,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.INVALID_INCLUDE_PATH, COMMENTS_BOGUS, Comment.class),
+                  MappingDiagnostic.INVALID_INCLUDE_PATH, null, Comment.class),
               COMMENTS_BOGUS),
           document(
               "runtime nested owner type re-checks include policy",
               CompoundWriteScenarios::polymorphicArticle,
               NESTED_COMMENTS_AUTHOR,
               CompoundWriteExpectation.failure(
-                  MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE,
-                  COMMENTS_AUTHOR,
-                  ModeratedComment.class),
+                  MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE, null, ModeratedComment.class),
               COMMENTS_AUTHOR),
           collection(
               "empty primary collection still enforces maxDepth",
@@ -243,7 +240,7 @@ public final class CompoundWriteScenarios {
               ArrayList::new,
               IncludePolicy.allowAll(),
               0,
-              CompoundWriteExpectation.failure(MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED, AUTHOR),
+              CompoundWriteExpectation.failure(MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED),
               AUTHOR),
           document(
               "cyclic graph with repeated segment path terminates",

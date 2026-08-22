@@ -186,9 +186,8 @@ public final class JsonApiResourceMapper {
 
   private static void rejectNonEmptyFieldsets(CompoundSerializationContext context) {
     if (!context.fieldsets().isEmpty()) {
-      throw new JsonApiMappingException(
+      throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT,
-          null,
           null,
           "Non-empty fieldsets require toMappedDocument / toMappedResourceCollection; types: "
               + context.fieldsets().keySet());

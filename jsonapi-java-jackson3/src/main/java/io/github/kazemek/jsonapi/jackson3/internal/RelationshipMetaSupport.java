@@ -1,10 +1,11 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import java.util.List;
 import java.util.Map;
 
-/** Shared helpers for whole-meta mapping properties and diagnostic pointers (ADR-015). */
+/** Shared helpers for whole-meta mapping properties and diagnostic locations (ADR-015). */
 final class RelationshipMetaSupport {
 
   private RelationshipMetaSupport() {}
@@ -17,21 +18,21 @@ final class RelationshipMetaSupport {
     return PatchMemberConverter.byJsonapiName(relationshipMetaProperties);
   }
 
-  /** Resource-relative diagnostic pointer for the resource-side {@code meta} location. */
-  static String resourceMetaPath() {
-    return "/" + JsonApiMembers.META;
+  /** Resource-relative diagnostic location for the resource-side {@code meta} member. */
+  static MappingLocation resourceMetaLocation() {
+    return MappingLocation.of(JsonApiMembers.META);
   }
 
   /**
-   * Resource-relative diagnostic pointer for a specific relationship's {@code meta} location, keyed
+   * Resource-relative diagnostic location for a specific relationship's {@code meta} member, keyed
    * by the relationship's resolved JSON:API member name.
    */
-  static String relationshipMetaPath(String relationshipName) {
-    return "/" + JsonApiMembers.RELATIONSHIPS + "/" + relationshipName + "/" + JsonApiMembers.META;
+  static MappingLocation relationshipMetaLocation(String relationshipName) {
+    return MappingLocation.of(JsonApiMembers.RELATIONSHIPS, relationshipName, JsonApiMembers.META);
   }
 
-  /** Resource-relative diagnostic pointer for the {@code relationships} location. */
-  static String relationshipsPath() {
-    return "/" + JsonApiMembers.RELATIONSHIPS;
+  /** Resource-relative diagnostic location for the {@code relationships} member. */
+  static MappingLocation relationshipsLocation() {
+    return MappingLocation.of(JsonApiMembers.RELATIONSHIPS);
   }
 }

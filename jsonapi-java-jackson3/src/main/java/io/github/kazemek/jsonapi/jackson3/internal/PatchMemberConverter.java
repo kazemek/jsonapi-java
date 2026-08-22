@@ -5,6 +5,7 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.PatchCommand;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
@@ -27,10 +28,13 @@ import tools.jackson.databind.json.JsonMapper;
  * unwrapped inner type) on the DTO path. To-many detection, property-level {@code @JsonDeserialize}
  * handling, primitive-null rules, linkage resolution, and final collection coercion all use that
  * target type.
+ *
+ * <p>Diagnostic locations follow the {@link MappingLocation} contract: callers supply the failing
+ * member's resource-relative location so failures never report Jackson logical property names.
  */
 final class PatchMemberConverter {
 
-  private static final String IDENTIFIER_PATH_ID = "/id";
+  private static final MappingLocation IDENTIFIER_LOCATION = MappingLocation.of("id");
 
   private final JsonMapper mapper;
   private final PropertyScopedValueConverter propertyScoped;
@@ -81,9 +85,9 @@ final class PatchMemberConverter {
       throw new JsonApiMappingException(
           MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED,
           rawType,
-          IDENTIFIER_PATH_ID,
+          IDENTIFIER_LOCATION,
           "Identifier converter returned null for the wire identifier at '"
-              + IDENTIFIER_PATH_ID
+              + IDENTIFIER_LOCATION
               + "'");
     }
     return parsed;
@@ -94,9 +98,9 @@ final class PatchMemberConverter {
     return new JsonApiMappingException(
         MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED,
         rawType,
-        IDENTIFIER_PATH_ID,
+        IDENTIFIER_LOCATION,
         "Failed to convert the wire identifier at '"
-            + IDENTIFIER_PATH_ID
+            + IDENTIFIER_LOCATION
             + "' for "
             + rawType.getName(),
         cause);
@@ -106,19 +110,21 @@ final class PatchMemberConverter {
    * Converts one supplied attribute value against {@code targetType}. Explicit JSON {@code null}
    * becomes raw Java {@code null} (low-level {@code PatchCommand} contract). Explicit null for a
    * primitive target is always {@link MappingDiagnostic#UNSUPPORTED_ATTRIBUTE_VALUE}, independent
-   * of the caller's {@code FAIL_ON_NULL_FOR_PRIMITIVES} setting.
+   * of the caller's {@code FAIL_ON_NULL_FOR_PRIMITIVES} setting. Failures report the caller's
+   * resource-relative attribute location (for example {@code /attributes/count}).
    */
   @Nullable Object convertAttribute(
       MappingProperty property,
       @Nullable Object rawValue,
       JavaType targetType,
       Class<?> rawType,
-      JavaType beanType) {
+      JavaType beanType,
+      MappingLocation attributeLocation) {
     if (rawValue == null && targetType.isPrimitive()) {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
           rawType,
-          "/" + property.logicalName(),
+          attributeLocation,
           "Explicit null is not supported for primitive attribute '"
               + property.logicalName()
               + "' on "
@@ -136,7 +142,7 @@ final class PatchMemberConverter {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
           rawType,
-          "/" + property.logicalName(),
+          attributeLocation,
           "Failed to convert attribute '" + property.logicalName() + "' for " + rawType.getName(),
           e);
     }
@@ -162,15 +168,14 @@ final class PatchMemberConverter {
   /**
    * Converts one whole-meta value atomically on the low-level path (ADR-015). Reuses the same
    * property-scoped Jackson authority as attribute conversion, but the caller supplies the
-   * location-specific meta pointer so failures never surface the attribute-oriented {@code
-   * "/<logicalName>"} pointer.
+   * location-specific meta location so failures never surface an attribute-oriented pointer.
    */
   @Nullable Object convertWholeMeta(
       MappingProperty property,
       @Nullable Object rawValue,
       JavaType declaredType,
       JavaType beanType,
-      String pointer,
+      MappingLocation metaLocation,
       Class<?> rawType) {
     try {
       return convertAttributeViaJackson(property, rawValue, declaredType, beanType);
@@ -181,8 +186,8 @@ final class PatchMemberConverter {
       throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_META_TARGET,
           rawType,
-          pointer,
-          "Failed to convert the meta value at '" + pointer + "'",
+          metaLocation,
+          "Failed to convert the meta value at '" + metaLocation + "'",
           e);
     }
   }
@@ -224,7 +229,7 @@ final class PatchMemberConverter {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
           RelationshipLinkageSupport.rawTypeOf(property),
-          RelationshipLinkageSupport.relationshipPath(property),
+          RelationshipLinkageSupport.relationshipLocation(property),
           "Failed to convert relationship '"
               + property.logicalName()
               + "' to "

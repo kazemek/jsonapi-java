@@ -170,7 +170,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
-    e.propertyPath == "/meta"
+    e.propertyPath() == "/meta"
   }
 
   def "write relationship meta failure reports the relationship meta pointer"() {
@@ -183,7 +183,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.INVALID_META_TARGET
-    e.propertyPath == "/relationships/author/meta"
+    e.propertyPath() == "/relationships/author/meta"
   }
 
   // ============================== READ ==============================
@@ -343,7 +343,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    e.propertyPath == "/meta/source"
+    e.propertyPath() == "/meta/source"
   }
 
   // ============================== TYPED PATCH ==============================
@@ -417,7 +417,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
-    e.propertyPath == "/meta"
+    e.propertyPath() == "/meta"
   }
 
   def "typed patch rejects supplied relationship meta without a mapped relationship meta member"() {
@@ -431,7 +431,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
-    e.propertyPath == "/relationships/author/meta"
+    e.propertyPath() == "/relationships/author/meta"
     // the supplied member name is the relationship wire name only, never a meta pointer fragment
     e.message.contains("Unknown supplied relationship meta 'author'")
     !e.message.contains("author/meta")
@@ -877,7 +877,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    e.propertyPath == "/meta/source"
+    e.propertyPath() == "/meta/source"
   }
 
   def "typed patch construction failure inside meta reports the renamed nested wire name"() {
@@ -891,7 +891,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    e.propertyPath == "/meta/w_source"
+    e.propertyPath() == "/meta/w_source"
   }
 
   def "typed patch final meta construction failure reports the renamed nested wire pointer"() {
@@ -907,7 +907,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    e.propertyPath == "/meta/w_source"
+    e.propertyPath() == "/meta/w_source"
   }
 
   def "typed patch final relationship-meta construction failure reports the renamed nested wire pointer"() {
@@ -922,7 +922,7 @@ class FlatMetaMappingSpec extends Specification {
     then:
     def e = thrown(JsonApiMappingException)
     e.diagnostic == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
-    e.propertyPath == "/relationships/author/meta/w_source"
+    e.propertyPath() == "/relationships/author/meta/w_source"
   }
 
   // ============================== FROM-DOCUMENT DATA-LESS RELATIONSHIP META ================

@@ -93,6 +93,8 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
+    // The wire identifier coordinate, not the Jackson logical property identity.
+    ex.propertyPath() == "/id"
   }
 
   @JsonApiResource(type = "dup")
@@ -194,6 +196,32 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    ex.propertyPath() == "/attributes/badAttr"
+  }
+
+  @JsonApiResource(type = "renamed-failing-attr")
+  static class RenamedFailingAttrEntity {
+    @JsonApiId String id
+    @JsonApiAttribute(name = "body-text") String badAttr
+
+    String getBadAttr() throws IOException {
+      throw new IOException("attribute read failure")
+    }
+  }
+
+  def "renamed attribute getter failure reports the wire name, never the logical name"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+    def entity = new RenamedFailingAttrEntity(id: "1", badAttr: "anything")
+
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    // Wire member body-text; the Jackson/logical name badAttr must not leak into the location.
+    ex.propertyPath() == "/attributes/body-text"
   }
 
   @JsonApiResource(type = "failing-id")
@@ -216,6 +244,7 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
+    ex.propertyPath() == "/id"
   }
 
   @JsonApiResource(type = "dup-attrs")
@@ -236,6 +265,8 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NAME_COLLISION
+    // The duplicated attribute container coordinate.
+    ex.propertyPath() == "/attributes/same"
   }
 
   @JsonApiResource(type = "dup-rels")
@@ -256,6 +287,7 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NAME_COLLISION
+    ex.propertyPath() == "/relationships/same/data"
   }
 
   @JsonApiResource(type = "reserved-attr")
@@ -319,5 +351,33 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_ACCESSOR
+    ex.propertyPath() == "/attributes/secret"
+  }
+
+  // ============================== NO-LOCATION DIAGNOSTICS ==============================
+  //
+  // Class-level and specification failures have no document member coordinate; the identifying
+  // names stay in the message and the location is absent (never "", "/", or a logical name).
+
+  def "class-level declaration failures carry no location"() {
+    when:
+    mapper.toResource(entity)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == diagnostic
+    ex.location() == null
+
+    where:
+    diagnostic                              | entity
+    MappingDiagnostic.MISSING_RESOURCE_ANNOTATION | new Object()
+    MappingDiagnostic.INVALID_RESOURCE_TYPE  | new EmptyTypeEntity(id: "1")
+    MappingDiagnostic.INVALID_RESOURCE_TYPE  | new InvalidTypeEntity(id: "1")
+    MappingDiagnostic.MISSING_IDENTIFIER     | new NoIdEntity(name: "test")
+    MappingDiagnostic.DUPLICATE_ROLE         | new DuplicateRoleEntity(id: "1")
+    MappingDiagnostic.NAME_COLLISION         | new NameCollisionEntity(id: "1", fieldA: "a", fieldB: "b")
+    MappingDiagnostic.INVALID_ATTRIBUTE_NAME | new InvalidAttrNameEntity(id: "1", value: "v")
+    MappingDiagnostic.INVALID_RELATIONSHIP_NAME | new InvalidRelNameEntity(id: "1", other: "o")
+    mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
   }
 }

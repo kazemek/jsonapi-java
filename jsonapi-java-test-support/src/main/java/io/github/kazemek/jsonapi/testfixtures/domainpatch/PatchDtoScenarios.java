@@ -28,7 +28,7 @@ public final class PatchDtoScenarios {
   private static final String SUBTITLE = "subtitle";
   private static final String ADDRESS = "address";
   private static final String PEOPLE = "people";
-  private static final String TITLE_PATH = "/title";
+  private static final String TITLE_PATH = "/attributes/title";
   private static final String ADDRESS_ATTRIBUTE_PATH = "/attributes/address";
   private static final String IDENTITY_ONLY_DOCUMENT =
       "{\"data\":{\"type\":\"articles\",\"id\":\"1\"}}";
@@ -314,7 +314,8 @@ public final class PatchDtoScenarios {
         "patch-dto-declaration-unannotated-member",
         "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"note\":\"n\"}}}",
         UnannotatedPatch.class,
-        PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/note"));
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/attributes/note"));
   }
 
   private static PatchDtoScenario declarationPresenceId() {

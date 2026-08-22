@@ -75,6 +75,34 @@ class PatchStructuredBindingSpec extends Specification {
     ex.propertyPath() == "/attributes/address/bogus"
   }
 
+  def "unknown nested members are escaped as JSON Pointer segments"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"external/name":"x"}}}}',
+        ArticleWithAddressPatch)
+
+    then:
+    def slash = thrown(JsonApiMappingException)
+    slash.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    // Attribute values are not namespace-validated, so pointer-sensitive characters reach the
+    // diagnostic and must be RFC 6901-escaped per segment.
+    slash.propertyPath() == "/attributes/address/external~1name"
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"articles","id":"1","attributes":{"address":{"a~b":"y"}}}}',
+        ArticleWithAddressPatch)
+
+    then:
+    def tilde = thrown(JsonApiMappingException)
+    tilde.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    // ~ escapes to ~0 first, so the escape character itself can never fake a later ~1.
+    tilde.propertyPath() == "/attributes/address/a~0b"
+  }
+
   def "low-level naming strategy carries both wire and logical nested names"() {
     given:
     def mapper = JsonMapper.builder()
@@ -292,7 +320,7 @@ class PatchStructuredBindingSpec extends Specification {
     box.numbers() == PatchPresence.present([1, 2])
   }
 
-  def "top-level construction failure with an empty path reports the root pointer"() {
+  def "top-level construction failure with an empty path reports no location"() {
     given:
     def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"}}}'
@@ -303,7 +331,9 @@ class PatchStructuredBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.MISSING_CREATOR_INPUT
-    ex.propertyPath() == "/"
+    // No Jackson member names on the failure path, so the location is absent — never "/" or "".
+    ex.location() == null
+    ex.propertyPath() == null
   }
 
   def "typed and low-level paths express the same nested presence for the same request"() {

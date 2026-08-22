@@ -142,7 +142,9 @@ PATCH DTO catalogs are in this module.
   hold for every entry regardless of catalog size: unique stable ids, exactly one input
   variant/converter-behavior discriminator/discriminated expectation, resolvable target DTO
   classes in the shared `domainread`/`domainwrite` packages, and either a complete bound value
-  or a known diagnostic (`propertyPath` only when the shared catalog asserts it). Adapter suites
+  or a known diagnostic (`propertyPath` only when the shared catalog asserts it; expected
+  `propertyPath` values are resource-relative JSON Pointer text per the adapter mapping-location
+  contract, or null when the catalog pins no location). Adapter suites
   run the whole catalog through their own binder and assert full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`). Binder expectations are resource-relative and
   never read `included` (ADR-011). Jackson-derived property-name paths and major-specific cause

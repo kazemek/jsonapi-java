@@ -83,10 +83,11 @@ public final class CompoundInclusionEngine {
     for (IncludePath path : paths) {
       if (path.segments().size() > context.maxDepth()) {
         Class<?> resourceClass = distinctTypes.isEmpty() ? null : distinctTypes.getFirst();
-        throw new JsonApiMappingException(
+        // Include-path specification failures have no document member location; the dotted path
+        // stays in the message per the mapping-location contract.
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED,
             resourceClass,
-            path.dotted(),
             "Include path exceeds maxDepth " + context.maxDepth() + ": " + path.dotted());
       }
       for (Class<?> resourceClass : distinctTypes) {
@@ -105,18 +106,28 @@ public final class CompoundInclusionEngine {
       ResourceMapping mapping = writer.mappingFor(currentClass);
       MappingProperty property = findRelationship(mapping, segment);
       if (property == null) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INVALID_INCLUDE_PATH,
             currentClass,
-            dottedThrough,
-            "Unknown relationship '" + segment + "' on " + mapping.resourceType());
+            "Unknown relationship '"
+                + segment
+                + "' on "
+                + mapping.resourceType()
+                + " in include path '"
+                + dottedThrough
+                + "'");
       }
       if (!policy.allows(mapping.resourceType(), segment)) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE,
             currentClass,
-            dottedThrough,
-            "Include denied for " + mapping.resourceType() + "." + segment);
+            "Include denied for "
+                + mapping.resourceType()
+                + "."
+                + segment
+                + " in include path '"
+                + dottedThrough
+                + "'");
       }
       currentClass = resolveRelatedDomainClass(property, currentClass, dottedThrough);
     }
@@ -133,17 +144,16 @@ public final class CompoundInclusionEngine {
   }
 
   private static Class<?> resolveRelatedDomainClass(
-      MappingProperty property, Class<?> ownerClass, String propertyPath) {
+      MappingProperty property, Class<?> ownerClass, String dottedThrough) {
     JavaType propertyType = property.accessor().getType();
     JavaType relatedType = unwrapOptionalType(propertyType);
     if (DomainResourceWriter.isToManyType(relatedType)) {
       JavaType contentType = DomainResourceWriter.resolveContentType(relatedType);
       if (contentType == null) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
             ownerClass,
-            propertyPath,
-            "Cannot resolve collection content type for include path");
+            "Cannot resolve collection content type for include path '" + dottedThrough + "'");
       }
       relatedType = unwrapOptionalType(contentType);
     }
@@ -221,18 +231,28 @@ public final class CompoundInclusionEngine {
       ResourceMapping mapping = writer.mappingFor(domain.getClass());
       MappingProperty property = findRelationship(mapping, segment);
       if (property == null) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INVALID_INCLUDE_PATH,
             domain.getClass(),
-            path.dottedThrough(current.segmentIndex()),
-            "Unknown relationship '" + segment + "'");
+            "Unknown relationship '"
+                + segment
+                + "' on "
+                + mapping.resourceType()
+                + " in include path '"
+                + path.dottedThrough(current.segmentIndex())
+                + "'");
       }
       if (!context.includePolicy().allows(mapping.resourceType(), segment)) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE,
             domain.getClass(),
-            path.dottedThrough(current.segmentIndex()),
-            "Include denied for " + mapping.resourceType() + "." + segment);
+            "Include denied for "
+                + mapping.resourceType()
+                + "."
+                + segment
+                + " in include path '"
+                + path.dottedThrough(current.segmentIndex())
+                + "'");
       }
 
       List<Object> related = readRelatedDomainObjects(domain, property);
@@ -278,20 +298,26 @@ public final class CompoundInclusionEngine {
       ResourceObject existing = includedByIdentity.get(identity);
       if (existing != null) {
         if (!existing.equals(candidate)) {
-          throw new JsonApiMappingException(
+          throw JsonApiMappingException.withoutLocation(
               MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION,
               null,
-              propertyPath,
-              "Conflicting included representation for " + identity);
+              "Conflicting included representation for "
+                  + identity
+                  + " reached via include path '"
+                  + propertyPath
+                  + "'");
         }
         return;
       }
       if (includedByIdentity.size() >= context.maxIncluded()) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INCLUDE_COUNT_EXCEEDED,
             null,
-            propertyPath,
-            "Included resource count exceeds maxIncluded " + context.maxIncluded());
+            "Included resource count exceeds maxIncluded "
+                + context.maxIncluded()
+                + " via include path '"
+                + propertyPath
+                + "'");
       }
       includedByIdentity.put(identity, candidate);
     }

@@ -274,7 +274,8 @@ public final class PatchScenarios {
         "{\"data\":{\"type\":\"things\",\"id\":\"1\",\"attributes\":{\"count\":\"not-an-int\"}}}",
         FlatCountedThing.class,
         null,
-        PatchExpectation.binderFailure(MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, "/count"));
+        PatchExpectation.binderFailure(
+            MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, "/attributes/count"));
   }
 
   private static PatchScenario unsupportedRelationshipTarget() {

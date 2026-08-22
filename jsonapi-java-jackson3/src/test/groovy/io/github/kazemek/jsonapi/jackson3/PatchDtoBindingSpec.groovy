@@ -199,7 +199,7 @@ class PatchDtoBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
-    ex.propertyPath() == "/title"
+    ex.propertyPath() == "/attributes/title"
   }
 
   def "property-level @JsonSerialize on a PatchPresence member is rejected"() {
@@ -213,7 +213,7 @@ class PatchDtoBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
-    ex.propertyPath() == "/title"
+    ex.propertyPath() == "/attributes/title"
   }
 
   def "inner type customization still works"() {
@@ -240,7 +240,7 @@ class PatchDtoBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
-    ex.propertyPath() == "/title"
+    ex.propertyPath() == "/attributes/title"
   }
 
   def "property-level @JsonSerialize(converter) on a PatchPresence member is rejected"() {
@@ -254,7 +254,7 @@ class PatchDtoBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
-    ex.propertyPath() == "/title"
+    ex.propertyPath() == "/attributes/title"
   }
 
   def "mix-in wrapper @JsonDeserialize on a PatchPresence member is rejected"() {
@@ -271,7 +271,7 @@ class PatchDtoBindingSpec extends Specification {
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
-    ex.propertyPath() == "/title"
+    ex.propertyPath() == "/attributes/title"
   }
 
   def "naming strategy is honored for PATCH DTO members"() {
@@ -412,6 +412,24 @@ class PatchDtoBindingSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
     ex.propertyPath() == "/attributes/bogus"
+  }
+
+  def "unknown supplied relationship names are escaped as JSON Pointer segments"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"articles","id":"1","relationships":{"bogus":{"data":null}}}}',
+        TitlePatch)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    // Escaping itself is exercised end-to-end by the structured PATCH specs: top-level wire
+    // member names are namespace-validated, so pointer-sensitive characters can only reach a
+    // diagnostic location inside attribute values.
+    ex.propertyPath() == "/relationships/bogus"
   }
 
   def "unknown supplied relationship is reported before a known relationship conversion"() {
@@ -784,6 +802,12 @@ class PatchDtoBindingSpec extends Specification {
   static class CountPatch {
     @JsonApiId String id
     @JsonApiAttribute PatchPresence<Integer> count
+  }
+
+  @JsonApiResource(type = "articles")
+  static class TitlePatch {
+    @JsonApiId String id
+    @JsonApiAttribute PatchPresence<String> title
   }
 
   static class AuthorId {
