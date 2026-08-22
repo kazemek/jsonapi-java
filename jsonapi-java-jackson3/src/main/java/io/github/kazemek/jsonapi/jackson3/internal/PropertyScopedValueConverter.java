@@ -119,10 +119,14 @@ final class PropertyScopedValueConverter {
       Object sourceBean,
       @Nullable Object rawValue,
       @Nullable Object fallbackValue) {
-    BeanPropertyWriter property = matchingSerializerProperty(beanType, wireName);
-    if (property == null) {
+    SerializerPropertyResolution resolution = matchingSerializerProperty(beanType, wireName);
+    if (!resolution.beanSerializerAvailable()) {
       return new SerializationResult(true, mapper.convertValue(fallbackValue, Object.class));
     }
+    if (resolution.property() == null) {
+      return new SerializationResult(false, null);
+    }
+    BeanPropertyWriter property = Objects.requireNonNull(resolution.property());
     SerializationContextExt serializationContext = serializationMapper._serializationContext();
     try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
       serializePropertyValue(property, sourceBean, rawValue, buffer, serializationContext);
@@ -152,7 +156,8 @@ final class PropertyScopedValueConverter {
       Object sourceBean,
       @Nullable Object rawValue,
       TokenBuffer buffer,
-      SerializationContextExt context) {
+      SerializationContextExt context)
+      throws Exception {
     RawValueBeanPropertyWriter rawValueProperty =
         property instanceof RawValueBeanPropertyWriter rawProperty
             ? rawProperty
@@ -183,22 +188,26 @@ final class PropertyScopedValueConverter {
   }
 
   /**
-   * Resolves the fully-contextualized property writer from the containing bean, or {@code null}
-   * when the bean has no ordinary bean serializer or the wire-named property is absent.
+   * Resolves the fully-contextualized property writer from the containing bean. A bean serializer
+   * without the requested writer means Jackson intentionally omitted the property; only a non-bean
+   * serializer uses the ordinary conversion fallback.
    */
-  private @Nullable BeanPropertyWriter matchingSerializerProperty(
+  private SerializerPropertyResolution matchingSerializerProperty(
       JavaType beanType, String wireName) {
     SerializationContextExt context = serializationMapper._serializationContext();
     ValueSerializer<Object> root = context.findRootValueSerializer(beanType);
     if (!(root instanceof BeanSerializerBase bean)) {
-      return null;
+      return new SerializerPropertyResolution(false, null);
     }
     for (var iterator = bean.properties(); iterator.hasNext(); ) {
       PropertyWriter writer = iterator.next();
       if (writer instanceof BeanPropertyWriter property && property.getName().equals(wireName)) {
-        return property;
+        return new SerializerPropertyResolution(true, property);
       }
     }
-    return null;
+    return new SerializerPropertyResolution(true, null);
   }
+
+  private record SerializerPropertyResolution(
+      boolean beanSerializerAvailable, @Nullable BeanPropertyWriter property) {}
 }

@@ -92,7 +92,12 @@ final class RawValueBeanPropertyWriter extends BeanPropertyWriter {
   }
 
   void serializeAsRawProperty(
-      Object bean, @Nullable Object value, JsonGenerator generator, SerializationContext context) {
+      Object bean, @Nullable Object value, JsonGenerator generator, SerializationContext context)
+      throws Exception {
+    if (usesCustomSerializationBehavior()) {
+      delegate.serializeAsProperty(bean, generator, context);
+      return;
+    }
     if (value == null) {
       if (delegate.isUnwrapping()) {
         return;
@@ -142,5 +147,10 @@ final class RawValueBeanPropertyWriter extends BeanPropertyWriter {
     } else {
       serializer.serializeWithType(value, generator, context, _typeSerializer);
     }
+  }
+
+  private boolean usesCustomSerializationBehavior() {
+    return delegate.getClass() != BeanPropertyWriter.class
+        && !(delegate instanceof UnwrappingBeanPropertyWriter);
   }
 }
