@@ -48,8 +48,11 @@
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
  * an explicit include request and {@link IncludePolicy}. Sparse fieldsets share that context
  * ({@code fieldsets} + {@link FieldPolicy}) and are applied only by the {@link MappedDocument}
- * overloads; pass {@link MappedDocument#applyTo} into the writer factory when relationships were
- * omitted by fieldset while inclusion still traversed them. Fieldsets select attributes and
+ * overloads; write the returned {@link MappedDocument} through a {@link JsonApiDocumentWriter} and
+ * the writer composes its bound validation policy with the mapped sparse-fieldset linkage
+ * exemptions—callers never translate mapping provenance into a validation context themselves.
+ * Exemptions name exactly the included resources whose linking relationship a fieldset removed, so
+ * unrelated full-linkage defects still fail validation. Fieldsets select attributes and
  * relationships only; whole-object resource meta is emitted independently (ADR-015).
  *
  * <p>Whole-object resource-side meta mapping (ADR-015) maps the complete {@code meta} object of a

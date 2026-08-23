@@ -34,3 +34,21 @@ JPA and other persistence technologies receive no implicit integration.
 - Applications explicitly decide what relationships may be exposed.
 - Inclusion requires context beyond a plain value serializer.
 - ORM-specific convenience can be considered later without affecting core semantics.
+
+## Amendment (2026-08): Sparse-fieldset provenance at the writer boundary
+
+Mapping provenance for sparse fieldsets is owned by the writer, not by callers. Mapping overloads
+that apply fieldsets return a provenance-bearing result (`MappedDocument`) carrying the identities
+of included resources whose inbound linkage was removed by an applied fieldset while inclusion
+still traversed the linking relationship. Document writers compose that provenance with their bound
+validation context before validation; callers never translate mapping provenance into validation
+policy themselves. Provenance stays out of the core document model — it is a mapping result, not a
+document member.
+
+Full-linkage relaxation granularity is per-resource, not document-wide. Exempted included
+resources count as reachable roots, so their own relationships still extend reachability to their
+subtrees; every other included resource still requires full linkage. A blanket document-wide flag
+was rejected because one legitimate fieldset omission would silently disable detection of
+unrelated genuine full-linkage defects elsewhere in the same document. The exemption concept is a
+core validation-policy value (`ValidationContext`) keyed by core resource identity, so adapter
+integrations share it without Jackson-major-specific choreography.

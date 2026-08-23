@@ -88,7 +88,7 @@ public final class Models {
         Set.of("ext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null);
@@ -100,7 +100,7 @@ public final class Models {
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null);

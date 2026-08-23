@@ -67,7 +67,7 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of())),
               SparseFieldsetExpectation.mapped(
-                  FieldsetResourceState.identity(ARTICLES, "1"), null, true)),
+                  FieldsetResourceState.identity(ARTICLES, "1"), null, false)),
           mappedDocument(
               "present empty list for included type selects no attributes or relationships",
               SparseFieldsetScenarios::article,
@@ -81,7 +81,7 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of())).withFieldPolicy(FieldPolicy.denyAll()),
               SparseFieldsetExpectation.mapped(
-                  FieldsetResourceState.identity(ARTICLES, "1"), null, true)),
+                  FieldsetResourceState.identity(ARTICLES, "1"), null, false)),
           unmappedDocument(
               "three-argument toDocument rejects non-empty fieldsets",
               SparseFieldsetScenarios::article,
@@ -97,11 +97,11 @@ public final class SparseFieldsetScenarios {
               "attribute-only fieldset via toMappedDocument",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE))),
-              SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, true)),
+              SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, false)),
           mappedCollection(
               () -> List.of(article()),
               fieldsets(Map.of(ARTICLES, List.of(AUTHOR))),
-              SparseFieldsetExpectation.mapped(authorOnlyArticle(), null, true)),
+              SparseFieldsetExpectation.mapped(authorOnlyArticle(), null, false)),
           mappedDocument(
               "renamed JsonProperty fieldset names use final JSON:API names",
               () -> new BlogWithJsonProperty("b1", "Hello"),
@@ -129,7 +129,7 @@ public final class SparseFieldsetScenarios {
                       null,
                       Map.of()),
                   null,
-                  true)),
+                  false)),
           mappedDocument(
               "renamed JsonApiRelationship fieldset uses written-by",
               () -> new ArticleWithRenamedAuthor("1", TITLE_VALUE, dan()),
@@ -213,17 +213,17 @@ public final class SparseFieldsetScenarios {
               "unused fieldset type keys are ignored",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of("tags", List.of(NAME), ARTICLES, List.of(TITLE))),
-              SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, true)),
+              SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, false)),
           mappedDocument(
               "duplicate-free multi-field fieldset keeps title and author",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR))),
-              SparseFieldsetExpectation.mapped(titleAndAuthorArticle(), null, true)),
+              SparseFieldsetExpectation.mapped(titleAndAuthorArticle(), null, false)),
           mappedDocument(
               "FieldAllowance-satisfied fieldset succeeds",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE))).withFieldPolicy(TITLE_ONLY_ALLOWANCE),
-              SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, true)),
+              SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, false)),
           mappedDocument(
               "FieldAllowance denies a present field not in the allowance set",
               SparseFieldsetScenarios::article,
@@ -245,9 +245,9 @@ public final class SparseFieldsetScenarios {
               "surviving fields keep mapping definition order",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(AUTHOR, BODY_TEXT, TITLE))),
-              SparseFieldsetExpectation.mapped(titleBodyTextAuthorArticle(), null, true)),
+              SparseFieldsetExpectation.mapped(titleBodyTextAuthorArticle(), null, false)),
           new SparseFieldsetScenario(
-              "concurrent fieldset mappings isolate documents and exception flags",
+              "concurrent fieldset mappings isolate documents and linkage exemptions",
               SparseFieldsetOperation.TO_MAPPED_DOCUMENT,
               SparseFieldsetRequest.concurrent(
                   new SparseFieldsetSide(

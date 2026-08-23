@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.core.validation;
 
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -12,26 +13,31 @@ import org.jspecify.annotations.Nullable;
  * Context for aggregate document validation.
  *
  * <p>Carries document usage (for example create, update, or response), allowed extension namespaces
- * and profile URIs/member names, the sparse-fieldset full-linkage exception, the current links
- * context, occurrence-keyed relationship pagination hints for link-only relationships, and an
- * optional expected endpoint identity compared against {@link DocumentUsage#UPDATE_REQUEST}
- * documents.
+ * and profile URIs/member names, sparse-fieldset linkage exemptions, the current links context,
+ * occurrence-keyed relationship pagination hints for link-only relationships, and an optional
+ * expected endpoint identity compared against {@link DocumentUsage#UPDATE_REQUEST} documents.
  *
- * <p>{@link #defaults()} uses {@link DocumentUsage#RESPONSE_OR_OTHER}, empty policy sets, no sparse
- * fieldset exception, {@link LinksContext#TOP_LEVEL}, no pagination hints, and no expected endpoint
- * identity—suitable for base-spec response documents without extensions or profiles.
+ * <p>Sparse-fieldset linkage exemptions name included resources whose inbound linkage was removed
+ * by an applied sparse fieldset, so full-linkage validation treats those resources as reachable
+ * roots while still enforcing full linkage for every other included resource.
+ *
+ * <p>{@link #defaults()} uses {@link DocumentUsage#RESPONSE_OR_OTHER}, empty policy sets, no
+ * sparse-fieldset linkage exemptions, {@link LinksContext#TOP_LEVEL}, no pagination hints, and no
+ * expected endpoint identity—suitable for base-spec response documents without extensions or
+ * profiles.
  */
 public record ValidationContext(
     DocumentUsage documentUsage,
     Set<String> allowedExtensionNamespaces,
     Set<String> allowedProfileUris,
     Set<String> allowedProfileMemberNames,
-    boolean sparseFieldsetException,
+    Set<ResourceIdentity> sparseFieldsetLinkageExemptions,
     LinksContext linksContext,
     Map<RelationshipPaginationKey, RelationshipCardinality> relationshipPaginationHints,
     @Nullable EndpointIdentity expectedEndpointIdentity) {
 
   private static final String PATH_RELATIONSHIP_PAGINATION_HINTS = "/relationshipPaginationHints";
+  private static final String PATH_LINKAGE_EXEMPTIONS = "/sparseFieldsetLinkageExemptions";
 
   public ValidationContext {
     LocalValidation.requireNonNull(
@@ -47,6 +53,7 @@ public record ValidationContext(
     allowedProfileMemberNames =
         copyRequiredStringSet(
             allowedProfileMemberNames, "/allowedProfileMemberNames", "allowedProfileMemberNames");
+    sparseFieldsetLinkageExemptions = copyRequiredIdentities(sparseFieldsetLinkageExemptions);
     relationshipPaginationHints =
         copyRequiredHints(
             LocalValidation.requireNonNull(
@@ -61,7 +68,7 @@ public record ValidationContext(
         Set.of(),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null);
@@ -73,7 +80,7 @@ public record ValidationContext(
         allowedExtensionNamespaces,
         allowedProfileUris,
         allowedProfileMemberNames,
-        sparseFieldsetException,
+        sparseFieldsetLinkageExemptions,
         linksContext,
         relationshipPaginationHints,
         expectedEndpointIdentity);
@@ -85,19 +92,23 @@ public record ValidationContext(
         allowedExtensionNamespaces,
         allowedProfileUris,
         allowedProfileMemberNames,
-        sparseFieldsetException,
+        sparseFieldsetLinkageExemptions,
         context,
         relationshipPaginationHints,
         expectedEndpointIdentity);
   }
 
-  public ValidationContext withSparseFieldsetException(boolean enabled) {
+  /**
+   * Returns a context whose full-linkage validation treats the given included-resource identities
+   * as reachable roots (sparse-fieldset linkage exemptions) while preserving every other setting.
+   */
+  public ValidationContext withSparseFieldsetLinkageExemptions(Set<ResourceIdentity> exemptions) {
     return new ValidationContext(
         documentUsage,
         allowedExtensionNamespaces,
         allowedProfileUris,
         allowedProfileMemberNames,
-        enabled,
+        exemptions,
         linksContext,
         relationshipPaginationHints,
         expectedEndpointIdentity);
@@ -110,7 +121,7 @@ public record ValidationContext(
         allowedExtensionNamespaces,
         allowedProfileUris,
         allowedProfileMemberNames,
-        sparseFieldsetException,
+        sparseFieldsetLinkageExemptions,
         linksContext,
         relationshipPaginationHints,
         identity);
@@ -135,6 +146,16 @@ public record ValidationContext(
       index++;
     }
     return Set.copyOf(copy);
+  }
+
+  private static Set<ResourceIdentity> copyRequiredIdentities(Set<ResourceIdentity> source) {
+    LocalValidation.requireNonNull(
+        source, PATH_LINKAGE_EXEMPTIONS, "sparseFieldsetLinkageExemptions must not be null");
+    for (ResourceIdentity identity : source) {
+      LocalValidation.requireNonNull(
+          identity, PATH_LINKAGE_EXEMPTIONS, "Linkage exemption element must not be null");
+    }
+    return Set.copyOf(source);
   }
 
   private static Map<RelationshipPaginationKey, RelationshipCardinality> copyRequiredHints(

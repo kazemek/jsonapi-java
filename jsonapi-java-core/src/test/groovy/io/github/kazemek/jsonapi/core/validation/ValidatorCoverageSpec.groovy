@@ -71,7 +71,7 @@ class ValidatorCoverageSpec extends Specification {
         Set.of("ext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -108,7 +108,7 @@ class ValidatorCoverageSpec extends Specification {
         Set.of("ext"),
         Set.of(),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)
@@ -151,7 +151,7 @@ class ValidatorCoverageSpec extends Specification {
         Set.of(),
         Set.of(uri),
         Set.of(),
-        false,
+        Set.of(),
         LinksContext.TOP_LEVEL,
         Map.of(),
         null)

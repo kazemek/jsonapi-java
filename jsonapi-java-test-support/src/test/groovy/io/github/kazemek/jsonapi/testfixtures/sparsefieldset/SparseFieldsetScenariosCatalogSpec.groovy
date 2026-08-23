@@ -178,7 +178,7 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
         "bad",
         SparseFieldsetOperation.TO_MAPPED_DOCUMENT,
         SparseFieldsetScenarios.byId(
-        "concurrent fieldset mappings isolate documents and exception flags").request(),
+        "concurrent fieldset mappings isolate documents and linkage exemptions").request(),
         SparseFieldsetExpectation.mapped(
         FieldsetResourceState.identity("articles", "1"), null, false))
 

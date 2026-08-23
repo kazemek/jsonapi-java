@@ -41,8 +41,9 @@ public final class CompoundInclusionEngine {
   /**
    * Collects included resources for the given primary domain snapshot and context.
    *
-   * @return included list {@code null} when no inclusion was requested (empty path list), plus an
-   *     aggregated bit for relationships omitted by fieldsets during included selective writes
+   * @return included list {@code null} when no inclusion was requested (empty path list), plus the
+   *     identities of included resources whose inbound linkage was removed by an applied fieldset
+   *     while inclusion still traversed the linking relationship
    */
   public IncludedResourcesResult collectIncluded(
       List<?> primarySnapshot,
@@ -57,7 +58,7 @@ public final class CompoundInclusionEngine {
 
     List<IncludePath> paths = context.includePaths();
     if (paths.isEmpty()) {
-      return new IncludedResourcesResult(null, false);
+      return new IncludedResourcesResult(null, Set.of());
     }
 
     List<Class<?>> distinctTypes = distinctTypesInOrder(primarySnapshot);
@@ -174,7 +175,7 @@ public final class CompoundInclusionEngine {
     private final Set<ResourceIdentity> primaryIdentities = new HashSet<>();
     private final Map<ResourceIdentity, ResourceObject> includedByIdentity = new LinkedHashMap<>();
     private final Set<VisitKey> visited = new HashSet<>();
-    private boolean relationshipOmittedByFieldset;
+    private final Set<ResourceIdentity> linkageExemptions = new LinkedHashSet<>();
 
     Traversal(
         CompoundSerializationContext context,
@@ -200,7 +201,7 @@ public final class CompoundInclusionEngine {
         }
       }
       return new IncludedResourcesResult(
-          List.copyOf(includedByIdentity.values()), relationshipOmittedByFieldset);
+          List.copyOf(includedByIdentity.values()), linkageExemptions);
     }
 
     private void walkPath(Object primaryDomain, IncludePath path, int pathIndex) {
@@ -258,21 +259,43 @@ public final class CompoundInclusionEngine {
       List<Object> related = readRelatedDomainObjects(domain, property);
       int nextSegment = current.segmentIndex() + 1;
       boolean lastSegment = nextSegment >= path.segments().size();
+      // When the owning resource's fieldset omits this segment, the traversed relationship is
+      // absent from its wire representation while inclusion still follows it; resources reached
+      // through such an edge legitimately lack inbound linkage in the produced document.
+      List<String> ownerFields = DomainResourceWriter.fieldsFor(context, mapping.resourceType());
+      boolean edgeOmittedByFieldset = ownerFields != null && !ownerFields.contains(segment);
+      String propertyPath = path.dottedThrough(current.segmentIndex());
       for (Object relatedDomain : related) {
-        ResourceIdentity relatedIdentity = identityOf(relatedDomain);
-        if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
-          if (!lastSegment) {
-            queue.add(new DomainAtSegment(relatedDomain, nextSegment));
-          }
-          continue;
-        }
-        DomainResourceWriter.SelectiveResource selective =
-            writer.toResource(relatedDomain, context);
-        relationshipOmittedByFieldset |= selective.relationshipOmittedByFieldset();
-        offerIncluded(selective.resource(), path.dottedThrough(current.segmentIndex()));
-        if (!lastSegment) {
-          queue.add(new DomainAtSegment(relatedDomain, nextSegment));
-        }
+        processRelated(
+            relatedDomain, edgeOmittedByFieldset, nextSegment, lastSegment, propertyPath, queue);
+      }
+    }
+
+    /** Handles one related domain object reached through the relationship of one path segment. */
+    private void processRelated(
+        Object relatedDomain,
+        boolean edgeOmittedByFieldset,
+        int nextSegment,
+        boolean lastSegment,
+        String propertyPath,
+        Queue<DomainAtSegment> queue) {
+      ResourceIdentity relatedIdentity = identityOf(relatedDomain);
+      if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
+        enqueueNextSegment(relatedDomain, nextSegment, lastSegment, queue);
+        return;
+      }
+      if (edgeOmittedByFieldset && relatedIdentity != null) {
+        linkageExemptions.add(relatedIdentity);
+      }
+      ResourceObject relatedResource = writer.toResource(relatedDomain, context);
+      offerIncluded(relatedResource, propertyPath);
+      enqueueNextSegment(relatedDomain, nextSegment, lastSegment, queue);
+    }
+
+    private void enqueueNextSegment(
+        Object domain, int nextSegment, boolean lastSegment, Queue<DomainAtSegment> queue) {
+      if (!lastSegment) {
+        queue.add(new DomainAtSegment(domain, nextSegment));
       }
     }
 
