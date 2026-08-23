@@ -28,6 +28,7 @@ public final class MappingDefinitionCache {
 
   private final JsonMapper mapper;
   private final Map<CacheKey, ResourceMapping> cache = new ConcurrentHashMap<>();
+  private final Map<CacheKey, ValidatedMapping> validatedCache = new ConcurrentHashMap<>();
   private final Map<CacheKey, ReadResourceMapping> readCache = new ConcurrentHashMap<>();
   private final Map<CacheKey, Optional<String>> resourceTypeNames = new ConcurrentHashMap<>();
 
@@ -35,8 +36,12 @@ public final class MappingDefinitionCache {
     this.mapper = mapper;
   }
 
-  ResourceMapping resolve(Class<?> rawType) {
-    return resolve(mapper.constructType(rawType));
+  JavaType constructType(Class<?> rawType) {
+    return mapper.constructType(rawType);
+  }
+
+  JavaType specializeType(JavaType declaredType, Class<?> runtimeType) {
+    return mapper.getTypeFactory().constructSpecializedType(declaredType, runtimeType);
   }
 
   /**
@@ -58,6 +63,25 @@ public final class MappingDefinitionCache {
   }
 
   /**
+   * Resolves a write mapping and memoizes the generic-member validation result using the same
+   * complete-type and serialization-configuration key as the mapping cache.
+   */
+  ValidatedMapping resolveValidated(JavaType javaType) {
+    SerializationConfig config = mapper.serializationConfig();
+    CacheKey key = new CacheKey(javaType, configHash(config));
+    return validatedCache.computeIfAbsent(
+        key,
+        cacheKey -> {
+          ResourceMapping mapping =
+              cache.computeIfAbsent(
+                  cacheKey, ignored -> computeMapping(javaType.getRawClass(), javaType, config));
+          return new ValidatedMapping(
+              mapping,
+              Optional.ofNullable(ResolvedTypeSupport.findUnresolvedProperty(mapping, javaType)));
+        });
+  }
+
+  /**
    * Resolves the deserialization-oriented property view used by ordinary flat reads. This cache is
    * deliberately separate from {@link #cache}: write mapping remains serialization-oriented and
    * continues to own resource writing.
@@ -74,14 +98,8 @@ public final class MappingDefinitionCache {
         key, cacheKey -> computeReadMapping(rawType, javaType, config));
   }
 
-  /**
-   * Resolves the configured class-level resource type name for {@code rawType} through mapper-aware
-   * introspection (class-level mix-ins honored), or {@code null} when the type carries no
-   * configured {@code @JsonApiResource} metadata. Presence-only: the name is returned without
-   * member-name validation so callers can keep their own absence diagnostics.
-   */
-  public @Nullable String findResourceTypeName(Class<?> rawType) {
-    JavaType javaType = mapper.constructType(rawType);
+  /** Resolves the configured class-level resource type name for a complete Java type. */
+  public @Nullable String findResourceTypeName(JavaType javaType) {
     CacheKey key = new CacheKey(javaType, configHash(mapper.serializationConfig()));
     Optional<String> existing =
         resourceTypeNames.computeIfAbsent(
@@ -99,8 +117,15 @@ public final class MappingDefinitionCache {
    *     invalid
    */
   public String requireResourceTypeName(Class<?> rawType) {
+    return requireResourceTypeName(mapper.constructType(rawType));
+  }
+
+  /**
+   * Resolves and validates the configured class-level resource type name for a complete Java type.
+   */
+  public String requireResourceTypeName(JavaType javaType) {
     return MappingDefinitionResolver.validateResourceTypeName(
-        findResourceTypeName(rawType), rawType);
+        findResourceTypeName(javaType), javaType.getRawClass());
   }
 
   private @Nullable String computeResourceTypeName(JavaType javaType) {
@@ -189,6 +214,8 @@ public final class MappingDefinitionCache {
     result = 31 * result + (activeView == null ? 0 : activeView.hashCode());
     return result;
   }
+
+  record ValidatedMapping(ResourceMapping mapping, Optional<MappingProperty> unresolvedProperty) {}
 
   private record CacheKey(JavaType type, int configHash) {}
 }

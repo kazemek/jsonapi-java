@@ -30,6 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 public final class DomainResourceWriter {
 
   private static final String RESOURCE = "resource";
+  private static final String DECLARED_TYPE = "declaredType";
 
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
@@ -44,9 +45,25 @@ public final class DomainResourceWriter {
     this.propertyScoped = new PropertyScopedValueConverter(mapper);
   }
 
-  public ResourceObject toResource(Object resource) {
+  public JavaType inferredType(Object resource) {
     Objects.requireNonNull(resource, RESOURCE);
-    ResourceMapping mapping = cache.resolve(resource.getClass());
+    return cache.constructType(resource.getClass());
+  }
+
+  public JavaType effectiveType(Object resource, JavaType declaredType) {
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
+    if (declaredType.getRawClass() == resource.getClass()) {
+      return declaredType;
+    }
+    return cache.specializeType(declaredType, resource.getClass());
+  }
+
+  public ResourceObject toResource(Object resource, JavaType declaredType) {
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
+    requireAssignable(resource, declaredType);
+    ResourceMapping mapping = mappingFor(declaredType);
     validateMetaTargets(mapping, resource.getClass());
     String id = extractId(resource, mapping);
     Attributes attributes = buildAttributes(resource, mapping, null);
@@ -60,27 +77,28 @@ public final class DomainResourceWriter {
    * present fieldset entry for the resource's mapped type before any selective attribute or
    * relationship reads.
    */
-  public ResourceObject toResource(Object resource, CompoundSerializationContext context) {
+  public ResourceObject toResource(
+      Object resource, JavaType declaredType, CompoundSerializationContext context) {
     Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
     Objects.requireNonNull(context, "context");
-    ResourceMapping mapping = cache.resolve(resource.getClass());
+    requireAssignable(resource, declaredType);
+    ResourceMapping mapping = mappingFor(declaredType);
     List<String> fields = fieldsFor(context, mapping.resourceType());
     if (fields != null) {
       validateFieldset(resource.getClass(), mapping, fields, context.fieldPolicy());
     }
-    return toResourceSelective(resource, fields);
+    return toResourceSelective(resource, mapping, fields);
   }
 
-  private ResourceObject toResourceSelective(Object resource, @Nullable List<String> fields) {
-    if (fields == null) {
-      return toResource(resource);
-    }
-    ResourceMapping mapping = cache.resolve(resource.getClass());
+  private ResourceObject toResourceSelective(
+      Object resource, ResourceMapping mapping, @Nullable List<String> fields) {
     validateMetaTargets(mapping, resource.getClass());
     String id = extractId(resource, mapping);
-    Set<String> allowed = Set.copyOf(fields);
-    Attributes attributes = buildAttributes(resource, mapping, allowed);
-    Relationships relationships = buildRelationships(resource, mapping, allowed);
+    Attributes attributes =
+        buildAttributes(resource, mapping, fields == null ? null : Set.copyOf(fields));
+    Relationships relationships =
+        buildRelationships(resource, mapping, fields == null ? null : Set.copyOf(fields));
     Meta meta = buildResourceMeta(resource, mapping);
     return buildResourceObject(mapping, id, attributes, relationships, meta);
   }
@@ -183,22 +201,43 @@ public final class DomainResourceWriter {
     return identifierString;
   }
 
-  public ResourceIdentifier extractIdentifier(Object resource) {
+  public ResourceIdentifier extractIdentifier(Object resource, JavaType declaredType) {
     Objects.requireNonNull(resource, RESOURCE);
-    Class<?> rawType = resource.getClass();
-    ResourceMapping mapping = cache.resolve(rawType);
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
+    requireAssignable(resource, declaredType);
+    ResourceMapping mapping = mappingFor(declaredType);
     String id = extractId(resource, mapping);
     return new ResourceIdentifier(mapping.resourceType(), id, null, null, Map.of());
   }
 
-  /** Resolves the cached mapping definition for {@code rawType}. */
-  ResourceMapping mappingFor(Class<?> rawType) {
-    return cache.resolve(rawType);
+  /** Resolves the cached mapping definition for a complete declared type. */
+  ResourceMapping mappingFor(JavaType declaredType) {
+    MappingDefinitionCache.ValidatedMapping validated = cache.resolveValidated(declaredType);
+    Optional<MappingProperty> unresolvedProperty = validated.unresolvedProperty();
+    if (unresolvedProperty.isPresent()) {
+      MappingProperty unresolved = unresolvedProperty.orElseThrow();
+      throw new JsonApiMappingException(
+          MappingDiagnostic.UNRESOLVED_GENERIC_TYPE,
+          declaredType.getRawClass(),
+          ResolvedTypeSupport.location(unresolved),
+          ResolvedTypeSupport.message(unresolved, declaredType));
+    }
+    return validated.mapping();
   }
 
   /** Reads a relationship property for inclusion traversal (not linkage construction). */
   @Nullable Object readRelationshipValue(Object resource, MappingProperty property) {
     return readValue(resource, property, PropertyRole.RELATIONSHIP);
+  }
+
+  private static void requireAssignable(Object resource, JavaType declaredType) {
+    if (!declaredType.getRawClass().isInstance(resource)) {
+      throw new IllegalArgumentException(
+          "Resource of type "
+              + resource.getClass().getName()
+              + " is not assignable to declared type "
+              + declaredType.toCanonical());
+    }
   }
 
   static boolean isToManyType(JavaType type) {
@@ -331,7 +370,7 @@ public final class DomainResourceWriter {
     RelationshipData linkage =
         isToManyType(propertyType)
             ? extractToManyLinkage(value, propertyType, relationshipLocation)
-            : extractToOneLinkage(value);
+            : extractToOneLinkage(value, propertyType);
     Meta meta = null;
     MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
     if (metaProperty != null) {
@@ -444,7 +483,7 @@ public final class DomainResourceWriter {
             cause);
   }
 
-  private RelationshipData extractToOneLinkage(@Nullable Object value) {
+  private RelationshipData extractToOneLinkage(@Nullable Object value, JavaType propertyType) {
     value = unwrapOptional(value);
     return switch (value) {
       case null -> RelationshipData.NullLinkage.INSTANCE;
@@ -452,8 +491,19 @@ public final class DomainResourceWriter {
           new RelationshipData.SingleLinkage(resourceIdentifier);
       case RelationshipData relationshipData -> relationshipData;
       default ->
-          new RelationshipData.SingleLinkage(extractIdentifier(Objects.requireNonNull(value)));
+          new RelationshipData.SingleLinkage(
+              extractIdentifier(
+                  Objects.requireNonNull(value), relationshipTargetType(value, propertyType)));
     };
+  }
+
+  private JavaType relationshipTargetType(Object value, JavaType propertyType) {
+    JavaType unwrapped = RelationshipLinkageSupport.unwrapOptionalType(propertyType);
+    if (unwrapped.getRawClass() == Object.class
+        || (unwrapped.getRawClass() == Optional.class && unwrapped.containedTypeCount() == 0)) {
+      return inferredType(value);
+    }
+    return effectiveType(value, unwrapped);
   }
 
   private RelationshipData extractToManyLinkage(
@@ -513,10 +563,11 @@ public final class DomainResourceWriter {
           relationshipLocation,
           "Cannot resolve collection content type");
     }
-    checkDeclaredTargetHasResourceMetadata(contentType.getRawClass(), relationshipLocation);
+    checkDeclaredTargetHasResourceMetadata(contentType, relationshipLocation);
     List<ResourceIdentifier> identifiers = new ArrayList<>(items.size());
     for (Object item : items) {
-      identifiers.add(extractIdentifier(item));
+      JavaType effectiveContentType = effectiveType(item, contentType);
+      identifiers.add(extractIdentifier(item, effectiveContentType));
     }
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
   }
@@ -608,13 +659,13 @@ public final class DomainResourceWriter {
    * (including class-level mix-ins). Presence-only, so absence keeps this path's stable diagnostic.
    */
   private void checkDeclaredTargetHasResourceMetadata(
-      Class<?> rawType, MappingLocation relationshipLocation) {
-    if (cache.findResourceTypeName(rawType) == null) {
+      JavaType targetType, MappingLocation relationshipLocation) {
+    if (cache.findResourceTypeName(targetType) == null) {
       throw new JsonApiMappingException(
           MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
-          rawType,
+          targetType.getRawClass(),
           relationshipLocation,
-          "Collection element type " + rawType.getName() + " lacks @JsonApiResource");
+          "Collection element type " + targetType.toCanonical() + " lacks @JsonApiResource");
     }
   }
 
