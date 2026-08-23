@@ -152,9 +152,9 @@ public final class MappingDefinitionCache {
   private Map<String, JavaType> effectiveDeserializationTypes(
       JavaType javaType, BeanDescription description) {
     Map<String, JavaType> targets = new java.util.LinkedHashMap<>();
-    ValueDeserializer<?> root =
-        mapper._deserializationContext().findRootValueDeserializer(javaType);
-    if (!(root instanceof BeanDeserializerBase bean)) {
+    ValueDeserializer<?> deserializer =
+        mapper._deserializationContext().findNonContextualValueDeserializer(javaType);
+    if (!(deserializer instanceof BeanDeserializerBase bean)) {
       return targets;
     }
     Class<?> activeView = mapper.deserializationConfig().getActiveView();

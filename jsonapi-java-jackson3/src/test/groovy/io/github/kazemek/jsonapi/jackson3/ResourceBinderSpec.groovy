@@ -187,6 +187,20 @@ class ResourceBinderSpec extends Specification {
     dto.titleValue() == "injected"
   }
 
+  def "root type information does not hide effective flat-read properties"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    def dto = binder.fromResource(
+        resource("root-typed", "1", [title: "bound"], null),
+        DirectionalityReadModels.RootTyped)
+
+    then:
+    dto.id == "1"
+    dto.title == "bound"
+  }
+
   def "Jackson write-only mapped property is supported by ordinary flat reads"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())

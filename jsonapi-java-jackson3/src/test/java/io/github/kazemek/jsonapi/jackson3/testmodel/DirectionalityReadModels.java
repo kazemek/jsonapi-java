@@ -3,6 +3,8 @@ package io.github.kazemek.jsonapi.jackson3.testmodel;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.annotation.OptBoolean;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
@@ -74,6 +76,20 @@ public final class DirectionalityReadModels {
     public String titleValue() {
       return title;
     }
+  }
+
+  @JsonTypeInfo(
+      use = JsonTypeInfo.Id.NAME,
+      include = JsonTypeInfo.As.PROPERTY,
+      property = "kind",
+      defaultImpl = RootTyped.class)
+  @JsonSubTypes({@JsonSubTypes.Type(value = RootTyped.class, name = "root-typed")})
+  @JsonApiResource(type = "root-typed")
+  public static final class RootTyped {
+
+    @JsonApiId public String id;
+
+    @JsonApiAttribute public String title;
   }
 
   @JsonApiResource(type = "write-only")
