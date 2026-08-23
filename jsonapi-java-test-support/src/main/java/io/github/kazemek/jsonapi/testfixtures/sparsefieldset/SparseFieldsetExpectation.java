@@ -8,8 +8,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Discriminated sparse-fieldset expectation: a mapped success carrying resource states and the
  * expected sparse-fieldset linkage-exemption provenance, an unmapped three-argument success without
- * that expectation, a concurrent isolation of two mapped successes, an identity-preservation
- * check, or a failure carrying a shared mapping diagnostic.
+ * that expectation, a concurrent isolation of two mapped successes, an identity-preservation check,
+ * or a failure carrying a shared mapping diagnostic.
  *
  * <p>{@code included == null} is an absent {@code included} member; an empty list is a present
  * empty array. {@code propertyPath} and {@code resourceClass} are {@code null} for {@link
