@@ -7,6 +7,7 @@ import io.github.kazemek.jsonapi.core.validation.ValidationContext;
 import io.github.kazemek.jsonapi.jackson.MappedDocument;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import tools.jackson.core.JsonGenerator;
@@ -132,10 +133,16 @@ public final class JsonApiDocumentWriter {
    */
   private JsonApiDocument validatedDocument(MappedDocument mapped) {
     Objects.requireNonNull(mapped, MAPPED_PARAM);
-    Set<ResourceIdentity> exemptions = mapped.sparseFieldsetLinkageExemptions();
+    Set<ResourceIdentity> mappedExemptions = mapped.sparseFieldsetLinkageExemptions();
     ValidationContext effective =
-        exemptions.isEmpty() ? context : context.withSparseFieldsetLinkageExemptions(exemptions);
+        mappedExemptions.isEmpty() ? context : mergedContext(mappedExemptions);
     validator.validate(mapped.document(), effective);
     return mapped.document();
+  }
+
+  private ValidationContext mergedContext(Set<ResourceIdentity> mappedExemptions) {
+    Set<ResourceIdentity> exemptions = new HashSet<>(context.sparseFieldsetLinkageExemptions());
+    exemptions.addAll(mappedExemptions);
+    return context.withSparseFieldsetLinkageExemptions(exemptions);
   }
 }

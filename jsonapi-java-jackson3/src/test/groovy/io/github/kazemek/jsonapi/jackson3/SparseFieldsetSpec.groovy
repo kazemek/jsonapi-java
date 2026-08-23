@@ -250,6 +250,28 @@ class SparseFieldsetSpec extends Specification {
     ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
   }
 
+  def "mapped writing unions bound and mapped linkage exemptions"() {
+    given:
+    def article = ResourceObject.of("articles", "1")
+    def boundOrphan = ResourceObject.of("people", "9")
+    def mappedOrphan = ResourceObject.of("people", "10")
+    def mapped = new MappedDocument(
+        new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null, null, null, null,
+        [boundOrphan, mappedOrphan],
+        [:]),
+        Set.of(ResourceIdentity.ofId("people", "10")))
+    def base = ValidationContext.defaults()
+        .withSparseFieldsetLinkageExemptions(Set.of(ResourceIdentity.ofId("people", "9")))
+
+    when:
+    JsonApiJackson3.writer(jackson, base).writeValueAsString(mapped)
+
+    then:
+    noExceptionThrown()
+  }
+
   def "exempted sparse-fieldset orphans stay valid while unrelated full-linkage defects fail"() {
     given:
     def fieldsetOrphanArticle = ResourceObject.of("articles", "1")
