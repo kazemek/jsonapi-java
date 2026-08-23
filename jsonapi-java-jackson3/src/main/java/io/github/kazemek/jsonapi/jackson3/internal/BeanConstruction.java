@@ -120,7 +120,7 @@ final class BeanConstruction {
   }
 
   /** Returns whether the outermost Jackson path member identifies the supplied mapping property. */
-  static boolean pathStartsWithProperty(Throwable failure, MappingProperty property) {
+  static boolean pathStartsWithProperty(Throwable failure, MappingPropertyView property) {
     List<String> names = pathNames(failure);
     if (names.isEmpty()) {
       return false;
@@ -138,7 +138,7 @@ final class BeanConstruction {
    */
   static boolean isConstructionFailureForProperty(
       JsonApiMappingException failure,
-      MappingProperty property,
+      MappingPropertyView property,
       @Nullable MappingLocation propertyLocation) {
     Throwable constructionFailure = failure.getCause() == null ? failure : failure.getCause();
     if (!pathNames(constructionFailure).isEmpty()) {

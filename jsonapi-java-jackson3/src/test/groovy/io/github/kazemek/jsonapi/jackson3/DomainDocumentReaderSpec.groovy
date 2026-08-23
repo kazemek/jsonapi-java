@@ -36,6 +36,7 @@ import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReaderContext
 import io.github.kazemek.jsonapi.testfixtures.enveloperead.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.DirectionalityReadModels
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -322,7 +323,71 @@ class DomainDocumentReaderSpec extends Specification {
     ex.jsonPointer() == "/included/1"
   }
 
-  private List execute(EnvelopeReadScenario scenario) {
+  def "typed envelope binding rejects supplied getter-only mapped members"() {
+    given:
+    def registry = ResourceTypeRegistry.builder()
+        .register(DirectionalityReadModels.GetterOnly)
+        .build()
+    def reader = JsonApiJackson3.domainDocumentReader(
+        JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
+
+    when:
+    reader.readValue(
+        '{"data":{"type":"getter-only","id":"1","attributes":{"title":"supplied"}}}')
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/data/attributes/title"
+    ex.resourceClass() == DirectionalityReadModels.GetterOnly
+  }
+
+  def "typed envelope binding rejects a supplied getter-only identifier at /data/id"() {
+    given:
+    def registry = ResourceTypeRegistry.builder()
+        .register(DirectionalityReadModels.GetterOnlyIdentifier)
+        .build()
+    def reader = JsonApiJackson3.domainDocumentReader(
+        JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
+
+    when:
+    reader.readValue('{"data":{"type":"getter-only-id","id":"supplied"}}')
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/data/id"
+    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+  }
+
+  def "typed envelope binding rejects a supplied getter-only identifier at /data/lid"() {
+    given:
+    def registry = ResourceTypeRegistry.builder()
+        .register(DirectionalityReadModels.GetterOnlyIdentifier)
+        .build()
+    def reader = JsonApiJackson3.domainDocumentReader(
+        JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(
+        new ResourceObject("getter-only-id", null, "client-lid", null, null, null, null, Map.of())),
+        null,
+        null,
+        null,
+        null,
+        null,
+        Map.of())
+
+    when:
+    reader.fromDocument(document)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/data/lid"
+    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+  }
+
+  private static List execute(EnvelopeReadScenario scenario) {
     def variant = scenario.variant()
     if (variant instanceof EnvelopeReadVariant.Registry) {
       return variant.attempts().collect { attempt -> executeRegistry(attempt) }
@@ -344,7 +409,7 @@ class DomainDocumentReaderSpec extends Specification {
     }
   }
 
-  private Object executeCase(
+  private static Object executeCase(
       EnvelopeReadVariant.DocumentBinding binding, EnvelopeReadCase envelopeCase) {
     def reader = readerFor(binding, envelopeCase)
     try {
@@ -650,7 +715,7 @@ class DomainDocumentReaderSpec extends Specification {
     @JsonApiAttribute NestedAddress address
   }
 
-  private String wireText(EnvelopeReadInput input) {
+  private static String wireText(EnvelopeReadInput input) {
     if (input instanceof EnvelopeReadInput.CodecFixture) {
       return fixtureText(input.codecScenarioId())
     }

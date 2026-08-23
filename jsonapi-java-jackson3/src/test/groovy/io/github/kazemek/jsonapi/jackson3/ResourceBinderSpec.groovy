@@ -27,6 +27,7 @@ import io.github.kazemek.jsonapi.testfixtures.domainread.FlatRequiredThing
 import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThrowingCreatorThing
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
+import io.github.kazemek.jsonapi.jackson3.testmodel.DirectionalityReadModels
 import io.github.kazemek.jsonapi.jackson3.testmodel.GenericArticle
 import spock.lang.Shared
 import spock.lang.Specification
@@ -34,6 +35,7 @@ import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
+import tools.jackson.databind.InjectableValues
 import tools.jackson.databind.JavaType
 import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.annotation.JsonDeserialize
@@ -121,6 +123,159 @@ class ResourceBinderSpec extends Specification {
 
     then:
     thing.title == "HELLO"
+  }
+
+  def "setter-only mapped property is supported by ordinary flat reads"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    def dto = binder.fromResource(resource("setter-only", "1", [title: "bound"], null),
+    DirectionalityReadModels.SetterOnly)
+
+    then:
+    dto.id == "1"
+    dto.titleValue() == "bound"
+  }
+
+  def "creator-only mapped property is supported by ordinary flat reads"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    def dto = binder.fromResource(resource("creator-only", "1", [title: "bound"], null),
+    DirectionalityReadModels.CreatorOnly)
+
+    then:
+    dto.idValue() == "1"
+    dto.titleValue() == "bound"
+  }
+
+  def "supplied injection-only creator property is rejected"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .injectableValues(new InjectableValues.Std().addValue("injected-title", "injected"))
+        .build()
+    def binder = JsonApiJackson3.resourceBinder(mapper)
+
+    when:
+    binder.fromResource(
+        resource("injection-only", "1", [title: "supplied"], null),
+        DirectionalityReadModels.InjectionOnly)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/attributes/title"
+    ex.resourceClass() == DirectionalityReadModels.InjectionOnly
+  }
+
+  def "omitted injection-only creator property still uses Jackson injection"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .injectableValues(new InjectableValues.Std().addValue("injected-title", "injected"))
+        .build()
+    def binder = JsonApiJackson3.resourceBinder(mapper)
+
+    when:
+    def dto = binder.fromResource(
+        resource("injection-only", "1", null, null),
+        DirectionalityReadModels.InjectionOnly)
+
+    then:
+    dto.idValue() == "1"
+    dto.titleValue() == "injected"
+  }
+
+  def "root type information does not hide effective flat-read properties"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    def dto = binder.fromResource(
+        resource("root-typed", "1", [title: "bound"], null),
+        DirectionalityReadModels.RootTyped)
+
+    then:
+    dto.id == "1"
+    dto.title == "bound"
+  }
+
+  def "Jackson write-only mapped property is supported by ordinary flat reads"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    def dto = binder.fromResource(resource("write-only", "1", [title: "bound"], null),
+    DirectionalityReadModels.WriteOnly)
+
+    then:
+    dto.id == "1"
+    dto.titleValue() == "bound"
+  }
+
+  def "supplied getter-only mapped property is rejected instead of silently discarded"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    binder.fromResource(resource("getter-only", "1", [title: "supplied"], null),
+    DirectionalityReadModels.GetterOnly)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/attributes/title"
+    ex.resourceClass() == DirectionalityReadModels.GetterOnly
+  }
+
+  def "supplied getter-only identifier is rejected at /id"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+
+    when:
+    binder.fromResource(resource("getter-only-id", "supplied", null, null),
+        DirectionalityReadModels.GetterOnlyIdentifier)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/id"
+    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+  }
+
+  def "supplied getter-only identifier is rejected at /lid"() {
+    given:
+    def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
+    def resource = new ResourceObject("getter-only-id", null, "client-lid", null, null, null, null, Map.of())
+
+    when:
+    binder.fromResource(resource, DirectionalityReadModels.GetterOnlyIdentifier)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/lid"
+    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+  }
+
+  def "supplied property excluded by the default deserialization view is rejected"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .defaultDeserializationView(DirectionalityReadModels.IncludedInReadView)
+        .build()
+    def binder = JsonApiJackson3.resourceBinder(mapper)
+
+    when:
+    binder.fromResource(
+        resource("view-restricted", "1", [hidden: "supplied"], null),
+        DirectionalityReadModels.ViewRestricted)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/attributes/hidden"
+    ex.resourceClass() == DirectionalityReadModels.ViewRestricted
   }
 
   def "JavaType entry points bind resource and collection"() {

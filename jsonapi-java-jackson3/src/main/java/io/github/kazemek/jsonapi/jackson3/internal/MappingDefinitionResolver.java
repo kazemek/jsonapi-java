@@ -15,11 +15,13 @@ import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.JavaType;
 import tools.jackson.databind.introspect.AnnotatedClass;
 import tools.jackson.databind.introspect.AnnotatedMember;
 import tools.jackson.databind.introspect.BeanPropertyDefinition;
@@ -67,6 +69,74 @@ final class MappingDefinitionResolver {
         resourceMeta,
         List.copyOf(relationshipMetaProperties),
         beanDescription.getType());
+  }
+
+  /**
+   * Resolves the minimum deserialization-aware mapping view needed by ordinary flat reads.
+   *
+   * <p>Role and JSON:API wire-name interpretation is shared with the write mapping, but the
+   * property definitions and effective target types come from Jackson's deserialization side. The
+   * serialization definitions are retained only to preserve role annotations and to diagnose a
+   * supplied member whose serialization-only declaration is absent from the effective read model.
+   */
+  static ReadResourceMapping resolveRead(
+      BeanDescription deserializationDescription,
+      BeanDescription serializationDescription,
+      Class<?> rawType,
+      AnnotatedClass resourceMetadata,
+      Map<String, JavaType> deserializationTypes) {
+    String resourceType = validateResourceTypeName(resourceTypeName(resourceMetadata), rawType);
+    List<ReadMappingProperty> identifierProperties = new ArrayList<>();
+    List<ReadMappingProperty> attributeProperties = new ArrayList<>();
+    List<ReadMappingProperty> relationshipProperties = new ArrayList<>();
+    List<ReadMappingProperty> resourceMetaProperties = new ArrayList<>();
+    List<ReadMappingProperty> relationshipMetaProperties = new ArrayList<>();
+
+    for (PropertyPair pair :
+        mergeProperties(deserializationDescription, serializationDescription)) {
+      BeanPropertyDefinition propertyDefinition = pair.primary();
+      RoleAnnotations annotations = RoleAnnotations.from(pair.definitions());
+      String logicalName = propertyDefinition.getName();
+      PropertyRole role = resolveRole(annotations, logicalName, rawType);
+      String jsonapiName = resolveJsonapiName(annotations, logicalName, role);
+      validateJsonApiName(jsonapiName, role, logicalName, rawType);
+      ReadMappingProperty mappingProperty =
+          new ReadMappingProperty(
+              propertyDefinition,
+              pair.serialization() == null ? null : pair.serialization().getAccessor(),
+              pair.deserialization() == null ? null : pair.deserialization().getMutator(),
+              deserializationTypes.get(logicalName),
+              logicalName,
+              jsonapiName,
+              role);
+      switch (role) {
+        case ID -> identifierProperties.add(mappingProperty);
+        case ATTRIBUTE -> attributeProperties.add(mappingProperty);
+        case RELATIONSHIP -> relationshipProperties.add(mappingProperty);
+        case RESOURCE_META -> resourceMetaProperties.add(mappingProperty);
+        case RELATIONSHIP_META -> relationshipMetaProperties.add(mappingProperty);
+      }
+    }
+    validatePropertyRoles(
+        identifierProperties,
+        attributeProperties,
+        relationshipProperties,
+        resourceMetaProperties,
+        relationshipMetaProperties,
+        rawType);
+
+    ReadMappingProperty identifier =
+        identifierProperties.isEmpty() ? null : identifierProperties.getFirst();
+    ReadMappingProperty resourceMeta =
+        resourceMetaProperties.isEmpty() ? null : resourceMetaProperties.getFirst();
+    return new ReadResourceMapping(
+        resourceType,
+        identifier,
+        List.copyOf(attributeProperties),
+        List.copyOf(relationshipProperties),
+        resourceMeta,
+        List.copyOf(relationshipMetaProperties),
+        deserializationDescription.getType());
   }
 
   /**
@@ -256,11 +326,11 @@ final class MappingDefinitionResolver {
   }
 
   private static void validatePropertyRoles(
-      List<MappingProperty> identifierProperties,
-      List<MappingProperty> attributeProperties,
-      List<MappingProperty> relationshipProperties,
-      List<MappingProperty> resourceMetaProperties,
-      List<MappingProperty> relationshipMetaProperties,
+      List<? extends MappingPropertyView> identifierProperties,
+      List<? extends MappingPropertyView> attributeProperties,
+      List<? extends MappingPropertyView> relationshipProperties,
+      List<? extends MappingPropertyView> resourceMetaProperties,
+      List<? extends MappingPropertyView> relationshipMetaProperties,
       Class<?> rawType) {
     requireSingleIdentifier(identifierProperties, rawType);
     rejectDuplicateNames(
@@ -276,7 +346,7 @@ final class MappingDefinitionResolver {
   }
 
   private static void requireSingleIdentifier(
-      List<MappingProperty> identifierProperties, Class<?> rawType) {
+      List<? extends MappingPropertyView> identifierProperties, Class<?> rawType) {
     if (identifierProperties.isEmpty()) {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.MISSING_IDENTIFIER,
@@ -292,7 +362,7 @@ final class MappingDefinitionResolver {
   }
 
   private static void requireSingleResourceMeta(
-      List<MappingProperty> resourceMetaProperties, Class<?> rawType) {
+      List<? extends MappingPropertyView> resourceMetaProperties, Class<?> rawType) {
     if (resourceMetaProperties.size() > 1) {
       throw new JsonApiMappingException(
           MappingDiagnostic.DUPLICATE_ROLE,
@@ -305,18 +375,18 @@ final class MappingDefinitionResolver {
   }
 
   private static void validateRelationshipMetaTargets(
-      List<MappingProperty> relationshipMetaProperties,
-      List<MappingProperty> relationshipProperties,
+      List<? extends MappingPropertyView> relationshipMetaProperties,
+      List<? extends MappingPropertyView> relationshipProperties,
       Class<?> rawType) {
     if (relationshipMetaProperties.isEmpty()) {
       return;
     }
     Set<String> relationshipNames = new HashSet<>();
-    for (MappingProperty relationship : relationshipProperties) {
+    for (MappingPropertyView relationship : relationshipProperties) {
       relationshipNames.add(relationship.jsonapiName());
     }
     Set<String> seen = new HashSet<>();
-    for (MappingProperty property : relationshipMetaProperties) {
+    for (MappingPropertyView property : relationshipMetaProperties) {
       String target = property.jsonapiName();
       if (!relationshipNames.contains(target)) {
         throw new JsonApiMappingException(
@@ -345,12 +415,12 @@ final class MappingDefinitionResolver {
   }
 
   private static void rejectDuplicateNames(
-      List<MappingProperty> properties,
+      List<? extends MappingPropertyView> properties,
       Class<?> rawType,
       String roleLabel,
       Function<String, MappingLocation> containerLocation) {
     Set<String> seen = new HashSet<>();
-    for (MappingProperty property : properties) {
+    for (MappingPropertyView property : properties) {
       if (!seen.add(property.jsonapiName())) {
         throw new JsonApiMappingException(
             MappingDiagnostic.NAME_COLLISION,
@@ -362,14 +432,14 @@ final class MappingDefinitionResolver {
   }
 
   private static void rejectAttributeRelationshipCollisions(
-      List<MappingProperty> attributeProperties,
-      List<MappingProperty> relationshipProperties,
+      List<? extends MappingPropertyView> attributeProperties,
+      List<? extends MappingPropertyView> relationshipProperties,
       Class<?> rawType) {
     Set<String> relationshipNames = new HashSet<>();
-    for (MappingProperty relationship : relationshipProperties) {
+    for (MappingPropertyView relationship : relationshipProperties) {
       relationshipNames.add(relationship.jsonapiName());
     }
-    for (MappingProperty attribute : attributeProperties) {
+    for (MappingPropertyView attribute : attributeProperties) {
       if (relationshipNames.contains(attribute.jsonapiName())) {
         // The colliding name could live under either container; no single member location applies.
         throw JsonApiMappingException.withoutLocation(
@@ -377,6 +447,74 @@ final class MappingDefinitionResolver {
             rawType,
             "Attribute and relationship name collision: " + attribute.jsonapiName());
       }
+    }
+  }
+
+  private static List<PropertyPair> mergeProperties(
+      BeanDescription deserializationDescription, BeanDescription serializationDescription) {
+    List<PropertyPair> pairs = new ArrayList<>();
+    for (BeanPropertyDefinition definition : deserializationDescription.findProperties()) {
+      pairs.add(new PropertyPair(definition, null));
+    }
+    for (BeanPropertyDefinition definition : serializationDescription.findProperties()) {
+      PropertyPair match = null;
+      for (PropertyPair pair : pairs) {
+        if (pair.matches(definition)) {
+          match = pair;
+          break;
+        }
+      }
+      if (match == null) {
+        pairs.add(new PropertyPair(null, definition));
+      } else {
+        match.setSerialization(definition);
+      }
+    }
+    return pairs;
+  }
+
+  private static final class PropertyPair {
+
+    private final @Nullable BeanPropertyDefinition deserialization;
+    private @Nullable BeanPropertyDefinition serialization;
+
+    PropertyPair(
+        @Nullable BeanPropertyDefinition deserialization,
+        @Nullable BeanPropertyDefinition serialization) {
+      this.deserialization = deserialization;
+      this.serialization = serialization;
+    }
+
+    @Nullable BeanPropertyDefinition deserialization() {
+      return deserialization;
+    }
+
+    @Nullable BeanPropertyDefinition serialization() {
+      return serialization;
+    }
+
+    void setSerialization(BeanPropertyDefinition definition) {
+      serialization = definition;
+    }
+
+    boolean matches(BeanPropertyDefinition candidate) {
+      BeanPropertyDefinition existing = deserialization != null ? deserialization : serialization;
+      return existing != null
+          && (existing.getName().equals(candidate.getName())
+              || existing.getInternalName().equals(candidate.getInternalName()));
+    }
+
+    BeanPropertyDefinition primary() {
+      return deserialization != null
+          ? deserialization
+          : Objects.requireNonNull(serialization, "serialization");
+    }
+
+    List<BeanPropertyDefinition> definitions() {
+      if (deserialization != null && serialization != null) {
+        return List.of(deserialization, serialization);
+      }
+      return List.of(primary());
     }
   }
 
@@ -396,12 +534,17 @@ final class MappingDefinitionResolver {
       @Nullable JsonApiRelationshipMeta relationshipMeta) {
 
     static RoleAnnotations from(BeanPropertyDefinition propertyDefinition) {
-      AnnotatedMember[] members = {
-        propertyDefinition.getField(),
-        propertyDefinition.getGetter(),
-        propertyDefinition.getSetter(),
-        propertyDefinition.getConstructorParameter()
-      };
+      return from(List.of(propertyDefinition));
+    }
+
+    static RoleAnnotations from(List<BeanPropertyDefinition> propertyDefinitions) {
+      List<@Nullable AnnotatedMember> members = new ArrayList<>();
+      for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
+        members.add(propertyDefinition.getField());
+        members.add(propertyDefinition.getGetter());
+        members.add(propertyDefinition.getSetter());
+        members.add(propertyDefinition.getConstructorParameter());
+      }
       return new RoleAnnotations(
           findAnnotationAnywhere(members, JsonApiId.class),
           findAnnotationAnywhere(members, JsonApiAttribute.class),
@@ -411,8 +554,8 @@ final class MappingDefinitionResolver {
     }
 
     private static <A extends Annotation> @Nullable A findAnnotationAnywhere(
-        AnnotatedMember[] members, Class<A> annotationClass) {
-      for (AnnotatedMember member : members) {
+        List<@Nullable AnnotatedMember> members, Class<A> annotationClass) {
+      for (@Nullable AnnotatedMember member : members) {
         // Jackson's getAnnotation is not @Nullable-annotated; use hasAnnotation as the presence
         // check.
         if (member != null && member.hasAnnotation(annotationClass)) {

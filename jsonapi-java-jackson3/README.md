@@ -61,6 +61,14 @@ List<ResourceObject> resources = ((DocumentData.ResourceCollection) collectionDo
 List<FlatArticleDto> dtos = binder.fromResources(resources, FlatArticleDto.class);
 ```
 
+Ordinary flat reads use Jackson's effective **deserialization** property model while retaining
+JSON:API role and wire-name metadata from the configured mapper. Normal readable/writable,
+setter-only, creator-only/constructor-bound, and Jackson write-only properties are supported. A
+supplied member mapped to a getter-only, read-only, or otherwise non-deserializable property fails
+with `NON_DESERIALIZABLE_PROPERTY` at its JSON:API wire location instead of being silently
+discarded. The same rule applies to primary and included resources bound through the typed domain
+envelope; the serialization-oriented `ResourceMapping` remains authoritative for writes.
+
 Compound inclusion (explicit context only; relationship mapping alone never includes):
 
 ```java
@@ -328,8 +336,10 @@ artifact; both majors share the neutral contracts of
   resolved shape metadata); unmappable paths carry no location. Missing members are omitted;
   explicit JSON `null` binds null; relationship linkage binds `ResourceIdentifier` (plus
   Optional/List/Set/array shapes) directly, and any other target class needs a registered
-  `RelationshipLinkageMapper`. Bind failures throw `JsonApiMappingException`, never
-  `JsonApiDocumentReadException`.
+   `RelationshipLinkageMapper`. Read bindability follows Jackson's deserialization metadata rather
+   than the serialization accessor: supplied getter-only or otherwise non-deserializable mapped
+   members fail with `NON_DESERIALIZABLE_PROPERTY`. Bind failures throw
+   `JsonApiMappingException`, never `JsonApiDocumentReadException`.
 - **Typed domain envelope:** `JsonApiDomainDocumentReader` composes the document reader with the
   flat DTO binder. Primary and included resources bind only through the `ResourceTypeRegistry`
   (keyed by each registered raw class's configured class-level resource metadata; build it with
