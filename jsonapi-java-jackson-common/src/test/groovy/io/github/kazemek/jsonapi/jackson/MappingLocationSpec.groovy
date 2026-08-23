@@ -1,5 +1,9 @@
 package io.github.kazemek.jsonapi.jackson
 
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 import spock.lang.Specification
 
 /** Escaping, parsing, and composition invariants of the mapping-diagnostic location type. */
@@ -58,6 +62,27 @@ class MappingLocationSpec extends Specification {
     MappingLocation.of("data").hashCode() == MappingLocation.parse("/data").hashCode()
     MappingLocation.of("data").toString() == "/data"
     MappingLocation.of("data") != MappingLocation.of("included")
+  }
+
+  def "mapping locations preserve exception diagnostics during serialization"() {
+    given:
+    def original = new JsonApiMappingException(
+        MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE,
+        null,
+        MappingLocation.of("attributes", "title"),
+        "bad value")
+    def bytes = new ByteArrayOutputStream()
+    new ObjectOutputStream(bytes).withCloseable { it.writeObject(original) }
+
+    when:
+    def restored = new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray())).withCloseable {
+      it.readObject()
+    }
+
+    then:
+    restored instanceof JsonApiMappingException
+    ((JsonApiMappingException) restored).location() == original.location()
+    ((JsonApiMappingException) restored).propertyPath() == "/attributes/title"
   }
 
   def "empty segments are rejected at every entry point"() {

@@ -32,6 +32,8 @@ import tools.jackson.databind.JavaType;
  */
 public final class CompoundInclusionEngine {
 
+  private static final String INCLUDE_PATH_CONTEXT = " in include path '";
+
   private final DomainResourceWriter writer;
 
   public CompoundInclusionEngine(DomainResourceWriter writer) {
@@ -114,7 +116,7 @@ public final class CompoundInclusionEngine {
                 + segment
                 + "' on "
                 + mapping.resourceType()
-                + " in include path '"
+                + INCLUDE_PATH_CONTEXT
                 + dottedThrough
                 + "'");
       }
@@ -126,7 +128,7 @@ public final class CompoundInclusionEngine {
                 + mapping.resourceType()
                 + "."
                 + segment
-                + " in include path '"
+                + INCLUDE_PATH_CONTEXT
                 + dottedThrough
                 + "'");
       }
@@ -239,7 +241,7 @@ public final class CompoundInclusionEngine {
                 + segment
                 + "' on "
                 + mapping.resourceType()
-                + " in include path '"
+                + INCLUDE_PATH_CONTEXT
                 + path.dottedThrough(current.segmentIndex())
                 + "'");
       }
@@ -251,7 +253,7 @@ public final class CompoundInclusionEngine {
                 + mapping.resourceType()
                 + "."
                 + segment
-                + " in include path '"
+                + INCLUDE_PATH_CONTEXT
                 + path.dottedThrough(current.segmentIndex())
                 + "'");
       }

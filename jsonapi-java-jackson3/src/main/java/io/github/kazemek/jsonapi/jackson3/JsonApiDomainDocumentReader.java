@@ -208,8 +208,9 @@ public final class JsonApiDomainDocumentReader {
       return binder.fromResource(checkedResource, targetType);
     } catch (JsonApiMappingException ex) {
       String message = ex.getMessage() != null ? ex.getMessage() : ex.diagnostic().name();
+      MappingLocation relative = ex.location();
       MappingLocation composed =
-          ex.location() == null ? documentPrefix : documentPrefix.append(ex.location());
+          relative == null ? documentPrefix : documentPrefix.append(relative);
       throw new JsonApiMappingException(ex.diagnostic(), ex.resourceClass(), composed, message, ex);
     }
   }
