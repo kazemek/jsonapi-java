@@ -24,6 +24,14 @@ Flat DTO binding:
 
 - uses the same Jackson logical-property metadata, annotations, creator rules, converters, and
   diagnostics in both directions;
+- uses Jackson's effective **deserialization** property model to decide which supplied mapped
+  members can participate in ordinary reads; a serialization accessor is not proof of read
+  bindability;
+- supports normal readable/writable properties, setter-only properties, creator-only or
+  constructor-bound properties, and Jackson write-only/deserialization-only properties;
+- rejects a supplied member mapped to a getter-only, read-only, or otherwise non-deserializable
+  property with a stable mapping diagnostic at the JSON:API wire location rather than silently
+  discarding the value;
 - preserves single, collection, explicit-null, and absent primary-data states in the typed
   envelope rather than guessing cardinality from a Java target;
 - binds `@JsonApiRelationship` properties to explicit null, single, or collection linkage only;
@@ -42,6 +50,9 @@ construction has different semantics from complete DTO binding.
 
 - Applications using documented flat DTO shapes need not depend directly on core model types in
   routine Jackson or Spring entry points.
+- Ordinary flat-read DTO directionality is explicit and portable: adapter implementations may use
+  Jackson-major-specific introspection APIs, but supplied values must obey the effective
+  deserialization model described above.
 - Validation and absent-versus-null correctness remain centralized in core.
 - Included resources are available as independently bound DTOs but do not silently change domain
   relationships.

@@ -8,4 +8,11 @@ record MappingProperty(
     AnnotatedMember accessor,
     String logicalName,
     String jsonapiName,
-    PropertyRole role) {}
+    PropertyRole role)
+    implements MappingPropertyView {
+
+  @Override
+  public tools.jackson.databind.JavaType type() {
+    return accessor.getType();
+  }
+}

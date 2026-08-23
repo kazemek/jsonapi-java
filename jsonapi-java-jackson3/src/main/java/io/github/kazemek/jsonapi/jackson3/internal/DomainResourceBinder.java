@@ -28,6 +28,12 @@ import tools.jackson.databind.json.JsonMapper;
  * map, so its target property's configured deserializer still applies during construction. Document
  * {@code included} is never read; relationships bind from linkage only (ADR-011).
  *
+ * <p>Read-side bindability is resolved from Jackson's effective deserialization model,
+ * independently of the serialization-oriented {@link ResourceMapping}. Setter-only, creator-only,
+ * and write-only properties can therefore bind normally, while a supplied member with no effective
+ * deserialization target fails with {@link MappingDiagnostic#NON_DESERIALIZABLE_PROPERTY} at its
+ * JSON:API wire location.
+ *
  * <p>Diagnostic locations follow the shared mapping-location contract: resource-relative pointers
  * over wire names ({@code /type}, {@code /id}, {@code /lid}, {@code /attributes/<name>}, {@code
  * /relationships/<name>/data}, meta locations). Bean-construction failures translate their Jackson
@@ -65,31 +71,33 @@ public final class DomainResourceBinder {
     Objects.requireNonNull(resource, "resource");
     Objects.requireNonNull(targetType, "targetType");
     Class<?> rawType = targetType.getRawClass();
-    ResourceMapping mapping = cache.resolve(targetType);
+    ReadResourceMapping mapping = cache.resolveRead(targetType);
     validateResourceType(resource, mapping, rawType);
     validateMetaTargets(mapping, rawType);
     Map<String, @Nullable Object> properties = new LinkedHashMap<>();
     MappingLocation identifierLocation = null;
-    MappingProperty identifierProperty = mapping.identifierProperty();
+    ReadMappingProperty identifierProperty = mapping.identifierProperty();
     if (identifierProperty != null) {
       if (resource.hasId()) {
         identifierLocation = ID_LOCATION;
+        requireDeserializable(identifierProperty, identifierLocation, rawType);
         bindIdentifierValue(
             Objects.requireNonNull(resource.id()), ID_LOCATION, identifierProperty, properties);
       } else if (resource.lid() != null) {
         identifierLocation = LID_LOCATION;
+        requireDeserializable(identifierProperty, identifierLocation, rawType);
         bindIdentifierValue(resource.lid(), LID_LOCATION, identifierProperty, properties);
       }
     }
-    bindAttributes(resource, mapping, properties);
-    bindRelationships(resource, mapping, properties);
-    bindResourceMeta(resource, mapping, properties);
-    bindRelationshipMeta(resource, mapping, properties);
+    bindAttributes(resource, mapping, properties, rawType);
+    bindRelationships(resource, mapping, properties, rawType);
+    bindResourceMeta(resource, mapping, properties, rawType);
+    bindRelationshipMeta(resource, mapping, properties, rawType);
     return convertBean(properties, targetType, rawType, mapping, identifierLocation);
   }
 
   private void validateResourceType(
-      ResourceObject resource, ResourceMapping mapping, Class<?> rawType) {
+      ResourceObject resource, ReadResourceMapping mapping, Class<?> rawType) {
     String expectedType = mapping.resourceType();
     if (!expectedType.equals(resource.type())) {
       throw new JsonApiMappingException(
@@ -105,14 +113,14 @@ public final class DomainResourceBinder {
   }
 
   /** Whole-meta declared-target validation for the read/write domain-mapping role (ADR-015). */
-  private void validateMetaTargets(ResourceMapping mapping, Class<?> rawType) {
+  private void validateMetaTargets(ReadResourceMapping mapping, Class<?> rawType) {
     wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
   private void bindIdentifierValue(
       String wireIdentifier,
       MappingLocation identifierLocation,
-      MappingProperty identifierProperty,
+      ReadMappingProperty identifierProperty,
       Map<String, @Nullable Object> properties) {
     Object parsed;
     try {
@@ -151,12 +159,15 @@ public final class DomainResourceBinder {
             cause);
   }
 
-  private static Class<?> rawTypeOf(MappingProperty property) {
+  private static Class<?> rawTypeOf(MappingPropertyView property) {
     return RelationshipLinkageSupport.rawTypeOf(property);
   }
 
   private void bindAttributes(
-      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
+      ResourceObject resource,
+      ReadResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
     if (mapping.attributes().isEmpty()) {
       return;
     }
@@ -165,16 +176,21 @@ public final class DomainResourceBinder {
       return;
     }
     Map<String, @Nullable Object> members = attributes.attributes();
-    for (MappingProperty property : mapping.attributes()) {
+    for (ReadMappingProperty property : mapping.attributes()) {
       if (!members.containsKey(property.jsonapiName())) {
         continue;
       }
+      requireDeserializable(
+          property, MappingLocation.of("attributes", property.jsonapiName()), rawType);
       properties.put(property.logicalName(), members.get(property.jsonapiName()));
     }
   }
 
   private void bindRelationships(
-      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
+      ResourceObject resource,
+      ReadResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
     if (mapping.relationships().isEmpty()) {
       return;
     }
@@ -182,11 +198,13 @@ public final class DomainResourceBinder {
     if (relationships == null) {
       return;
     }
-    for (MappingProperty property : mapping.relationships()) {
+    for (ReadMappingProperty property : mapping.relationships()) {
       RelationshipData data = relationshipData(relationships, property);
       if (data == null) {
         continue;
       }
+      requireDeserializable(
+          property, RelationshipLinkageSupport.relationshipLocation(property), rawType);
       bindRelationship(properties, property, data);
     }
   }
@@ -196,11 +214,16 @@ public final class DomainResourceBinder {
    * name when the resource carries meta. Absent meta leaves the property absent.
    */
   private void bindResourceMeta(
-      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
-    MappingProperty resourceMetaProperty = mapping.resourceMeta();
+      ResourceObject resource,
+      ReadResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
+    ReadMappingProperty resourceMetaProperty = mapping.resourceMeta();
     if (resourceMetaProperty == null || resource.meta() == null) {
       return;
     }
+    requireDeserializable(
+        resourceMetaProperty, RelationshipMetaSupport.resourceMetaLocation(), rawType);
     properties.put(resourceMetaProperty.logicalName(), resource.meta().members());
   }
 
@@ -211,7 +234,10 @@ public final class DomainResourceBinder {
    * meta here (read side); PATCH additionally requires {@code data} (ADR-015).
    */
   private void bindRelationshipMeta(
-      ResourceObject resource, ResourceMapping mapping, Map<String, @Nullable Object> properties) {
+      ResourceObject resource,
+      ReadResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
     if (mapping.relationshipMetaProperties().isEmpty()) {
       return;
     }
@@ -219,17 +245,21 @@ public final class DomainResourceBinder {
     if (relationships == null) {
       return;
     }
-    for (MappingProperty property : mapping.relationshipMetaProperties()) {
+    for (ReadMappingProperty property : mapping.relationshipMetaProperties()) {
       Relationship relationship = relationships.relationships().get(property.jsonapiName());
       if (relationship == null || relationship.meta() == null) {
         continue;
       }
+      requireDeserializable(
+          property,
+          RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()),
+          rawType);
       properties.put(property.logicalName(), relationship.meta().members());
     }
   }
 
   private static @Nullable RelationshipData relationshipData(
-      Relationships relationships, MappingProperty property) {
+      Relationships relationships, MappingPropertyView property) {
     Relationship relationship = relationships.relationships().get(property.jsonapiName());
     if (relationship == null) {
       return null;
@@ -238,8 +268,10 @@ public final class DomainResourceBinder {
   }
 
   private void bindRelationship(
-      Map<String, @Nullable Object> properties, MappingProperty property, RelationshipData data) {
-    JavaType propertyType = property.accessor().getType();
+      Map<String, @Nullable Object> properties,
+      ReadMappingProperty property,
+      RelationshipData data) {
+    JavaType propertyType = property.type();
     boolean toMany = DomainResourceWriter.isToManyType(propertyType);
     Class<?> targetClass =
         RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
@@ -261,11 +293,28 @@ public final class DomainResourceBinder {
             property, data, toMany, linkageMapper, mapperTargetType));
   }
 
+  private static void requireDeserializable(
+      ReadMappingProperty property, MappingLocation location, Class<?> rawType) {
+    if (property.deserializable()) {
+      return;
+    }
+    throw new JsonApiMappingException(
+        MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY,
+        rawType,
+        location,
+        "Supplied JSON:API member at '"
+            + location
+            + "' targets property '"
+            + property.logicalName()
+            + "' without an effective Jackson deserialization target on "
+            + rawType.getName());
+  }
+
   private Object convertBean(
       Map<String, @Nullable Object> properties,
       JavaType targetType,
       Class<?> rawType,
-      ResourceMapping mapping,
+      ReadResourceMapping mapping,
       @Nullable MappingLocation identifierLocation) {
     Map<String, StructuredValueBinder.ConstructionStart> startsByLogicalName =
         mapping.constructionStartsByLogicalName(identifierLocation);
@@ -279,7 +328,7 @@ public final class DomainResourceBinder {
               structuredBinder.translateConstructionPath(
                   BeanConstruction.pathNames(failure), startsByLogicalName, true));
     } catch (JsonApiMappingException e) {
-      MappingProperty identifierProperty = mapping.identifierProperty();
+      ReadMappingProperty identifierProperty = mapping.identifierProperty();
       if (identifierProperty != null
           && identifierLocation != null
           && BeanConstruction.isConstructionFailureForProperty(

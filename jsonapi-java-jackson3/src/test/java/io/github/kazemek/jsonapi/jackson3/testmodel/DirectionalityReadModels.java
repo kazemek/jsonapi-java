@@ -1,0 +1,87 @@
+package io.github.kazemek.jsonapi.jackson3.testmodel;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
+import io.github.kazemek.jsonapi.annotation.JsonApiId;
+import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+
+/** DTO shapes used to prove the ordinary flat-read directionality contract. */
+public final class DirectionalityReadModels {
+
+  private DirectionalityReadModels() {}
+
+  @JsonApiResource(type = "setter-only")
+  public static final class SetterOnly {
+
+    @JsonApiId public String id;
+
+    private String title;
+
+    public void setTitle(String title) {
+      this.title = title;
+    }
+
+    public String titleValue() {
+      return title;
+    }
+  }
+
+  @JsonApiResource(type = "creator-only")
+  public static final class CreatorOnly {
+
+    private final String id;
+    private final String title;
+
+    @JsonCreator
+    public CreatorOnly(
+        @JsonProperty("id") @JsonApiId String id, @JsonProperty("title") String title) {
+      this.id = id;
+      this.title = title;
+    }
+
+    public String idValue() {
+      return id;
+    }
+
+    public String titleValue() {
+      return title;
+    }
+  }
+
+  @JsonApiResource(type = "write-only")
+  public static final class WriteOnly {
+
+    @JsonApiId public String id;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @JsonApiAttribute
+    private String title;
+
+    public String titleValue() {
+      return title;
+    }
+  }
+
+  @JsonApiResource(type = "getter-only")
+  public static final class GetterOnly {
+
+    @JsonApiId public String id;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JsonApiAttribute
+    public String getTitle() {
+      return "derived";
+    }
+  }
+
+  @JsonApiResource(type = "getter-only-id")
+  public static final class GetterOnlyIdentifier {
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JsonApiId
+    public String getId() {
+      return "derived";
+    }
+  }
+}

@@ -5,8 +5,13 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.BeanDescription;
+import tools.jackson.databind.DeserializationConfig;
 import tools.jackson.databind.JavaType;
+import tools.jackson.databind.PropertyName;
 import tools.jackson.databind.SerializationConfig;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.deser.SettableBeanProperty;
+import tools.jackson.databind.deser.bean.BeanDeserializerBase;
 import tools.jackson.databind.introspect.AnnotatedClass;
 import tools.jackson.databind.introspect.ClassIntrospector;
 import tools.jackson.databind.json.JsonMapper;
@@ -23,6 +28,7 @@ public final class MappingDefinitionCache {
 
   private final JsonMapper mapper;
   private final Map<CacheKey, ResourceMapping> cache = new ConcurrentHashMap<>();
+  private final Map<CacheKey, ReadResourceMapping> readCache = new ConcurrentHashMap<>();
   private final Map<CacheKey, Optional<String>> resourceTypeNames = new ConcurrentHashMap<>();
 
   public MappingDefinitionCache(JsonMapper mapper) {
@@ -49,6 +55,23 @@ public final class MappingDefinitionCache {
     }
     Class<?> rawType = javaType.getRawClass();
     return cache.computeIfAbsent(key, cacheKey -> computeMapping(rawType, javaType, config));
+  }
+
+  /**
+   * Resolves the deserialization-oriented property view used by ordinary flat reads. This cache is
+   * deliberately separate from {@link #cache}: write mapping remains serialization-oriented and
+   * continues to own resource writing.
+   */
+  ReadResourceMapping resolveRead(JavaType javaType) {
+    DeserializationConfig config = mapper.deserializationConfig();
+    CacheKey key = new CacheKey(javaType, configHash(config));
+    ReadResourceMapping existing = readCache.get(key);
+    if (existing != null) {
+      return existing;
+    }
+    Class<?> rawType = javaType.getRawClass();
+    return readCache.computeIfAbsent(
+        key, cacheKey -> computeReadMapping(rawType, javaType, config));
   }
 
   /**
@@ -96,7 +119,68 @@ public final class MappingDefinitionCache {
     return MappingDefinitionResolver.resolve(beanDescription, rawType, resourceMetadata);
   }
 
+  private ReadResourceMapping computeReadMapping(
+      Class<?> rawType, JavaType javaType, DeserializationConfig config) {
+    ClassIntrospector deserializationIntrospector = config.classIntrospectorInstance();
+    AnnotatedClass annotatedClass =
+        deserializationIntrospector.introspectClassAnnotations(javaType);
+    AnnotatedClass resourceMetadata =
+        deserializationIntrospector.introspectDirectClassAnnotations(javaType);
+    BeanDescription deserializationDescription =
+        deserializationIntrospector.introspectForDeserialization(javaType, annotatedClass);
+
+    SerializationConfig serializationConfig = mapper.serializationConfig();
+    ClassIntrospector serializationIntrospector = serializationConfig.classIntrospectorInstance();
+    AnnotatedClass serializationAnnotations =
+        serializationIntrospector.introspectClassAnnotations(javaType);
+    BeanDescription serializationDescription =
+        serializationIntrospector.introspectForSerialization(javaType, serializationAnnotations);
+
+    return MappingDefinitionResolver.resolveRead(
+        deserializationDescription,
+        serializationDescription,
+        rawType,
+        resourceMetadata,
+        effectiveDeserializationTypes(javaType, deserializationDescription));
+  }
+
+  /**
+   * Resolves property types from the actual configured bean deserializer. In particular, this keeps
+   * creator parameters, setter-only properties, write-only properties, generic bindings, and
+   * property-level type refinement on the deserialization side instead of guessing from a getter.
+   */
+  private Map<String, JavaType> effectiveDeserializationTypes(
+      JavaType javaType, BeanDescription description) {
+    Map<String, JavaType> targets = new java.util.LinkedHashMap<>();
+    ValueDeserializer<?> root;
+    try {
+      root = mapper._deserializationContext().findRootValueDeserializer(javaType);
+    } catch (RuntimeException ignored) {
+      return targets;
+    }
+    if (!(root instanceof BeanDeserializerBase bean)) {
+      return targets;
+    }
+    for (var definition : description.findProperties()) {
+      SettableBeanProperty property =
+          bean.findProperty(PropertyName.construct(definition.getFullName().getSimpleName()));
+      if (property != null) {
+        targets.put(definition.getName(), property.getType());
+      }
+    }
+    return targets;
+  }
+
   private static int configHash(SerializationConfig config) {
+    int result =
+        config.getPropertyNamingStrategy() != null
+            ? config.getPropertyNamingStrategy().hashCode()
+            : 0;
+    result = 31 * result + config.getDefaultVisibilityChecker().hashCode();
+    return result;
+  }
+
+  private static int configHash(DeserializationConfig config) {
     int result =
         config.getPropertyNamingStrategy() != null
             ? config.getPropertyNamingStrategy().hashCode()

@@ -25,7 +25,7 @@ final class RelationshipLinkageSupport {
   private RelationshipLinkageSupport() {}
 
   static Class<?> resolveTargetClass(
-      JavaType propertyType, boolean toMany, MappingProperty property) {
+      JavaType propertyType, boolean toMany, MappingPropertyView property) {
     if (toMany) {
       JavaType contentType = DomainResourceWriter.resolveContentType(propertyType);
       if (contentType == null) {
@@ -48,7 +48,7 @@ final class RelationshipLinkageSupport {
    * the linkage denotes an empty value ({@code null} on to-one, empty collection on to-many).
    */
   static boolean validateCardinality(
-      MappingProperty property, RelationshipData data, boolean toMany) {
+      MappingPropertyView property, RelationshipData data, boolean toMany) {
     return switch (data) {
       case RelationshipData.NullLinkage ignored -> {
         if (toMany) {
@@ -77,7 +77,7 @@ final class RelationshipLinkageSupport {
   }
 
   static @Nullable Object builtInLinkage(
-      MappingProperty property, RelationshipData data, boolean toMany) {
+      MappingPropertyView property, RelationshipData data, boolean toMany) {
     boolean empty = validateCardinality(property, data, toMany);
     return switch (data) {
       case RelationshipData.NullLinkage ignored -> null;
@@ -96,7 +96,7 @@ final class RelationshipLinkageSupport {
   }
 
   static @Nullable Object mappedLinkage(
-      MappingProperty property,
+      MappingPropertyView property,
       RelationshipData data,
       boolean toMany,
       RelationshipLinkageMapper linkageMapper,
@@ -119,7 +119,7 @@ final class RelationshipLinkageSupport {
       RelationshipLinkageMapper linkageMapper,
       RelationshipData data,
       JavaType targetType,
-      MappingProperty property) {
+      MappingPropertyView property) {
     try {
       return linkageMapper.map(data, targetType);
     } catch (RuntimeException e) {
@@ -147,12 +147,12 @@ final class RelationshipLinkageSupport {
     return type;
   }
 
-  static Class<?> rawTypeOf(MappingProperty property) {
-    return property.accessor().getType().getRawClass();
+  static Class<?> rawTypeOf(MappingPropertyView property) {
+    return property.type().getRawClass();
   }
 
   static JsonApiMappingException unsupportedRelationshipTarget(
-      MappingProperty property, Class<?> targetClass) {
+      MappingPropertyView property, Class<?> targetClass) {
     return new JsonApiMappingException(
         MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET,
         rawTypeOf(property),
@@ -163,12 +163,12 @@ final class RelationshipLinkageSupport {
             + targetClass.getName());
   }
 
-  static MappingLocation relationshipLocation(MappingProperty property) {
+  static MappingLocation relationshipLocation(MappingPropertyView property) {
     return MappingLocation.of(JsonApiMembers.RELATIONSHIPS, property.jsonapiName(), "data");
   }
 
   private static JsonApiMappingException cardinalityMismatch(
-      MappingProperty property, String detail) {
+      MappingPropertyView property, String detail) {
     return new JsonApiMappingException(
         MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH,
         rawTypeOf(property),

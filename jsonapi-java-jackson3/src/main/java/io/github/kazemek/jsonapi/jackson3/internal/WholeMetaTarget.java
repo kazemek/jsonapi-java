@@ -79,8 +79,26 @@ final class WholeMetaTarget {
     }
   }
 
+  /** Validates whole-meta targets using effective deserialization-side property types. */
+  void validateReadWriteTargets(ReadResourceMapping mapping, Class<?> rawType) {
+    ReadMappingProperty resourceMeta = mapping.resourceMeta();
+    if (resourceMeta != null && invalidReadWriteTarget(resourceMeta.type())) {
+      throw invalidTarget(
+          "Resource meta", resourceMeta, rawType, RelationshipMetaSupport.resourceMetaLocation());
+    }
+    for (ReadMappingProperty property : mapping.relationshipMetaProperties()) {
+      if (invalidReadWriteTarget(property.type())) {
+        throw invalidTarget(
+            "Relationship meta",
+            property,
+            rawType,
+            RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
+      }
+    }
+  }
+
   private static JsonApiMappingException invalidTarget(
-      String kind, MappingProperty property, Class<?> rawType, MappingLocation metaLocation) {
+      String kind, MappingPropertyView property, Class<?> rawType, MappingLocation metaLocation) {
     return new JsonApiMappingException(
         MappingDiagnostic.INVALID_META_TARGET,
         rawType,
