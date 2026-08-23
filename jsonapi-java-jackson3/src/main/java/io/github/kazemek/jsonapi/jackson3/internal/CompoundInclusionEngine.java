@@ -51,6 +51,7 @@ public final class CompoundInclusionEngine {
       List<?> primarySnapshot,
       List<JavaType> primaryTypes,
       List<ResourceObject> primaryResources,
+      @Nullable JavaType emptyPrimaryType,
       CompoundSerializationContext context) {
     Objects.requireNonNull(primarySnapshot, "primarySnapshot");
     Objects.requireNonNull(primaryTypes, "primaryTypes");
@@ -67,7 +68,11 @@ public final class CompoundInclusionEngine {
       return new IncludedResourcesResult(null, Set.of());
     }
 
-    List<JavaType> distinctTypes = distinctTypesInOrder(primaryTypes);
+    List<JavaType> validationTypes =
+        primaryTypes.isEmpty() && emptyPrimaryType != null
+            ? List.of(emptyPrimaryType)
+            : primaryTypes;
+    List<JavaType> distinctTypes = distinctTypesInOrder(validationTypes);
     preValidate(distinctTypes, paths, context);
 
     return new Traversal(context, primarySnapshot, primaryTypes, primaryResources).run();

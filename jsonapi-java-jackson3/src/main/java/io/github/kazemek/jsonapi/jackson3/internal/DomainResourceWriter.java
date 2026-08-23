@@ -30,6 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 public final class DomainResourceWriter {
 
   private static final String RESOURCE = "resource";
+  private static final String DECLARED_TYPE = "declaredType";
 
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
@@ -49,9 +50,9 @@ public final class DomainResourceWriter {
     return cache.constructType(resource.getClass());
   }
 
-  JavaType effectiveType(Object resource, JavaType declaredType) {
+  public JavaType effectiveType(Object resource, JavaType declaredType) {
     Objects.requireNonNull(resource, RESOURCE);
-    Objects.requireNonNull(declaredType, "declaredType");
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
     if (declaredType.getRawClass() == resource.getClass()) {
       return declaredType;
     }
@@ -60,7 +61,7 @@ public final class DomainResourceWriter {
 
   public ResourceObject toResource(Object resource, JavaType declaredType) {
     Objects.requireNonNull(resource, RESOURCE);
-    Objects.requireNonNull(declaredType, "declaredType");
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
     validateMetaTargets(mapping, resource.getClass());
@@ -79,7 +80,7 @@ public final class DomainResourceWriter {
   public ResourceObject toResource(
       Object resource, JavaType declaredType, CompoundSerializationContext context) {
     Objects.requireNonNull(resource, RESOURCE);
-    Objects.requireNonNull(declaredType, "declaredType");
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
     Objects.requireNonNull(context, "context");
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
@@ -87,22 +88,17 @@ public final class DomainResourceWriter {
     if (fields != null) {
       validateFieldset(resource.getClass(), mapping, fields, context.fieldPolicy());
     }
-    return toResourceSelective(resource, declaredType, mapping, fields);
+    return toResourceSelective(resource, mapping, fields);
   }
 
   private ResourceObject toResourceSelective(
-      Object resource,
-      JavaType declaredType,
-      ResourceMapping mapping,
-      @Nullable List<String> fields) {
-    if (fields == null) {
-      return toResource(resource, declaredType);
-    }
+      Object resource, ResourceMapping mapping, @Nullable List<String> fields) {
     validateMetaTargets(mapping, resource.getClass());
     String id = extractId(resource, mapping);
-    Set<String> allowed = Set.copyOf(fields);
-    Attributes attributes = buildAttributes(resource, mapping, allowed);
-    Relationships relationships = buildRelationships(resource, mapping, allowed);
+    Attributes attributes =
+        buildAttributes(resource, mapping, fields == null ? null : Set.copyOf(fields));
+    Relationships relationships =
+        buildRelationships(resource, mapping, fields == null ? null : Set.copyOf(fields));
     Meta meta = buildResourceMeta(resource, mapping);
     return buildResourceObject(mapping, id, attributes, relationships, meta);
   }
@@ -207,7 +203,7 @@ public final class DomainResourceWriter {
 
   public ResourceIdentifier extractIdentifier(Object resource, JavaType declaredType) {
     Objects.requireNonNull(resource, RESOURCE);
-    Objects.requireNonNull(declaredType, "declaredType");
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
     String id = extractId(resource, mapping);
@@ -216,16 +212,17 @@ public final class DomainResourceWriter {
 
   /** Resolves the cached mapping definition for a complete declared type. */
   ResourceMapping mappingFor(JavaType declaredType) {
-    ResourceMapping mapping = cache.resolve(declaredType);
-    MappingProperty unresolved = ResolvedTypeSupport.findUnresolvedProperty(mapping, declaredType);
-    if (unresolved != null) {
+    MappingDefinitionCache.ValidatedMapping validated = cache.resolveValidated(declaredType);
+    Optional<MappingProperty> unresolvedProperty = validated.unresolvedProperty();
+    if (unresolvedProperty.isPresent()) {
+      MappingProperty unresolved = unresolvedProperty.orElseThrow();
       throw new JsonApiMappingException(
           MappingDiagnostic.UNRESOLVED_GENERIC_TYPE,
           declaredType.getRawClass(),
           ResolvedTypeSupport.location(unresolved),
           ResolvedTypeSupport.message(unresolved, declaredType));
     }
-    return mapping;
+    return validated.mapping();
   }
 
   /** Reads a relationship property for inclusion traversal (not linkage construction). */

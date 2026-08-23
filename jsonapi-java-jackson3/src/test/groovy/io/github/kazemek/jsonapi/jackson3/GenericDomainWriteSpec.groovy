@@ -21,6 +21,7 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.GenericDomainWriteModels.Sca
 import io.github.kazemek.jsonapi.jackson3.testmodel.GenericDomainWriteModels.ScalarView
 import io.github.kazemek.jsonapi.jackson3.testmodel.GenericDomainWriteModels.ThingResource
 import io.github.kazemek.jsonapi.jackson3.testmodel.GenericDomainWriteModels.WildcardRelationship
+import io.github.kazemek.jsonapi.testfixtures.compoundwrite.BaseComment
 import java.util.Optional
 import spock.lang.Specification
 import tools.jackson.databind.JavaType
@@ -79,6 +80,61 @@ class GenericDomainWriteSpec extends Specification {
     ((DocumentData.ResourceCollection) collection.data()).resources()[0].id() == "r1"
     compound.included()*.type() == ["things"]
     mapped.document().included()*.type() == ["things"]
+  }
+
+  def "typed primary collections specialize runtime subtypes"() {
+    given:
+    def base = JsonMapper.builder().build()
+    def mapper = JsonApiJackson3.resourceMapper(base)
+    def resourceType = base.constructType(BaseComment)
+    def resources = [
+      new BaseComment("c1", "Base", null),
+      new ModeratedComment("c1", "Moderated", null)
+    ]
+
+    when:
+    def document = mapper.toResourceCollection(resources, resourceType, null)
+
+    then:
+    ((DocumentData.ResourceCollection) document.data()).resources()*.type() ==
+        [
+          "comments",
+          "moderated-comments"
+        ]
+  }
+
+  def "empty typed collections validate unknown include paths"() {
+    given:
+    def base = JsonMapper.builder().build()
+    def mapper = JsonApiJackson3.resourceMapper(base)
+    def rootType = parameterized(base, GenericResource, GenericThing)
+    def context = CompoundSerializationContext.defaults()
+        .withIncludePaths([IncludePath.of("missing")])
+        .withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    mapper.toResourceCollection([], rootType, null, context)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.INVALID_INCLUDE_PATH
+  }
+
+  def "empty typed collections validate denied include paths"() {
+    given:
+    def base = JsonMapper.builder().build()
+    def mapper = JsonApiJackson3.resourceMapper(base)
+    def rootType = parameterized(base, GenericResource, GenericThing)
+    def context = CompoundSerializationContext.defaults()
+        .withIncludePaths([IncludePath.of("related")])
+        .withIncludePolicy(IncludePolicy.denyAll())
+
+    when:
+    mapper.toResourceCollection([], rootType, null, context)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE
   }
 
   def "polymorphic relationship linkage matches the specialized included resource"() {

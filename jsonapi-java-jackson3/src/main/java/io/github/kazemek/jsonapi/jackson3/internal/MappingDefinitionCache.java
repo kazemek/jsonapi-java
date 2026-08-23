@@ -28,6 +28,7 @@ public final class MappingDefinitionCache {
 
   private final JsonMapper mapper;
   private final Map<CacheKey, ResourceMapping> cache = new ConcurrentHashMap<>();
+  private final Map<CacheKey, ValidatedMapping> validatedCache = new ConcurrentHashMap<>();
   private final Map<CacheKey, ReadResourceMapping> readCache = new ConcurrentHashMap<>();
   private final Map<CacheKey, Optional<String>> resourceTypeNames = new ConcurrentHashMap<>();
 
@@ -59,6 +60,25 @@ public final class MappingDefinitionCache {
     }
     Class<?> rawType = javaType.getRawClass();
     return cache.computeIfAbsent(key, cacheKey -> computeMapping(rawType, javaType, config));
+  }
+
+  /**
+   * Resolves a write mapping and memoizes the generic-member validation result using the same
+   * complete-type and serialization-configuration key as the mapping cache.
+   */
+  ValidatedMapping resolveValidated(JavaType javaType) {
+    SerializationConfig config = mapper.serializationConfig();
+    CacheKey key = new CacheKey(javaType, configHash(config));
+    return validatedCache.computeIfAbsent(
+        key,
+        cacheKey -> {
+          ResourceMapping mapping =
+              cache.computeIfAbsent(
+                  cacheKey, ignored -> computeMapping(javaType.getRawClass(), javaType, config));
+          return new ValidatedMapping(
+              mapping,
+              Optional.ofNullable(ResolvedTypeSupport.findUnresolvedProperty(mapping, javaType)));
+        });
   }
 
   /**
@@ -194,6 +214,8 @@ public final class MappingDefinitionCache {
     result = 31 * result + (activeView == null ? 0 : activeView.hashCode());
     return result;
   }
+
+  record ValidatedMapping(ResourceMapping mapping, Optional<MappingProperty> unresolvedProperty) {}
 
   private record CacheKey(JavaType type, int configHash) {}
 }

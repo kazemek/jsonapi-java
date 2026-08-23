@@ -59,6 +59,7 @@ public final class JsonApiResourceMapper {
 
   private static final String CONTEXT = "context";
   private static final String RESOURCES = "resources";
+  private static final String RESOURCE_TYPE = "resourceType";
 
   private final DomainResourceWriter writer;
   private final CompoundInclusionEngine inclusionEngine;
@@ -113,7 +114,7 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     Objects.requireNonNull(context, CONTEXT);
     rejectNonEmptyFieldsets(context);
     List<Object> snapshot = List.of(resource);
@@ -121,7 +122,7 @@ public final class JsonApiResourceMapper {
     List<ResourceObject> primary = List.of(resourceObject);
     List<ResourceObject> included =
         inclusionEngine
-            .collectIncluded(snapshot, List.of(resourceType), primary, context)
+            .collectIncluded(snapshot, List.of(resourceType), primary, null, context)
             .included();
     return buildDocument(new DocumentData.SingleResource(resourceObject), envelope, included);
   }
@@ -144,13 +145,13 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = List.of(resource);
     ResourceObject resourceObject = writer.toResource(resource, resourceType, context);
     List<ResourceObject> primary = List.of(resourceObject);
     IncludedResourcesResult includedResult =
-        inclusionEngine.collectIncluded(snapshot, List.of(resourceType), primary, context);
+        inclusionEngine.collectIncluded(snapshot, List.of(resourceType), primary, null, context);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
@@ -173,9 +174,10 @@ public final class JsonApiResourceMapper {
   public JsonApiDocument toResourceCollection(
       Iterable<?> resources, JavaType resourceType, @Nullable DocumentEnvelope envelope) {
     Objects.requireNonNull(resources, RESOURCES);
-    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     List<Object> snapshot = materialize(resources);
-    return toResourceCollection(snapshot, repeatedType(snapshot.size(), resourceType), envelope);
+    return toResourceCollection(
+        snapshot, effectiveTypes(snapshot, repeatedType(snapshot.size(), resourceType)), envelope);
   }
 
   private JsonApiDocument toResourceCollection(
@@ -201,7 +203,7 @@ public final class JsonApiResourceMapper {
     Objects.requireNonNull(resources, RESOURCES);
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
-    return toResourceCollection(snapshot, inferredTypes(snapshot), envelope, context);
+    return toResourceCollection(snapshot, inferredTypes(snapshot), envelope, context, null);
   }
 
   /**
@@ -214,18 +216,23 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       CompoundSerializationContext context) {
     Objects.requireNonNull(resources, RESOURCES);
-    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
     return toResourceCollection(
-        snapshot, repeatedType(snapshot.size(), resourceType), envelope, context);
+        snapshot,
+        effectiveTypes(snapshot, repeatedType(snapshot.size(), resourceType)),
+        envelope,
+        context,
+        resourceType);
   }
 
   private JsonApiDocument toResourceCollection(
       List<Object> snapshot,
       List<JavaType> resourceTypes,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      CompoundSerializationContext context,
+      @Nullable JavaType emptyCollectionType) {
     Objects.requireNonNull(context, CONTEXT);
     rejectNonEmptyFieldsets(context);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
@@ -234,7 +241,9 @@ public final class JsonApiResourceMapper {
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     List<ResourceObject> included =
-        inclusionEngine.collectIncluded(snapshot, resourceTypes, primary, context).included();
+        inclusionEngine
+            .collectIncluded(snapshot, resourceTypes, primary, emptyCollectionType, context)
+            .included();
     return buildDocument(new DocumentData.ResourceCollection(primary), envelope, included);
   }
 
@@ -251,7 +260,7 @@ public final class JsonApiResourceMapper {
     Objects.requireNonNull(resources, RESOURCES);
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
-    return toMappedResourceCollection(snapshot, inferredTypes(snapshot), envelope, context);
+    return toMappedResourceCollection(snapshot, inferredTypes(snapshot), envelope, context, null);
   }
 
   /**
@@ -264,18 +273,23 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       CompoundSerializationContext context) {
     Objects.requireNonNull(resources, RESOURCES);
-    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
     return toMappedResourceCollection(
-        snapshot, repeatedType(snapshot.size(), resourceType), envelope, context);
+        snapshot,
+        effectiveTypes(snapshot, repeatedType(snapshot.size(), resourceType)),
+        envelope,
+        context,
+        resourceType);
   }
 
   private MappedDocument toMappedResourceCollection(
       List<Object> snapshot,
       List<JavaType> resourceTypes,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      CompoundSerializationContext context,
+      @Nullable JavaType emptyCollectionType) {
     Objects.requireNonNull(context, CONTEXT);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
     for (int i = 0; i < snapshot.size(); i++) {
@@ -283,7 +297,8 @@ public final class JsonApiResourceMapper {
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     IncludedResourcesResult includedResult =
-        inclusionEngine.collectIncluded(snapshot, resourceTypes, primary, context);
+        inclusionEngine.collectIncluded(
+            snapshot, resourceTypes, primary, emptyCollectionType, context);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.ResourceCollection(primary), envelope, includedResult.included());
@@ -313,6 +328,14 @@ public final class JsonApiResourceMapper {
     List<JavaType> types = new ArrayList<>(resources.size());
     for (Object resource : resources) {
       types.add(writer.inferredType(resource));
+    }
+    return List.copyOf(types);
+  }
+
+  private List<JavaType> effectiveTypes(List<Object> resources, List<JavaType> declaredTypes) {
+    List<JavaType> types = new ArrayList<>(resources.size());
+    for (int i = 0; i < resources.size(); i++) {
+      types.add(writer.effectiveType(resources.get(i), declaredTypes.get(i)));
     }
     return List.copyOf(types);
   }
