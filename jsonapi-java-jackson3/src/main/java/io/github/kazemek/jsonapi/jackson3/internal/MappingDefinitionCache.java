@@ -161,7 +161,9 @@ public final class MappingDefinitionCache {
     for (var definition : description.findProperties()) {
       SettableBeanProperty property =
           bean.findProperty(PropertyName.construct(definition.getFullName().getSimpleName()));
-      if (property != null && (activeView == null || property.visibleInView(activeView))) {
+      if (property != null
+          && !property.isInjectionOnly()
+          && (activeView == null || property.visibleInView(activeView))) {
         targets.put(definition.getName(), property.getType());
       }
     }

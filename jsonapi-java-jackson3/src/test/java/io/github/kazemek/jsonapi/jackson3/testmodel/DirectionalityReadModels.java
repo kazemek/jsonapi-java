@@ -1,8 +1,10 @@
 package io.github.kazemek.jsonapi.jackson3.testmodel;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.annotation.OptBoolean;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -37,6 +39,30 @@ public final class DirectionalityReadModels {
     @JsonCreator
     public CreatorOnly(
         @JsonProperty("id") @JsonApiId String id, @JsonProperty("title") String title) {
+      this.id = id;
+      this.title = title;
+    }
+
+    public String idValue() {
+      return id;
+    }
+
+    public String titleValue() {
+      return title;
+    }
+  }
+
+  @JsonApiResource(type = "injection-only")
+  public static final class InjectionOnly {
+
+    private final String id;
+    private final String title;
+
+    @JsonCreator
+    public InjectionOnly(
+        @JsonProperty("id") @JsonApiId String id,
+        @JsonProperty("title") @JacksonInject(value = "injected-title", useInput = OptBoolean.FALSE)
+            String title) {
       this.id = id;
       this.title = title;
     }
