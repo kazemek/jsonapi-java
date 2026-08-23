@@ -264,22 +264,38 @@ public final class CompoundInclusionEngine {
       // through such an edge legitimately lack inbound linkage in the produced document.
       List<String> ownerFields = DomainResourceWriter.fieldsFor(context, mapping.resourceType());
       boolean edgeOmittedByFieldset = ownerFields != null && !ownerFields.contains(segment);
+      String propertyPath = path.dottedThrough(current.segmentIndex());
       for (Object relatedDomain : related) {
-        ResourceIdentity relatedIdentity = identityOf(relatedDomain);
-        if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
-          if (!lastSegment) {
-            queue.add(new DomainAtSegment(relatedDomain, nextSegment));
-          }
-          continue;
-        }
-        if (edgeOmittedByFieldset && relatedIdentity != null) {
-          linkageExemptions.add(relatedIdentity);
-        }
-        ResourceObject relatedResource = writer.toResource(relatedDomain, context);
-        offerIncluded(relatedResource, path.dottedThrough(current.segmentIndex()));
-        if (!lastSegment) {
-          queue.add(new DomainAtSegment(relatedDomain, nextSegment));
-        }
+        processRelated(
+            relatedDomain, edgeOmittedByFieldset, nextSegment, lastSegment, propertyPath, queue);
+      }
+    }
+
+    /** Handles one related domain object reached through the relationship of one path segment. */
+    private void processRelated(
+        Object relatedDomain,
+        boolean edgeOmittedByFieldset,
+        int nextSegment,
+        boolean lastSegment,
+        String propertyPath,
+        Queue<DomainAtSegment> queue) {
+      ResourceIdentity relatedIdentity = identityOf(relatedDomain);
+      if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
+        enqueueNextSegment(relatedDomain, nextSegment, lastSegment, queue);
+        return;
+      }
+      if (edgeOmittedByFieldset && relatedIdentity != null) {
+        linkageExemptions.add(relatedIdentity);
+      }
+      ResourceObject relatedResource = writer.toResource(relatedDomain, context);
+      offerIncluded(relatedResource, propertyPath);
+      enqueueNextSegment(relatedDomain, nextSegment, lastSegment, queue);
+    }
+
+    private void enqueueNextSegment(
+        Object domain, int nextSegment, boolean lastSegment, Queue<DomainAtSegment> queue) {
+      if (!lastSegment) {
+        queue.add(new DomainAtSegment(domain, nextSegment));
       }
     }
 
