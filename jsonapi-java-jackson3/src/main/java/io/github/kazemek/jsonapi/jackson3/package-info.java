@@ -17,6 +17,12 @@
  * identifier conversion is pluggable through {@link IdentifierConverter}. Read-side flat DTO
  * binding uses {@link JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder};
  * relationship linkage conversion is pluggable through {@link RelationshipLinkageMapper}.
+ * Convenience domain writes infer a root {@link tools.jackson.databind.JavaType} from a concrete
+ * runtime class. Directly parameterized roots require the mapper overloads that accept a complete
+ * {@code JavaType}; that type remains authoritative for generic attributes, relationship targets,
+ * and compound inclusion. Concrete subclasses with resolvable generic superclass bindings remain
+ * eligible for the convenience route, while unresolved mapped variables fail at their JSON:API
+ * member location instead of being inferred from runtime contents.
  *
  * <p>Configured Jackson is also authoritative at the mapped-property boundary for ordinary values:
  * attributes and mapped resource/relationship meta use contextualized property serializers on

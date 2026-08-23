@@ -43,6 +43,22 @@ JsonApiDocument doc = mapper.toDocument(someAnnotatedPojo);
 String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 ```
 
+The convenience route derives the root type from the concrete runtime class. When the declared
+root is parameterized directly, pass the complete Jackson type explicitly so generic attributes,
+relationships, and include traversal retain their bindings:
+
+```java
+JavaType containerType =
+    callerMapper.getTypeFactory().constructParametricType(Container.class, Thing.class);
+JsonApiDocument typed = mapper.toDocument(container, containerType, null);
+```
+
+`Container<Thing>` and `Container<OtherThing>` therefore have distinct mapping metadata. A concrete
+subclass such as `ThingContainer extends Container<Thing>` can use the convenience route when
+Jackson resolves its bound superclass type. A direct runtime `Container` instance cannot recover
+`Thing` from `resource.getClass()`; an unparameterized write fails deterministically when a mapped
+member needs that information rather than guessing from runtime values.
+
 Flat resource-to-DTO binding (validated document model → DTO; bind after `JsonApiDocumentReader`):
 
 ```java
@@ -78,6 +94,9 @@ CompoundSerializationContext context =
         .withIncludePolicy(IncludePolicy.allowAll());
 
 JsonApiDocument compound = mapper.toDocument(article, null, context);
+
+// The same context is available on the declared-type overload:
+JsonApiDocument typedCompound = mapper.toDocument(container, containerType, null, context);
 ```
 
 Sparse fieldsets (same context; only via `MappedDocument` overloads):
@@ -311,7 +330,8 @@ artifact; both majors share the neutral contracts of
   expose the codec mapper publicly.
 - **Map then write:** `JsonApiResourceMapper` produces core model objects; feed them to a writer
   for serialization. Mapping uses Jackson's logical property model and caches `ResourceMapping`
-  by type and mapper config identity. Configured Jackson is the single authority for class-level
+  by complete declared type and mapper config identity. Ordinary concrete roots infer that type;
+  direct parameterized roots use the `JavaType` overloads. Configured Jackson is the single authority for class-level
   resource metadata: `@JsonApiResource` is read through mapper introspection, so class-level
   mix-ins provide or override it exactly as for ordinary Jackson serialization — across domain
   write, flat binding, both PATCH paths, registry key derivation, and declared to-many element

@@ -35,8 +35,12 @@ public final class MappingDefinitionCache {
     this.mapper = mapper;
   }
 
-  ResourceMapping resolve(Class<?> rawType) {
-    return resolve(mapper.constructType(rawType));
+  JavaType constructType(Class<?> rawType) {
+    return mapper.constructType(rawType);
+  }
+
+  JavaType specializeType(JavaType declaredType, Class<?> runtimeType) {
+    return mapper.getTypeFactory().constructSpecializedType(declaredType, runtimeType);
   }
 
   /**
@@ -74,14 +78,8 @@ public final class MappingDefinitionCache {
         key, cacheKey -> computeReadMapping(rawType, javaType, config));
   }
 
-  /**
-   * Resolves the configured class-level resource type name for {@code rawType} through mapper-aware
-   * introspection (class-level mix-ins honored), or {@code null} when the type carries no
-   * configured {@code @JsonApiResource} metadata. Presence-only: the name is returned without
-   * member-name validation so callers can keep their own absence diagnostics.
-   */
-  public @Nullable String findResourceTypeName(Class<?> rawType) {
-    JavaType javaType = mapper.constructType(rawType);
+  /** Resolves the configured class-level resource type name for a complete Java type. */
+  public @Nullable String findResourceTypeName(JavaType javaType) {
     CacheKey key = new CacheKey(javaType, configHash(mapper.serializationConfig()));
     Optional<String> existing =
         resourceTypeNames.computeIfAbsent(
@@ -99,8 +97,15 @@ public final class MappingDefinitionCache {
    *     invalid
    */
   public String requireResourceTypeName(Class<?> rawType) {
+    return requireResourceTypeName(mapper.constructType(rawType));
+  }
+
+  /**
+   * Resolves and validates the configured class-level resource type name for a complete Java type.
+   */
+  public String requireResourceTypeName(JavaType javaType) {
     return MappingDefinitionResolver.validateResourceTypeName(
-        findResourceTypeName(rawType), rawType);
+        findResourceTypeName(javaType), javaType.getRawClass());
   }
 
   private @Nullable String computeResourceTypeName(JavaType javaType) {

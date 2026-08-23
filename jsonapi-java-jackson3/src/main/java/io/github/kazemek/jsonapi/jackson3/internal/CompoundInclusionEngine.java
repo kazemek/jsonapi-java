@@ -49,13 +49,17 @@ public final class CompoundInclusionEngine {
    */
   public IncludedResourcesResult collectIncluded(
       List<?> primarySnapshot,
+      List<JavaType> primaryTypes,
       List<ResourceObject> primaryResources,
       CompoundSerializationContext context) {
     Objects.requireNonNull(primarySnapshot, "primarySnapshot");
+    Objects.requireNonNull(primaryTypes, "primaryTypes");
     Objects.requireNonNull(primaryResources, "primaryResources");
     Objects.requireNonNull(context, "context");
-    if (primarySnapshot.size() != primaryResources.size()) {
-      throw new IllegalArgumentException("primary snapshot and resource lists must match in size");
+    if (primarySnapshot.size() != primaryResources.size()
+        || primarySnapshot.size() != primaryTypes.size()) {
+      throw new IllegalArgumentException(
+          "primary snapshot, type, and resource lists must match in size");
     }
 
     List<IncludePath> paths = context.includePaths();
@@ -63,17 +67,16 @@ public final class CompoundInclusionEngine {
       return new IncludedResourcesResult(null, Set.of());
     }
 
-    List<Class<?>> distinctTypes = distinctTypesInOrder(primarySnapshot);
+    List<JavaType> distinctTypes = distinctTypesInOrder(primaryTypes);
     preValidate(distinctTypes, paths, context);
 
-    return new Traversal(context, primarySnapshot, primaryResources).run();
+    return new Traversal(context, primarySnapshot, primaryTypes, primaryResources).run();
   }
 
-  private static List<Class<?>> distinctTypesInOrder(List<?> primarySnapshot) {
-    Set<Class<?>> seen = new LinkedHashSet<>();
-    List<Class<?>> types = new ArrayList<>();
-    for (Object resource : primarySnapshot) {
-      Class<?> type = resource.getClass();
+  private static List<JavaType> distinctTypesInOrder(List<JavaType> primaryTypes) {
+    Set<JavaType> seen = new LinkedHashSet<>();
+    List<JavaType> types = new ArrayList<>();
+    for (JavaType type : primaryTypes) {
       if (seen.add(type)) {
         types.add(type);
       }
@@ -82,10 +85,11 @@ public final class CompoundInclusionEngine {
   }
 
   private void preValidate(
-      List<Class<?>> distinctTypes, List<IncludePath> paths, CompoundSerializationContext context) {
+      List<JavaType> distinctTypes, List<IncludePath> paths, CompoundSerializationContext context) {
     for (IncludePath path : paths) {
       if (path.segments().size() > context.maxDepth()) {
-        Class<?> resourceClass = distinctTypes.isEmpty() ? null : distinctTypes.getFirst();
+        Class<?> resourceClass =
+            distinctTypes.isEmpty() ? null : distinctTypes.getFirst().getRawClass();
         // Include-path specification failures have no document member location; the dotted path
         // stays in the message per the mapping-location contract.
         throw JsonApiMappingException.withoutLocation(
@@ -93,25 +97,25 @@ public final class CompoundInclusionEngine {
             resourceClass,
             "Include path exceeds maxDepth " + context.maxDepth() + ": " + path.dotted());
       }
-      for (Class<?> resourceClass : distinctTypes) {
-        validatePathAgainstType(path, resourceClass, context);
+      for (JavaType resourceType : distinctTypes) {
+        validatePathAgainstType(path, resourceType, context);
       }
     }
   }
 
   private void validatePathAgainstType(
-      IncludePath path, Class<?> resourceClass, CompoundSerializationContext context) {
-    Class<?> currentClass = resourceClass;
+      IncludePath path, JavaType resourceType, CompoundSerializationContext context) {
+    JavaType currentType = resourceType;
     IncludePolicy policy = context.includePolicy();
     for (int i = 0; i < path.segments().size(); i++) {
       String segment = path.segments().get(i);
       String dottedThrough = path.dottedThrough(i);
-      ResourceMapping mapping = writer.mappingFor(currentClass);
+      ResourceMapping mapping = writer.mappingFor(currentType);
       MappingProperty property = findRelationship(mapping, segment);
       if (property == null) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INVALID_INCLUDE_PATH,
-            currentClass,
+            currentType.getRawClass(),
             "Unknown relationship '"
                 + segment
                 + "' on "
@@ -123,7 +127,7 @@ public final class CompoundInclusionEngine {
       if (!policy.allows(mapping.resourceType(), segment)) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE,
-            currentClass,
+            currentType.getRawClass(),
             "Include denied for "
                 + mapping.resourceType()
                 + "."
@@ -132,7 +136,7 @@ public final class CompoundInclusionEngine {
                 + dottedThrough
                 + "'");
       }
-      currentClass = resolveRelatedDomainClass(property, currentClass, dottedThrough);
+      currentType = resolveRelatedDomainType(property, currentType, dottedThrough);
     }
   }
 
@@ -146,8 +150,8 @@ public final class CompoundInclusionEngine {
     return null;
   }
 
-  private static Class<?> resolveRelatedDomainClass(
-      MappingProperty property, Class<?> ownerClass, String dottedThrough) {
+  private static JavaType resolveRelatedDomainType(
+      MappingProperty property, JavaType ownerType, String dottedThrough) {
     JavaType propertyType = property.accessor().getType();
     JavaType relatedType = unwrapOptionalType(propertyType);
     if (DomainResourceWriter.isToManyType(relatedType)) {
@@ -155,12 +159,12 @@ public final class CompoundInclusionEngine {
       if (contentType == null) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
-            ownerClass,
+            ownerType.getRawClass(),
             "Cannot resolve collection content type for include path '" + dottedThrough + "'");
       }
       relatedType = unwrapOptionalType(contentType);
     }
-    return relatedType.getRawClass();
+    return relatedType;
   }
 
   private static JavaType unwrapOptionalType(JavaType type) {
@@ -173,6 +177,7 @@ public final class CompoundInclusionEngine {
   private final class Traversal {
     private final CompoundSerializationContext context;
     private final List<?> primarySnapshot;
+    private final List<JavaType> primaryTypes;
     private final List<ResourceObject> primaryResources;
     private final Set<ResourceIdentity> primaryIdentities = new HashSet<>();
     private final Map<ResourceIdentity, ResourceObject> includedByIdentity = new LinkedHashMap<>();
@@ -182,9 +187,11 @@ public final class CompoundInclusionEngine {
     Traversal(
         CompoundSerializationContext context,
         List<?> primarySnapshot,
+        List<JavaType> primaryTypes,
         List<ResourceObject> primaryResources) {
       this.context = context;
       this.primarySnapshot = primarySnapshot;
+      this.primaryTypes = primaryTypes;
       this.primaryResources = primaryResources;
     }
 
@@ -197,18 +204,21 @@ public final class CompoundInclusionEngine {
       }
 
       List<IncludePath> paths = context.includePaths();
-      for (Object primaryDomain : primarySnapshot) {
+      for (int primaryIndex = 0; primaryIndex < primarySnapshot.size(); primaryIndex++) {
+        Object primaryDomain = primarySnapshot.get(primaryIndex);
+        JavaType primaryType = primaryTypes.get(primaryIndex);
         for (int pathIndex = 0; pathIndex < paths.size(); pathIndex++) {
-          walkPath(primaryDomain, paths.get(pathIndex), pathIndex);
+          walkPath(primaryDomain, primaryType, paths.get(pathIndex), pathIndex);
         }
       }
       return new IncludedResourcesResult(
           List.copyOf(includedByIdentity.values()), linkageExemptions);
     }
 
-    private void walkPath(Object primaryDomain, IncludePath path, int pathIndex) {
+    private void walkPath(
+        Object primaryDomain, JavaType primaryType, IncludePath path, int pathIndex) {
       Queue<DomainAtSegment> queue = new ArrayDeque<>();
-      queue.add(new DomainAtSegment(primaryDomain, 0));
+      queue.add(new DomainAtSegment(primaryDomain, primaryType, 0));
       while (!queue.isEmpty()) {
         DomainAtSegment current = queue.poll();
         processSegment(current, path, pathIndex, queue);
@@ -221,22 +231,23 @@ public final class CompoundInclusionEngine {
         return;
       }
       Object domain = current.domain();
-      ResourceIdentity identity = identityOf(domain);
+      JavaType declaredType = current.declaredType();
+      ResourceIdentity identity = identityOf(domain, declaredType);
       if (identity == null) {
         return;
       }
-      VisitKey visitKey = new VisitKey(identity, pathIndex, current.segmentIndex());
+      VisitKey visitKey = new VisitKey(identity, declaredType, pathIndex, current.segmentIndex());
       if (!visited.add(visitKey)) {
         return;
       }
 
       String segment = path.segments().get(current.segmentIndex());
-      ResourceMapping mapping = writer.mappingFor(domain.getClass());
+      ResourceMapping mapping = writer.mappingFor(declaredType);
       MappingProperty property = findRelationship(mapping, segment);
       if (property == null) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INVALID_INCLUDE_PATH,
-            domain.getClass(),
+            declaredType.getRawClass(),
             "Unknown relationship '"
                 + segment
                 + "' on "
@@ -259,6 +270,8 @@ public final class CompoundInclusionEngine {
       }
 
       List<Object> related = readRelatedDomainObjects(domain, property);
+      String propertyPath = path.dottedThrough(current.segmentIndex());
+      JavaType relatedType = resolveRelatedDomainType(property, declaredType, propertyPath);
       int nextSegment = current.segmentIndex() + 1;
       boolean lastSegment = nextSegment >= path.segments().size();
       // When the owning resource's fieldset omits this segment, the traversed relationship is
@@ -266,43 +279,55 @@ public final class CompoundInclusionEngine {
       // through such an edge legitimately lack inbound linkage in the produced document.
       List<String> ownerFields = DomainResourceWriter.fieldsFor(context, mapping.resourceType());
       boolean edgeOmittedByFieldset = ownerFields != null && !ownerFields.contains(segment);
-      String propertyPath = path.dottedThrough(current.segmentIndex());
       for (Object relatedDomain : related) {
         processRelated(
-            relatedDomain, edgeOmittedByFieldset, nextSegment, lastSegment, propertyPath, queue);
+            relatedDomain,
+            relatedType,
+            edgeOmittedByFieldset,
+            nextSegment,
+            lastSegment,
+            propertyPath,
+            queue);
       }
     }
 
     /** Handles one related domain object reached through the relationship of one path segment. */
     private void processRelated(
         Object relatedDomain,
+        JavaType relatedType,
         boolean edgeOmittedByFieldset,
         int nextSegment,
         boolean lastSegment,
         String propertyPath,
         Queue<DomainAtSegment> queue) {
-      ResourceIdentity relatedIdentity = identityOf(relatedDomain);
+      JavaType effectiveRelatedType = writer.effectiveType(relatedDomain, relatedType);
+      ResourceIdentity relatedIdentity = identityOf(relatedDomain, effectiveRelatedType);
       if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
-        enqueueNextSegment(relatedDomain, nextSegment, lastSegment, queue);
+        enqueueNextSegment(relatedDomain, effectiveRelatedType, nextSegment, lastSegment, queue);
         return;
       }
       if (edgeOmittedByFieldset && relatedIdentity != null) {
         linkageExemptions.add(relatedIdentity);
       }
-      ResourceObject relatedResource = writer.toResource(relatedDomain, context);
+      ResourceObject relatedResource =
+          writer.toResource(relatedDomain, effectiveRelatedType, context);
       offerIncluded(relatedResource, propertyPath);
-      enqueueNextSegment(relatedDomain, nextSegment, lastSegment, queue);
+      enqueueNextSegment(relatedDomain, effectiveRelatedType, nextSegment, lastSegment, queue);
     }
 
     private void enqueueNextSegment(
-        Object domain, int nextSegment, boolean lastSegment, Queue<DomainAtSegment> queue) {
+        Object domain,
+        JavaType declaredType,
+        int nextSegment,
+        boolean lastSegment,
+        Queue<DomainAtSegment> queue) {
       if (!lastSegment) {
-        queue.add(new DomainAtSegment(domain, nextSegment));
+        queue.add(new DomainAtSegment(domain, declaredType, nextSegment));
       }
     }
 
-    private @Nullable ResourceIdentity identityOf(Object domain) {
-      ResourceIdentifier identifier = writer.extractIdentifier(domain);
+    private @Nullable ResourceIdentity identityOf(Object domain, JavaType declaredType) {
+      ResourceIdentifier identifier = writer.extractIdentifier(domain, declaredType);
       if (identifier.hasId()) {
         return ResourceIdentity.ofId(identifier.type(), Objects.requireNonNull(identifier.id()));
       }
@@ -378,7 +403,8 @@ public final class CompoundInclusionEngine {
     }
   }
 
-  private record DomainAtSegment(Object domain, int segmentIndex) {}
+  private record DomainAtSegment(Object domain, JavaType declaredType, int segmentIndex) {}
 
-  private record VisitKey(ResourceIdentity identity, int pathIndex, int segmentIndex) {}
+  private record VisitKey(
+      ResourceIdentity identity, JavaType declaredType, int pathIndex, int segmentIndex) {}
 }

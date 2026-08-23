@@ -51,4 +51,24 @@ subtrees; every other included resource still requires full linkage. A blanket d
 was rejected because one legitimate fieldset omission would silently disable detection of
 unrelated genuine full-linkage defects elsewhere in the same document. The exemption concept is a
 core validation-policy value (`ValidationContext`) keyed by core resource identity, so adapter
-integrations share it without Jackson-major-specific choreography.
+ integrations share it without Jackson-major-specific choreography.
+
+## Amendment (2026-08): Declared type fidelity for generic domain writes
+
+The write mapper has two root-type entry routes:
+
+- convenience methods infer a type from a concrete runtime class;
+- overloads accepting a complete Jackson `JavaType` preserve caller-declared parameterization.
+
+A directly parameterized runtime value such as `Container<Thing>` has only `Container.class` at
+runtime, so the convenience route cannot recover `Thing`. When a mapped member depends on that
+binding, an unparameterized root fails at its JSON:API member location rather than guessing from a
+null, empty collection, first element, proxy, or polymorphic runtime value. A concrete subtype that
+binds its generic superclass, such as `ThingContainer extends Container<Thing>`, remains eligible for
+the convenience route when Jackson resolves that binding.
+
+The declared `JavaType` is carried through the serialization-oriented `ResourceMapping`, property
+serialization, relationship linkage, and recursive include traversal. Mapping cache entries remain
+distinct for distinct parameterizations. This keeps generic scalar properties and `T`,
+`Optional<T>`, and `List<T>` relationships on the same configured Jackson authority as ordinary
+writes; the relationship/inclusion separation above is unchanged.

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JavaType;
 
 /**
  * Maps annotated domain objects to JSON:API {@link ResourceObject} instances and documents.
@@ -29,6 +30,13 @@ import org.jspecify.annotations.Nullable;
  * <p>Mapping is write-only: this mapper produces core model objects. Feed them to a {@link
  * JsonApiDocumentWriter} for serialization. Read-side flat DTO binding is provided by {@link
  * JsonApiResourceBinder}.
+ *
+ * <p>The convenience methods infer a root {@link JavaType} from the concrete runtime class. Use the
+ * overloads that accept a {@link JavaType} for a directly parameterized root such as {@code
+ * Container<Thing>}; the declared type is retained through mapping, relationship linkage, and
+ * compound inclusion. Concrete subclasses that bind a generic superclass can use the convenience
+ * methods when Jackson resolves those bindings. An unparameterized generic root fails at the mapped
+ * member that requires the missing declaration rather than inferring a type from runtime contents.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the three-argument
  * {@link #toDocument(Object, DocumentEnvelope, CompoundSerializationContext)} and {@link
@@ -61,7 +69,12 @@ public final class JsonApiResourceMapper {
   }
 
   public ResourceObject toResource(Object resource) {
-    return writer.toResource(resource);
+    return writer.toResource(resource, writer.inferredType(resource));
+  }
+
+  /** Maps a domain object using the complete declared Jackson type supplied by the caller. */
+  public ResourceObject toResource(Object resource, JavaType resourceType) {
+    return writer.toResource(resource, resourceType);
   }
 
   public JsonApiDocument toDocument(Object resource) {
@@ -69,7 +82,14 @@ public final class JsonApiResourceMapper {
   }
 
   public JsonApiDocument toDocument(Object resource, @Nullable DocumentEnvelope envelope) {
-    ResourceObject resourceObject = writer.toResource(resource);
+    JavaType resourceType = writer.inferredType(resource);
+    return toDocument(resource, resourceType, envelope);
+  }
+
+  /** Maps a domain object to a document using a complete declared type and optional envelope. */
+  public JsonApiDocument toDocument(
+      Object resource, JavaType resourceType, @Nullable DocumentEnvelope envelope) {
+    ResourceObject resourceObject = writer.toResource(resource, resourceType);
     return buildDocument(new DocumentData.SingleResource(resourceObject), envelope, null);
   }
 
@@ -80,14 +100,29 @@ public final class JsonApiResourceMapper {
    */
   public JsonApiDocument toDocument(
       Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
+    return toDocument(resource, writer.inferredType(resource), envelope, context);
+  }
+
+  /**
+   * Maps a domain object to a document with explicit inclusion using the complete declared Jackson
+   * type supplied by the caller.
+   */
+  public JsonApiDocument toDocument(
+      Object resource,
+      JavaType resourceType,
+      @Nullable DocumentEnvelope envelope,
+      CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resourceType, "resourceType");
     Objects.requireNonNull(context, CONTEXT);
     rejectNonEmptyFieldsets(context);
     List<Object> snapshot = List.of(resource);
-    ResourceObject resourceObject = writer.toResource(resource);
+    ResourceObject resourceObject = writer.toResource(resource, resourceType, context);
     List<ResourceObject> primary = List.of(resourceObject);
     List<ResourceObject> included =
-        inclusionEngine.collectIncluded(snapshot, primary, context).included();
+        inclusionEngine
+            .collectIncluded(snapshot, List.of(resourceType), primary, context)
+            .included();
     return buildDocument(new DocumentData.SingleResource(resourceObject), envelope, included);
   }
 
@@ -99,13 +134,23 @@ public final class JsonApiResourceMapper {
    */
   public MappedDocument toMappedDocument(
       Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
+    return toMappedDocument(resource, writer.inferredType(resource), envelope, context);
+  }
+
+  /** Maps a domain object with inclusion and sparse fieldsets using a complete declared type. */
+  public MappedDocument toMappedDocument(
+      Object resource,
+      JavaType resourceType,
+      @Nullable DocumentEnvelope envelope,
+      CompoundSerializationContext context) {
     Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resourceType, "resourceType");
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = List.of(resource);
-    ResourceObject resourceObject = writer.toResource(resource, context);
+    ResourceObject resourceObject = writer.toResource(resource, resourceType, context);
     List<ResourceObject> primary = List.of(resourceObject);
     IncludedResourcesResult includedResult =
-        inclusionEngine.collectIncluded(snapshot, primary, context);
+        inclusionEngine.collectIncluded(snapshot, List.of(resourceType), primary, context);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
@@ -120,9 +165,24 @@ public final class JsonApiResourceMapper {
       Iterable<?> resources, @Nullable DocumentEnvelope envelope) {
     Objects.requireNonNull(resources, RESOURCES);
     List<Object> snapshot = materialize(resources);
+    List<JavaType> resourceTypes = inferredTypes(snapshot);
+    return toResourceCollection(snapshot, resourceTypes, envelope);
+  }
+
+  /** Maps a homogeneous collection using a complete declared element type and optional envelope. */
+  public JsonApiDocument toResourceCollection(
+      Iterable<?> resources, JavaType resourceType, @Nullable DocumentEnvelope envelope) {
+    Objects.requireNonNull(resources, RESOURCES);
+    Objects.requireNonNull(resourceType, "resourceType");
+    List<Object> snapshot = materialize(resources);
+    return toResourceCollection(snapshot, repeatedType(snapshot.size(), resourceType), envelope);
+  }
+
+  private JsonApiDocument toResourceCollection(
+      List<Object> snapshot, List<JavaType> resourceTypes, @Nullable DocumentEnvelope envelope) {
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
-    for (Object resource : snapshot) {
-      resourceObjects.add(writer.toResource(resource));
+    for (int i = 0; i < snapshot.size(); i++) {
+      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i)));
     }
     return buildDocument(
         new DocumentData.ResourceCollection(List.copyOf(resourceObjects)), envelope, null);
@@ -140,15 +200,41 @@ public final class JsonApiResourceMapper {
       CompoundSerializationContext context) {
     Objects.requireNonNull(resources, RESOURCES);
     Objects.requireNonNull(context, CONTEXT);
-    rejectNonEmptyFieldsets(context);
     List<Object> snapshot = materialize(resources);
+    return toResourceCollection(snapshot, inferredTypes(snapshot), envelope, context);
+  }
+
+  /**
+   * Maps a homogeneous collection with explicit compound inclusion using the complete declared
+   * element type supplied by the caller.
+   */
+  public JsonApiDocument toResourceCollection(
+      Iterable<?> resources,
+      JavaType resourceType,
+      @Nullable DocumentEnvelope envelope,
+      CompoundSerializationContext context) {
+    Objects.requireNonNull(resources, RESOURCES);
+    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(context, CONTEXT);
+    List<Object> snapshot = materialize(resources);
+    return toResourceCollection(
+        snapshot, repeatedType(snapshot.size(), resourceType), envelope, context);
+  }
+
+  private JsonApiDocument toResourceCollection(
+      List<Object> snapshot,
+      List<JavaType> resourceTypes,
+      @Nullable DocumentEnvelope envelope,
+      CompoundSerializationContext context) {
+    Objects.requireNonNull(context, CONTEXT);
+    rejectNonEmptyFieldsets(context);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
-    for (Object resource : snapshot) {
-      resourceObjects.add(writer.toResource(resource));
+    for (int i = 0; i < snapshot.size(); i++) {
+      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i), context));
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     List<ResourceObject> included =
-        inclusionEngine.collectIncluded(snapshot, primary, context).included();
+        inclusionEngine.collectIncluded(snapshot, resourceTypes, primary, context).included();
     return buildDocument(new DocumentData.ResourceCollection(primary), envelope, included);
   }
 
@@ -165,13 +251,39 @@ public final class JsonApiResourceMapper {
     Objects.requireNonNull(resources, RESOURCES);
     Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
+    return toMappedResourceCollection(snapshot, inferredTypes(snapshot), envelope, context);
+  }
+
+  /**
+   * Maps a homogeneous collection with inclusion and sparse fieldsets using a complete declared
+   * type.
+   */
+  public MappedDocument toMappedResourceCollection(
+      Iterable<?> resources,
+      JavaType resourceType,
+      @Nullable DocumentEnvelope envelope,
+      CompoundSerializationContext context) {
+    Objects.requireNonNull(resources, RESOURCES);
+    Objects.requireNonNull(resourceType, "resourceType");
+    Objects.requireNonNull(context, CONTEXT);
+    List<Object> snapshot = materialize(resources);
+    return toMappedResourceCollection(
+        snapshot, repeatedType(snapshot.size(), resourceType), envelope, context);
+  }
+
+  private MappedDocument toMappedResourceCollection(
+      List<Object> snapshot,
+      List<JavaType> resourceTypes,
+      @Nullable DocumentEnvelope envelope,
+      CompoundSerializationContext context) {
+    Objects.requireNonNull(context, CONTEXT);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
-    for (Object resource : snapshot) {
-      resourceObjects.add(writer.toResource(resource, context));
+    for (int i = 0; i < snapshot.size(); i++) {
+      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i), context));
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     IncludedResourcesResult includedResult =
-        inclusionEngine.collectIncluded(snapshot, primary, context);
+        inclusionEngine.collectIncluded(snapshot, resourceTypes, primary, context);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.ResourceCollection(primary), envelope, includedResult.included());
@@ -195,6 +307,18 @@ public final class JsonApiResourceMapper {
       snapshot.add(resource);
     }
     return List.copyOf(snapshot);
+  }
+
+  private List<JavaType> inferredTypes(List<Object> resources) {
+    List<JavaType> types = new ArrayList<>(resources.size());
+    for (Object resource : resources) {
+      types.add(writer.inferredType(resource));
+    }
+    return List.copyOf(types);
+  }
+
+  private static List<JavaType> repeatedType(int size, JavaType resourceType) {
+    return java.util.Collections.nCopies(size, resourceType);
   }
 
   private static JsonApiDocument buildDocument(
