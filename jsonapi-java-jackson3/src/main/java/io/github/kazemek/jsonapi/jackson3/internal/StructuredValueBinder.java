@@ -339,18 +339,20 @@ final class StructuredValueBinder {
     }
     MappingLocation pointer = start.location();
     JavaType current = start.declaredType();
-    for (int i = 1; i < names.size(); i++) {
+    boolean walking = true;
+    for (int i = 1; i < names.size() && walking; i++) {
       String name = names.get(i);
       Shape shape = walkShape(current, walkPlainShapes);
       if (shape == null) {
-        break;
-      }
-      Member member = shape.memberByWire(name);
-      if (member != null) {
-        pointer = pointer.append(member.wireName());
-        current = member.type();
-      } else if (!shape.presenceAware() || !"value".equals(name)) {
-        break;
+        walking = false;
+      } else {
+        Member member = shape.memberByWire(name);
+        if (member != null) {
+          pointer = pointer.append(member.wireName());
+          current = member.type();
+        } else if (!shape.presenceAware() || !"value".equals(name)) {
+          walking = false;
+        }
       }
     }
     return pointer;

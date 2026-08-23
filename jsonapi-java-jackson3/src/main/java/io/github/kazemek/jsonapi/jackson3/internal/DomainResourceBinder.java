@@ -83,10 +83,13 @@ public final class DomainResourceBinder {
         requireDeserializable(identifierProperty, identifierLocation, rawType);
         bindIdentifierValue(
             Objects.requireNonNull(resource.id()), ID_LOCATION, identifierProperty, properties);
-      } else if (resource.lid() != null) {
-        identifierLocation = LID_LOCATION;
-        requireDeserializable(identifierProperty, identifierLocation, rawType);
-        bindIdentifierValue(resource.lid(), LID_LOCATION, identifierProperty, properties);
+      } else {
+        String lid = resource.lid();
+        if (lid != null) {
+          identifierLocation = LID_LOCATION;
+          requireDeserializable(identifierProperty, identifierLocation, rawType);
+          bindIdentifierValue(lid, LID_LOCATION, identifierProperty, properties);
+        }
       }
     }
     bindAttributes(resource, mapping, properties, rawType);

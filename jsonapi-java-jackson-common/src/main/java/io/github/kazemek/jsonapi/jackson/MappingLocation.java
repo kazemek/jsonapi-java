@@ -1,5 +1,7 @@
 package io.github.kazemek.jsonapi.jackson;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.StringJoiner;
 import org.jspecify.annotations.Nullable;
@@ -25,7 +27,9 @@ import org.jspecify.annotations.Nullable;
  * contract: leading {@code /}, no empty segments, and {@code ~} only inside valid {@code ~0} /
  * {@code ~1} escape sequences. Instances are immutable and safe for concurrent use.
  */
-public final class MappingLocation {
+public final class MappingLocation implements Serializable {
+
+  @Serial private static final long serialVersionUID = 1L;
 
   private final String pointer;
 
