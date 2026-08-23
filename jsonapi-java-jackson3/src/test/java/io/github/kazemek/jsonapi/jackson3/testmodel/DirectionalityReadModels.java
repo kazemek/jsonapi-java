@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.testmodel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -83,5 +84,26 @@ public final class DirectionalityReadModels {
     public String getId() {
       return "derived";
     }
+  }
+
+  public static final class IncludedInReadView {}
+
+  public static final class ExcludedFromReadView {}
+
+  @JsonApiResource(type = "view-restricted")
+  public static final class ViewRestricted {
+
+    @JsonView(IncludedInReadView.class)
+    @JsonApiId
+    public String id;
+
+    @JsonView(IncludedInReadView.class)
+    @JsonApiAttribute
+    public String visible;
+
+    @JsonView(ExcludedFromReadView.class)
+    @JsonApiAttribute
+    @SuppressWarnings("unused")
+    public String hidden;
   }
 }

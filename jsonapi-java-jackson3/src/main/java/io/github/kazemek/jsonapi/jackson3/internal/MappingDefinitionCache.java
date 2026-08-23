@@ -152,19 +152,16 @@ public final class MappingDefinitionCache {
   private Map<String, JavaType> effectiveDeserializationTypes(
       JavaType javaType, BeanDescription description) {
     Map<String, JavaType> targets = new java.util.LinkedHashMap<>();
-    ValueDeserializer<?> root;
-    try {
-      root = mapper._deserializationContext().findRootValueDeserializer(javaType);
-    } catch (RuntimeException ignored) {
-      return targets;
-    }
+    ValueDeserializer<?> root =
+        mapper._deserializationContext().findRootValueDeserializer(javaType);
     if (!(root instanceof BeanDeserializerBase bean)) {
       return targets;
     }
+    Class<?> activeView = mapper.deserializationConfig().getActiveView();
     for (var definition : description.findProperties()) {
       SettableBeanProperty property =
           bean.findProperty(PropertyName.construct(definition.getFullName().getSimpleName()));
-      if (property != null) {
+      if (property != null && (activeView == null || property.visibleInView(activeView))) {
         targets.put(definition.getName(), property.getType());
       }
     }
@@ -186,6 +183,8 @@ public final class MappingDefinitionCache {
             ? config.getPropertyNamingStrategy().hashCode()
             : 0;
     result = 31 * result + config.getDefaultVisibilityChecker().hashCode();
+    Class<?> activeView = config.getActiveView();
+    result = 31 * result + (activeView == null ? 0 : activeView.hashCode());
     return result;
   }
 

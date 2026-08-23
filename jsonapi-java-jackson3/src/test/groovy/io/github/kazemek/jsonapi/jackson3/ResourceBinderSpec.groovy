@@ -208,6 +208,25 @@ class ResourceBinderSpec extends Specification {
     ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
   }
 
+  def "supplied property excluded by the default deserialization view is rejected"() {
+    given:
+    def mapper = JsonMapper.builder()
+        .defaultDeserializationView(DirectionalityReadModels.IncludedInReadView)
+        .build()
+    def binder = JsonApiJackson3.resourceBinder(mapper)
+
+    when:
+    binder.fromResource(
+        resource("view-restricted", "1", [hidden: "supplied"], null),
+        DirectionalityReadModels.ViewRestricted)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    ex.propertyPath() == "/attributes/hidden"
+    ex.resourceClass() == DirectionalityReadModels.ViewRestricted
+  }
+
   def "JavaType entry points bind resource and collection"() {
     given:
     def binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
