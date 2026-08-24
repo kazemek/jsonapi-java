@@ -33,6 +33,31 @@ JsonApiDocumentReader reader =
 JsonApiDocument roundTrip = reader.readValue(json);
 ```
 
+## Construction policy
+
+The canonical construction seam for every Jackson 3 capability starts with a fully configured
+`JsonMapper`, followed by the capability-specific context or policy and any collaborators that
+cannot be derived safely. The canonical forms are:
+
+```java
+JsonApiJackson3.writer(mapper, validationContext);
+JsonApiJackson3.reader(mapper, readContext);
+JsonApiJackson3.resourceMapper(mapper, identifierConverter);
+JsonApiJackson3.resourceBinder(mapper, identifierConverter, linkageMappers);
+JsonApiJackson3.domainDocumentReader(mapper, readContext, registry, identifierConverter, linkageMappers);
+JsonApiJackson3.patchReader(mapper, validationContext, identifierConverter, linkageMappers);
+JsonApiJackson3.patchDtoReader(mapper, validationContext, identifierConverter, linkageMappers);
+```
+
+Shorter factory forms remain meaningful conveniences: they select the documented default validation
+policy, identifier converter, and empty linkage-mapper set, then delegate to these
+mapper-instance forms. `JsonMapper.Builder` overloads are deliberately not part of the API: a
+builder that only calls `build()` adds no construction semantics, and Jackson 2 will follow this
+semantic capability surface rather than reproduce an overload matrix. Callers retain authority over
+mapper modules, mix-ins, naming, serializers, deserializers, visibility, and property behavior.
+Future Spring integration can therefore pass its configured mapper, capability context, and required
+collaborators directly without knowing about facade conveniences or internal mapper derivation.
+
 Domain-to-resource mapping (map → write):
 
 ```java
@@ -287,12 +312,14 @@ relationship linkage, and `PatchPresence` state; those adapter-owned states are 
 property serializer or deserializer. If no mapped property can be resolved, the adapter retains its
 ordinary type/module conversion fallback.
 
-`JsonApiJackson3.writer` / `reader` / `resourceMapper` / `resourceBinder` / `patchReader` /
-`patchDtoReader` always derive a **new** mapper via `rebuild()`; the caller's mapper or builder is
-never mutated. Writers validate before emission. Readers decode through public core constructors,
-then run aggregate validation. Mappers and binders introspect types for resource metadata but do
-not register a Jackson module (the PATCH DTO reader additionally derives a binder mapper with an
-internal `PatchPresence` module; the caller's mapper is still never mutated).
+`JsonApiJackson3.writer` / `resourceMapper` / `resourceBinder` / `patchReader` / `patchDtoReader`
+derive isolated mappers via `rebuild()`; `reader` uses the supplied mapper directly for token-driven
+decoding, and `domainDocumentReader` uses it for decoding while deriving its binder mapper. No
+construction path mutates the caller's mapper. Writers validate before emission. Readers decode
+through public core constructors, then run aggregate validation. Mappers and binders introspect
+types for resource metadata but do not register a Jackson module (the PATCH DTO reader additionally
+derives a binder mapper with an internal `PatchPresence` module; the caller's mapper is still never
+mutated).
 
 ## Non-goals
 
@@ -318,6 +345,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-013 — Direct typed PATCH DTO binding](../docs/adr/013-direct-typed-patch-dto-binding.md)
 - [ADR-014 — Recursive structured value PATCH semantics](../docs/adr/014-recursive-structured-value-patch-semantics.md)
 - [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
+- [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
 - [Canonical fixtures](../jsonapi-java-test-support/src/main/resources/jsonapi/corpus/1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -403,9 +431,9 @@ artifact; both majors share the neutral contracts of
 - **Wire states:** Omit members for Java `null` components; emit/decode JSON `null` for sealed
   null variants; emit/decode `{}` / `[]` for present-empty wrappers and empty collections.
   Serialize flat wrappers from `flatten()` / `Meta.members()`.
-- **Mapper isolation:** Never mutate the caller-supplied `JsonMapper` or `JsonMapper.Builder`;
-  always derive via `rebuild()`. Close only parsers created by convenience overloads; leave
-  caller-owned streams/parsers open.
+- **Mapper isolation:** Factories accept configured `JsonMapper` instances, never builders, and do
+  not mutate them. Capabilities derive isolated mappers only where their implementation requires
+  it. Close only parsers created by convenience overloads; leave caller-owned streams/parsers open.
 - **Nullness:** Production packages are `@NullMarked` (JSpecify only). Use `@Nullable` for
   absence and intentionally null map values. Do not import `core.internal`.
 - **Mapping grammar:** JSON:API member-name validation delegates to
@@ -443,7 +471,7 @@ artifact; both majors share the neutral contracts of
   local. Typed
   envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
   full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
-  registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
+  registrations, mapper-instance factory forms, custom linkage mappers, caller-owned streams,
   malformed input, validation failures).   Presence-aware PATCH contract cases come from
   `PatchScenarios`; `PatchBindingSpec` asserts full-catalog coverage and keeps adapter-local
   cases local (custom deserializer, custom linkage conversion, Optional attribute null,

@@ -50,6 +50,7 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - [ADR-007 — Module boundaries](../docs/adr/007-module-boundaries.md)
 - [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
+- [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents

@@ -42,7 +42,7 @@ public final class JsonApiDocumentReader {
     return context;
   }
 
-  /** Codec-configured mapper used for parsing (derived; not the caller's original mapper). */
+  /** Configured mapper supplied to this reader for token-driven parsing. */
   JsonMapper mapper() {
     return mapper;
   }
