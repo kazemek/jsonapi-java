@@ -1,0 +1,1 @@
+{"data":{"type":"articles","id":"1","relationships":{"comments":{"data":[{"type":"comments","id":"c1"},{"type":"comments","id":"c2"}]}}}}

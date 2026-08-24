@@ -5,11 +5,7 @@ import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithContainersPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithGeoPatch;
@@ -17,7 +13,6 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithOpt
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithTagsPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMetaPatch;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithAddressPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithAddressTagsPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithBoxPatch;
@@ -31,6 +26,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOpt
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalCityPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalMetaPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRawAddressPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.BoxPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.DirectPresentPatch;
@@ -43,11 +39,18 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.OptionalPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PresenceIdPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.RawPatchPresencePatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.UnannotatedPatch;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * The shared direct typed PATCH DTO catalog consumed by Jackson-major contract tests.
  *
- * <p>The catalog grows by addition: scenarios are added as the direct PATCH DTO surface grows, and
+ * <p>Scenario documents are named classpath resources under {@code jsonapi/corpus/1.1/patch/};
+ * documents that low-level PATCH and typed PATCH consume identically reference the same resource.
+ * The catalog grows by addition: scenarios are added as the direct PATCH DTO surface grows, and
  * adapter suites pick them up through {@link #all()}. Consumers dispatch on {@link
  * PatchDtoExpectation}, never on a scenario id.
  */
@@ -62,12 +65,6 @@ public final class PatchDtoScenarios {
   private static final String PEOPLE = "people";
   private static final String TITLE_PATH = "/attributes/title";
   private static final String ADDRESS_ATTRIBUTE_PATH = "/attributes/address";
-  private static final String IDENTITY_ONLY_DOCUMENT =
-      "{\"data\":{\"type\":\"articles\",\"id\":\"1\"}}";
-  private static final String MIXED_ADDRESS_DOCUMENT =
-      "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"city\":\"C\"}}}}";
-  private static final String DECLARATION_DOCUMENT =
-      "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"}}}";
 
   private static final List<PatchDtoScenario> SCENARIOS =
       List.of(
@@ -125,13 +122,14 @@ public final class PatchDtoScenarios {
     return CATALOG;
   }
 
-
-
+  private static String doc(String stem) {
+    return TestSupportResources.readCorpusUtf8("patch/" + stem + ".json");
+  }
 
   private static PatchDtoScenario omittedAndSuppliedAttributes() {
     return scenario(
         "patch-dto-omitted-and-supplied-attributes",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"Hello\"}}}",
+        doc("omitted-and-supplied-attributes"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -145,7 +143,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario explicitNullAttribute() {
     return scenario(
         "patch-dto-explicit-null-attribute",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":null}}}",
+        doc("explicit-null-attribute"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -159,7 +157,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario explicitNullOptionalInner() {
     return scenario(
         "patch-dto-explicit-null-optional-inner",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"subtitle\":null}}}",
+        doc("subtitle-explicit-null"),
         OptionalPatch.class,
         PatchDtoExpectation.success("1", optionalArticle(PatchPresence.present(Optional.empty()))));
   }
@@ -167,7 +165,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario attributeRename() {
     return scenario(
         "patch-dto-attribute-rename",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"body-text\":\"Content\"}}}",
+        doc("attribute-rename"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -181,7 +179,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario relationshipNullLinkage() {
     return scenario(
         "patch-dto-relationship-null-linkage",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"relationships\":{\"author\":{\"data\":null}}}}",
+        doc("relationship-null-linkage"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -195,7 +193,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario relationshipSingleLinkage() {
     return scenario(
         "patch-dto-relationship-single-linkage",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"}}}}}",
+        doc("relationship-single-linkage"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -209,7 +207,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario relationshipEmptyCollection() {
     return scenario(
         "patch-dto-relationship-empty-collection",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"relationships\":{\"comments\":{\"data\":[]}}}}",
+        doc("relationship-empty-collection"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -223,7 +221,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario relationshipNonEmptyCollection() {
     return scenario(
         "patch-dto-relationship-non-empty-collection",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"relationships\":{\"comments\":{\"data\":[{\"type\":\"comments\",\"id\":\"c1\"},{\"type\":\"comments\",\"id\":\"c2\"}]}}}}",
+        doc("relationship-non-empty-collection"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -240,7 +238,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario identityOnly() {
     return scenario(
         "patch-dto-identity-only",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"7\"}}",
+        doc("identity-other-id"),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "7",
@@ -254,7 +252,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario wrongPrimaryShape() {
     return scenario(
         "patch-dto-wrong-primary-shape",
-        "{\"data\":[{\"type\":\"articles\",\"id\":\"1\"}]}",
+        doc("wrong-primary-shape"),
         ArticlePatch.class,
         PatchDtoExpectation.readerFailure(
             ValidationRuleCode.UPDATE_REQUIRES_SINGLE_RESOURCE, "/data"));
@@ -263,7 +261,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario resourceTypeMismatch() {
     return scenario(
         "patch-dto-resource-type-mismatch",
-        "{\"data\":{\"type\":\"people\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"}}}",
+        doc("resource-type-mismatch"),
         ArticlePatch.class,
         PatchDtoExpectation.binderFailure(MappingDiagnostic.RESOURCE_TYPE_MISMATCH, "/type"));
   }
@@ -271,7 +269,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario unknownAttribute() {
     return scenario(
         "patch-dto-unknown-attribute",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"bogus\":\"x\"}}}",
+        doc("attribute-unknown-member"),
         ArticlePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.UNKNOWN_PATCH_MEMBER, "/attributes/bogus"));
@@ -280,7 +278,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario unknownRelationship() {
     return scenario(
         "patch-dto-unknown-relationship",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"relationships\":{\"bogus\":{\"data\":null}}}}",
+        doc("relationship-unknown-member"),
         ArticlePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.UNKNOWN_PATCH_MEMBER, "/relationships/bogus"));
@@ -289,7 +287,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario identifierConversionFailure() {
     return scenario(
         "patch-dto-identifier-conversion-failure",
-        "{\"data\":{\"type\":\"things\",\"id\":\"not-an-int\",\"attributes\":{\"name\":\"T\"}}}",
+        doc("things-identifier-not-an-integer"),
         IntIdPatch.class,
         PatchDtoExpectation.binderFailure(MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED, "/id"));
   }
@@ -297,7 +295,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario relationshipCardinalityMismatch() {
     return scenario(
         "patch-dto-relationship-cardinality-mismatch",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"relationships\":{\"author\":{\"data\":[]}}}}",
+        doc("relationship-cardinality-mismatch"),
         ArticlePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH, "/relationships/author/data"));
@@ -306,7 +304,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationNonPatchPresence() {
     return scenario(
         "patch-dto-declaration-non-patch-presence",
-        DECLARATION_DOCUMENT,
+        doc("title-only"),
         NonPatchPresencePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, TITLE_PATH));
@@ -315,7 +313,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationRawPatchPresence() {
     return scenario(
         "patch-dto-declaration-raw-patch-presence",
-        DECLARATION_DOCUMENT,
+        doc("title-only"),
         RawPatchPresencePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, TITLE_PATH));
@@ -324,7 +322,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationDirectPresent() {
     return scenario(
         "patch-dto-declaration-direct-present",
-        DECLARATION_DOCUMENT,
+        doc("title-only"),
         DirectPresentPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, TITLE_PATH));
@@ -333,7 +331,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationUnannotatedMember() {
     return scenario(
         "patch-dto-declaration-unannotated-member",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"note\":\"n\"}}}",
+        doc("note-attribute"),
         UnannotatedPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/attributes/note"));
@@ -342,7 +340,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationPresenceId() {
     return scenario(
         "patch-dto-declaration-presence-id",
-        IDENTITY_ONLY_DOCUMENT,
+        doc("identity-only"),
         PresenceIdPatch.class,
         PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/id"));
   }
@@ -350,7 +348,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedPartialStructuredObject() {
     return scenario(
         "patch-dto-nested-partial-structured-object",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"New Street\"}}}}",
+        doc("address-street-new-street"),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -363,7 +361,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedEmptyStructuredObject() {
     return scenario(
         "patch-dto-nested-empty-structured-object",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{}}}}",
+        doc("address-empty-object"),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -375,7 +373,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedExplicitNull() {
     return scenario(
         "patch-dto-nested-explicit-null",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":null}}}",
+        doc("address-explicit-null"),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.present(null))));
   }
@@ -383,7 +381,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedOmitted() {
     return scenario(
         "patch-dto-nested-omitted",
-        IDENTITY_ONLY_DOCUMENT,
+        doc("identity-only"),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.omitted())));
   }
@@ -391,7 +389,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedMultiLevel() {
     return scenario(
         "patch-dto-nested-multi-level",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"geo\":{\"lat\":\"1\"}}}}}",
+        doc("address-street-and-geo-lat"),
         ArticleWithGeoPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -406,7 +404,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedOptionalObject() {
     return scenario(
         "patch-dto-nested-optional-object",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\"}}}}",
+        doc("address-street"),
         ArticleWithOptionalAddressPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -419,7 +417,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedOptionalNull() {
     return scenario(
         "patch-dto-nested-optional-null",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":null}}}",
+        doc("address-explicit-null"),
         ArticleWithOptionalAddressPatch.class,
         PatchDtoExpectation.success(
             "1", addressPatchMembers(PatchPresence.present(Optional.empty()))));
@@ -428,7 +426,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedOptionalMemberNull() {
     return scenario(
         "patch-dto-nested-optional-member-null",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"city\":null}}}}",
+        doc("address-street-city-null"),
         ArticleWithOptionalCityPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -441,7 +439,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedContainerAtomic() {
     return scenario(
         "patch-dto-nested-container-atomic",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"tags\":[\"a\",\"b\"]}}}}",
+        doc("address-street-tags"),
         ArticleWithAddressTagsPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -454,7 +452,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedGenericJavaType() {
     return scenario(
         "patch-dto-nested-generic-javatype",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"box\":{\"numbers\":[\"1\",\"2\"]}}}}",
+        doc("box-numbers"),
         ArticleWithBoxPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -465,7 +463,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedContainerAtomicSet() {
     return scenario(
         "patch-dto-nested-container-atomic-set",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"aliases\":[\"a\",\"b\"]}}}}",
+        doc("address-street-aliases"),
         ArticleWithContainerAddressPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -481,7 +479,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedContainerAtomicMap() {
     return scenario(
         "patch-dto-nested-container-atomic-map",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\",\"scores\":{\"x\":\"1\",\"y\":\"2\"}}}}}",
+        doc("address-street-scores"),
         ArticleWithContainerAddressPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -497,7 +495,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedNonObjectWire() {
     return scenario(
         "patch-dto-nested-non-object-wire",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":\"not-an-object\"}}}",
+        doc("address-scalar-wire"),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, ADDRESS_ATTRIBUTE_PATH));
@@ -506,7 +504,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedUnknownMember() {
     return scenario(
         "patch-dto-nested-unknown-member",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"bogus\":\"x\"}}}}",
+        doc("address-unknown-member"),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.UNKNOWN_PATCH_MEMBER, "/attributes/address/bogus"));
@@ -515,7 +513,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedDeclarationMixed() {
     return scenario(
         "patch-dto-nested-declaration-mixed",
-        MIXED_ADDRESS_DOCUMENT,
+        doc("address-street-city"),
         ArticleWithMixedAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
@@ -524,7 +522,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedDeclarationRaw() {
     return scenario(
         "patch-dto-nested-declaration-raw",
-        MIXED_ADDRESS_DOCUMENT,
+        doc("address-street-city"),
         ArticleWithRawAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
@@ -533,7 +531,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedDeclarationDirectPresent() {
     return scenario(
         "patch-dto-nested-declaration-direct-present",
-        MIXED_ADDRESS_DOCUMENT,
+        doc("address-street-city"),
         ArticleWithDirectPresentAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
@@ -542,7 +540,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedInvalidShapeOmitted() {
     return scenario(
         "patch-dto-nested-invalid-shape-omitted",
-        IDENTITY_ONLY_DOCUMENT,
+        doc("identity-only"),
         ArticleWithMixedAddressPatch.class,
         PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.omitted())));
   }
@@ -550,7 +548,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario javabeanNestedPartial() {
     return scenario(
         "patch-dto-javabean-nested-partial",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"address\":{\"street\":\"S\"}}}}",
+        doc("address-street"),
         MutableArticleWithAddressPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -594,10 +592,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario metaRecursiveResourceAndRelationship() {
     return scenario(
         "patch-dto-meta-recursive-resource-and-relationship",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\","
-            + "\"attributes\":{\"title\":\"T\"},"
-            + "\"meta\":{\"source\":\"cms\",\"note\":\"n\"},"
-            + "\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"},\"meta\":{\"displayName\":\"Alice\"}}}}}",
+        doc("meta-source-note-author-meta"),
         ArticleWithMetaPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -612,14 +607,11 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario metaAtomicMap() {
     return scenario(
         "patch-dto-meta-atomic-map",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\","
-            + "\"attributes\":{\"title\":\"T\"},"
-            + "\"meta\":{\"source\":\"cms\"},"
-            + "\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"},\"meta\":{\"displayName\":\"Alice\"}}}}}",
+        doc("meta-map-with-relationship"),
         ArticleWithMapMetaPatch.class,
         PatchDtoExpectation.success(
             "1",
-            mapMetaPatchMembers(
+            metaPatchMembers(
                 PatchPresence.present("T"),
                 PatchPresence.present(Map.of("source", "cms")),
                 PatchPresence.present(ResourceIdentifier.of(PEOPLE, "p1")),
@@ -629,7 +621,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario metaOptionalObject() {
     return scenario(
         "patch-dto-meta-optional-object",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"meta\":{\"source\":\"cms\",\"note\":\"n\"}}}",
+        doc("title-with-meta-source-note"),
         ArticleWithOptionalMetaPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -641,7 +633,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario metaEmptyObject() {
     return scenario(
         "patch-dto-meta-empty-object",
-        "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"meta\":{}}}",
+        doc("meta-empty-object"),
         ArticleWithMetaPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -656,7 +648,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario metaOmitted() {
     return scenario(
         "patch-dto-meta-omitted",
-        IDENTITY_ONLY_DOCUMENT,
+        doc("identity-only"),
         ArticleWithMetaPatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -678,14 +670,6 @@ public final class PatchDtoScenarios {
     members.put(AUTHOR, author);
     members.put("authorMeta", authorMeta);
     return members;
-  }
-
-  private static Map<String, PatchPresence<?>> mapMetaPatchMembers(
-      PatchPresence<?> title,
-      PatchPresence<?> meta,
-      PatchPresence<?> author,
-      PatchPresence<?> authorMeta) {
-    return metaPatchMembers(title, meta, author, authorMeta);
   }
 
   private static Map<String, PatchPresence<?>> optionalMetaPatchMembers(

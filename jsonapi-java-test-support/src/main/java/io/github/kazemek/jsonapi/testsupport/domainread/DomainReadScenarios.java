@@ -9,6 +9,7 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
@@ -58,11 +59,12 @@ public final class DomainReadScenarios {
   private static final String REL_AUTHOR_DATA = "/relationships/author/data";
   private static final String REL_COMMENTS_DATA = "/relationships/comments/data";
 
-  private static final String INCLUDED_PRIMARY =
-      "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"}}}},\"included\":[{\"type\":\"people\",\"id\":\"p1\",\"attributes\":{\"name\":\"Alice\"}}]}";
+  private static final String INCLUDED_PRIMARY = doc("included-isolation-primary");
+  private static final String INCLUDED_SWAPPED = doc("included-isolation-swapped");
 
-  private static final String INCLUDED_SWAPPED =
-      "{\"data\":{\"type\":\"articles\",\"id\":\"1\",\"attributes\":{\"title\":\"T\"},\"relationships\":{\"author\":{\"data\":{\"type\":\"people\",\"id\":\"p1\"}}}},\"included\":[{\"type\":\"people\",\"id\":\"p1\",\"attributes\":{\"name\":\"AliceChanged\"}}]}";
+  private static String doc(String stem) {
+    return TestSupportResources.readCorpusUtf8("domain-read/" + stem + ".json");
+  }
 
   private static final List<DomainReadScenario> SCENARIOS =
       List.of(
