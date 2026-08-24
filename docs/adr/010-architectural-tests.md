@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-21 (test-support module rename; package allowlist unchanged)
+**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-21 (test-support module rename; package allowlist unchanged); 2026-08-24 (passive-fixture sub-allowlist enforcing the testsupport.fixtures coverage boundary)
 
 ## Context
 
@@ -38,6 +38,15 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
     `com.fasterxml.jackson.databind..`, a major-specific adapter package (`jackson2..`,
     `jackson3..`), `core.internal..`, `groovy..`, or `org.codehaus.groovy..`; this keeps the
     shared fixtures major-neutral and confines Groovy to test sources.
+  - `io.github.kazemek.jsonapi.testsupport.fixtures..` (passive carriers) → `java..`,
+    `org.jspecify.annotations..`, `io.github.kazemek.jsonapi.annotation..`,
+    `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.jackson..`, other
+    `io.github.kazemek.jsonapi.testsupport.fixtures..` types, and
+    `com.fasterxml.jackson.annotation..`. This stricter sub-allowlist is the structural boundary
+    behind coverage-by-default: only passive application-shaped carriers live under
+    `fixtures`, so scenario catalogs, resource loaders, descriptors, and invariant services —
+    whose dependencies fall outside this list — cannot be moved there to escape JaCoCo/Sonar
+    coverage.
 - Major-specific Jackson 2 allowlist (when registered):
   - `io.github.kazemek.jsonapi.jackson2..` → JDK, JSpecify, core public packages, annotations,
     module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's
