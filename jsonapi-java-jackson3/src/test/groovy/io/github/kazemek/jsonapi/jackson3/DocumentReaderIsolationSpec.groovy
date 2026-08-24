@@ -43,21 +43,6 @@ class DocumentReaderIsolationSpec extends Specification {
     reader.mapper().is(caller)
   }
 
-  def "deriving a reader from a builder does not register the module on the builder"() {
-    given:
-    def builder = JsonMapper.builder()
-    def before = builder.build().writeValueAsString(new SampleBean('beta'))
-
-    when:
-    def reader = JsonApiJackson3.reader(builder, DocumentReadContext.resourceDefaults())
-    def after = builder.build().writeValueAsString(new SampleBean('beta'))
-
-    then:
-    before == after
-    before == '{"name":"beta"}'
-    reader.mapper().writeValueAsString(new SampleBean('gamma')) == '{"name":"gamma"}'
-  }
-
   def "JsonApiDocumentReader.mapper is package-private"() {
     expect:
     def method = JsonApiDocumentReader.getDeclaredMethod('mapper')

@@ -178,7 +178,7 @@ PATCH DTO catalogs are in this module.
   own domain document reader and assert full-catalog coverage
   (`executedScenarioIds == catalogScenarioIds`). Included resources bind independently and are
   never injected into relationships (ADR-011). Adapter-specific behavior (`metaAs`, `JavaType`
-  registrations, builder-based reader factories, custom linkage mappers, caller-owned streams,
+  registrations, mapper-instance reader factories, custom linkage mappers, caller-owned streams,
   malformed input, validation failures) is documented in the adapter-local specs themselves, not
   enumerated in a manifest.
 - **PATCH catalog:** `PatchScenariosCatalogSpec` enforces the local invariants that hold for every

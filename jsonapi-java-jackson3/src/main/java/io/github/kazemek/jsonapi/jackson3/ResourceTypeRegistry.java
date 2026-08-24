@@ -15,17 +15,19 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Explicit JSON:API resource type to DTO target registry for {@link JsonApiDomainDocumentReader}.
  *
- * <p>Build via {@link #builder(JsonMapper)} (or the default-mapper compatibility overload {@link
- * #builder()}) and {@link Builder#register(Class)} / {@link Builder#register(JavaType)}. The
- * registry is a dispatch mechanism only: it answers "wire JSON:API resource type &rarr; Java target
- * type" and never interprets annotations itself. Registration keys each target by the class-level
- * resource metadata of the <em>configured</em> {@link JsonMapper} passed to {@link
- * #builder(JsonMapper)} — the same canonical configured-Jackson authority that drives mapping — so
- * class-level mix-ins are honored exactly as in domain write, read, and PATCH paths. The built
- * registry retains no mapper. Missing configured resource metadata or empty/invalid type names fail
- * at {@link Builder#register(Class)} with {@link MappingDiagnostic#MISSING_RESOURCE_ANNOTATION} /
- * {@link MappingDiagnostic#INVALID_RESOURCE_TYPE}; duplicate JSON:API type names fail at {@link
- * Builder#build()} with {@link MappingDiagnostic#CONFLICTING_TYPE_REGISTRATION}.
+ * <p>Build via {@link #builder(JsonMapper)} and {@link Builder#register(Class)} / {@link
+ * Builder#register(JavaType)}. The no-argument {@link #builder()} convenience uses a default mapper
+ * for applications that have no mapper-specific configuration; callers with configured Jackson
+ * should pass that mapper explicitly. The registry is a dispatch mechanism only: it answers "wire
+ * JSON:API resource type &rarr; Java target type" and never interprets annotations itself.
+ * Registration keys each target by the class-level resource metadata of the <em>configured</em>
+ * {@link JsonMapper} passed to {@link #builder(JsonMapper)} — the same canonical configured-Jackson
+ * authority that drives mapping — so class-level mix-ins are honored exactly as in domain write,
+ * read, and PATCH paths. The built registry retains no mapper. Missing configured resource metadata
+ * or empty/invalid type names fail at {@link Builder#register(Class)} with {@link
+ * MappingDiagnostic#MISSING_RESOURCE_ANNOTATION} / {@link MappingDiagnostic#INVALID_RESOURCE_TYPE};
+ * duplicate JSON:API type names fail at {@link Builder#build()} with {@link
+ * MappingDiagnostic#CONFLICTING_TYPE_REGISTRATION}.
  *
  * <p>An empty registry is legal: identifier, error, and meta-only documents bind without resource
  * DTOs, while any resource document whose primary or included type is unregistered fails at bind
@@ -41,18 +43,16 @@ public final class ResourceTypeRegistry {
 
   /**
    * Returns a builder keyed by the class-level resource metadata of the given configured mapper.
-   * Pass the same mapper (or builder state) you hand to {@link
-   * JsonApiJackson3#domainDocumentReader} so registration keys and binding agree on configured
-   * metadata such as mix-ins.
+   * Pass the same configured mapper you hand to {@link JsonApiJackson3#domainDocumentReader} so
+   * registration keys and binding agree on configured metadata such as mix-ins.
    */
   public static Builder builder(JsonMapper mapper) {
     return new Builder(mapper);
   }
 
   /**
-   * Returns a builder using a default mapper for compatibility with the original API. Use {@link
-   * #builder(JsonMapper)} when the registry must honor caller configuration such as class-level
-   * mix-ins.
+   * Returns a builder using a default mapper. Use {@link #builder(JsonMapper)} when the registry
+   * must honor caller configuration such as class-level mix-ins.
    */
   public static Builder builder() {
     return builder(JsonMapper.builder().build());

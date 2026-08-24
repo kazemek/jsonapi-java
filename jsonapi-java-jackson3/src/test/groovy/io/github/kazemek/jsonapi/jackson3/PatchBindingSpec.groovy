@@ -196,20 +196,21 @@ class PatchBindingSpec extends Specification {
     ex.propertyPath() == "/attributes/count"
   }
 
-  def "Builder and JavaType factory overloads bind successfully"() {
+  def "mapper and JavaType factory overloads bind successfully"() {
     given:
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"Hello"}}}'
-    def builderReader = JsonApiJackson3.patchReader(JsonMapper.builder())
+    def mapper = JsonMapper.builder().build()
+    def mapperReader = JsonApiJackson3.patchReader(mapper)
     def javaType = JsonMapper.builder().build().constructType(FlatArticle)
 
     when:
-    def fromBuilder = builderReader.readValue(json, FlatArticle)
+    def fromMapper = mapperReader.readValue(json, FlatArticle)
     def fromJavaType = JsonApiJackson3.patchReader(JsonMapper.builder().build())
         .readValue(json, javaType)
 
     then:
-    fromBuilder.identity() == "1"
-    fromBuilder.changes() == [
+    fromMapper.identity() == "1"
+    fromMapper.changes() == [
       new PatchChange.AttributeChange("title", "title", "Hello")
     ]
     fromJavaType.resourceType() == FlatArticle
@@ -548,7 +549,7 @@ class PatchBindingSpec extends Specification {
     ((ResourceIdentifier[]) emptyArrayCommand.changes()[0].value()).length == 0
   }
 
-  def "Builder factory with ValidationContext and IdentifierConverter binds"() {
+  def "mapper factory with ValidationContext and IdentifierConverter binds"() {
     given:
     def converter = new IdentifierConverter() {
           @Override
@@ -562,7 +563,7 @@ class PatchBindingSpec extends Specification {
           }
         }
     def reader = JsonApiJackson3.patchReader(
-        JsonMapper.builder(), ValidationContext.defaults(), converter)
+        JsonMapper.builder().build(), ValidationContext.defaults(), converter)
     def json = '{"data":{"type":"articles","id":"9","attributes":{"title":"T"}}}'
 
     when:

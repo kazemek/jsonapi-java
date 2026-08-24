@@ -5,8 +5,8 @@ import io.github.kazemek.jsonapi.testfixtures.domainwrite.Article
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
-// Adapter-specific: mapper/builder isolation and converter-overload behavior of this major's own
-// factory, deliberately not shared in the domain-write catalog.
+// Adapter-specific: mapper isolation and converter-overload behavior of this major's own factory,
+// deliberately not shared in the domain-write catalog.
 class ResourceMapperIsolationSpec extends Specification {
 
   static class SampleBean {
@@ -39,20 +39,6 @@ class ResourceMapperIsolationSpec extends Specification {
     then:
     before == after
     before == '{"name":"alpha"}'
-  }
-
-  def "deriving a resource mapper from a builder does not mutate the builder"() {
-    given:
-    def builder = JsonMapper.builder()
-    def before = builder.build().writeValueAsString(new SampleBean("beta"))
-
-    when:
-    JsonApiJackson3.resourceMapper(builder)
-    def after = builder.build().writeValueAsString(new SampleBean("beta"))
-
-    then:
-    before == after
-    before == '{"name":"beta"}'
   }
 
   def "resource mapper with IdentifierConverter overload works"() {

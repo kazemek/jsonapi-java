@@ -7,22 +7,29 @@
  * {@link JsonApiJackson3#writer} and {@link JsonApiJackson3#reader} as the sole public codec paths;
  * writers validate before emission, and readers validate before returning a document.
  *
+ * <p>Jackson-major adapters use a configured {@link tools.jackson.databind.json.JsonMapper} as the
+ * canonical construction input. Capability-specific contexts and policy objects remain explicit,
+ * and convenience factories choose documented defaults on top of the mapper-instance seam; {@code
+ * JsonMapper.Builder} overloads are intentionally not part of the public contract. This
+ * mapper-instance construction rule is the semantic reference for the future Jackson 2 adapter and
+ * for Spring integration; parity does not require duplicating this facade's convenience overloads.
+ *
  * <p>Domain-to-resource mapping uses {@link JsonApiJackson3#resourceMapper} to derive a {@link
- * JsonApiResourceMapper} from a caller's {@link tools.jackson.databind.json.JsonMapper} or builder.
- * Mapping is explicit, respects Jackson's logical property model, and never mutates the caller's
- * mapper. Configured Jackson is authoritative for class-level resource metadata: {@code
- * JsonApiResource} is resolved through mapper introspection, so class-level mix-ins provide or
- * override it across domain write, flat binding, PATCH binding, registry key derivation, and
- * declared to-many element types. Mapping diagnostics use {@link MappingDiagnostic} stable codes;
- * identifier conversion is pluggable through {@link IdentifierConverter}. Read-side flat DTO
- * binding uses {@link JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder};
- * relationship linkage conversion is pluggable through {@link RelationshipLinkageMapper}.
- * Convenience domain writes infer a root {@link tools.jackson.databind.JavaType} from a concrete
- * runtime class. Directly parameterized roots require the mapper overloads that accept a complete
- * {@code JavaType}; that type remains authoritative for generic attributes, relationship targets,
- * and compound inclusion. Concrete subclasses with resolvable generic superclass bindings remain
- * eligible for the convenience route, while unresolved mapped variables fail at their JSON:API
- * member location instead of being inferred from runtime contents.
+ * JsonApiResourceMapper} from the caller's configured mapper. Mapping is explicit, respects
+ * Jackson's logical property model, and never mutates the caller's mapper. Configured Jackson is
+ * authoritative for class-level resource metadata: {@code JsonApiResource} is resolved through
+ * mapper introspection, so class-level mix-ins provide or override it across domain write, flat
+ * binding, PATCH binding, registry key derivation, and declared to-many element types. Mapping
+ * diagnostics use {@link MappingDiagnostic} stable codes; identifier conversion is pluggable
+ * through {@link IdentifierConverter}. Read-side flat DTO binding uses {@link
+ * JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder}; relationship linkage
+ * conversion is pluggable through {@link RelationshipLinkageMapper}. Convenience domain writes
+ * infer a root {@link tools.jackson.databind.JavaType} from a concrete runtime class. Directly
+ * parameterized roots require the mapper overloads that accept a complete {@code JavaType}; that
+ * type remains authoritative for generic attributes, relationship targets, and compound inclusion.
+ * Concrete subclasses with resolvable generic superclass bindings remain eligible for the
+ * convenience route, while unresolved mapped variables fail at their JSON:API member location
+ * instead of being inferred from runtime contents.
  *
  * <p>Configured Jackson is also authoritative at the mapped-property boundary for ordinary values:
  * attributes and mapped resource/relationship meta use contextualized property serializers on

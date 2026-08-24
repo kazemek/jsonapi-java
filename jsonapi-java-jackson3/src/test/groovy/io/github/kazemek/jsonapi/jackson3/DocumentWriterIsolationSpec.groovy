@@ -47,21 +47,6 @@ class DocumentWriterIsolationSpec extends Specification {
     !writer.mapper().is(caller)
   }
 
-  def "deriving a writer from a builder does not register the module on the builder"() {
-    given:
-    def builder = JsonMapper.builder()
-    def before = builder.build().writeValueAsString(new SampleBean("beta"))
-
-    when:
-    def writer = JsonApiJackson3.writer(builder)
-    def after = builder.build().writeValueAsString(new SampleBean("beta"))
-
-    then:
-    before == after
-    before == '{"name":"beta"}'
-    !writer.mapper().is(builder.build())
-  }
-
   def "documentMapper is package-private and not a public factory method"() {
     expect:
     def method = JsonApiJackson3.getDeclaredMethod('documentMapper', JsonMapper)

@@ -55,7 +55,7 @@ import tools.jackson.databind.module.SimpleModule
 // Shared typed-envelope cases live in EnvelopeReadScenarios. This spec runs every catalog entry
 // and asserts executedScenarioIds == catalogScenarioIds so a later Jackson 2 envelope suite can
 // do the same. Adapter-local cases stay here (no shared manifest): metaAs, JavaType registrations,
-// builder-based domainDocumentReader overloads, custom linkage mappers, caller-owned streams,
+// mapper-instance factory forms, custom linkage mappers, caller-owned streams,
 // malformed input, and validation failures.
 // @Stepwise pins the declared feature order so the coverage feature always runs after the
 // parameterized catalog iterations (Spock does not guarantee feature order otherwise).
@@ -155,16 +155,16 @@ class DomainDocumentReaderSpec extends Specification {
         ]
   }
 
-  def "builder-based domainDocumentReader overloads derive readers that bind identically"() {
+  def "mapper-instance domainDocumentReader overloads bind identically"() {
     given:
-    def builder = JsonMapper.builder()
+    def mapper = JsonMapper.builder().build()
     def registry = registry(FlatArticle)
     def threeArg = JsonApiJackson3.domainDocumentReader(
-        builder, DocumentReadContext.resourceDefaults(), registry)
+        mapper, DocumentReadContext.resourceDefaults(), registry)
     def fourArg = JsonApiJackson3.domainDocumentReader(
-        builder, DocumentReadContext.resourceDefaults(), registry, IdentifierConverter.defaults())
+        mapper, DocumentReadContext.resourceDefaults(), registry, IdentifierConverter.defaults())
     def fiveArg = JsonApiJackson3.domainDocumentReader(
-        builder,
+        mapper,
         DocumentReadContext.resourceDefaults(),
         registry,
         IdentifierConverter.defaults(),

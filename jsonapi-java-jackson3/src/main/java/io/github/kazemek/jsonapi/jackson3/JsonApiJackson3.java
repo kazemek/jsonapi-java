@@ -15,12 +15,13 @@ import tools.jackson.databind.json.JsonMapper;
  * Factory for Jackson 3 JSON:API document writers, readers, resource mappers, flat DTO binders, and
  * presence-aware PATCH readers.
  *
- * <p>Callers supply an existing {@link JsonMapper} or {@link JsonMapper.Builder}; this factory
- * always derives a <em>new</em> mapper via {@link JsonMapper#rebuild()} and never mutates or
- * replaces the caller's configuration in place. Public surface consists of {@link
- * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link
- * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and
- * {@link JsonApiPatchDtoReader}.
+ * <p>Callers supply an already-configured {@link JsonMapper}. Each canonical factory accepts that
+ * mapper first, followed by the policy, context, and collaborators required by its capability.
+ * Convenience factories select documented defaults and delegate to the canonical seam; mapper
+ * builders are intentionally not accepted. Factory construction never mutates or replaces the
+ * caller's configuration in place. Public surface consists of {@link JsonApiDocumentWriter}, {@link
+ * JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link JsonApiResourceBinder}, {@link
+ * JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and {@link JsonApiPatchDtoReader}.
  */
 public final class JsonApiJackson3 {
 
@@ -49,24 +50,6 @@ public final class JsonApiJackson3 {
   }
 
   /**
-   * Returns a writer derived from a caller-supplied builder. The builder is not given the JSON:API
-   * module; {@link JsonMapper.Builder#build()} is called, then a codec mapper is derived via {@link
-   * JsonMapper#rebuild()}.
-   */
-  public static JsonApiDocumentWriter writer(JsonMapper.Builder base) {
-    return writer(base, ValidationContext.defaults());
-  }
-
-  /**
-   * Returns a writer derived from a caller-supplied builder and validation context. The builder is
-   * not given the JSON:API module.
-   */
-  public static JsonApiDocumentWriter writer(JsonMapper.Builder base, ValidationContext context) {
-    Objects.requireNonNull(base, "base");
-    return writer(base.build(), context);
-  }
-
-  /**
    * Returns a reader bound to the given read context. Decoding is token-driven and does not use
    * document serializers, so the caller mapper is used as-is.
    */
@@ -74,15 +57,6 @@ public final class JsonApiJackson3 {
     Objects.requireNonNull(base, "base");
     Objects.requireNonNull(context, CONTEXT);
     return new JsonApiDocumentReader(base, context);
-  }
-
-  /**
-   * Returns a reader derived from a caller-supplied builder and read context. The builder is not
-   * given the JSON:API module.
-   */
-  public static JsonApiDocumentReader reader(JsonMapper.Builder base, DocumentReadContext context) {
-    Objects.requireNonNull(base, "base");
-    return reader(base.build(), context);
   }
 
   /**
@@ -105,24 +79,6 @@ public final class JsonApiJackson3 {
     DomainResourceWriter writer =
         new DomainResourceWriter(derived, identifierConverter, new MappingDefinitionCache(derived));
     return new JsonApiResourceMapper(writer);
-  }
-
-  /**
-   * Returns a resource mapper derived from a caller-supplied builder. The builder is not given the
-   * JSON:API module.
-   */
-  public static JsonApiResourceMapper resourceMapper(JsonMapper.Builder base) {
-    return resourceMapper(base, IdentifierConverter.defaults());
-  }
-
-  /**
-   * Returns a resource mapper derived from a caller-supplied builder and identifier converter. The
-   * builder is not given the JSON:API module.
-   */
-  public static JsonApiResourceMapper resourceMapper(
-      JsonMapper.Builder base, IdentifierConverter identifierConverter) {
-    Objects.requireNonNull(base, "base");
-    return resourceMapper(base.build(), identifierConverter);
   }
 
   /**
@@ -161,35 +117,6 @@ public final class JsonApiJackson3 {
         new DomainResourceBinder(
             derived, identifierConverter, new MappingDefinitionCache(derived), linkageMappers);
     return new JsonApiResourceBinder(derived, binder);
-  }
-
-  /**
-   * Returns a flat DTO binder derived from a caller-supplied builder with default identifier
-   * conversion. The builder is not given the JSON:API module.
-   */
-  public static JsonApiResourceBinder resourceBinder(JsonMapper.Builder base) {
-    return resourceBinder(base, IdentifierConverter.defaults(), Map.of());
-  }
-
-  /**
-   * Returns a flat DTO binder derived from a caller-supplied builder and identifier converter. The
-   * builder is not given the JSON:API module.
-   */
-  public static JsonApiResourceBinder resourceBinder(
-      JsonMapper.Builder base, IdentifierConverter identifierConverter) {
-    return resourceBinder(base, identifierConverter, Map.of());
-  }
-
-  /**
-   * Returns a flat DTO binder derived from a caller-supplied builder, identifier converter, and
-   * relationship linkage mappers. The builder is not given the JSON:API module.
-   */
-  public static JsonApiResourceBinder resourceBinder(
-      JsonMapper.Builder base,
-      IdentifierConverter identifierConverter,
-      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
-    Objects.requireNonNull(base, "base");
-    return resourceBinder(base.build(), identifierConverter, linkageMappers);
   }
 
   /**
@@ -235,42 +162,6 @@ public final class JsonApiJackson3 {
     Objects.requireNonNull(linkageMappers, LINKAGE_MAPPERS);
     return new JsonApiDomainDocumentReader(
         base, context, registry, identifierConverter, linkageMappers);
-  }
-
-  /**
-   * Returns a typed domain envelope reader derived from a caller-supplied builder with default
-   * identifier conversion. The builder is not given the JSON:API module.
-   */
-  public static JsonApiDomainDocumentReader domainDocumentReader(
-      JsonMapper.Builder base, DocumentReadContext context, ResourceTypeRegistry registry) {
-    return domainDocumentReader(base, context, registry, IdentifierConverter.defaults(), Map.of());
-  }
-
-  /**
-   * Returns a typed domain envelope reader derived from a caller-supplied builder and identifier
-   * converter. The builder is not given the JSON:API module.
-   */
-  public static JsonApiDomainDocumentReader domainDocumentReader(
-      JsonMapper.Builder base,
-      DocumentReadContext context,
-      ResourceTypeRegistry registry,
-      IdentifierConverter identifierConverter) {
-    return domainDocumentReader(base, context, registry, identifierConverter, Map.of());
-  }
-
-  /**
-   * Returns a typed domain envelope reader derived from a caller-supplied builder, identifier
-   * converter, and relationship linkage mappers. The builder is not given the JSON:API module.
-   */
-  public static JsonApiDomainDocumentReader domainDocumentReader(
-      JsonMapper.Builder base,
-      DocumentReadContext context,
-      ResourceTypeRegistry registry,
-      IdentifierConverter identifierConverter,
-      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
-    Objects.requireNonNull(base, "base");
-    return domainDocumentReader(
-        base.build(), context, registry, identifierConverter, linkageMappers);
   }
 
   /**
@@ -323,49 +214,6 @@ public final class JsonApiJackson3 {
   }
 
   /**
-   * Returns a presence-aware PATCH reader derived from a caller-supplied builder with default
-   * validation context. The builder is not given the JSON:API module.
-   */
-  public static JsonApiPatchReader patchReader(JsonMapper.Builder base) {
-    return patchReader(
-        base, ValidationContext.defaults(), IdentifierConverter.defaults(), Map.of());
-  }
-
-  /**
-   * Returns a presence-aware PATCH reader derived from a caller-supplied builder and validation
-   * context. The builder is not given the JSON:API module.
-   */
-  public static JsonApiPatchReader patchReader(
-      JsonMapper.Builder base, ValidationContext validationContext) {
-    return patchReader(base, validationContext, IdentifierConverter.defaults(), Map.of());
-  }
-
-  /**
-   * Returns a presence-aware PATCH reader derived from a caller-supplied builder, validation
-   * context, and identifier converter. The builder is not given the JSON:API module.
-   */
-  public static JsonApiPatchReader patchReader(
-      JsonMapper.Builder base,
-      ValidationContext validationContext,
-      IdentifierConverter identifierConverter) {
-    return patchReader(base, validationContext, identifierConverter, Map.of());
-  }
-
-  /**
-   * Returns a presence-aware PATCH reader derived from a caller-supplied builder, validation
-   * context, identifier converter, and relationship linkage mappers. The builder is not given the
-   * JSON:API module.
-   */
-  public static JsonApiPatchReader patchReader(
-      JsonMapper.Builder base,
-      ValidationContext validationContext,
-      IdentifierConverter identifierConverter,
-      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
-    Objects.requireNonNull(base, "base");
-    return patchReader(base.build(), validationContext, identifierConverter, linkageMappers);
-  }
-
-  /**
    * Returns a direct typed PATCH DTO reader with {@link ValidationContext#defaults()}, default
    * identifier conversion, and no custom relationship linkage mappers. Forces {@code
    * DocumentUsage.UPDATE_REQUEST} and {@code PrimaryDataKind.RESOURCE} for validate-on-read.
@@ -415,49 +263,6 @@ public final class JsonApiJackson3 {
     Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
     Objects.requireNonNull(linkageMappers, LINKAGE_MAPPERS);
     return new JsonApiPatchDtoReader(base, validationContext, identifierConverter, linkageMappers);
-  }
-
-  /**
-   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder with default
-   * validation context. The builder is not given the JSON:API module.
-   */
-  public static JsonApiPatchDtoReader patchDtoReader(JsonMapper.Builder base) {
-    return patchDtoReader(
-        base, ValidationContext.defaults(), IdentifierConverter.defaults(), Map.of());
-  }
-
-  /**
-   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder and validation
-   * context. The builder is not given the JSON:API module.
-   */
-  public static JsonApiPatchDtoReader patchDtoReader(
-      JsonMapper.Builder base, ValidationContext validationContext) {
-    return patchDtoReader(base, validationContext, IdentifierConverter.defaults(), Map.of());
-  }
-
-  /**
-   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder, validation
-   * context, and identifier converter. The builder is not given the JSON:API module.
-   */
-  public static JsonApiPatchDtoReader patchDtoReader(
-      JsonMapper.Builder base,
-      ValidationContext validationContext,
-      IdentifierConverter identifierConverter) {
-    return patchDtoReader(base, validationContext, identifierConverter, Map.of());
-  }
-
-  /**
-   * Returns a direct typed PATCH DTO reader derived from a caller-supplied builder, validation
-   * context, identifier converter, and relationship linkage mappers. The builder is not given the
-   * JSON:API module.
-   */
-  public static JsonApiPatchDtoReader patchDtoReader(
-      JsonMapper.Builder base,
-      ValidationContext validationContext,
-      IdentifierConverter identifierConverter,
-      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
-    Objects.requireNonNull(base, "base");
-    return patchDtoReader(base.build(), validationContext, identifierConverter, linkageMappers);
   }
 
   /**

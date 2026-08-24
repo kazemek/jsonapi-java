@@ -579,18 +579,18 @@ class PatchDtoBindingSpec extends Specification {
     thrown(IllegalArgumentException)
   }
 
-  def "Builder factory overloads bind successfully"() {
+  def "mapper factory overloads bind successfully"() {
     given:
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"Hello"}}}'
+    def mapper = JsonMapper.builder().build()
 
     when:
-    def fromBuilder = JsonApiJackson3.patchDtoReader(JsonMapper.builder())
-        .readValue(json, ArticlePatch)
-    def fromJavaType = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
-        .readValue(json, JsonMapper.builder().build().constructType(ArticlePatch))
+    def fromMapper = JsonApiJackson3.patchDtoReader(mapper).readValue(json, ArticlePatch)
+    def fromJavaType = JsonApiJackson3.patchDtoReader(mapper)
+        .readValue(json, mapper.constructType(ArticlePatch))
 
     then:
-    fromBuilder.title == PatchPresence.present("Hello")
+    fromMapper.title == PatchPresence.present("Hello")
     fromJavaType instanceof ArticlePatch
     ((ArticlePatch) fromJavaType).title == PatchPresence.present("Hello")
   }
