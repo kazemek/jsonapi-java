@@ -18,6 +18,8 @@ symmetry.
 | `documents/*.compact.json`     | Exact UTF-8 expectations for member-order cases                                               |
 | `negative/*.json`              | Read-only inputs for the negative corpus (malformed or context-invalid documents)             |
 | `envelope-binding/*.json`      | Named typed-envelope binding-variant documents (stable names; not codec corpus entries)       |
+| `patch/*.json`                 | Named PATCH request documents consumed by the shared low-level PATCH and typed PATCH DTO catalogs; one resource serves both catalogs wherever the request wire form is identical |
+| `domain-read/*.json`           | Named flat-read wire documents (currently the included-isolation pair)                        |
 
 Model builders, capability metadata, and validation contexts live in the internal Gradle module
 `jsonapi-java-test-support` (`io.github.kazemek.jsonapi.testsupport.codec`), not as extra copies of
@@ -36,6 +38,9 @@ entry-point contract. Stable file stems (enum names in `EnvelopeBindingDocument`
 `binder-failure-single`, `binder-failure-included`, `root-level-failure`, `cyclic-linkage`,
 `shared-identity-id-and-lid`, `duplicate-included-identities`, `independent-envelopes-matching`,
 and `independent-envelopes-unrelated`.
+PATCH scenario resources under `patch/` use semantic kebab-case stems derived from their scenario
+ids (for example `patch-omitted-and-supplied-attributes` loads `patch/omitted-and-supplied-attributes.json`);
+stems are stable once published because both adapter majors resolve them by name.
 
 ## Capabilities
 
@@ -59,18 +64,21 @@ capability instead of maintaining independent hard-coded id lists:
 
 1. Add pretty expected JSON under `documents/`.
 2. Add a row to `manifest.json` (same order as the catalog list).
-3. Add a scenario class under
-   `jsonapi-java-test-support/.../codec/cases/` that returns `CodecScenario.of(...)` (or
-   `new CodecScenario(...)` when defaults do not apply) with the applicable capabilities.
-4. Register the scenario in `CodecScenarios` (explicit list; no classpath scanning).
-5. If exact member order matters, add a `.compact.json` sibling and set `assertExactUtf8` /
+3. Add a declarative descriptor entry to `CodecScenarios` (explicit list; no classpath scanning)
+   via `CodecScenario.of(...)` (or the full record constructor when defaults do not apply) with
+   the applicable capabilities.
+4. If exact member order matters, add a `.compact.json` sibling and set `assertExactUtf8` /
    `exactUtf8Path` on the fixture.
-6. If the document intentionally fails the pinned draft schema, record the disagreement in
+5. If the document intentionally fails the pinned draft schema, record the disagreement in
    `schemaDisagreement` and keep the fixture failing.
-7. Run `./gradlew :jsonapi-java-test-support:test :jsonapi-java-jackson3:test`. Changes under
+6. Run `./gradlew :jsonapi-java-test-support:test :jsonapi-java-jackson3:test`. Changes under
    `src/main/` or `src/test/` must then pass the full completion gates (see `AGENTS.md`): `./gradlew
    clean build`, Spotless (`spotlessApply` then `spotlessCheck`), and the Sonar Quality Gate with
    zero new-code issues.
+
+PATCH scenarios follow the same resource-first rule: a new scenario in `PatchScenarios` /
+`PatchDtoScenarios` adds a named document under `patch/` (reusing an existing stem when the wire
+form is identical) and references it through the catalog's `doc(...)` helper.
 
 ## Negative corpus
 
