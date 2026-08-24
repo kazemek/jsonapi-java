@@ -58,9 +58,10 @@ tasks.jacocoTestReport {
     }
 }
 
-// Per-module JaCoCo instruction/branch floors (sole numeric authority). Re-measure with
-// `./gradlew jacocoTestReport`, then set each minimum to floor(measuredPercent) / 100.
-// Intentional coverage drops must update this map in the same change.
+// Per-module JaCoCo instruction/branch floors (sole numeric authority). They are regression
+// ratchets, not evidence that tests adequately own a contract. After meaningful test additions,
+// re-measure with `./gradlew jacocoTestReport` and set each justified minimum to
+// floor(measuredPercent) / 100. Intentional coverage drops must update this map in the same change.
 data class JacocoCoverageFloors(
     val instructionMinimum: java.math.BigDecimal,
     val branchMinimum: java.math.BigDecimal,
@@ -79,7 +80,7 @@ val jacocoCoverageFloorsByProject =
         "jsonapi-java-core" to
             JacocoCoverageFloors("0.91".toBigDecimal(), "0.80".toBigDecimal()),
         "jsonapi-java-jackson-common" to
-            JacocoCoverageFloors("0.83".toBigDecimal(), "0.78".toBigDecimal()),
+            JacocoCoverageFloors("0.95".toBigDecimal(), "0.86".toBigDecimal()),
         "jsonapi-java-jackson3" to
             JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),
         "jsonapi-java-test-support" to

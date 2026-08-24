@@ -66,7 +66,9 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   length mismatches are rejected. Do not re-introduce a raw two-collection constructor.
 - **Move policy:** Neutral contracts live here, not in the adapters. When a type can be expressed
   without Jackson imports, move it here rather than duplicating it per major; when it exposes
-  Jackson APIs it must stay in the adapter.
+  Jackson APIs it must stay in the adapter. Adapter architecture tests derive their duplicate-name
+  guard from this public package boundary, so newly moved public contracts are protected without a
+  second type-name inventory.
 - **Nullness:** The package is `@NullMarked` (JSpecify only). Document/envelope/codec contracts:
   Java `null` means member absence; explicit JSON `null` stays a sealed variant
   (`DomainData.NullData`, etc.). Presence-aware PATCH: `PatchChange` entries in `changes()` are
@@ -84,3 +86,5 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   safe `SourceLocation`. Do not introduce new failure types without an implementation plan.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout; unit/contract
   tests of moved types live here, while Jackson-bound integration suites stay in the adapters.
+  JaCoCo floors are regression ratchets after meaningful ownership tests, not proof that a contract
+  has an adequate direct test strategy.
