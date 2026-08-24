@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
  * Article DTO whose relationship property types are deliberately not registered as bindable
  * relationship targets: {@code author} is an unregistered to-one target and {@code comments} is an
  * unregistered to-many target. Scenarios bind documents containing only one of the two
- * relationships at a time and assert {@code UNSUPPORTED_RELATIONSHIP_TARGET} at that
- * relationship's data pointer.
+ * relationships at a time and assert {@code UNSUPPORTED_RELATIONSHIP_TARGET} at that relationship's
+ * data pointer.
  */
 @JsonApiResource(type = "articles")
 public class FlatUnregisteredRelationshipsArticle {
@@ -28,9 +28,7 @@ public class FlatUnregisteredRelationshipsArticle {
   public FlatUnregisteredRelationshipsArticle() {}
 
   public FlatUnregisteredRelationshipsArticle(
-      @Nullable String id,
-      @Nullable Person author,
-      @Nullable List<Comment> comments) {
+      @Nullable String id, @Nullable Person author, @Nullable List<Comment> comments) {
     this.id = id;
     this.author = author;
     this.comments = comments;

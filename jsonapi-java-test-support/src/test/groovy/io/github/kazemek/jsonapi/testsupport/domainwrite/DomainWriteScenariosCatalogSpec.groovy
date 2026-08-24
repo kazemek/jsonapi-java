@@ -4,9 +4,9 @@ import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import spock.lang.Specification
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithSet;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.SamplePojo;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Tag;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithSet
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.SamplePojo
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Tag
 
 // Why this spec exists: DomainWriteScenarios is the version-neutral flat write catalog shared by
 // every Jackson major. Adapter suites run the whole catalog through their own mapper — Jackson 3

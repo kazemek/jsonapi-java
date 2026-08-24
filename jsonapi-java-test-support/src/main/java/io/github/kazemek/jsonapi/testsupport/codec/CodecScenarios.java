@@ -398,7 +398,8 @@ public final class CodecScenarios {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
         "author",
-        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        Relationship.withData(
+            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
     var article = Models.resource("articles", "1", Relationships.ofRelationships(relationships));
     Map<String, Object> includedAttributes = new LinkedHashMap<>();
     includedAttributes.put("name", "Dan");
@@ -423,20 +424,21 @@ public final class CodecScenarios {
     Map<String, @Nullable Relationship> articleRelationships = new LinkedHashMap<>();
     articleRelationships.put(
         "author",
-        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        Relationship.withData(
+            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
     articleRelationships.put(
         "comments",
         Relationship.withData(
             new RelationshipData.IdentifierCollectionLinkage(
-                List.of(
-                    Models.identifier("comments", "5"), Models.identifier("comments", "12")))));
+                List.of(Models.identifier("comments", "5"), Models.identifier("comments", "12")))));
     var article =
         Models.resource("articles", "1", Relationships.ofRelationships(articleRelationships));
 
     Map<String, @Nullable Relationship> comment5Relationships = new LinkedHashMap<>();
     comment5Relationships.put(
         "author",
-        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier("people", "2"))));
+        Relationship.withData(
+            new RelationshipData.SingleLinkage(Models.identifier("people", "2"))));
     var comment5 =
         Models.resource(
             "comments",
@@ -450,7 +452,8 @@ public final class CodecScenarios {
     Map<String, @Nullable Relationship> comment12Relationships = new LinkedHashMap<>();
     comment12Relationships.put(
         "author",
-        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        Relationship.withData(
+            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
     var comment12 =
         Models.resource(
             "comments",
@@ -458,8 +461,7 @@ public final class CodecScenarios {
             Attributes.ofAttributes(attribute("body", "I like XML better")),
             Relationships.ofRelationships(comment12Relationships));
 
-    var person9 =
-        Models.resource("people", "9", Attributes.ofAttributes(attribute("name", "Dan")));
+    var person9 = Models.resource("people", "9", Attributes.ofAttributes(attribute("name", "Dan")));
 
     return CodecScenario.of(
         "compound-nested-intermediate",
@@ -567,7 +569,8 @@ public final class CodecScenarios {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
         "author",
-        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        Relationship.withData(
+            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
     Map<String, @Nullable Link> resourceLinks = new LinkedHashMap<>();
     resourceLinks.put("self", self);
     Map<String, Object> resourceMeta = new LinkedHashMap<>();
@@ -623,7 +626,8 @@ public final class CodecScenarios {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
         "author",
-        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        Relationship.withData(
+            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
     return Relationships.ofRelationships(relationships);
   }
 

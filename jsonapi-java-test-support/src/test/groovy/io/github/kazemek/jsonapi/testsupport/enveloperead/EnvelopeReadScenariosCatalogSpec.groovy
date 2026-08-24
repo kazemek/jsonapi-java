@@ -181,8 +181,8 @@ class EnvelopeReadScenariosCatalogSpec extends Specification {
       classes.each { type ->
         def pkg = type.packageName
         assert pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead" ||
-            pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainread" ||
-            pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite"
+        pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainread" ||
+        pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite"
       }
     }
   }

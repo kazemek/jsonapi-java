@@ -13,6 +13,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithOpt
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithTagsPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMetaPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithAddressPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithAddressTagsPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithBoxPatch;
@@ -26,7 +27,6 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOpt
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalCityPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalMetaPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRawAddressPatch;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.BoxPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.DirectPresentPatch;

@@ -5,6 +5,13 @@ import io.github.kazemek.jsonapi.jackson.IncludePolicy;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.RelationshipAllowance;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ConflictArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.CyclicNode;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.DeepNode;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.LinkedArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ModeratedComment;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.PolymorphicArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person;
@@ -15,13 +22,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ConflictArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.CyclicNode;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.DeepNode;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.LinkedArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ModeratedComment;
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.PolymorphicArticle;
 
 /**
  * The shared compound-inclusion write catalog consumed by Jackson-major contract tests.
@@ -284,9 +284,6 @@ public final class CompoundWriteScenarios {
   public static FixtureCatalog<CompoundWriteScenario> catalog() {
     return CATALOG;
   }
-
-
-
 
   private static CompoundWriteScenario document(
       String id,

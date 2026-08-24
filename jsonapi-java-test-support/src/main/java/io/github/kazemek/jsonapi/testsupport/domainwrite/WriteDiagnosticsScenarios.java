@@ -11,8 +11,8 @@ import java.util.List;
  * <p>Each entry maps one deliberately mis-declared carrier from {@code fixtures.domainwrite}
  * through the adapter's own writer and pins the expected semantic diagnostic category plus either
  * the stable wire location (resource-relative JSON Pointer) or an absent location for class-level
- * and specification failures. The catalog grows by addition; adapter suites pick entries up
- * through {@link #all()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario id.
+ * and specification failures. The catalog grows by addition; adapter suites pick entries up through
+ * {@link #all()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario id.
  */
 public final class WriteDiagnosticsScenarios {
 

@@ -13,6 +13,8 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person;
+import io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset.AccessCountingFieldsetArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset.ArticleWithRenamedAuthor;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,8 +23,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
-import io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset.AccessCountingFieldsetArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset.ArticleWithRenamedAuthor;
 
 /**
  * The shared sparse-fieldset write catalog consumed by Jackson-major contract tests.
@@ -277,9 +277,6 @@ public final class SparseFieldsetScenarios {
   public static FixtureCatalog<SparseFieldsetScenario> catalog() {
     return CATALOG;
   }
-
-
-
 
   private static SparseFieldsetScenario mappedDocument(
       String id,

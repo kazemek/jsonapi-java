@@ -12,14 +12,6 @@ import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import org.jspecify.annotations.Nullable;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithOptional;
@@ -37,6 +29,14 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatPersonArtic
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIgnored;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The shared flat resource-to-DTO binding catalog consumed by Jackson-major contract tests.
@@ -478,9 +478,6 @@ public final class DomainReadScenarios {
   public static FixtureCatalog<DomainReadScenario> catalog() {
     return CATALOG;
   }
-
-
-
 
   private static ResourceObject resource(
       String type,

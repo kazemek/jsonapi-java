@@ -33,9 +33,6 @@ public final class NegativeCodecScenarios {
     return CATALOG;
   }
 
-
-
-
   private static List<NegativeCodecScenario> load() {
     try (InputStream in = TestSupportResources.openCorpus("negative-manifest.json");
         JsonReader reader = Json.createReader(in)) {

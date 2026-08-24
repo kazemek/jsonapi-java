@@ -12,7 +12,8 @@ import java.util.List;
 public final class AmbiguousPrimaryDataScenarios {
 
   private static final FixtureCatalog<AmbiguousPrimaryDataScenario> CATALOG =
-      FixtureCatalog.of("ambiguous-primary-data", List.of(ambiguousObject(), ambiguousEmptyArray()));
+      FixtureCatalog.of(
+          "ambiguous-primary-data", List.of(ambiguousObject(), ambiguousEmptyArray()));
 
   private AmbiguousPrimaryDataScenarios() {}
 

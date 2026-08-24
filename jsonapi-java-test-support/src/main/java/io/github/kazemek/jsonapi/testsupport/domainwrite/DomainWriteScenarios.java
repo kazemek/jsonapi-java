@@ -13,14 +13,6 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import org.jspecify.annotations.Nullable;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithSet;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
@@ -29,6 +21,14 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ConventionalId
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.SamplePojo;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Tag;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The shared flat domain-to-resource write catalog consumed by Jackson-major contract tests.
@@ -247,9 +247,6 @@ public final class DomainWriteScenarios {
   public static FixtureCatalog<DomainWriteScenario> catalog() {
     return CATALOG;
   }
-
-
-
 
   private static ResourceObject articleResource(
       String id, String title, String body, List<Comment> comments, @Nullable Person author) {

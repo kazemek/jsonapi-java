@@ -17,22 +17,22 @@ import io.github.kazemek.jsonapi.jackson.DomainData;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios;
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadExpectation.BoundEnvelope;
+import io.github.kazemek.jsonapi.testsupport.enveloperead.IncludedExpectation.IdentityProbe;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatLidArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person;
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadExpectation.BoundEnvelope;
-import io.github.kazemek.jsonapi.testsupport.enveloperead.IncludedExpectation.IdentityProbe;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.EmptyResourceType;
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.FlatNode;
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.FlatStrictArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.FlatThrowingArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.InvalidResourceType;
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.UnannotatedBindingTarget;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The shared typed-envelope read catalog consumed by Jackson-major contract tests.
@@ -96,9 +96,6 @@ public final class EnvelopeReadScenarios {
   public static FixtureCatalog<EnvelopeReadScenario> catalog() {
     return CATALOG;
   }
-
-
-
 
   private static EnvelopeReadScenario singleResource() {
     return documentBinding(
@@ -663,7 +660,8 @@ public final class EnvelopeReadScenarios {
   }
 
   private static Meta requireMeta(String codecId) {
-    return Objects.requireNonNull(CodecScenarios.catalog().byId(codecId).document().meta(), codecId);
+    return Objects.requireNonNull(
+        CodecScenarios.catalog().byId(codecId).document().meta(), codecId);
   }
 
   private static List<ErrorObject> requireErrors() {
@@ -673,7 +671,8 @@ public final class EnvelopeReadScenarios {
 
   private static JsonApiObject requireJsonapi() {
     return Objects.requireNonNull(
-        CodecScenarios.catalog().byId(JSONAPI_OBJECT_DOCUMENT).document().jsonapi(), JSONAPI_OBJECT_DOCUMENT);
+        CodecScenarios.catalog().byId(JSONAPI_OBJECT_DOCUMENT).document().jsonapi(),
+        JSONAPI_OBJECT_DOCUMENT);
   }
 
   private static Links requireLinks() {

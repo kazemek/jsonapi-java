@@ -78,4 +78,3 @@ class TestSupportDependencyRulesSpec extends Specification {
         .check(testSupportClasses)
   }
 }
-

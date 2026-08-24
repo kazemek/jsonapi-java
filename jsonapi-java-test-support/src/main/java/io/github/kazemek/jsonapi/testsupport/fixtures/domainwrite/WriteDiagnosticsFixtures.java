@@ -78,9 +78,7 @@ public final class WriteDiagnosticsFixtures {
   /** Identifier member carrying a second role annotation. */
   @JsonApiResource(type = "dup")
   public static final class DuplicateRoleEntity {
-    @JsonApiId
-    @JsonApiAttribute
-    private final String id;
+    @JsonApiId @JsonApiAttribute private final String id;
 
     public DuplicateRoleEntity(String id) {
       this.id = id;
@@ -95,8 +93,12 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "collision")
   public static final class NameCollisionEntity {
     @JsonApiId private final String id;
-    @JsonApiAttribute(name = "same") private final String fieldA;
-    @JsonApiRelationship(name = "same") private final String fieldB;
+
+    @JsonApiAttribute(name = "same")
+    private final String fieldA;
+
+    @JsonApiRelationship(name = "same")
+    private final String fieldB;
 
     public NameCollisionEntity(String id, String fieldA, String fieldB) {
       this.id = id;
@@ -121,8 +123,12 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "dup-attrs")
   public static final class DuplicateAttrNameEntity {
     @JsonApiId private final String id;
-    @JsonApiAttribute(name = "same") private final String fieldA;
-    @JsonApiAttribute(name = "same") private final String fieldB;
+
+    @JsonApiAttribute(name = "same")
+    private final String fieldA;
+
+    @JsonApiAttribute(name = "same")
+    private final String fieldB;
 
     public DuplicateAttrNameEntity(String id, String fieldA, String fieldB) {
       this.id = id;
@@ -147,8 +153,12 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "dup-rels")
   public static final class DuplicateRelNameEntity {
     @JsonApiId private final String id;
-    @JsonApiRelationship(name = "same") private final String otherA;
-    @JsonApiRelationship(name = "same") private final String otherB;
+
+    @JsonApiRelationship(name = "same")
+    private final String otherA;
+
+    @JsonApiRelationship(name = "same")
+    private final String otherB;
 
     public DuplicateRelNameEntity(String id, String otherA, String otherB) {
       this.id = id;
@@ -173,7 +183,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "invalid")
   public static final class InvalidAttrNameEntity {
     @JsonApiId private final String id;
-    @JsonApiAttribute(name = "bad name!") private final String value;
+
+    @JsonApiAttribute(name = "bad name!")
+    private final String value;
 
     public InvalidAttrNameEntity(String id, String value) {
       this.id = id;
@@ -193,7 +205,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "reserved-attr")
   public static final class ReservedAttrNameEntity {
     @JsonApiId private final String id;
-    @JsonApiAttribute(name = "type") private final String value;
+
+    @JsonApiAttribute(name = "type")
+    private final String value;
 
     public ReservedAttrNameEntity(String id, String value) {
       this.id = id;
@@ -213,7 +227,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "invalid-rel")
   public static final class InvalidRelNameEntity {
     @JsonApiId private final String id;
-    @JsonApiRelationship(name = "bad name!") private final String other;
+
+    @JsonApiRelationship(name = "bad name!")
+    private final String other;
 
     public InvalidRelNameEntity(String id, String other) {
       this.id = id;
@@ -233,7 +249,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "reserved-rel")
   public static final class ReservedRelNameEntity {
     @JsonApiId private final String id;
-    @JsonApiRelationship(name = "id") private final String other;
+
+    @JsonApiRelationship(name = "id")
+    private final String other;
 
     public ReservedRelNameEntity(String id, String other) {
       this.id = id;
@@ -273,7 +291,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "renamed-failing-attr")
   public static final class RenamedFailingAttrEntity {
     @JsonApiId private final String id;
-    @JsonApiAttribute(name = "body-text") private final String badAttr;
+
+    @JsonApiAttribute(name = "body-text")
+    private final String badAttr;
 
     public RenamedFailingAttrEntity(String id, String badAttr) {
       this.id = id;
@@ -327,7 +347,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "raw-array-rel")
   public static final class RenamedArrayRelEntity {
     @JsonApiId private final String id;
-    @JsonApiRelationship(name = "ext-values") private final long[] values;
+
+    @JsonApiRelationship(name = "ext-values")
+    private final long[] values;
 
     public RenamedArrayRelEntity(String id, long[] values) {
       this.id = id;
@@ -347,7 +369,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "mixed-rel")
   public static final class RenamedMixedRelEntity {
     @JsonApiId private final String id;
-    @JsonApiRelationship(name = "ext-items") private final List<Object> items;
+
+    @JsonApiRelationship(name = "ext-items")
+    private final List<Object> items;
 
     public RenamedMixedRelEntity(String id, List<Object> items) {
       this.id = id;
@@ -381,7 +405,9 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "bag-rel")
   public static final class RenamedBagRelEntity {
     @JsonApiId private final String id;
-    @JsonApiRelationship(name = "ext-bag") private final RawBag things;
+
+    @JsonApiRelationship(name = "ext-bag")
+    private final RawBag things;
 
     public RenamedBagRelEntity(String id, RawBag things) {
       this.id = id;

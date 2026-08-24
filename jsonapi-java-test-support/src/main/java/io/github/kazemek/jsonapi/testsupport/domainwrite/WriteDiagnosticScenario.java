@@ -8,8 +8,8 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One shared write-diagnostics case: a supplier building the mis-declared entity, the expected
- * major-neutral {@link MappingDiagnostic} category, and either the expected resource-relative
- * JSON Pointer location or null when the failure has no document member coordinate.
+ * major-neutral {@link MappingDiagnostic} category, and either the expected resource-relative JSON
+ * Pointer location or null when the failure has no document member coordinate.
  *
  * <p>Adapter suites map the supplied entity through their own resource writer and assert the
  * semantic category and location; Jackson-specific cause chains and introspection details stay in
