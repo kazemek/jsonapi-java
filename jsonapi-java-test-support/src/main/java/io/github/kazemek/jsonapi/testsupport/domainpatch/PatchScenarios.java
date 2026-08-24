@@ -28,8 +28,8 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PatchPresenceT
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIntIdArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatPersonArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIgnored;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatUnregisteredRelationshipsArticle;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,8 +42,8 @@ import org.jspecify.annotations.Nullable;
  * <p>Scenario documents are named classpath resources under {@code jsonapi/corpus/1.1/patch/};
  * documents that low-level PATCH and typed PATCH consume identically reference the same resource.
  * The catalog grows by addition: scenarios are added as the PATCH surface grows, and adapter suites
- * pick them up through {@link #all()}. Consumers dispatch on {@link PatchExpectation}, never on a
- * scenario id.
+ * pick them up through {@link #catalog()}. Consumers dispatch on {@link PatchExpectation}, never on
+ * a scenario id.
  */
 public final class PatchScenarios {
 
@@ -287,7 +287,7 @@ public final class PatchScenarios {
     return scenario(
         "patch-unsupported-relationship-target",
         doc("relationship-single-linkage"),
-        FlatPersonArticle.class,
+        FlatUnregisteredRelationshipsArticle.class,
         null,
         PatchExpectation.binderFailure(
             MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, "/relationships/author/data"));

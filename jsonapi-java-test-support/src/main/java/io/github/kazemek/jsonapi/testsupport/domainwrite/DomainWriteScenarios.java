@@ -34,7 +34,7 @@ import org.jspecify.annotations.Nullable;
  * The shared flat domain-to-resource write catalog consumed by Jackson-major contract tests.
  *
  * <p>The catalog grows by addition: scenarios are added as the mapping surface grows, and adapter
- * suites pick them up through {@link #all()}. Consumers dispatch on the {@link
+ * suites pick them up through {@link #catalog()}. Consumers dispatch on the {@link
  * DomainWriteOperation}/{@link DomainWriteInput} descriptor, never on a scenario id.
  */
 public final class DomainWriteScenarios {

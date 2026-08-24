@@ -51,7 +51,7 @@ import java.util.Set;
  * <p>Scenario documents are named classpath resources under {@code jsonapi/corpus/1.1/patch/};
  * documents that low-level PATCH and typed PATCH consume identically reference the same resource.
  * The catalog grows by addition: scenarios are added as the direct PATCH DTO surface grows, and
- * adapter suites pick them up through {@link #all()}. Consumers dispatch on {@link
+ * adapter suites pick them up through {@link #catalog()}. Consumers dispatch on {@link
  * PatchDtoExpectation}, never on a scenario id.
  */
 public final class PatchDtoScenarios {

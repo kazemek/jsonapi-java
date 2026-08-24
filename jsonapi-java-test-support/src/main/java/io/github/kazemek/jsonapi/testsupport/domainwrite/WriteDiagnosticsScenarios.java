@@ -12,7 +12,7 @@ import java.util.List;
  * through the adapter's own writer and pins the expected semantic diagnostic category plus either
  * the stable wire location (resource-relative JSON Pointer) or an absent location for class-level
  * and specification failures. The catalog grows by addition; adapter suites pick entries up through
- * {@link #all()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario id.
+ * {@link #catalog()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario id.
  */
 public final class WriteDiagnosticsScenarios {
 
@@ -21,7 +21,7 @@ public final class WriteDiagnosticsScenarios {
           new WriteDiagnosticScenario(
               "missing-resource-annotation",
               "Unannotated instance is rejected as MISSING_RESOURCE_ANNOTATION with no location",
-              () -> new Object(),
+              Object::new,
               MappingDiagnostic.MISSING_RESOURCE_ANNOTATION,
               null),
           new WriteDiagnosticScenario(

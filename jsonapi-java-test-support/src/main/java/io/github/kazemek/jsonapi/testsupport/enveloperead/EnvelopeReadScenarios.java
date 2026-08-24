@@ -38,8 +38,8 @@ import org.jspecify.annotations.Nullable;
  * The shared typed-envelope read catalog consumed by Jackson-major contract tests.
  *
  * <p>The catalog grows by addition: scenarios are added as the envelope surface grows, and adapter
- * suites pick them up through {@link #all()}. Consumers dispatch on {@link EnvelopeReadVariant} and
- * {@link EnvelopeReadExpectation}, never on a scenario id.
+ * suites pick them up through {@link #catalog()}. Consumers dispatch on {@link EnvelopeReadVariant}
+ * and {@link EnvelopeReadExpectation}, never on a scenario id.
  */
 public final class EnvelopeReadScenarios {
 

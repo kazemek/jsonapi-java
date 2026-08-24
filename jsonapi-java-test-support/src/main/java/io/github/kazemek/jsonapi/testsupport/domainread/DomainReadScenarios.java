@@ -16,7 +16,6 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithOptional;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithSet;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCommentArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCreatorArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatDefaultedArticle;
@@ -25,10 +24,10 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIntIdArticl
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatLidArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatMetaArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatMutableArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatPersonArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIgnored;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatUnregisteredRelationshipsArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -42,7 +41,7 @@ import org.jspecify.annotations.Nullable;
  * The shared flat resource-to-DTO binding catalog consumed by Jackson-major contract tests.
  *
  * <p>The catalog grows by addition: scenarios are added as the binder surface grows, and adapter
- * suites pick them up through {@link #all()}. Consumers dispatch on the {@link DomainReadInput}
+ * suites pick them up through {@link #catalog()}. Consumers dispatch on the {@link DomainReadInput}
  * variant and {@link ConverterBehavior}, never on a scenario id.
  */
 public final class DomainReadScenarios {
@@ -375,7 +374,7 @@ public final class DomainReadScenarios {
               "unregistered to-one relationship target is UNSUPPORTED_RELATIONSHIP_TARGET",
               DomainReadInput.single(
                   resource(ARTICLES, "1", null, rels(AUTHOR, toOne(PEOPLE, "p1")))),
-              FlatPersonArticle.class,
+              FlatUnregisteredRelationshipsArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
                   MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, REL_AUTHOR_DATA)),
@@ -383,7 +382,7 @@ public final class DomainReadScenarios {
               "unregistered to-many relationship target is UNSUPPORTED_RELATIONSHIP_TARGET",
               DomainReadInput.single(
                   resource(ARTICLES, "1", null, rels(COMMENTS, toMany(COMMENTS, List.of("c1"))))),
-              FlatCommentArticle.class,
+              FlatUnregisteredRelationshipsArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.failure(
                   MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET, REL_COMMENTS_DATA)),

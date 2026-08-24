@@ -77,13 +77,47 @@ class CodecScenariosCatalogSpec extends Specification {
     }
   }
 
-  def "capability selections are non-empty"() {
+  def "capability metadata is pinned per scenario id"() {
+    given:
+    def response = capabilities(SchemaKind.RESPONSE)
+    def expected = [
+      "single-resource"                 : response,
+      "resource-collection"             : response,
+      "single-identifier"               : response,
+      "identifier-collection"           : response,
+      "null-data"                       : response,
+      "meta-only"                       : response,
+      "empty-identifier-collection"     : response,
+      "empty-wrappers"                  : response,
+      "empty-errors"                    : response,
+      "empty-included"                  : response,
+      "open-values"                     : response,
+      "relationship-null-linkage"       : response,
+      "relationship-empty-to-many"      : response,
+      "relationship-link-only"          : response,
+      "relationship-meta-only"          : response,
+      "string-and-object-links"         : capabilities(SchemaKind.RESPONSE, false, null, true),
+      "errors-document"                 : response,
+      "jsonapi-object"                  : response,
+      "compound-document"               : response,
+      "compound-nested-intermediate"    : response,
+      "compound-shared-identity"        : response,
+      "local-identifier"                : capabilities(SchemaKind.CREATE),
+      "extension-and-at-members"        : response,
+      "member-order"                    : capabilities(SchemaKind.RESPONSE, true, "documents/member-order.compact.json")
+    ]
+    def actual = CodecScenarios.catalog().all().collectEntries { fixture ->
+      [(fixture.id): capabilities(
+        fixture.schemaKind,
+        fixture.assertExactUtf8,
+        fixture.exactUtf8Path,
+        fixture.assertHreflangArray,
+        fixture.writable,
+        fixture.readable)]
+    }
+
     expect:
-    !CodecScenarios.catalog().where { it.writable }.isEmpty()
-    !CodecScenarios.catalog().where { it.readable }.isEmpty()
-    !CodecScenarios.catalog().where { it.schemaKind() != null }.isEmpty()
-    !CodecScenarios.catalog().where { it.assertExactUtf8 }.isEmpty()
-    !CodecScenarios.catalog().where { it.assertHreflangArray }.isEmpty()
+    actual == expected
   }
 
   def "every fixture participates in at least one codec suite"() {
@@ -113,5 +147,22 @@ class CodecScenariosCatalogSpec extends Specification {
     def hasReason = nonBlankString(disagreement.reason)
     def hasExpected = disagreement.expected.size() > 0
     return hasKind && hasReason && hasExpected && wellFormedEntries
+  }
+
+  private static Map<String, Object> capabilities(
+      SchemaKind schemaKind,
+      boolean assertExactUtf8 = false,
+      String exactUtf8Path = null,
+      boolean assertHreflangArray = false,
+      boolean writable = true,
+      boolean readable = true) {
+    [
+      writable            : writable,
+      readable            : readable,
+      schemaKind          : schemaKind,
+      assertExactUtf8     : assertExactUtf8,
+      exactUtf8Path       : exactUtf8Path,
+      assertHreflangArray : assertHreflangArray
+    ] as Map<String, Object>
   }
 }
