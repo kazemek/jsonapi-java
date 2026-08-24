@@ -50,7 +50,7 @@ JsonApiJackson3.patchDtoReader(mapper, validationContext, identifierConverter, l
 ```
 
 Shorter factory forms remain meaningful conveniences: they select the documented default validation
-or read policy, identifier converter, and empty linkage-mapper set, then delegate to these
+policy, identifier converter, and empty linkage-mapper set, then delegate to these
 mapper-instance forms. `JsonMapper.Builder` overloads are deliberately not part of the API: a
 builder that only calls `build()` adds no construction semantics, and Jackson 2 will follow this
 semantic capability surface rather than reproduce an overload matrix. Callers retain authority over

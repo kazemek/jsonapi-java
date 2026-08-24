@@ -158,7 +158,9 @@ class DomainDocumentReaderSpec extends Specification {
   def "mapper-instance domainDocumentReader overloads bind identically"() {
     given:
     def mapper = JsonMapper.builder().build()
-    def registry = registry(FlatArticle)
+    def registry = ResourceTypeRegistry.builder(mapper)
+        .register(FlatArticle)
+        .build()
     def threeArg = JsonApiJackson3.domainDocumentReader(
         mapper, DocumentReadContext.resourceDefaults(), registry)
     def fourArg = JsonApiJackson3.domainDocumentReader(

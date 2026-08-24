@@ -48,7 +48,7 @@ universal options object is not introduced merely to make factory signatures loo
 
 Convenience factories are allowed when they remove real boilerplate and have unambiguous defaults.
 They delegate to the canonical mapper-instance form. The Jackson 3 facade keeps shortcuts for
-default validation/read policies, the default identifier converter, and an empty linkage-mapper set.
+default validation policies, the default identifier converter, and an empty linkage-mapper set.
 `JsonMapper.Builder` overloads that only call `build()` and delegate are not part of the API and are
 not retained as deprecated bridges.
 
