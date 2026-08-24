@@ -1,0 +1,1 @@
+{"data":{"type":"articles","id":"1","attributes":{"title":"T"},"meta":{"source":"cms"},"relationships":{"author":{"data":{"type":"people","id":"p1"},"meta":{"displayName":"Alice"}}}}}

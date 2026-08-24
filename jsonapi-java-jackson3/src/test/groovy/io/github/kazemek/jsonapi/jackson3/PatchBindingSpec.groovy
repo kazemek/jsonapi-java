@@ -21,14 +21,13 @@ import io.github.kazemek.jsonapi.jackson.PatchChange
 import io.github.kazemek.jsonapi.jackson.PatchCommand
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson3.testmodel.GenericValue
-import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchExpectation
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenario
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchScenarios
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithArray
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithSet
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCountedThing
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchExpectation
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenario
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenarios
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithSet
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -54,7 +53,7 @@ class PatchBindingSpec extends Specification {
   List<String> executedScenarioIds = []
 
   def cleanupSpec() {
-    assert executedScenarioIds == PatchScenarios.all()*.id
+    assert executedScenarioIds == PatchScenarios.catalog().all()*.id
   }
 
   def "shared patch catalog scenario: #scenario.id"() {
@@ -69,7 +68,7 @@ class PatchBindingSpec extends Specification {
     assertExpectation(scenario, result)
 
     where:
-    scenario << JsonApiFixtures.patch().all()
+    scenario << PatchScenarios.catalog().all()
   }
 
   def "custom deserializer applies to attribute change"() {

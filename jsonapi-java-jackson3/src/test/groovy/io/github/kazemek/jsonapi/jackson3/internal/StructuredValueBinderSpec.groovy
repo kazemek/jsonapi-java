@@ -15,10 +15,10 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithNullEmptyCity
 import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterAsProfile
 import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithSetterCustomDetails
 import io.github.kazemek.jsonapi.jackson3.testmodel.OuterWithTypedContact
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.Address
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.AddressPatch
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.Dimensions
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.MixedAddressPatch
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.Address
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressPatch
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.Dimensions
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.MixedAddressPatch
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 

@@ -1,6 +1,5 @@
 import net.ltgt.gradle.errorprone.errorprone
 import net.ltgt.gradle.nullaway.nullaway
-import java.io.File
 
 plugins {
     `java-library`
@@ -65,37 +64,15 @@ tasks.jacocoTestReport {
 data class JacocoCoverageFloors(
     val instructionMinimum: java.math.BigDecimal,
     val branchMinimum: java.math.BigDecimal,
-    val includePatterns: List<String> = emptyList(),
+    val excludePatterns: List<String> = emptyList(),
 )
 
-// Test-support coverage is limited to executable catalog/resource/invariant types. Inert fixture
-// POJO/record accessors are excluded so they do not require synthetic tests solely for JaCoCo.
-// Production-module floors do not use includePatterns and remain unchanged.
-val testSupportJacocoIncludes =
-    listOf(
-        "io/github/kazemek/jsonapi/testfixtures/FixtureCatalog.class",
-        "io/github/kazemek/jsonapi/testfixtures/ImmutableFixtureCatalog.class",
-        "io/github/kazemek/jsonapi/testfixtures/JsonApiFixtures.class",
-        "io/github/kazemek/jsonapi/testfixtures/Scenario.class",
-        "io/github/kazemek/jsonapi/testfixtures/TestSupportResources.class",
-        "io/github/kazemek/jsonapi/testfixtures/codec/**",
-        "io/github/kazemek/jsonapi/testfixtures/domainwrite/DomainWrite*.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainread/DomainRead*.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainread/ConverterBehavior.class",
-        "io/github/kazemek/jsonapi/testfixtures/compoundwrite/CompoundWrite*.class",
-        "io/github/kazemek/jsonapi/testfixtures/compoundwrite/IncludedResourceRef.class",
-        "io/github/kazemek/jsonapi/testfixtures/sparsefieldset/SparseFieldset*.class",
-        "io/github/kazemek/jsonapi/testfixtures/sparsefieldset/FieldsetResourceState.class",
-        "io/github/kazemek/jsonapi/testfixtures/sparsefieldset/ZeroReadGuarantee.class",
-        "io/github/kazemek/jsonapi/testfixtures/enveloperead/Envelope*.class",
-        "io/github/kazemek/jsonapi/testfixtures/enveloperead/IncludedExpectation.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchScenarios.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchDtoScenarios.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchScenario.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchDtoScenario.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchExpectation*.class",
-        "io/github/kazemek/jsonapi/testfixtures/domainpatch/PatchDtoExpectation*.class",
-    )
+// Coverage is on by default: floor verification and Sonar cover every test-support production
+// class except passive application-shaped carriers under testsupport.fixtures.., which are
+// exempt by package placement alone. New executable support code outside that hierarchy is
+// therefore coverage-gated automatically, with no per-class list to maintain. Production-module
+// floors do not use excludePatterns and remain unchanged.
+val testSupportFixtureExclusions = listOf("io/github/kazemek/jsonapi/testsupport/fixtures/**")
 
 val jacocoCoverageFloorsByProject =
     mapOf(
@@ -109,7 +86,7 @@ val jacocoCoverageFloorsByProject =
             JacocoCoverageFloors(
                 "0.98".toBigDecimal(),
                 "0.87".toBigDecimal(),
-                testSupportJacocoIncludes,
+                testSupportFixtureExclusions,
             ),
     )
 
@@ -135,28 +112,26 @@ when {
     }
 
     jacocoFloors != null -> {
-        if (jacocoFloors.includePatterns.isNotEmpty()) {
-            val filteredClasses =
+        if (jacocoFloors.excludePatterns.isNotEmpty()) {
+            val verificationClasses =
                 files(
                     sourceSets.named("main").get().output.classesDirs.map { dir ->
                         fileTree(dir) {
-                            include(jacocoFloors.includePatterns)
+                            exclude(jacocoFloors.excludePatterns)
                         }
                     },
                 )
-            // Floor verification excludes inert fixture carriers. The published JaCoCo XML report
-            // stays complete for local HTML inspection; Sonar coverage uses the derived
-            // sonar.coverage.exclusions list so carriers cannot fail new_coverage after their
-            // synthetic tests are removed.
+            // Floor verification excludes only the passive-fixture hierarchy; every other
+            // production class is verified by default. The published JaCoCo XML report stays
+            // complete for local HTML inspection; Sonar coverage uses the equivalent single
+            // package-level exclusion so carriers cannot fail new_coverage.
             tasks.jacocoTestCoverageVerification {
-                classDirectories.setFrom(filteredClasses)
+                classDirectories.setFrom(verificationClasses)
             }
+            val modulePrefix =
+                projectDir.relativeTo(rootDir).invariantSeparatorsPath + "/src/main/java/"
             extra["sonarCoverageExclusions"] =
-                sonarCoverageExclusionsFromIncludes(
-                    layout.projectDirectory.dir("src/main/java").asFile,
-                    rootProject.projectDir,
-                    jacocoFloors.includePatterns,
-                )
+                jacocoFloors.excludePatterns.joinToString(",") { modulePrefix + it }
         }
         tasks.jacocoTestCoverageVerification {
             violationRules {
@@ -176,24 +151,4 @@ when {
             dependsOn(tasks.jacocoTestCoverageVerification)
         }
     }
-}
-
-fun Project.sonarCoverageExclusionsFromIncludes(
-    srcRoot: File,
-    repoRoot: File,
-    includePatterns: List<String>,
-): String {
-    val sourceIncludes = includePatterns.map { it.replace(Regex("\\.class$"), ".java") }
-    val included =
-        fileTree(srcRoot) {
-            sourceIncludes.forEach { include(it) }
-        }.files
-    val allJava =
-        fileTree(srcRoot) {
-            include("**/*.java")
-        }.files
-    return (allJava - included)
-        .map { it.relativeTo(repoRoot).invariantSeparatorsPath }
-        .sorted()
-        .joinToString(",")
 }

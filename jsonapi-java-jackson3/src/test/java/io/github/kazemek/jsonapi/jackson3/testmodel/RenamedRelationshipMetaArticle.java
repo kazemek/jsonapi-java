@@ -7,8 +7,8 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleMeta;
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.AuthorMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 
 /** Write/low-level model with a renamed relationship whose meta references the wire name. */
 @JsonApiResource(type = "articles")

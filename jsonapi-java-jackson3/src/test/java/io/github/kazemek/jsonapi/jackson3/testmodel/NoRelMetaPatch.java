@@ -7,7 +7,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticleMetaPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMetaPatch;
 
 /**
  * Typed PATCH DTO with resource meta but no relationship meta member: supplied rel meta rejected.

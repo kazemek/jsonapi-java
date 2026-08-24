@@ -15,16 +15,16 @@ import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.testfixtures.domainread.ConverterBehavior
-import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadExpectation
-import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadInput
-import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenario
-import io.github.kazemek.jsonapi.testfixtures.domainread.DomainReadScenarios
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticleWithArray
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatCountedThing
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatRequiredThing
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatThrowingCreatorThing
+import io.github.kazemek.jsonapi.testsupport.domainread.ConverterBehavior
+import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadExpectation
+import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadInput
+import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadScenario
+import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadScenarios
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThing
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.DirectionalityReadModels
@@ -74,12 +74,12 @@ class ResourceBinderSpec extends Specification {
     verifyOutcome(scenario, result, thrownException)
 
     where:
-    scenario << DomainReadScenarios.all()
+    scenario << DomainReadScenarios.catalog().all()
   }
 
   def "covers every shared domain-read scenario exactly once"() {
     expect:
-    executedScenarioIds == DomainReadScenarios.all()*.id
+    executedScenarioIds == DomainReadScenarios.catalog().all()*.id
   }
 
   def "naming strategy renames bound attribute keys"() {

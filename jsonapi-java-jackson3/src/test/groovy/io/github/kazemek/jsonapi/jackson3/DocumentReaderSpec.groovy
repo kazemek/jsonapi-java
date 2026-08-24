@@ -17,10 +17,10 @@ import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
 import io.github.kazemek.jsonapi.jackson.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
-import io.github.kazemek.jsonapi.testfixtures.codec.AmbiguousPrimaryDataScenarios
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
-import io.github.kazemek.jsonapi.testfixtures.codec.NegativeCodecScenarios
+import io.github.kazemek.jsonapi.testsupport.TestSupportResources
+import io.github.kazemek.jsonapi.testsupport.codec.AmbiguousPrimaryDataScenarios
+import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios
+import io.github.kazemek.jsonapi.testsupport.codec.NegativeCodecScenarios
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -49,7 +49,7 @@ class DocumentReaderSpec extends Specification {
     mapper.readTree(writer.writeValueAsString(document)) == mapper.readTree(json)
 
     where:
-    fixture << CodecScenarios.readable()
+    fixture << CodecScenarios.catalog().where { it.readable }
   }
 
   def "all read sources decode #fixture.id equivalently"() {
@@ -79,7 +79,7 @@ class DocumentReaderSpec extends Specification {
     parser?.close()
 
     where:
-    fixture << CodecScenarios.readable()
+    fixture << CodecScenarios.catalog().where { it.readable }
   }
 
   def "ambiguous case #fixture.id decodes under both PrimaryDataKind values"() {
@@ -104,7 +104,7 @@ class DocumentReaderSpec extends Specification {
     mapper.readTree(writer.writeValueAsString(asIdentifier)) == mapper.readTree(json)
 
     where:
-    fixture << AmbiguousPrimaryDataScenarios.all()
+    fixture << AmbiguousPrimaryDataScenarios.catalog().all()
   }
 
   def "negative corpus case #fixture.id fails with the documented diagnostics"() {
@@ -141,7 +141,7 @@ class DocumentReaderSpec extends Specification {
     }
 
     where:
-    fixture << NegativeCodecScenarios.all()
+    fixture << NegativeCodecScenarios.catalog().all()
   }
 
   def "empty input and whitespace-only variants report MALFORMED_JSON for #source"() {
@@ -164,7 +164,7 @@ class DocumentReaderSpec extends Specification {
 
   def "aggregate validation resource location is precise on Jackson 3"() {
     given:
-    def entry = NegativeCodecScenarios.byId('aggregate-validation-resource-location')
+    def entry = NegativeCodecScenarios.catalog().byId('aggregate-validation-resource-location')
     def json = readFixtureText(entry.path)
 
     when:

@@ -4,9 +4,9 @@ import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.dialect.Dialects
 
-import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
-import io.github.kazemek.jsonapi.testfixtures.codec.SchemaKind
+import io.github.kazemek.jsonapi.testsupport.TestSupportResources
+import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios
+import io.github.kazemek.jsonapi.testsupport.codec.SchemaKind
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -19,7 +19,7 @@ import tools.jackson.databind.json.JsonMapper
  *
  * The draft schemas are unreleased and not an official conformance oracle: a schema result never
  * changes a conformance status in docs/conformance.md. Fixtures that fail the draft only because
- * of a known draft gap carry {@link io.github.kazemek.jsonapi.testfixtures.codec.SchemaDisagreement}
+ * of a known draft gap carry {@link io.github.kazemek.jsonapi.testsupport.codec.SchemaDisagreement}
  * metadata and must keep failing, so a schema fix forces an intentional re-review.
  */
 class JsonApiDraftSchemaSpec extends Specification {
@@ -54,7 +54,7 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   def "every schema-checked fixture declares a known schema kind"() {
     expect:
-    CodecScenarios.schemaChecked().every { it.schemaKind in SCHEMA_FILE_BY_KIND }
+    CodecScenarios.catalog().where { it.schemaKind() != null }.every { it.schemaKind in SCHEMA_FILE_BY_KIND }
   }
 
   def "fixture #fixture.id passes the #kind draft schema"() {
@@ -65,7 +65,7 @@ class JsonApiDraftSchemaSpec extends Specification {
     errors.isEmpty()
 
     where:
-    fixture << CodecScenarios.schemaChecked().findAll { it.schemaDisagreement == null }
+    fixture << CodecScenarios.catalog().where { it.schemaKind() != null }.findAll { it.schemaDisagreement == null }
     kind = fixture.schemaKind
   }
 
@@ -81,7 +81,7 @@ class JsonApiDraftSchemaSpec extends Specification {
     }
 
     where:
-    fixture << CodecScenarios.schemaChecked().findAll { it.schemaDisagreement != null }
+    fixture << CodecScenarios.catalog().where { it.schemaKind() != null }.findAll { it.schemaDisagreement != null }
   }
 
   def "invalid control #control.file fails the #control.kind schema at #control.path with #control.keyword"() {

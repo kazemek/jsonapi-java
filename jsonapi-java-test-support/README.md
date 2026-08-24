@@ -47,46 +47,58 @@ work, not this module's ownership contract.
 
 ## Packages
 
+Executable support code (catalogs, scenario descriptors, resource loading, invariants) lives in
+feature packages; passive application-shaped carriers live only under `testsupport.fixtures..`.
+
 | Package                                                        | Role                                                               |
 |----------------------------------------------------------------|--------------------------------------------------------------------|
-| `io.github.kazemek.jsonapi.testfixtures`                       | `Scenario` / `FixtureCatalog` contract, `JsonApiFixtures` facade, and `TestSupportResources` |
-| `io.github.kazemek.jsonapi.testfixtures.codec`                 | `CodecScenario` capability metadata, `CodecScenarios` catalog, `AmbiguousPrimaryDataScenarios`, JSON-P-backed `NegativeCodecScenarios`, `SchemaKind` / `SchemaDisagreement` |
-| `io.github.kazemek.jsonapi.testfixtures.codec.cases`           | One scenario builder class per corpus entry (explicit list; no classpath scanning) |
-| `io.github.kazemek.jsonapi.testfixtures.domainwrite`           | Shared flat domain-to-resource write fixtures: annotated domain models plus the `DomainWriteScenarios` catalog and the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types |
-| `io.github.kazemek.jsonapi.testfixtures.domainread`            | Shared flat resource-to-DTO read fixtures: annotated DTO models plus the `DomainReadScenarios` catalog and the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types |
-| `io.github.kazemek.jsonapi.testfixtures.compoundwrite`         | Shared compound-inclusion write fixtures: graph builders plus the `CompoundWriteScenarios` catalog and the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
-| `io.github.kazemek.jsonapi.testfixtures.sparsefieldset`        | Shared sparse-fieldset write fixtures: annotated models plus the `SparseFieldsetScenarios` catalog and the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
-| `io.github.kazemek.jsonapi.testfixtures.enveloperead`          | Shared typed-envelope read fixtures: envelope-only binding targets plus the `EnvelopeReadScenarios` catalog and the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
-| `io.github.kazemek.jsonapi.testfixtures.domainpatch`           | Shared presence-aware PATCH fixtures: `PatchScenarios` catalog plus `PatchScenario` / `PatchExpectation` value types (reuses `domainread` / `domainwrite` DTOs), and the direct typed PATCH DTO `PatchDtoScenarios` catalog plus `PatchDtoScenario` / `PatchDtoExpectation` and the shared `ArticlePatch` / `OptionalPatch` / `IntIdPatch` PATCH DTOs (including declaration-invalid PATCH DTOs). Recursive structured value fixtures (ADR-014): presence-aware nested PATCH shapes (`AddressPatch`, `GeoPatch`, `AddressWithGeoPatch`, `AddressWithOptionalCityPatch`, `AddressWithTagsPatch`, JavaBean-style `MutableAddressPatch`), their top-level DTOs, invalid nested declarations (`MixedAddressPatch`, `RawPresenceAddressPatch`, `DirectPresentAddressPatch`), and ordinary structured domain types for the low-level path (`Address`, `Geo`, `AddressWithGeo`, `AddressWithOptionalCity`, `Dimensions`, JavaBean-style `MutableAddress`, plus the low-level DTOs `Article`, `ArticleWithOptionalAddress`, `ArticleWithOptionalCity`, `ArticleWithGeoAddress`, `ArticleWithDimensions`, `ArticleWithTags`, `MutableArticle`, and the `PatchPresence<T>`-wrapped low-level DTOs `PatchPresenceTitleArticle`, `PatchPresenceAddressArticle`, `PatchPresenceAddressPatchArticle`) |
+| `io.github.kazemek.jsonapi.testsupport`                        | `Scenario` / `FixtureCatalog` contract and `TestSupportResources` |
+| `io.github.kazemek.jsonapi.testsupport.codec`                  | `CodecScenario` capability metadata, `CodecScenarios` catalog, `AmbiguousPrimaryDataScenarios`, JSON-P-backed `NegativeCodecScenarios`, `SchemaKind` / `SchemaDisagreement` |
+| `io.github.kazemek.jsonapi.testsupport.domainwrite`            | `DomainWriteScenarios` catalog plus the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types, and the `WriteDiagnosticsScenarios` semantic failure catalog with `WriteDiagnosticScenario` |
+| `io.github.kazemek.jsonapi.testsupport.domainread`             | `DomainReadScenarios` catalog plus the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types |
+| `io.github.kazemek.jsonapi.testsupport.compoundwrite`          | `CompoundWriteScenarios` catalog plus the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
+| `io.github.kazemek.jsonapi.testsupport.sparsefieldset`         | `SparseFieldsetScenarios` catalog plus the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
+| `io.github.kazemek.jsonapi.testsupport.enveloperead`           | `EnvelopeReadScenarios` catalog plus the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
+| `io.github.kazemek.jsonapi.testsupport.domainpatch`            | Presence-aware PATCH (`PatchScenarios` + `PatchScenario` / `PatchExpectation`) and direct typed PATCH DTO (`PatchDtoScenarios` + `PatchDtoScenario` / `PatchDtoExpectation`) catalogs |
+| `io.github.kazemek.jsonapi.testsupport.fixtures.*`             | **Passive carriers only**, grouped by feature (`domainread`, `domainwrite`, `domainpatch`, `compoundwrite`, `sparsefieldset`, `enveloperead`): annotated records/beans, structured values, presence-wrapper shapes, instrumented access-counting models, and intentionally invalid declaration targets. No catalogs, loaders, descriptors, or invariant logic may live here — ArchUnit enforces this structurally. |
+
+Canonical carrier families kept deliberately small: the domain-write graph (`Article` / `Person` /
+`Comment`), the ordinary flat-read family around `FlatArticle`, the typed PATCH family around
+`ArticlePatch` with compact structured values (`Address`, `Geo`, containers), the compact
+`ArticleMeta` / `AuthorMeta` meta family, and intentional mutable JavaBean shapes
+(`FlatMutableArticle`, `MutableAddress` / `MutableAddressPatch`) where bean semantics are part of
+the contract.
 
 ## Minimal usage
 
-This module is not published and its types are not a supported production/library API, but
-`JsonApiFixtures` is the canonical in-repo retrieval entry point (`FixtureCatalog` views; capability
-selection is `where`). Concrete `*Scenarios` statics remain as compatibility shims:
+This module is not published and its types are not a supported production/library API. Each
+feature catalog class exposes exactly one accessor, `catalog()`, returning an immutable
+`FixtureCatalog` view; that is the canonical retrieval path. Capability selection is `where`
+with the descriptor predicates:
 
 ```groovy
-JsonApiFixtures.codec().where(CodecScenario::readable)
-JsonApiFixtures.codec().where(CodecScenario::writable)
-JsonApiFixtures.codec().where { it.schemaKind() != null }
-JsonApiFixtures.negativeCodec().all()
-JsonApiFixtures.ambiguousPrimaryData().all()
-JsonApiFixtures.domainWrite().all()
-JsonApiFixtures.domainWrite().byId("maps mutable POJO")
-JsonApiFixtures.domainRead().all()
-JsonApiFixtures.domainRead().byId("binds mutable POJO")
-JsonApiFixtures.compoundWrite().all()
-JsonApiFixtures.compoundWrite().byId("includes nested intermediates for comments.author")
-JsonApiFixtures.sparseFieldset().all()
-JsonApiFixtures.sparseFieldset().byId("attribute-only fieldset via toMappedDocument")
-JsonApiFixtures.envelopeRead().all()
-JsonApiFixtures.envelopeRead().byId("binds a single-resource document into a flat DTO envelope")
-JsonApiFixtures.patch().all()
-JsonApiFixtures.patch().byId("patch-omitted-and-supplied-attributes")
-JsonApiFixtures.patchDto().all()
-JsonApiFixtures.patchDto().byId("patch-dto-omitted-and-supplied-attributes")
+CodecScenarios.catalog().where(CodecScenario::readable)
+CodecScenarios.catalog().where(CodecScenario::writable)
+CodecScenarios.catalog().where { it.schemaKind() != null }
+NegativeCodecScenarios.catalog().all()
+AmbiguousPrimaryDataScenarios.catalog().all()
+DomainWriteScenarios.catalog().all()
+DomainWriteScenarios.catalog().byId("maps mutable POJO")
+DomainReadScenarios.catalog().all()
+DomainReadScenarios.catalog().byId("binds mutable POJO")
+CompoundWriteScenarios.catalog().all()
+CompoundWriteScenarios.catalog().byId("includes nested intermediates for comments.author")
+SparseFieldsetScenarios.catalog().all()
+SparseFieldsetScenarios.catalog().byId("attribute-only fieldset via toMappedDocument")
+EnvelopeReadScenarios.catalog().all()
+EnvelopeReadScenarios.catalog().byId("binds a single-resource document into a flat DTO envelope")
+PatchScenarios.catalog().all()
+PatchScenarios.catalog().byId("patch-omitted-and-supplied-attributes")
+PatchDtoScenarios.catalog().all()
+PatchDtoScenarios.catalog().byId("patch-dto-omitted-and-supplied-attributes")
 TestSupportResources.readCorpusUtf8("documents/single-resource.json")
 TestSupportResources.readCorpusBytes("documents/member-order.compact.json")
+TestSupportResources.readCorpusUtf8("patch/address-street-and-geo-lat.json")
 TestSupportResources.readSchemaUtf8("schema.json")
 ```
 
@@ -113,10 +125,10 @@ PATCH DTO catalogs are in this module.
 
 ## For contributors / agents
 
-- **Retrieval:** `JsonApiFixtures` plus the `FixtureCatalog` instances it exposes is the canonical
-  API. Future catalogs register a facade accessor and the same public
-  static `all()` / `byId(String)` / `where(Predicate)` / `catalog()` delegation surface; they do
-  not invent retrieval types. Existing suites may keep calling the `*Scenarios` shims.
+- **Retrieval:** each `*Scenarios` class owns exactly one immutable `FixtureCatalog` and exposes it
+  through a single static `catalog()` accessor; that accessor plus `all()` / `byId(String)` /
+  `where(Predicate)` on the returned catalog is the canonical retrieval surface. Future catalogs
+  follow the same shape and do not invent retrieval types or facade classes.
 - **Stable ids and paths:** `CodecScenario` ids and expected JSON paths are stable across Jackson
   majors; never fork or rewrite expected wire documents for new terminology. `manifest.json`
   remains the ordered index and `CodecScenariosCatalogSpec` enforces the bijection.
@@ -194,7 +206,7 @@ PATCH DTO catalogs are in this module.
   declaration-invalid fixtures), at least one `Success` / `ReaderFailure` / `BinderFailure` and at
   least one declaration-validation scenario, and `PatchPresence` values on every `Success`
   member. Adapter suites run the whole catalog through their own `patchDtoReader` and assert
-  full-catalog coverage (`executedScenarioIds == catalogScenarioIds` via the same `JsonApiFixtures`
+  full-catalog coverage (`executedScenarioIds == catalogScenarioIds` via the shared `catalog()`
   accessor). Adapter-local cases (generics/`JavaType`, wrapper-level `@JsonDeserialize` /
   `@JsonSerialize` rejection, naming strategies, `fromDocument`, custom linkage mappers,
   `NON_ABSENT`/`NON_EMPTY` robustness) stay in adapter specs only.
@@ -206,6 +218,12 @@ PATCH DTO catalogs are in this module.
   scalar/ordinary, `PatchPresence`-wrapped-presence-aware-rejected) cases. The matrix is not
   record-only: JavaBean-style typed PATCH shapes and non-record low-level domain beans are covered
   to prove the semantics are ordinary Jackson-bean semantics, not record-specific introspection.
+- **Write diagnostics:** `WriteDiagnosticsScenarios` is the curated cross-major contract for
+  resource-write failures: each entry supplies a mis-declared carrier plus the expected
+  major-neutral `MappingDiagnostic` category and either the stable wire location
+  (resource-relative JSON Pointer) or an absent location for class-level failures. Adapter suites
+  run the whole catalog through their own writer and assert full-catalog coverage.
+  Jackson-specific cause chains and introspection mechanics stay adapter-local.
 - **Capability selection:** Tests select by `FixtureCatalog.where` (and the retained
   `CodecScenarios` conveniences `writable`, `readable`, `schemaChecked`, `exactUtf8`,
   `hreflangArray`) instead of maintaining independent hard-coded id lists. Adapter write suites
@@ -219,18 +237,25 @@ PATCH DTO catalogs are in this module.
 - **Resources:** Read corpus and vendored schema files only through `TestSupportResources`. Exact
   UTF-8 bytes are `readCorpusBytes` / `readSchemaBytes`. Schema pin/integrity lives in this
   module; adapter output-versus-schema execution stays in each Jackson-major suite.
-- **Coverage:** JaCoCo floors and Sonar `new_coverage` cover catalog, resource-loader, and
-  invariant types. Inert fixture POJO/record accessors are excluded from both the JaCoCo
-  verification class set and Sonar coverage (`sonar.coverage.exclusions` derived from that same
-  include list) so they do not require direct tests solely for coverage; production-module floors
-  are unchanged.
+- **Coverage:** Coverage is on by default. Only passive application-shaped carriers under
+  `testsupport.fixtures..` are coverage-exempt: JaCoCo floor verification and Sonar `new_coverage`
+  cover every other production class in this module automatically, with no per-class allowlist to
+  maintain. A new executable support class is coverage-gated by placement; moving code under
+  `fixtures` cannot hide logic from coverage because ArchUnit forbids executable-support
+  dependencies inside that hierarchy (see `TestSupportDependencyRulesSpec`). Production-module
+  floors are unchanged.
+- **Passive carriers:** types under `testsupport.fixtures..` may contain the ordinary structure
+  needed to exercise mapping semantics — annotations, records/classes, constructors, fields,
+  accessors and mutators, simple value equality, and application-shaped instrumentation such as
+  access counters or intentionally throwing creators — but never scenario catalogs, resource
+  loading, validation/invariant logic, or other executable support infrastructure.
 - **Negative corpus:** `NegativeCodecScenarios` loads `negative-manifest.json` with JSON-P (Jakarta
   JSON Processing + Parsson); the closed case set is enforced by `NegativeCodecScenariosCatalogSpec`.
   Category and rule-code values are manifest strings; adapters map them onto their own enums.
   Catalog specs still cross-check the manifest independently via `JsonSlurper`.
 - **Ambiguous primary data:** `AmbiguousPrimaryDataScenarios` holds both expected models per
   scenario; these are valid dual-success documents, never failure fixtures.
-- **Major-neutral boundary:** production types under `io.github.kazemek.jsonapi.testfixtures..`
+- **Major-neutral boundary:** production types under `io.github.kazemek.jsonapi.testsupport..`
   never depend on `tools.jackson..`, `com.fasterxml.jackson.databind..`, a major-specific adapter
   package, `core.internal..`, or Groovy; `TestSupportDependencyRulesSpec` (ArchUnit, per ADR-010)
   enforces this on main bytecode — do not replace it with a source-import scan. JSON-P

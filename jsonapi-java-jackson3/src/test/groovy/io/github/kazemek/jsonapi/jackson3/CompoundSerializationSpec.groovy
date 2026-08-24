@@ -3,13 +3,13 @@ package io.github.kazemek.jsonapi.jackson3
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.AccessCountingArticle
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteExpectation
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteRequest
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteScenario
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteScenarios
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.CompoundWriteSide
-import io.github.kazemek.jsonapi.testfixtures.compoundwrite.IncludedResourceRef
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle
+import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteExpectation
+import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteRequest
+import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteScenario
+import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteScenarios
+import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteSide
+import io.github.kazemek.jsonapi.testsupport.compoundwrite.IncludedResourceRef
 import groovy.json.JsonSlurper
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -64,12 +64,12 @@ class CompoundSerializationSpec extends Specification {
     verify(scenario, document, thrownException)
 
     where:
-    scenario << CompoundWriteScenarios.all()
+    scenario << CompoundWriteScenarios.catalog().all()
   }
 
   def "covers every shared compound-write scenario exactly once"() {
     given:
-    def catalogIds = CompoundWriteScenarios.all()*.id as Set
+    def catalogIds = CompoundWriteScenarios.catalog().all()*.id as Set
 
     expect:
     // Selective --tests runs can execute a subset of the @Unroll iterations. Assert
