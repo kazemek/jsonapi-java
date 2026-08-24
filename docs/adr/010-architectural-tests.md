@@ -59,8 +59,10 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Sibling modules must not depend on `io.github.kazemek.jsonapi.core.internal..`. That ban is
   enforced for `jsonapi-java-jackson3` and `jsonapi-java-jackson-common` and must be added when
   further sibling modules register.
-- Major-specific adapters must not re-declare types that live in `jsonapi-java-jackson-common`;
-  `Jackson3DependencyRulesSpec` asserts no moved contract type remains under the jackson3 package.
+- Major-specific adapters must not re-declare public top-level contracts that live in
+  `jsonapi-java-jackson-common`; each adapter's architecture test derives the forbidden simple names
+  from the compiled common package boundary rather than a hand-maintained moved-type list. This
+  automatically protects later neutral contracts and is the model for Jackson 2 when registered.
 
 ## Consequences
 

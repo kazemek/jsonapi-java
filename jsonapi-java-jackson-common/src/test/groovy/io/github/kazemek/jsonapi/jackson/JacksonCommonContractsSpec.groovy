@@ -2,8 +2,13 @@ package io.github.kazemek.jsonapi.jackson
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.JsonApiObject
+import io.github.kazemek.jsonapi.core.model.Links
+import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import spock.lang.Specification
 
 import java.util.Collections
@@ -53,6 +58,32 @@ class JacksonCommonContractsSpec extends Specification {
     then:
     context.fieldsets() == [articles: ["title", "author"]]
     context.fieldsets()["articles"] == ["title", "author"]
+  }
+
+  def "context derivations preserve unrelated inclusion and fieldset policy"() {
+    given:
+    def defaults = CompoundSerializationContext.defaults()
+    def path = IncludePath.of("comments.author")
+    def includePolicy = IncludePolicy.allowing(Set.of(RelationshipAllowance.of("articles", "author")))
+    def fieldPolicy = FieldPolicy.allowing(Set.of(FieldAllowance.of("articles", "title")))
+
+    when:
+    def derived =
+        defaults
+        .withIncludePaths([path])
+        .withIncludePolicy(includePolicy)
+        .withMaxDepth(2)
+        .withMaxIncluded(3)
+        .withFieldsets([articles: ["title"]])
+        .withFieldPolicy(fieldPolicy)
+
+    then:
+    derived.includePaths() == [path]
+    derived.includePolicy().is(includePolicy)
+    derived.maxDepth() == 2
+    derived.maxIncluded() == 3
+    derived.fieldsets() == [articles: ["title"]]
+    derived.fieldPolicy().is(fieldPolicy)
   }
 
   // IncludePath
@@ -183,6 +214,81 @@ class JacksonCommonContractsSpec extends Specification {
     thrown(UnsupportedOperationException)
   }
 
+  def "domain data preserves explicit null, resource, and identifier primary-data states"() {
+    given:
+    def resource = "article dto"
+    def identifier = ResourceIdentifier.of("articles", "1")
+    def resources = new ArrayList<Object>([resource])
+    def identifiers = new ArrayList<ResourceIdentifier>([identifier])
+
+    when:
+    def collection = new DomainData.ResourceCollection(resources)
+    def identifierCollection = new DomainData.IdentifierCollection(identifiers)
+    resources.add("another dto")
+    identifiers.add(ResourceIdentifier.of("articles", "2"))
+
+    then:
+    (Set) DomainData.class.getPermittedSubclasses().toSet() ==
+        [
+          DomainData.NullData,
+          DomainData.SingleResource,
+          DomainData.ResourceCollection,
+          DomainData.SingleIdentifier,
+          DomainData.IdentifierCollection
+        ].toSet()
+    DomainData.NullData.INSTANCE == new DomainData.NullData()
+    new DomainData.SingleResource(resource).resource().is(resource)
+    collection.resources() == [resource]
+    new DomainData.SingleIdentifier(identifier).identifier() == identifier
+    identifierCollection.identifiers() == [identifier]
+
+    when:
+    collection.resources().add("nope")
+
+    then:
+    thrown(UnsupportedOperationException)
+  }
+
+  def "domain data rejects null required payloads and collection members"() {
+    when:
+    new DomainData.SingleResource(null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new DomainData.ResourceCollection([null])
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new DomainData.SingleIdentifier(null)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new DomainData.IdentifierCollection([null])
+
+    then:
+    thrown(NullPointerException)
+  }
+
+  def "document envelope preserves independent absence and present document members"() {
+    given:
+    def links = Links.empty()
+    def meta = Meta.empty()
+    def jsonapi = JsonApiObject.ofVersion("1.1")
+
+    expect:
+    new DocumentEnvelope(null, null, null) == new DocumentEnvelope(null, null, null)
+    new DocumentEnvelope(links, null, null).links() == links
+    new DocumentEnvelope(null, meta, null).meta() == meta
+    new DocumentEnvelope(null, null, jsonapi).jsonapi() == jsonapi
+    new DocumentEnvelope(links, meta, jsonapi) != new DocumentEnvelope(null, meta, jsonapi)
+  }
+
   // IncludedResources
 
   def "of preserves wire order and resolves identities through declared positions"() {
@@ -308,6 +414,20 @@ class JacksonCommonContractsSpec extends Specification {
     DocumentReadContext.resourceDefaults()
         .withPrimaryDataKind(PrimaryDataKind.RESOURCE_IDENTIFIER) ==
         DocumentReadContext.identifierDefaults()
+  }
+
+  def "read context rejects missing policy components"() {
+    when:
+    new DocumentReadContext(null, PrimaryDataKind.RESOURCE)
+
+    then:
+    thrown(NullPointerException)
+
+    when:
+    new DocumentReadContext(ValidationContext.defaults(), null)
+
+    then:
+    thrown(NullPointerException)
   }
 
   // MappedDocument
@@ -442,6 +562,39 @@ class JacksonCommonContractsSpec extends Specification {
     e.message == "message"
   }
 
+  def "diagnostic exceptions retain their stable context and optional causes"() {
+    given:
+    def mappingCause = new IllegalStateException("mapping cause")
+    def readCause = new IllegalArgumentException("read cause")
+    def location = MappingLocation.of("attributes", "title")
+    def sourceLocation = new SourceLocation(1, 2, 3L, 4L)
+
+    when:
+    def mapping = new JsonApiMappingException(
+        MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, String, location, "mapping", mappingCause)
+    def defaultMessage = new JsonApiMappingException(
+        MappingDiagnostic.MISSING_IDENTIFIER, String, location)
+    def read = new JsonApiDocumentReadException(
+        CodecFailureCategory.LOCAL_VALIDATION,
+        "/data",
+        sourceLocation,
+        ValidationRuleCode.MISSING_RESOURCE_ID,
+        "read",
+        readCause)
+
+    then:
+    mapping.diagnostic() == MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE
+    mapping.resourceClass() == String
+    mapping.location() == location
+    mapping.getCause().is(mappingCause)
+    defaultMessage.message == "MISSING_IDENTIFIER"
+    read.category() == CodecFailureCategory.LOCAL_VALIDATION
+    read.jsonPointer() == "/data"
+    read.sourceLocation() == sourceLocation
+    read.ruleCode() == ValidationRuleCode.MISSING_RESOURCE_ID
+    read.getCause().is(readCause)
+  }
+
   def "source location distinguishes known and unknown positions"() {
     expect:
     !SourceLocation.UNKNOWN.isKnown()
@@ -475,6 +628,38 @@ class JacksonCommonContractsSpec extends Specification {
 
     then:
     thrown(NullPointerException)
+  }
+
+  def "patch change sealed variants preserve explicit null and variant identity"() {
+    given:
+    def changes = [
+      new PatchChange.AttributeChange("title", "title", null),
+      new PatchChange.RelationshipChange("author", "author", null),
+      new PatchChange.ResourceMetaChange("meta", "articleMeta", null),
+      new PatchChange.RelationshipMetaChange("author", "authorMeta", null)
+    ]
+
+    expect:
+    (Set) PatchChange.class.getPermittedSubclasses().toSet() ==
+        [
+          PatchChange.AttributeChange,
+          PatchChange.RelationshipChange,
+          PatchChange.ResourceMetaChange,
+          PatchChange.RelationshipMetaChange
+        ].toSet()
+    changes*.value() == [null, null, null, null]
+    changes*.jsonapiName() == [
+      "title",
+      "author",
+      "meta",
+      "author"
+    ]
+    changes*.logicalName() == [
+      "title",
+      "author",
+      "articleMeta",
+      "authorMeta"
+    ]
   }
 
   def "patch command rejects null components"() {
