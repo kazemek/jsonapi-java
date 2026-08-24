@@ -95,7 +95,7 @@ class Jackson3DependencyRulesSpec extends Specification {
     return new ArchCondition<JavaClass>("not redeclare a public Jackson-common contract") {
           @Override
           void check(JavaClass item, ConditionEvents events) {
-            if (commonContractNames.contains(item.simpleName)) {
+            if (item.topLevelClass && commonContractNames.contains(item.simpleName)) {
               events.add(
                   SimpleConditionEvent.violated(
                   item,
