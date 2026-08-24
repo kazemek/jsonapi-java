@@ -15,7 +15,7 @@ import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithFormattedTitle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptional
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptionalId
 import io.github.kazemek.jsonapi.jackson3.testmodel.ArticleWithOptionalRelationship
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.jackson3.testmodel.CreatorBasedArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.ExtendedBlog
 import io.github.kazemek.jsonapi.jackson3.testmodel.FormattedTitle

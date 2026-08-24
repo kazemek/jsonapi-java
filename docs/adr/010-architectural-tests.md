@@ -28,10 +28,10 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
     `io.github.kazemek.jsonapi.jackson3..`, and
     `tools.jackson..`. Production sources must not depend on
     `io.github.kazemek.jsonapi.core.internal..` or `com.fasterxml.jackson..`.
-  - `io.github.kazemek.jsonapi.testfixtures..` → `java..`, `org.jspecify.annotations..`,
+  - `io.github.kazemek.jsonapi.testsupport..` → `java..`, `org.jspecify.annotations..`,
     `jakarta.json..`, `org.eclipse.parsson..`, `io.github.kazemek.jsonapi.annotation..`,
     `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`,
-    `io.github.kazemek.jsonapi.jackson..`, other `io.github.kazemek.jsonapi.testfixtures..`
+    `io.github.kazemek.jsonapi.jackson..`, other `io.github.kazemek.jsonapi.testsupport..`
     types, and `com.fasterxml.jackson.annotation..`. The `jakarta.json..` /
     `org.eclipse.parsson..` entries cover the JSON-P loader for `negative-manifest.json`.
     Production sources must not depend on `tools.jackson..`,

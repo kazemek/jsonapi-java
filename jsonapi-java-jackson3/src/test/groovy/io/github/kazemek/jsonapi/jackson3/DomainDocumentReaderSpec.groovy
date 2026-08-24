@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadScenarios
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
@@ -17,23 +18,22 @@ import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
-import io.github.kazemek.jsonapi.testfixtures.TestSupportResources
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenario
-import io.github.kazemek.jsonapi.testfixtures.codec.CodecScenarios
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Comment
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
-import io.github.kazemek.jsonapi.testfixtures.domainread.FlatLidArticle
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeBindingDocument
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeEntryPoint
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadCase
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadExpectation
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadInput
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadScenario
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReadVariant
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.EnvelopeReaderContext
-import io.github.kazemek.jsonapi.testfixtures.enveloperead.FlatThrowingArticle
+import io.github.kazemek.jsonapi.testsupport.TestSupportResources
+import io.github.kazemek.jsonapi.testsupport.codec.CodecScenario
+import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatLidArticle
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeBindingDocument
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeEntryPoint
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadCase
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadExpectation
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadInput
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadScenario
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadVariant
+import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReaderContext
+import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.testmodel.DirectionalityReadModels
@@ -77,12 +77,12 @@ class DomainDocumentReaderSpec extends Specification {
     verify(scenario, results)
 
     where:
-    scenario << JsonApiFixtures.envelopeRead().all()
+    scenario << EnvelopeReadScenarios.catalog().all()
   }
 
   def "covers every shared envelope-read scenario exactly once"() {
     expect:
-    executedScenarioIds == JsonApiFixtures.envelopeRead().all()*.id
+    executedScenarioIds == EnvelopeReadScenarios.catalog().all()*.id
   }
 
   def "metaAs returns null for both overloads when meta is absent"() {
@@ -443,7 +443,7 @@ class DomainDocumentReaderSpec extends Specification {
         return DocumentReadContext.identifierDefaults()
       case EnvelopeReaderContext.CODEC_DERIVED:
         CodecScenario fixture =
-        CodecScenarios.byId(
+        CodecScenarios.catalog().byId(
         ((EnvelopeReadInput.CodecFixture) envelopeCase.input()).codecScenarioId())
         return DocumentReadContext.of(
             fixture.context(),
@@ -728,7 +728,7 @@ class DomainDocumentReaderSpec extends Specification {
   }
 
   private static String fixtureText(String id) {
-    CodecScenario fixture = CodecScenarios.byId(id)
+    CodecScenario fixture = CodecScenarios.catalog().byId(id)
     TestSupportResources.readCorpusUtf8(fixture.expectedPath)
   }
 

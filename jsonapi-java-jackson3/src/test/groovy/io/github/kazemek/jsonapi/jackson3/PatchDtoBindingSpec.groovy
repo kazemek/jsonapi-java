@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoScenarios
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
@@ -23,11 +24,10 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson3.testmodel.GenericPatch
-import io.github.kazemek.jsonapi.testfixtures.JsonApiFixtures
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.ArticlePatch
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.OptionalPatch
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoExpectation
-import io.github.kazemek.jsonapi.testfixtures.domainpatch.PatchDtoScenario
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.OptionalPatch
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoExpectation
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoScenario
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
@@ -55,7 +55,7 @@ class PatchDtoBindingSpec extends Specification {
   List<String> executedScenarioIds = []
 
   def cleanupSpec() {
-    assert executedScenarioIds == JsonApiFixtures.patchDto().all()*.id
+    assert executedScenarioIds == PatchDtoScenarios.catalog().all()*.id
   }
 
   def "shared patch dto catalog scenario: #scenario.id"() {
@@ -70,7 +70,7 @@ class PatchDtoBindingSpec extends Specification {
     assertExpectation(scenario, result)
 
     where:
-    scenario << JsonApiFixtures.patchDto().all()
+    scenario << PatchDtoScenarios.catalog().all()
   }
 
   def "implicit id property binds without @JsonApiId"() {

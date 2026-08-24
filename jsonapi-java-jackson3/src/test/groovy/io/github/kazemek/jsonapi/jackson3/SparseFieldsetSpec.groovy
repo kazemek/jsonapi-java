@@ -23,16 +23,16 @@ import io.github.kazemek.jsonapi.jackson.IncludePolicy
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappedDocument
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Article
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.Person
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.AccessCountingFieldsetArticle
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.FieldsetResourceState
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetExpectation
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetOperation
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetRequest
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenario
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetScenarios
-import io.github.kazemek.jsonapi.testfixtures.sparsefieldset.SparseFieldsetSide
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset.AccessCountingFieldsetArticle
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.FieldsetResourceState
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetExpectation
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetOperation
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetRequest
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetScenario
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetScenarios
+import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetSide
 import java.io.ByteArrayOutputStream
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets
@@ -90,12 +90,12 @@ class SparseFieldsetSpec extends Specification {
     verify(scenario, mapped, document, thrownException)
 
     where:
-    scenario << SparseFieldsetScenarios.all()
+    scenario << SparseFieldsetScenarios.catalog().all()
   }
 
   def "covers every shared sparse-fieldset scenario exactly once"() {
     expect:
-    executedScenarioIds == SparseFieldsetScenarios.all()*.id as Set
+    executedScenarioIds == SparseFieldsetScenarios.catalog().all()*.id as Set
   }
 
   def "defensive copy isolates the caller's fieldset map after context construction"() {
@@ -116,7 +116,7 @@ class SparseFieldsetSpec extends Specification {
 
   def "duplicate fieldset names collapse to first-seen order"() {
     given:
-    def scenario = SparseFieldsetScenarios.byId(
+    def scenario = SparseFieldsetScenarios.catalog().byId(
         "duplicate-free multi-field fieldset keeps title and author")
     def context = ((SparseFieldsetRequest.Single) scenario.request()).context()
 
@@ -137,7 +137,7 @@ class SparseFieldsetSpec extends Specification {
     when:
     allowances.add(FieldAllowance.of("articles", "author"))
     def mapped = mapper.toMappedDocument(
-        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.byId(
+        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.catalog().byId(
         "FieldAllowance-satisfied fieldset succeeds").request()).supplier().get(),
         null,
         context)
@@ -147,7 +147,7 @@ class SparseFieldsetSpec extends Specification {
 
     when:
     mapper.toMappedDocument(
-        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.byId(
+        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.catalog().byId(
         "FieldAllowance denies a present field not in the allowance set").request()).supplier().get(),
         null,
         CompoundSerializationContext.defaults()
@@ -161,7 +161,7 @@ class SparseFieldsetSpec extends Specification {
 
   def "toDocument FIELDSETS_REQUIRE_MAPPED_DOCUMENT message names the fieldset types"() {
     given:
-    def scenario = SparseFieldsetScenarios.byId(
+    def scenario = SparseFieldsetScenarios.catalog().byId(
         "three-argument toDocument rejects non-empty fieldsets")
     def request = (SparseFieldsetRequest.Single) scenario.request()
 
@@ -176,7 +176,7 @@ class SparseFieldsetSpec extends Specification {
 
   def "access counting exact single-read counts remain Jackson 3 suite-local"() {
     given:
-    def scenario = SparseFieldsetScenarios.byId(
+    def scenario = SparseFieldsetScenarios.catalog().byId(
         "access counting proves linkage vs traversal split")
     def request = (SparseFieldsetRequest.Single) scenario.request()
     def counting = (AccessCountingFieldsetArticle) request.supplier().get()
@@ -193,7 +193,7 @@ class SparseFieldsetSpec extends Specification {
 
   def "writer composes sparse-fieldset provenance without caller choreography"() {
     given:
-    def scenario = SparseFieldsetScenarios.byId(
+    def scenario = SparseFieldsetScenarios.catalog().byId(
         "include author with fields articles title omits linkage and sets exception")
     def request = (SparseFieldsetRequest.Single) scenario.request()
     def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
@@ -321,7 +321,7 @@ class SparseFieldsetSpec extends Specification {
 
   def "all output variants compose provenance consistently"() {
     given:
-    def scenario = SparseFieldsetScenarios.byId(
+    def scenario = SparseFieldsetScenarios.catalog().byId(
         "include author with fields articles title omits linkage and sets exception")
     def request = (SparseFieldsetRequest.Single) scenario.request()
     def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
@@ -354,7 +354,7 @@ class SparseFieldsetSpec extends Specification {
 
   def "no-provenance mappings write under the unchanged base context"() {
     given:
-    def scenario = SparseFieldsetScenarios.byId(
+    def scenario = SparseFieldsetScenarios.catalog().byId(
         "full field list keeps the unrestricted resource state")
     def request = (SparseFieldsetRequest.Single) scenario.request()
     def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())

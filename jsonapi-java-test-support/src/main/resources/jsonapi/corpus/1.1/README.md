@@ -20,14 +20,14 @@ symmetry.
 | `envelope-binding/*.json`      | Named typed-envelope binding-variant documents (stable names; not codec corpus entries)       |
 
 Model builders, capability metadata, and validation contexts live in the internal Gradle module
-`jsonapi-java-test-support` (`io.github.kazemek.jsonapi.testfixtures.codec`), not as extra copies of
+`jsonapi-java-test-support` (`io.github.kazemek.jsonapi.testsupport.codec`), not as extra copies of
 these JSON files.
 `CodecScenario` carries the capability metadata (write, read, schema kind, primary-data kind,
 exact-byte policy, canonical `hreflang`, and known draft-schema disagreement), `CodecScenarios`
 exposes capability selections, `AmbiguousPrimaryDataScenarios` holds the dual-success models, and
 `NegativeCodecScenarios` loads the manifest-backed negative corpus. Typed-envelope binding variants
 live under `envelope-binding/` and are indexed by `EnvelopeBindingDocument` in
-`io.github.kazemek.jsonapi.testfixtures.enveloperead`; they are not codec corpus entries and must
+`io.github.kazemek.jsonapi.testsupport.enveloperead`; they are not codec corpus entries and must
 not be added to `manifest.json`. The duplicate-included-identities wire form is deliberately
 validation-invalid and is not part of the negative corpus — it serves the `fromDocument`
 entry-point contract. Stable file stems (enum names in `EnvelopeBindingDocument`) are

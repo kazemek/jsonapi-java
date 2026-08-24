@@ -7,12 +7,12 @@ import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteComparisonPolicy
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteInput
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteOperation
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteOutcome
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenario
-import io.github.kazemek.jsonapi.testfixtures.domainwrite.DomainWriteScenarios
+import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteComparisonPolicy
+import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteInput
+import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteOperation
+import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteOutcome
+import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteScenario
+import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteScenarios
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Stepwise
@@ -48,12 +48,12 @@ class ResourceMapperSpec extends Specification {
     verifyOutcome(scenario, result, thrownException)
 
     where:
-    scenario << DomainWriteScenarios.all()
+    scenario << DomainWriteScenarios.catalog().all()
   }
 
   def "covers every shared domain-write scenario exactly once"() {
     expect:
-    executedScenarioIds == DomainWriteScenarios.all()*.id as Set
+    executedScenarioIds == DomainWriteScenarios.catalog().all()*.id as Set
   }
 
   private Object invoke(DomainWriteScenario scenario) {
