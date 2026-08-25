@@ -34,15 +34,13 @@ import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadScenario
 import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadVariant
 import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReaderContext
 import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.FlatThrowingArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.DirectionalityReadModels
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
+import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
-import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.core.JsonParser
 import tools.jackson.core.JsonToken
@@ -53,23 +51,14 @@ import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.module.SimpleModule
 
 // Shared typed-envelope cases live in EnvelopeReadScenarios. This spec runs every catalog entry
-// and asserts executedScenarioIds == catalogScenarioIds so a later Jackson 2 envelope suite can
-// do the same. Adapter-local cases stay here (no shared manifest): metaAs, JavaType registrations,
-// mapper-instance factory forms, custom linkage mappers, caller-owned streams,
+// directly through this adapter's domain document reader; adding a scenario to the shared catalog
+// is picked up automatically. Adapter-local cases stay here (no shared manifest): metaAs, JavaType
+// registrations, mapper-instance factory forms, custom linkage mappers, caller-owned streams,
 // malformed input, and validation failures.
-// @Stepwise pins the declared feature order so the coverage feature always runs after the
-// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
-@Stepwise
 class DomainDocumentReaderSpec extends Specification {
-
-  @Shared
-  List<String> executedScenarioIds = []
 
   @Unroll
   def "envelope read #scenario.id from the shared catalog"() {
-    given:
-    executedScenarioIds.add(scenario.id())
-
     when:
     def results = execute(scenario)
 
@@ -78,11 +67,6 @@ class DomainDocumentReaderSpec extends Specification {
 
     where:
     scenario << EnvelopeReadScenarios.catalog().all()
-  }
-
-  def "covers every shared envelope-read scenario exactly once"() {
-    expect:
-    executedScenarioIds == EnvelopeReadScenarios.catalog().all()*.id
   }
 
   def "metaAs returns null for both overloads when meta is absent"() {
@@ -328,7 +312,7 @@ class DomainDocumentReaderSpec extends Specification {
   def "typed envelope binding rejects supplied getter-only mapped members"() {
     given:
     def registry = ResourceTypeRegistry.builder()
-        .register(DirectionalityReadModels.GetterOnly)
+        .register(DirectionalityReadFixtures.GetterOnly)
         .build()
     def reader = JsonApiJackson3.domainDocumentReader(
         JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
@@ -341,13 +325,13 @@ class DomainDocumentReaderSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/data/attributes/title"
-    ex.resourceClass() == DirectionalityReadModels.GetterOnly
+    ex.resourceClass() == DirectionalityReadFixtures.GetterOnly
   }
 
   def "typed envelope binding rejects a supplied getter-only identifier at /data/id"() {
     given:
     def registry = ResourceTypeRegistry.builder()
-        .register(DirectionalityReadModels.GetterOnlyIdentifier)
+        .register(DirectionalityReadFixtures.GetterOnlyIdentifier)
         .build()
     def reader = JsonApiJackson3.domainDocumentReader(
         JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
@@ -359,13 +343,13 @@ class DomainDocumentReaderSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/data/id"
-    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+    ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
   }
 
   def "typed envelope binding rejects a supplied getter-only identifier at /data/lid"() {
     given:
     def registry = ResourceTypeRegistry.builder()
-        .register(DirectionalityReadModels.GetterOnlyIdentifier)
+        .register(DirectionalityReadFixtures.GetterOnlyIdentifier)
         .build()
     def reader = JsonApiJackson3.domainDocumentReader(
         JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
@@ -386,7 +370,7 @@ class DomainDocumentReaderSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/data/lid"
-    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+    ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
   }
 
   private static List execute(EnvelopeReadScenario scenario) {

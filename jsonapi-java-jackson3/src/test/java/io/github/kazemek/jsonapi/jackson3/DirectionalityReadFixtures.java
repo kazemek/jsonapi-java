@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3.testmodel;
+package io.github.kazemek.jsonapi.jackson3;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -11,10 +11,15 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 
-/** DTO shapes used to prove the ordinary flat-read directionality contract. */
-public final class DirectionalityReadModels {
+/**
+ * DTO shapes used to prove the ordinary flat-read directionality contract through the resource
+ * binder and typed envelope reader. Owned by {@code ResourceBinderSpec} and {@code
+ * DomainDocumentReaderSpec}; each nested shape isolates one Jackson access mechanic (setter-only,
+ * creator-only, injected creator, root-typed, write-only, getter-only, view-restricted).
+ */
+public final class DirectionalityReadFixtures {
 
-  private DirectionalityReadModels() {}
+  private DirectionalityReadFixtures() {}
 
   @JsonApiResource(type = "setter-only")
   public static final class SetterOnly {

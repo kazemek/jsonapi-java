@@ -17,17 +17,13 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
 // Shared compound-inclusion cases live in CompoundWriteScenarios. This spec runs every catalog
-// entry and asserts executedScenarioIds == catalogScenarioIds so a later Jackson 2 suite can do
-// the same. Adapter-local remains empty unless a Jackson-API-specific case appears; suite-local
-// round-trip serialization and absolute getter-read counts stay here.
-// @Stepwise pins the declared feature order so the coverage feature always runs after the
-// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
-@Stepwise
+// entry directly through this adapter's mapper; adding a scenario to the shared catalog is picked
+// up automatically. Adapter-local remains empty unless a Jackson-API-specific case appears;
+// suite-local round-trip serialization and absolute getter-read counts stay here.
 class CompoundSerializationSpec extends Specification {
 
   private static final Set<String> ROUND_TRIP_IDS = Set.of(
@@ -43,14 +39,8 @@ class CompoundSerializationSpec extends Specification {
   @Shared
   def writer = JsonApiJackson3.writer(JsonMapper.builder().build())
 
-  @Shared
-  Set<String> executedScenarioIds = new LinkedHashSet<>()
-
   @Unroll
   def "compound write #scenario.id from the shared catalog"() {
-    given:
-    executedScenarioIds.add(scenario.id())
-
     when:
     def thrownException = null
     def document = null
@@ -65,16 +55,6 @@ class CompoundSerializationSpec extends Specification {
 
     where:
     scenario << CompoundWriteScenarios.catalog().all()
-  }
-
-  def "covers every shared compound-write scenario exactly once"() {
-    given:
-    def catalogIds = CompoundWriteScenarios.catalog().all()*.id as Set
-
-    expect:
-    // Selective --tests runs can execute a subset of the @Unroll iterations. Assert
-    // full-catalog coverage only when this spec actually ran every catalog entry.
-    executedScenarioIds.size() != catalogIds.size() || executedScenarioIds == catalogIds
   }
 
   private JsonApiDocument execute(CompoundWriteScenario scenario) {

@@ -460,24 +460,25 @@ artifact; both majors share the neutral contracts of
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
   moved common-contract type is re-declared here (ADR-010).
-- **Tests:** Spock specs under `src/test/groovy/`; remaining adapter-local test domain types under
-  `src/test/java/io/github/kazemek/jsonapi/jackson3/testmodel/`. Flat binder contract cases come
-  from `DomainReadScenarios`; `ResourceBinderSpec` asserts full-catalog coverage and keeps
-  Jackson-API-specific cases local. Compound-inclusion contract cases come from
-  `CompoundWriteScenarios`; `CompoundSerializationSpec` asserts full-catalog coverage.
-  Sparse-fieldset contract cases come from `SparseFieldsetScenarios`; `SparseFieldsetSpec`
-  asserts full-catalog coverage and keeps harness-level assertions (mutation isolation,
-  duplicate collapse, exact access counts, writer-owned provenance composition and validation)
-  local. Typed
-  envelope contract cases come from `EnvelopeReadScenarios`; `DomainDocumentReaderSpec` asserts
-  full-catalog coverage and keeps Jackson-API-specific cases local (`metaAs`, `JavaType`
+- **Tests:** Spock specs under `src/test/groovy/`; Jackson-major-specific fixture shapes live in
+  small `*Fixtures.java` containers with static nested classes next to the specs that own them.
+  There is no generic adapter-wide test-model package: shared cross-adapter semantics come from
+  `jsonapi-java-test-support` catalogs, and each catalog runner iterates the complete shared
+  catalog directly (`catalog().all()`), so a new scenario is picked up without runner changes;
+  catalog completeness and stable ids are owned by the test-support catalog integrity specs.
+  Flat binder contract cases come from `DomainReadScenarios` (`ResourceBinderSpec`, which keeps
+  Jackson-API-specific cases local). Compound-inclusion contract cases come from
+  `CompoundWriteScenarios` (`CompoundSerializationSpec`). Sparse-fieldset contract cases come from
+  `SparseFieldsetScenarios` (`SparseFieldsetSpec`, which keeps harness-level assertions such as
+  mutation isolation, duplicate collapse, exact access counts, and writer-owned provenance
+  composition and validation local). Typed envelope contract cases come from
+  `EnvelopeReadScenarios` (`DomainDocumentReaderSpec`, which keeps `metaAs`, `JavaType`
   registrations, mapper-instance factory forms, custom linkage mappers, caller-owned streams,
-  malformed input, validation failures).   Presence-aware PATCH contract cases come from
-  `PatchScenarios`; `PatchBindingSpec` asserts full-catalog coverage and keeps adapter-local
-  cases local (custom deserializer, custom linkage conversion, Optional attribute null,
-  `fromDocument` missing id, factory overloads, ownership, illegal primary-data matrices).
-  Direct typed PATCH DTO contract cases come from
-  `PatchDtoScenarios`; `PatchDtoBindingSpec` asserts full-catalog coverage and keeps adapter-local
-  cases local (generics/`JavaType`, wrapper-level `@JsonDeserialize`/`@JsonSerialize` rejection,
-  inner-type customization, custom linkage mappers, naming strategy, `fromDocument`, construction
-  robustness under `NON_ABSENT`/`NON_EMPTY`, ownership).
+  malformed input, and validation failures local). Presence-aware PATCH contract cases come from
+  `PatchScenarios` (`PatchBindingSpec`, which keeps custom deserializers, custom linkage
+  conversion, Optional attribute null, `fromDocument` missing id, factory overloads, ownership,
+  and illegal primary-data matrices local). Direct typed PATCH DTO contract cases come from
+  `PatchDtoScenarios` (`PatchDtoBindingSpec`, which keeps generics/`JavaType`, wrapper-level
+  `@JsonDeserialize`/`@JsonSerialize` rejection, inner-type customization, custom linkage mappers,
+  naming strategy, `fromDocument`, and construction robustness under `NON_ABSENT`/`NON_EMPTY`
+  local).

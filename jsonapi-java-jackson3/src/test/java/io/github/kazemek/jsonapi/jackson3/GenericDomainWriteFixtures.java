@@ -1,4 +1,4 @@
-package io.github.kazemek.jsonapi.jackson3.testmodel;
+package io.github.kazemek.jsonapi.jackson3;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
@@ -10,11 +10,15 @@ import java.util.Map;
 import java.util.Optional;
 import tools.jackson.databind.annotation.JsonSerialize;
 
-/** Models used to prove declared generic types survive the Jackson 3 domain write pipeline. */
+/**
+ * Models used to prove declared generic types survive the Jackson 3 domain write pipeline. Owned by
+ * {@code GenericDomainWriteSpec}; these shapes exercise {@code JavaType}-based generic writes, not
+ * shared wire semantics.
+ */
 @SuppressWarnings({"ClassCanBeRecord", "OptionalUsedAsFieldOrParameterType", "rawtypes", "unused"})
-public final class GenericDomainWriteModels {
+public final class GenericDomainWriteFixtures {
 
-  private GenericDomainWriteModels() {}
+  private GenericDomainWriteFixtures() {}
 
   /** A resource whose mapped members are all parameterized by its root type variable. */
   @JsonApiResource(type = "generic-resources")

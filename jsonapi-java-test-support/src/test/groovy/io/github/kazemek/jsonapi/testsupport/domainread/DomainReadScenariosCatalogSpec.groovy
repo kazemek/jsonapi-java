@@ -4,9 +4,9 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import spock.lang.Specification
 
 // Why this spec exists: DomainReadScenarios is the version-neutral flat binder catalog shared by
-// every Jackson major. Adapter suites run the whole catalog through their own binder — Jackson 3
-// asserts executedScenarioIds == catalogScenarioIds in ResourceBinderSpec, and Phase 2.21 mandates
-// the same for Jackson 2 — so every entry must stay self-consistent. These tests enforce the local
+// every Jackson major. Adapter suites iterate the whole catalog directly through their own binder
+// (Jackson 3 in ResourceBinderSpec; Jackson 2 likewise later), so every entry must stay
+// self-consistent. These tests enforce the local
 // invariants that hold for any catalog entry regardless of catalog size: unique stable ids, exactly
 // one input variant/converter discriminator/discriminated expectation, resolvable target DTO
 // classes, and complete bound values or known diagnostics. They fail fast on malformed entries

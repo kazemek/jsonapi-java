@@ -15,26 +15,19 @@ import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteScenario
 import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteScenarios
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
-// @Stepwise pins the declared feature order so the coverage feature always runs after the
-// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
-@Stepwise
+// Runs every entry of the shared domain-write catalog directly through this adapter's mapper.
+// Catalog completeness and stable ids are owned by the test-support catalog integrity specs;
+// Jackson-API-specific behavior stays in adapter-local specs.
 class ResourceMapperSpec extends Specification {
 
   @Shared
   JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
-  @Shared
-  Set<String> executedScenarioIds = new LinkedHashSet<>()
-
   @Unroll
   def "derives #scenario.id from the shared catalog"() {
-    given:
-    executedScenarioIds.add(scenario.id())
-
     when:
     def result = null
     def thrownException = null
@@ -49,11 +42,6 @@ class ResourceMapperSpec extends Specification {
 
     where:
     scenario << DomainWriteScenarios.catalog().all()
-  }
-
-  def "covers every shared domain-write scenario exactly once"() {
-    expect:
-    executedScenarioIds == DomainWriteScenarios.catalog().all()*.id as Set
   }
 
   private Object invoke(DomainWriteScenario scenario) {
