@@ -15,10 +15,10 @@ flowchart TD
     SCHEMA[Pinned JSON:API schemas]
     INFRA[Catalog / resource / invariant infrastructure]
 
-    J3[Jackson 3 adapter tests]
-    J3LOCAL[Jackson 3 local mechanism tests]
-    J2[Future Jackson 2 adapter tests]
-    J2LOCAL[Jackson 2 local mechanism tests]
+    J3[Jackson 3 adapter tests run shared contracts]
+    J3LOCAL[Jackson 3 local mechanism tests<br>small adjacent *Fixtures.java containers]
+    J2[Future Jackson 2 adapter tests run shared contracts]
+    J2LOCAL[Jackson 2 local mechanism tests<br>small adjacent *Fixtures.java containers]
 
     TS --> CAT
     TS --> MODELS
@@ -42,8 +42,35 @@ flowchart TD
 
 Adapters execute the shared catalogs and classpath resources for parity. Mix-ins, naming strategies,
 custom serializers, JavaType entry points, mapper isolation, and exact Jackson access counts stay
-in each adapter suite. Fixture/model consolidation and Jackson 3 local-layout cleanup are follow-on
-work, not this module's ownership contract.
+in each adapter suite. Adapter-major mechanism fixtures live in small capability-local containers
+next to their owning specs; generic/global adapter `testmodel`, `models`, or `fixtures` package
+collections are not part of this architecture.
+
+## Fixture and test placement rules
+
+These rules are the durable contributor/agent contract for where new tests and fixtures belong:
+
+1. **Search shared canonical fixtures first.** Before adding any new model or carrier type,
+   check whether a fixture family under `testsupport.fixtures..` or an existing catalog entry
+   already expresses the needed shape; extend an existing family only when it stays coherent.
+2. **Add shared models only for genuine cross-adapter semantic contracts.** A type belongs here
+   when every Jackson-major adapter must prove the same wire-visible behavior through it. Do not
+   promote a fixture merely because a future adapter will need an analogous mechanism test.
+3. **Keep Jackson-major-specific fixtures local** to the owning spec/capability in the adapter
+   module: mix-ins, naming strategies, custom serializers/deserializers, creator/introspection
+   edges, `JavaType` entry points, mapper/module isolation, parser/stream mechanics, feature
+   toggles, version-specific causes, and construction mechanics.
+4. **Do not create new generic/global adapter test-model packages.** No new `testmodel`,
+   `models`, or catch-all adapter fixture packages.
+5. **Prefer small capability-local `*Fixtures.java` containers** with static nested classes over
+   many standalone one-off DTO files; keep standalone adjacent files only when Java/Jackson
+   semantics or readability genuinely favor them. A fixture's owner should be obvious from where
+   it lives.
+6. **Do not add tests solely to exercise inert fixture accessors** for coverage percentages.
+   Fixture carriers are coverage-exempt by placement; tests must protect behavior.
+7. **Shared wire-semantic JSON belongs in the central corpus**, loaded through
+   `TestSupportResources` — not in long inline strings duplicated across suites. Short inline
+   payloads inside focused mechanism probes remain fine.
 
 ## Packages
 
@@ -145,10 +172,9 @@ PATCH DTO catalogs are in this module.
   hold for every entry regardless of catalog size: unique stable ids, exactly one
   operation/typed input/envelope state/discriminated outcome/comparison policy, complete expected
   outcomes, and valid policies (entries reference existing relationships; unordered comparison
-  only for to-many linkage). Adapter suites run the whole catalog through their own mapper and
-  assert full-catalog coverage (`executedScenarioIds == catalogScenarioIds`), so adding a
-  scenario is a one-step action: add it to the catalog and the adapter suites pick it up
-  automatically. Adapter-specific behavior (Jackson API surface, mapper-factory wiring) is
+  only for to-many linkage). Adapter suites iterate the whole catalog directly
+  (`catalog().all()`) through their own mapper, so adding a scenario is a one-step action: add it
+  to the catalog and the adapter suites pick it up automatically. Adapter-specific behavior (Jackson API surface, mapper-factory wiring) is
   documented in the adapter-local specs themselves, not enumerated in a manifest.
 - **Domain-read catalog:** `DomainReadScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, exactly one input
@@ -157,8 +183,8 @@ PATCH DTO catalogs are in this module.
   or a known diagnostic (`propertyPath` only when the shared catalog asserts it; expected
   `propertyPath` values are resource-relative JSON Pointer text per the adapter mapping-location
   contract, or null when the catalog pins no location). Adapter suites
-  run the whole catalog through their own binder and assert full-catalog coverage
-  (`executedScenarioIds == catalogScenarioIds`). Binder expectations are resource-relative and
+  iterate the whole catalog directly (`catalog().all()`) through their own binder. Binder
+  expectations are resource-relative and
   never read `included` (ADR-011). Jackson-derived property-name paths and major-specific cause
   types stay in adapter-local supplementary assertions. Adapter-specific behavior (custom
   deserializers, naming strategies, mix-ins, `JavaType` entry points, linkage mappers) is
@@ -166,9 +192,8 @@ PATCH DTO catalogs are in this module.
 - **Compound-write catalog:** `CompoundWriteScenariosCatalogSpec` enforces the local invariants that
   hold for every entry regardless of catalog size: unique stable ids, exactly one request
   variant/discriminated expectation, resolvable included identities or known diagnostics, and the
-  absent-`included` versus present-empty-array distinction. Adapter suites run the whole catalog
-  through their own mapper and assert full-catalog coverage
-  (`executedScenarioIds == catalogScenarioIds`). Canonical codec compound documents do not replace
+  absent-`included` versus present-empty-array distinction. Adapter suites iterate the whole
+  catalog directly (`catalog().all()`) through their own mapper. Canonical codec compound documents do not replace
   these domain-graph traversal proofs. Adapter-specific behavior (absolute getter-read counts,
   round-trip serialization) is documented in the adapter-local specs themselves, not enumerated
   in a manifest.
@@ -177,8 +202,8 @@ PATCH DTO catalogs are in this module.
   operation/request variant/discriminated expectation, resolvable resource states or known
   diagnostics, and the absent-`included` versus present-list distinction. The mapped-success
   expectation pins whether the mapping yields sparse-fieldset linkage-exemption provenance.
-  Adapter suites run the whole catalog through their own mapper and assert full-catalog coverage
-  (`executedScenarioIds == catalogScenarioIds`). Exact single-read access counts, fieldset-map
+  Adapter suites iterate the whole catalog directly (`catalog().all()`) through their own mapper.
+  Exact single-read access counts, fieldset-map
   and `FieldAllowance` mutation isolation, duplicate-name collapse, and writer-owned provenance
   composition/validation stay in adapter-local specs, not enumerated in a manifest.
 - **Envelope-read catalog:** `EnvelopeReadScenariosCatalogSpec` enforces the local invariants that
@@ -186,9 +211,8 @@ PATCH DTO catalogs are in this module.
   and named `envelope-binding/` documents, the per-variant field invariants (document-binding
   variants require `entryPoint` and `readerContext`; registry variants omit both), and either
   complete envelope values (including absent versus present-empty `included`) or a known mapping
-  diagnostic joined to the document pointer. Adapter suites run the whole catalog through their
-  own domain document reader and assert full-catalog coverage
-  (`executedScenarioIds == catalogScenarioIds`). Included resources bind independently and are
+  diagnostic joined to the document pointer. Adapter suites iterate the whole catalog directly
+  (`catalog().all()`) through their own domain document reader. Included resources bind independently and are
   never injected into relationships (ADR-011). Adapter-specific behavior (`metaAs`, `JavaType`
   registrations, mapper-instance reader factories, custom linkage mappers, caller-owned streams,
   malformed input, validation failures) is documented in the adapter-local specs themselves, not
@@ -196,8 +220,8 @@ PATCH DTO catalogs are in this module.
 - **PATCH catalog:** `PatchScenariosCatalogSpec` enforces the local invariants that hold for every
   entry regardless of catalog size: unique stable ids, exactly one JSON document and discriminated
   `PatchExpectation`, and resolvable target DTOs in `domainread` / `domainwrite` / `domainpatch`.
-  Adapter suites run the whole catalog through their own patch reader and assert full-catalog
-  coverage (`executedScenarioIds == catalogScenarioIds`). Adapter-local cases (custom deserializers,
+  Adapter suites iterate the whole catalog directly (`catalog().all()`) through their own patch
+  reader. Adapter-local cases (custom deserializers,
   linkage mappers, Optional attribute null, `fromDocument` missing id, naming strategies, nested
   wrapper customization, shape-translated construction-failure pointers) stay in adapter specs only.
 - **Typed PATCH DTO catalog:** `PatchDtoScenariosCatalogSpec` enforces the local invariants that
@@ -205,9 +229,8 @@ PATCH DTO catalogs are in this module.
   and discriminated `PatchDtoExpectation`, resolvable PATCH DTOs in `domainpatch` (including the
   declaration-invalid fixtures), at least one `Success` / `ReaderFailure` / `BinderFailure` and at
   least one declaration-validation scenario, and `PatchPresence` values on every `Success`
-  member. Adapter suites run the whole catalog through their own `patchDtoReader` and assert
-  full-catalog coverage (`executedScenarioIds == catalogScenarioIds` via the shared `catalog()`
-  accessor). Adapter-local cases (generics/`JavaType`, wrapper-level `@JsonDeserialize` /
+  member. Adapter suites iterate the whole catalog directly (`catalog().all()`) through their own
+  `patchDtoReader`. Adapter-local cases (generics/`JavaType`, wrapper-level `@JsonDeserialize` /
   `@JsonSerialize` rejection, naming strategies, `fromDocument`, custom linkage mappers,
   `NON_ABSENT`/`NON_EMPTY` robustness) stay in adapter specs only.
 - **Structured PATCH coverage (ADR-014):** the catalogs grow by addition with nested structured
@@ -297,10 +320,12 @@ PATCH DTO catalogs are in this module.
   `jsonapi`, `links`, `meta`); `EnvelopeReadExpectation.Failure.propertyPath` / `resourceClass`;
   `EnvelopeReadVariant.RegistryAttempt.propertyPath`; `PatchScenario.expectedEndpointIdentity`;
   `PatchChange` / attribute and relationship change `value`). Groovy tests are not annotated.
-- **Extension workflow (Jackson 2):** a new adapter suite runs every scenario of the shared
-  domain-write catalog through its own resource mapper and asserts full-catalog coverage
-  (`executedScenarioIds == catalogScenarioIds`) exactly like the Jackson 3 suite; the same
-  full-catalog rule applies to the domain-read binder catalog, the compound-write catalog, the
-  sparse-fieldset catalog, the typed-envelope catalog, and the presence-aware PATCH catalog.
-  Jackson-API-specific behavior (mix-ins, serializers, naming strategies, converter wiring, custom
-  deserializers, linkage mappers) stays in adapter-local specs, documented there.
+- **Extension workflow (Jackson 2):** a new adapter suite iterates every scenario of the shared
+  domain-write catalog (`catalog().all()`) through its own resource mapper exactly like the
+  Jackson 3 suite; the same direct full-catalog iteration applies to the domain-read binder
+  catalog, the compound-write catalog, the sparse-fieldset catalog, the typed-envelope catalog,
+  the presence-aware PATCH catalog, and the typed PATCH DTO catalog. No runner-side completeness
+  bookkeeping is required: the catalog integrity specs own stable ids and invariants, and a new
+  scenario reaches every adapter automatically. Jackson-API-specific behavior (mix-ins,
+  serializers, naming strategies, converter wiring, custom deserializers, linkage mappers) stays
+  in adapter-local specs with local fixtures, documented there.

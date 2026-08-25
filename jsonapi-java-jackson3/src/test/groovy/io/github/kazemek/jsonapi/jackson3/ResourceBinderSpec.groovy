@@ -25,13 +25,12 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWith
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThing
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatAuthor
-import io.github.kazemek.jsonapi.jackson3.testmodel.FlatMappedArticle
-import io.github.kazemek.jsonapi.jackson3.testmodel.DirectionalityReadModels
-import io.github.kazemek.jsonapi.jackson3.testmodel.GenericArticle
-import spock.lang.Shared
+import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedOptionalArticle
+import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericArticle
 import spock.lang.Specification
-import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
@@ -43,24 +42,16 @@ import tools.jackson.databind.deser.std.StdDeserializer
 import tools.jackson.databind.exc.ValueInstantiationException
 import tools.jackson.databind.json.JsonMapper
 
-// Shared binder cases live in DomainReadScenarios. This spec runs every catalog entry and asserts
-// executedScenarioIds == catalogScenarioIds so a later Jackson 2 binder suite can do the same.
-// Adapter-local Jackson-API cases stay here (no shared manifest): custom deserializer, naming
-// strategy, mix-in, JavaType entry points, linkage mapper, Optional unwrapping, short-circuit,
-// cardinality-before-mapper, LINKAGE_MAPPING_FAILED, and mapper-returning-null.
-// @Stepwise pins the declared feature order so the coverage feature always runs after the
-// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
-@Stepwise
+// Shared binder cases live in DomainReadScenarios. This spec runs every catalog entry directly
+// through this adapter's binder; adding a scenario to the shared catalog is picked up
+// automatically. Adapter-local Jackson-API cases stay here (no shared manifest): custom
+// deserializer, naming strategy, mix-in, JavaType entry points, linkage mapper, Optional
+// unwrapping, short-circuit, cardinality-before-mapper, LINKAGE_MAPPING_FAILED, and
+// mapper-returning-null.
 class ResourceBinderSpec extends Specification {
-
-  @Shared
-  List<String> executedScenarioIds = []
 
   @Unroll
   def "binds #scenario.id from the shared catalog"() {
-    given:
-    executedScenarioIds.add(scenario.id())
-
     when:
     def result = null
     def thrownException = null
@@ -75,11 +66,6 @@ class ResourceBinderSpec extends Specification {
 
     where:
     scenario << DomainReadScenarios.catalog().all()
-  }
-
-  def "covers every shared domain-read scenario exactly once"() {
-    expect:
-    executedScenarioIds == DomainReadScenarios.catalog().all()*.id
   }
 
   def "naming strategy renames bound attribute keys"() {
@@ -131,7 +117,7 @@ class ResourceBinderSpec extends Specification {
 
     when:
     def dto = binder.fromResource(resource("setter-only", "1", [title: "bound"], null),
-    DirectionalityReadModels.SetterOnly)
+    DirectionalityReadFixtures.SetterOnly)
 
     then:
     dto.id == "1"
@@ -144,7 +130,7 @@ class ResourceBinderSpec extends Specification {
 
     when:
     def dto = binder.fromResource(resource("creator-only", "1", [title: "bound"], null),
-    DirectionalityReadModels.CreatorOnly)
+    DirectionalityReadFixtures.CreatorOnly)
 
     then:
     dto.idValue() == "1"
@@ -161,13 +147,13 @@ class ResourceBinderSpec extends Specification {
     when:
     binder.fromResource(
         resource("injection-only", "1", [title: "supplied"], null),
-        DirectionalityReadModels.InjectionOnly)
+        DirectionalityReadFixtures.InjectionOnly)
 
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/attributes/title"
-    ex.resourceClass() == DirectionalityReadModels.InjectionOnly
+    ex.resourceClass() == DirectionalityReadFixtures.InjectionOnly
   }
 
   def "omitted injection-only creator property still uses Jackson injection"() {
@@ -180,7 +166,7 @@ class ResourceBinderSpec extends Specification {
     when:
     def dto = binder.fromResource(
         resource("injection-only", "1", null, null),
-        DirectionalityReadModels.InjectionOnly)
+        DirectionalityReadFixtures.InjectionOnly)
 
     then:
     dto.idValue() == "1"
@@ -194,7 +180,7 @@ class ResourceBinderSpec extends Specification {
     when:
     def dto = binder.fromResource(
         resource("root-typed", "1", [title: "bound"], null),
-        DirectionalityReadModels.RootTyped)
+        DirectionalityReadFixtures.RootTyped)
 
     then:
     dto.id == "1"
@@ -207,7 +193,7 @@ class ResourceBinderSpec extends Specification {
 
     when:
     def dto = binder.fromResource(resource("write-only", "1", [title: "bound"], null),
-    DirectionalityReadModels.WriteOnly)
+    DirectionalityReadFixtures.WriteOnly)
 
     then:
     dto.id == "1"
@@ -220,13 +206,13 @@ class ResourceBinderSpec extends Specification {
 
     when:
     binder.fromResource(resource("getter-only", "1", [title: "supplied"], null),
-    DirectionalityReadModels.GetterOnly)
+    DirectionalityReadFixtures.GetterOnly)
 
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/attributes/title"
-    ex.resourceClass() == DirectionalityReadModels.GetterOnly
+    ex.resourceClass() == DirectionalityReadFixtures.GetterOnly
   }
 
   def "supplied getter-only identifier is rejected at /id"() {
@@ -235,13 +221,13 @@ class ResourceBinderSpec extends Specification {
 
     when:
     binder.fromResource(resource("getter-only-id", "supplied", null, null),
-        DirectionalityReadModels.GetterOnlyIdentifier)
+        DirectionalityReadFixtures.GetterOnlyIdentifier)
 
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/id"
-    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+    ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
   }
 
   def "supplied getter-only identifier is rejected at /lid"() {
@@ -250,32 +236,32 @@ class ResourceBinderSpec extends Specification {
     def resource = new ResourceObject("getter-only-id", null, "client-lid", null, null, null, null, Map.of())
 
     when:
-    binder.fromResource(resource, DirectionalityReadModels.GetterOnlyIdentifier)
+    binder.fromResource(resource, DirectionalityReadFixtures.GetterOnlyIdentifier)
 
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/lid"
-    ex.resourceClass() == DirectionalityReadModels.GetterOnlyIdentifier
+    ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
   }
 
   def "supplied property excluded by the default deserialization view is rejected"() {
     given:
     def mapper = JsonMapper.builder()
-        .defaultDeserializationView(DirectionalityReadModels.IncludedInReadView)
+        .defaultDeserializationView(DirectionalityReadFixtures.IncludedInReadView)
         .build()
     def binder = JsonApiJackson3.resourceBinder(mapper)
 
     when:
     binder.fromResource(
         resource("view-restricted", "1", [hidden: "supplied"], null),
-        DirectionalityReadModels.ViewRestricted)
+        DirectionalityReadFixtures.ViewRestricted)
 
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/attributes/hidden"
-    ex.resourceClass() == DirectionalityReadModels.ViewRestricted
+    ex.resourceClass() == DirectionalityReadFixtures.ViewRestricted
   }
 
   def "JavaType entry points bind resource and collection"() {
@@ -672,12 +658,5 @@ class ResourceBinderSpec extends Specification {
     @JsonApiId String id
     @JsonDeserialize(using = UppercaseDeserializer)
     String title
-  }
-
-  @JsonApiResource(type = "articles")
-  static class FlatMappedOptionalArticle {
-    @JsonApiId String id
-    @JsonApiRelationship Optional<FlatAuthor> author
-    @JsonApiRelationship List<FlatAuthor> contributors
   }
 }

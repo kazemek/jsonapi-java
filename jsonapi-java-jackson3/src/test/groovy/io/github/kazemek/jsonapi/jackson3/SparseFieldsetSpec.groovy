@@ -42,19 +42,15 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.Stepwise
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
 // Shared sparse-fieldset cases live in SparseFieldsetScenarios. This spec runs every catalog
-// entry and asserts executedScenarioIds == catalogScenarioIds so a later Jackson 2 suite can do
-// the same. Adapter-local scenario content remains empty unless a major-mapper-only case appears;
-// suite-local harness assertions (fieldset-map and FieldAllowance mutation isolation, duplicate
-// collapse, FIELDSETS_REQUIRE_MAPPED_DOCUMENT message composition, exact single-read counts, and
-// writer-owned provenance composition/validation) stay here.
-// @Stepwise pins the declared feature order so the coverage feature always runs after the
-// parameterized catalog iterations (Spock does not guarantee feature order otherwise).
-@Stepwise
+// entry directly through this adapter's mapper; adding a scenario to the shared catalog is picked
+// up automatically. Adapter-local scenario content remains empty unless a major-mapper-only case
+// appears; suite-local harness assertions (fieldset-map and FieldAllowance mutation isolation,
+// duplicate collapse, FIELDSETS_REQUIRE_MAPPED_DOCUMENT message composition, exact single-read
+// counts, and writer-owned provenance composition/validation) stay here.
 class SparseFieldsetSpec extends Specification {
 
   @Shared
@@ -63,14 +59,8 @@ class SparseFieldsetSpec extends Specification {
   @Shared
   def jackson = JsonMapper.builder().build()
 
-  @Shared
-  Set<String> executedScenarioIds = new LinkedHashSet<>()
-
   @Unroll
   def "sparse fieldset #scenario.id from the shared catalog"() {
-    given:
-    executedScenarioIds.add(scenario.id())
-
     when:
     def thrownException = null
     def mapped = null
@@ -91,11 +81,6 @@ class SparseFieldsetSpec extends Specification {
 
     where:
     scenario << SparseFieldsetScenarios.catalog().all()
-  }
-
-  def "covers every shared sparse-fieldset scenario exactly once"() {
-    expect:
-    executedScenarioIds == SparseFieldsetScenarios.catalog().all()*.id as Set
   }
 
   def "defensive copy isolates the caller's fieldset map after context construction"() {

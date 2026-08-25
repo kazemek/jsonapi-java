@@ -20,7 +20,10 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PatchChange
 import io.github.kazemek.jsonapi.jackson.PatchCommand
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.jackson3.testmodel.GenericValue
+import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericValue
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedOptionalArticle
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchExpectation
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenario
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenarios
@@ -32,7 +35,6 @@ import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.util.Optional
-import spock.lang.Shared
 import spock.lang.Specification
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
@@ -49,16 +51,8 @@ class PatchBindingSpec extends Specification {
     "patch-resource-type-mismatch"
   ] as Set
 
-  @Shared
-  List<String> executedScenarioIds = []
-
-  def cleanupSpec() {
-    assert executedScenarioIds == PatchScenarios.catalog().all()*.id
-  }
-
   def "shared patch catalog scenario: #scenario.id"() {
     given:
-    executedScenarioIds.add(scenario.id())
     def reader = patchReaderFor(scenario)
 
     when:
@@ -658,39 +652,6 @@ class PatchBindingSpec extends Specification {
     @JsonApiId String id
     @JsonDeserialize(using = UppercaseDeserializer)
     String title
-  }
-
-  @JsonApiResource(type = "articles")
-  static class FlatMappedArticle {
-    @JsonApiId String id
-    @JsonApiRelationship FlatAuthor author
-    @JsonApiRelationship List<FlatAuthor> contributors
-  }
-
-  @JsonApiResource(type = "articles")
-  static class FlatMappedOptionalArticle {
-    @JsonApiId String id
-    @JsonApiRelationship Optional<FlatAuthor> author
-    @JsonApiRelationship List<FlatAuthor> contributors
-  }
-
-  @JsonApiResource(type = "people")
-  static class FlatAuthor {
-    String type
-    String id
-
-    FlatAuthor(String type, String id) {
-      this.type = type
-      this.id = id
-    }
-
-    boolean equals(Object other) {
-      other instanceof FlatAuthor && type == other.type && id == other.id
-    }
-
-    int hashCode() {
-      Objects.hash(type, id)
-    }
   }
 
   @JsonApiResource(type = "articles")

@@ -23,7 +23,7 @@ import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
-import io.github.kazemek.jsonapi.jackson3.testmodel.GenericPatch
+import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericPatch
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.OptionalPatch
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoExpectation
@@ -32,7 +32,6 @@ import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.util.Optional
-import spock.lang.Shared
 import spock.lang.Specification
 import tools.jackson.core.JsonParser
 import tools.jackson.core.JsonToken
@@ -51,16 +50,8 @@ import tools.jackson.databind.util.Converter
 
 class PatchDtoBindingSpec extends Specification {
 
-  @Shared
-  List<String> executedScenarioIds = []
-
-  def cleanupSpec() {
-    assert executedScenarioIds == PatchDtoScenarios.catalog().all()*.id
-  }
-
   def "shared patch dto catalog scenario: #scenario.id"() {
     given:
-    executedScenarioIds.add(scenario.id())
     def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
 
     when:

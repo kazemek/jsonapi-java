@@ -7,9 +7,9 @@ import java.util.EnumSet
 import spock.lang.Specification
 
 // Why this spec exists: SparseFieldsetScenarios is the version-neutral sparse-fieldset catalog
-// shared by every Jackson major. Adapter suites run the whole catalog through their own mapper —
-// Jackson 3 asserts executedScenarioIds == catalogScenarioIds in SparseFieldsetSpec, and Phase
-// 2.20 mandates the same for Jackson 2 — so every entry must stay self-consistent. These tests
+// shared by every Jackson major. Adapter suites iterate the whole catalog directly through their
+// own mapper (Jackson 3 in SparseFieldsetSpec; Jackson 2 likewise later), so every entry must stay
+// self-consistent. These tests
 // enforce the local invariants that hold for any catalog entry regardless of catalog size: unique
 // stable ids, exactly one operation/request variant/discriminated expectation, resolvable resource
 // states or known diagnostics, and the FixtureCatalog contract. They fail fast on malformed

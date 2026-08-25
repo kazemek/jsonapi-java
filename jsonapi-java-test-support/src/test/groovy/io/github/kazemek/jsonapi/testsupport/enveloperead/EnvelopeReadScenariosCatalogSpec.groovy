@@ -11,9 +11,9 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person
 import spock.lang.Specification
 
 // Why this spec exists: EnvelopeReadScenarios is the version-neutral typed-envelope catalog shared
-// by every Jackson major. Adapter suites run the whole catalog through their own domain document
-// reader — Jackson 3 asserts executedScenarioIds == catalogScenarioIds in DomainDocumentReaderSpec,
-// and Phase 2.22 mandates the same for Jackson 2 — so every entry must stay self-consistent. These
+// by every Jackson major. Adapter suites iterate the whole catalog directly through their own
+// domain document reader (Jackson 3 in DomainDocumentReaderSpec; Jackson 2 likewise later), so
+// every entry must stay self-consistent. These
 // tests enforce the local invariants that hold for any catalog entry regardless of catalog size:
 // unique stable ids, resolvable codec/binding/core documents, per-variant field invariants
 // (document-binding variants require entryPoint and readerContext; registry variants omit both),

@@ -4,9 +4,9 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article
 import spock.lang.Specification
 
 // Why this spec exists: CompoundWriteScenarios is the version-neutral compound-inclusion catalog
-// shared by every Jackson major. Adapter suites run the whole catalog through their own mapper —
-// Jackson 3 asserts executedScenarioIds == catalogScenarioIds in CompoundSerializationSpec, and
-// Phase 2.19 mandates the same for Jackson 2 — so every entry must stay self-consistent. These
+// shared by every Jackson major. Adapter suites iterate the whole catalog directly through their
+// own mapper (Jackson 3 in CompoundSerializationSpec; Jackson 2 likewise later), so every entry
+// must stay self-consistent. These
 // tests enforce the local invariants that hold for any catalog entry regardless of catalog size:
 // unique stable ids, exactly one request variant/discriminated expectation, resolvable included
 // identities or known diagnostics, and the absent-included versus present-empty-array distinction.
