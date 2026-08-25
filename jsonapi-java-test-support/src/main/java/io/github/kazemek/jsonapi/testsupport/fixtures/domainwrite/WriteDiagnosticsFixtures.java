@@ -82,31 +82,72 @@ public final class WriteDiagnosticsFixtures {
   public record ReservedRelNameEntity(
       @JsonApiId String id, @JsonApiRelationship(name = "id") String other) {}
 
-  /** Attribute getter that always throws. */
+  /**
+   * Attribute getter that always throws. Kept as a JavaBean so the catalog covers a conventional
+   * getter failure; records cannot declare checked-exception accessors.
+   */
+  @SuppressWarnings({"java:S6206", "java:S1068"})
   @JsonApiResource(type = "failing-attr")
-  public record FailingAttrEntity(@JsonApiId String id, @JsonApiAttribute String badAttr) {
-    @Override
-    public String badAttr() {
-      throw new IllegalStateException("attribute read failure");
+  public static final class FailingAttrEntity {
+    @JsonApiId private final String id;
+    @JsonApiAttribute private final String badAttr;
+
+    public FailingAttrEntity(String id, String badAttr) {
+      this.id = id;
+      this.badAttr = badAttr;
+    }
+
+    public String getId() {
+      return id;
+    }
+
+    public String getBadAttr() throws java.io.IOException {
+      throw new java.io.IOException("attribute read failure");
     }
   }
 
-  /** Renamed attribute getter that always throws; failures must report the wire name. */
+  /**
+   * Renamed attribute getter that always throws; failures must report the wire name. Kept as a
+   * JavaBean so the catalog covers a conventional getter failure; records cannot declare
+   * checked-exception accessors.
+   */
+  @SuppressWarnings({"java:S6206", "java:S1068"})
   @JsonApiResource(type = "renamed-failing-attr")
-  public record RenamedFailingAttrEntity(
-      @JsonApiId String id, @JsonApiAttribute(name = "body-text") String badAttr) {
-    @Override
-    public String badAttr() {
-      throw new IllegalStateException("attribute read failure");
+  public static final class RenamedFailingAttrEntity {
+    @JsonApiId private final String id;
+
+    @JsonApiAttribute(name = "body-text")
+    private final String badAttr;
+
+    public RenamedFailingAttrEntity(String id, String badAttr) {
+      this.id = id;
+      this.badAttr = badAttr;
+    }
+
+    public String getId() {
+      return id;
+    }
+
+    public String getBadAttr() throws java.io.IOException {
+      throw new java.io.IOException("attribute read failure");
     }
   }
 
-  /** Identifier getter that always throws. */
+  /**
+   * Identifier getter that always throws. Kept as a JavaBean so the catalog covers a conventional
+   * getter failure; records cannot declare checked-exception accessors.
+   */
+  @SuppressWarnings({"java:S6206", "java:S1068"})
   @JsonApiResource(type = "failing-id")
-  public record FailingIdEntity(@JsonApiId String id) {
-    @Override
-    public String id() {
-      throw new IllegalStateException("id read failure");
+  public static final class FailingIdEntity {
+    @JsonApiId private final String id;
+
+    public FailingIdEntity(String id) {
+      this.id = id;
+    }
+
+    public String getId() throws java.io.IOException {
+      throw new java.io.IOException("id read failure");
     }
   }
 
