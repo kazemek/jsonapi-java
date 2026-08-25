@@ -31,6 +31,15 @@ import org.jspecify.annotations.Nullable;
  */
 public final class CodecScenarios {
 
+  private static final String ARTICLES = "articles";
+  private static final String PEOPLE = "people";
+  private static final String COMMENTS = "comments";
+  private static final String TITLE = "title";
+  private static final String AUTHOR = "author";
+  private static final String RELATED = "related";
+  private static final String KEYWORD = "keyword";
+  private static final String COPYRIGHT_2026 = "Copyright 2026";
+
   private static final FixtureCatalog<CodecScenario> CATALOG =
       FixtureCatalog.of(
           "codec",
@@ -68,8 +77,8 @@ public final class CodecScenarios {
 
   private static CodecScenario singleResource() {
     Map<String, Object> attributes = new LinkedHashMap<>();
-    attributes.put("title", "JSON:API paints my bikeshed!");
-    var article = Models.resource("articles", "1", Attributes.ofAttributes(attributes));
+    attributes.put(TITLE, "JSON:API paints my bikeshed!");
+    var article = Models.resource(ARTICLES, "1", Attributes.ofAttributes(attributes));
     return CodecScenario.of(
         "single-resource",
         "Single resource primary data",
@@ -81,11 +90,11 @@ public final class CodecScenarios {
 
   private static CodecScenario resourceCollection() {
     Map<String, Object> firstAttributes = new LinkedHashMap<>();
-    firstAttributes.put("title", "First");
+    firstAttributes.put(TITLE, "First");
     Map<String, Object> secondAttributes = new LinkedHashMap<>();
-    secondAttributes.put("title", "Second");
-    var first = Models.resource("articles", "1", Attributes.ofAttributes(firstAttributes));
-    var second = Models.resource("articles", "2", Attributes.ofAttributes(secondAttributes));
+    secondAttributes.put(TITLE, "Second");
+    var first = Models.resource(ARTICLES, "1", Attributes.ofAttributes(firstAttributes));
+    var second = Models.resource(ARTICLES, "2", Attributes.ofAttributes(secondAttributes));
     return CodecScenario.of(
         "resource-collection",
         "Resource collection primary data",
@@ -101,7 +110,7 @@ public final class CodecScenarios {
         "Single resource identifier primary data",
         "documents/single-identifier.json",
         JsonApiDocument.withData(
-            new DocumentData.SingleIdentifier(Models.identifier("articles", "1"))),
+            new DocumentData.SingleIdentifier(Models.identifier(ARTICLES, "1"))),
         PrimaryDataKind.RESOURCE_IDENTIFIER,
         SchemaKind.RESPONSE);
   }
@@ -113,7 +122,7 @@ public final class CodecScenarios {
         "documents/identifier-collection.json",
         JsonApiDocument.withData(
             new DocumentData.IdentifierCollection(
-                List.of(Models.identifier("articles", "1"), Models.identifier("articles", "2")))),
+                List.of(Models.identifier(ARTICLES, "1"), Models.identifier(ARTICLES, "2")))),
         PrimaryDataKind.RESOURCE_IDENTIFIER,
         SchemaKind.RESPONSE);
   }
@@ -133,7 +142,7 @@ public final class CodecScenarios {
 
   private static CodecScenario metaOnly() {
     Map<String, Object> meta = new LinkedHashMap<>();
-    meta.put("copyright", "Copyright 2026");
+    meta.put("copyright", COPYRIGHT_2026);
     return CodecScenario.of(
         "meta-only",
         "Absent data; meta-only document",
@@ -156,12 +165,7 @@ public final class CodecScenarios {
   private static CodecScenario emptyWrappers() {
     var article =
         Models.resource(
-            "articles",
-            "1",
-            Attributes.empty(),
-            Relationships.empty(),
-            Links.empty(),
-            Meta.empty());
+            ARTICLES, "1", Attributes.empty(), Relationships.empty(), Links.empty(), Meta.empty());
     return CodecScenario.of(
         "empty-wrappers",
         "Present-empty attributes, relationships, links, meta",
@@ -182,7 +186,7 @@ public final class CodecScenarios {
   }
 
   private static CodecScenario emptyIncluded() {
-    var article = Models.resource("articles", "1");
+    var article = Models.resource(ARTICLES, "1");
     return CodecScenario.of(
         "empty-included",
         "Present-empty included array with primary data",
@@ -210,7 +214,7 @@ public final class CodecScenarios {
     attributes.put("bigIntValue", new BigInteger("123456789012345678901234567890"));
     attributes.put("bigDecimalValue", new BigDecimal("1234567890.123456789"));
 
-    var article = Models.resource("articles", "1", Attributes.ofAttributes(attributes));
+    var article = Models.resource(ARTICLES, "1", Attributes.ofAttributes(attributes));
 
     Map<String, @Nullable Object> meta = new LinkedHashMap<>();
     meta.put("flag", true);
@@ -234,8 +238,8 @@ public final class CodecScenarios {
 
   private static CodecScenario relationshipNullLinkage() {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
-    relationships.put("author", Relationship.withData(RelationshipData.NullLinkage.INSTANCE));
-    var article = Models.resource("articles", "1", Relationships.ofRelationships(relationships));
+    relationships.put(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE));
+    var article = Models.resource(ARTICLES, "1", Relationships.ofRelationships(relationships));
     return CodecScenario.of(
         "relationship-null-linkage",
         "Explicit null to-one relationship data",
@@ -248,8 +252,8 @@ public final class CodecScenarios {
   private static CodecScenario relationshipEmptyToMany() {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
-        "comments", Relationship.withData(RelationshipData.IdentifierCollectionLinkage.empty()));
-    var article = Models.resource("articles", "1", Relationships.ofRelationships(relationships));
+        COMMENTS, Relationship.withData(RelationshipData.IdentifierCollectionLinkage.empty()));
+    var article = Models.resource(ARTICLES, "1", Relationships.ofRelationships(relationships));
     return CodecScenario.of(
         "relationship-empty-to-many",
         "Empty to-many relationship data array",
@@ -263,10 +267,10 @@ public final class CodecScenarios {
     Map<String, @Nullable Link> authorLinkEntries = new LinkedHashMap<>();
     authorLinkEntries.put(
         "self", Models.stringLink("http://example.com/articles/1/relationships/author"));
-    authorLinkEntries.put("related", Models.stringLink("http://example.com/articles/1/author"));
+    authorLinkEntries.put(RELATED, Models.stringLink("http://example.com/articles/1/author"));
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
-    relationships.put("author", Relationship.linkOnly(Models.links(authorLinkEntries)));
-    var article = Models.resource("articles", "1", Relationships.ofRelationships(relationships));
+    relationships.put(AUTHOR, Relationship.linkOnly(Models.links(authorLinkEntries)));
+    var article = Models.resource(ARTICLES, "1", Relationships.ofRelationships(relationships));
     return CodecScenario.of(
         "relationship-link-only",
         "Link-only relationship without data",
@@ -280,8 +284,8 @@ public final class CodecScenarios {
     Map<String, Object> meta = new LinkedHashMap<>();
     meta.put("inferred", true);
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
-    relationships.put("author", Relationship.metaOnly(Meta.of(meta)));
-    var article = Models.resource("articles", "1", Relationships.ofRelationships(relationships));
+    relationships.put(AUTHOR, Relationship.metaOnly(Meta.of(meta)));
+    var article = Models.resource(ARTICLES, "1", Relationships.ofRelationships(relationships));
     return CodecScenario.of(
         "relationship-meta-only",
         "Meta-only relationship without data",
@@ -295,14 +299,14 @@ public final class CodecScenarios {
     String selfHref = "http://example.com/articles/1";
     Map<String, @Nullable Link> resourceLinks = new LinkedHashMap<>();
     resourceLinks.put("self", Models.stringLink(selfHref));
-    var article = Models.resource("articles", "1", Models.links(resourceLinks));
+    var article = Models.resource(ARTICLES, "1", Models.links(resourceLinks));
 
     Map<String, Object> relatedMeta = new LinkedHashMap<>();
     relatedMeta.put("count", 1);
     var related =
         Models.objectLink(
             "http://example.com/articles/1/related",
-            "related",
+            RELATED,
             "Related",
             "application/vnd.api+json",
             List.of("en"),
@@ -310,7 +314,7 @@ public final class CodecScenarios {
 
     Map<String, @Nullable Link> topLinkEntries = new LinkedHashMap<>();
     topLinkEntries.put("self", Models.stringLink(selfHref));
-    topLinkEntries.put("related", related);
+    topLinkEntries.put(RELATED, related);
     topLinkEntries.put("next", null);
 
     return new CodecScenario(
@@ -332,7 +336,7 @@ public final class CodecScenarios {
         SchemaKind.RESPONSE,
         new SchemaDisagreement(
             "hreflang canonical list form; draft linkObject.hreflang only accepts a string",
-            List.of(Map.of("keyword", "type", "path", "/links/related/hreflang"))),
+            List.of(Map.of(KEYWORD, "type", "path", "/links/related/hreflang"))),
         false,
         null,
         true);
@@ -376,7 +380,7 @@ public final class CodecScenarios {
         "jsonapi version, ext, profile, and meta",
         "documents/jsonapi-object.json",
         new JsonApiDocument(
-            new DocumentData.SingleResource(ResourceObject.of("articles", "1")),
+            new DocumentData.SingleResource(ResourceObject.of(ARTICLES, "1")),
             null,
             null,
             jsonapi,
@@ -397,13 +401,12 @@ public final class CodecScenarios {
   private static CodecScenario compoundDocument() {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
-        "author",
-        Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
-    var article = Models.resource("articles", "1", Relationships.ofRelationships(relationships));
+        AUTHOR,
+        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier(PEOPLE, "9"))));
+    var article = Models.resource(ARTICLES, "1", Relationships.ofRelationships(relationships));
     Map<String, Object> includedAttributes = new LinkedHashMap<>();
     includedAttributes.put("name", "Dan");
-    var included = Models.resource("people", "9", Attributes.ofAttributes(includedAttributes));
+    var included = Models.resource(PEOPLE, "9", Attributes.ofAttributes(includedAttributes));
     return CodecScenario.of(
         "compound-document",
         "Compound document with included resources",
@@ -423,45 +426,41 @@ public final class CodecScenarios {
   private static CodecScenario compoundNestedIntermediate() {
     Map<String, @Nullable Relationship> articleRelationships = new LinkedHashMap<>();
     articleRelationships.put(
-        "author",
-        Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        AUTHOR,
+        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier(PEOPLE, "9"))));
     articleRelationships.put(
-        "comments",
+        COMMENTS,
         Relationship.withData(
             new RelationshipData.IdentifierCollectionLinkage(
-                List.of(Models.identifier("comments", "5"), Models.identifier("comments", "12")))));
+                List.of(Models.identifier(COMMENTS, "5"), Models.identifier(COMMENTS, "12")))));
     var article =
-        Models.resource("articles", "1", Relationships.ofRelationships(articleRelationships));
+        Models.resource(ARTICLES, "1", Relationships.ofRelationships(articleRelationships));
 
     Map<String, @Nullable Relationship> comment5Relationships = new LinkedHashMap<>();
     comment5Relationships.put(
-        "author",
-        Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.identifier("people", "2"))));
+        AUTHOR,
+        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier(PEOPLE, "2"))));
     var comment5 =
         Models.resource(
-            "comments",
+            COMMENTS,
             "5",
             Attributes.ofAttributes(attribute("body", "First!")),
             Relationships.ofRelationships(comment5Relationships));
 
-    var person2 =
-        Models.resource("people", "2", Attributes.ofAttributes(attribute("name", "Ezra")));
+    var person2 = Models.resource(PEOPLE, "2", Attributes.ofAttributes(attribute("name", "Ezra")));
 
     Map<String, @Nullable Relationship> comment12Relationships = new LinkedHashMap<>();
     comment12Relationships.put(
-        "author",
-        Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        AUTHOR,
+        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier(PEOPLE, "9"))));
     var comment12 =
         Models.resource(
-            "comments",
+            COMMENTS,
             "12",
             Attributes.ofAttributes(attribute("body", "I like XML better")),
             Relationships.ofRelationships(comment12Relationships));
 
-    var person9 = Models.resource("people", "9", Attributes.ofAttributes(attribute("name", "Dan")));
+    var person9 = Models.resource(PEOPLE, "9", Attributes.ofAttributes(attribute("name", "Dan")));
 
     return CodecScenario.of(
         "compound-nested-intermediate",
@@ -480,11 +479,11 @@ public final class CodecScenarios {
   }
 
   private static CodecScenario compoundSharedIdentity() {
-    var article1 = Models.resource("articles", "1", sharedAuthorRelationship());
-    var article2 = Models.resource("articles", "2", sharedAuthorRelationship());
+    var article1 = Models.resource(ARTICLES, "1", sharedAuthorRelationship());
+    var article2 = Models.resource(ARTICLES, "2", sharedAuthorRelationship());
     Map<String, Object> includedAttributes = new LinkedHashMap<>();
     includedAttributes.put("name", "Dan");
-    var included = Models.resource("people", "9", Attributes.ofAttributes(includedAttributes));
+    var included = Models.resource(PEOPLE, "9", Attributes.ofAttributes(includedAttributes));
     return CodecScenario.of(
         "compound-shared-identity",
         "Compound collection sharing one included author identity",
@@ -504,11 +503,11 @@ public final class CodecScenarios {
   private static CodecScenario localIdentifier() {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
-        "author",
+        AUTHOR,
         Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.withLid("people", "temp-author"))));
+            new RelationshipData.SingleLinkage(Models.withLid(PEOPLE, "temp-author"))));
     var article =
-        Models.resourceWithLid("articles", "temp-1", Relationships.ofRelationships(relationships));
+        Models.resourceWithLid(ARTICLES, "temp-1", Relationships.ofRelationships(relationships));
     return new CodecScenario(
         "local-identifier",
         "Resource and linkage with lid",
@@ -527,12 +526,12 @@ public final class CodecScenarios {
 
   private static CodecScenario extensionAndAtMembers() {
     Map<String, Object> attributes = new LinkedHashMap<>();
-    attributes.put("title", "Hello");
+    attributes.put(TITLE, "Hello");
     Map<String, Object> additionalMembers = new LinkedHashMap<>();
-    additionalMembers.put("@copyright", "Copyright 2026");
+    additionalMembers.put("@copyright", COPYRIGHT_2026);
     additionalMembers.put("ext:version", 1);
     var article =
-        Models.resource("articles", "1", Attributes.ofAttributes(attributes), additionalMembers);
+        Models.resource(ARTICLES, "1", Attributes.ofAttributes(attributes), additionalMembers);
 
     Map<String, Object> documentMembers = new LinkedHashMap<>();
     documentMembers.put("ext:request-id", "abc-123");
@@ -556,7 +555,7 @@ public final class CodecScenarios {
         SchemaKind.RESPONSE,
         new SchemaDisagreement(
             "top-level ext: member; PR json-api/json-api#1603 does not yet model extension members (see its description)",
-            List.of(Map.of("keyword", "unevaluatedProperties", "path", ""))),
+            List.of(Map.of(KEYWORD, "unevaluatedProperties", "path", ""))),
         false,
         null,
         false);
@@ -565,12 +564,11 @@ public final class CodecScenarios {
   private static CodecScenario memberOrder() {
     var self = Models.stringLink("http://example.com/articles/1");
     Map<String, Object> attributes = new LinkedHashMap<>();
-    attributes.put("title", "Ordered");
+    attributes.put(TITLE, "Ordered");
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
-        "author",
-        Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        AUTHOR,
+        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier(PEOPLE, "9"))));
     Map<String, @Nullable Link> resourceLinks = new LinkedHashMap<>();
     resourceLinks.put("self", self);
     Map<String, Object> resourceMeta = new LinkedHashMap<>();
@@ -579,7 +577,7 @@ public final class CodecScenarios {
     resourceMembers.put("ext:flag", true);
     var article =
         new ResourceObject(
-            "articles",
+            ARTICLES,
             "1",
             "temp-1",
             Attributes.ofAttributes(attributes),
@@ -589,7 +587,7 @@ public final class CodecScenarios {
             resourceMembers);
 
     Map<String, Object> documentMeta = new LinkedHashMap<>();
-    documentMeta.put("copyright", "Copyright 2026");
+    documentMeta.put("copyright", COPYRIGHT_2026);
     Map<String, @Nullable Link> documentLinks = new LinkedHashMap<>();
     documentLinks.put("self", self);
     Map<String, Object> documentMembers = new LinkedHashMap<>();
@@ -605,7 +603,7 @@ public final class CodecScenarios {
             Meta.of(documentMeta),
             JsonApiObject.ofVersion("1.1"),
             Models.links(documentLinks),
-            List.of(ResourceObject.of("people", "9")),
+            List.of(ResourceObject.of(PEOPLE, "9")),
             documentMembers),
         Models.extContext(),
         true,
@@ -615,8 +613,8 @@ public final class CodecScenarios {
         new SchemaDisagreement(
             "response resource carries both id and lid and top-level ext: members; the draft schema requires id and forbids lid in response resources and only models @ members",
             List.of(
-                Map.of("keyword", "not", "path", "/data"),
-                Map.of("keyword", "unevaluatedProperties", "path", ""))),
+                Map.of(KEYWORD, "not", "path", "/data"),
+                Map.of(KEYWORD, "unevaluatedProperties", "path", ""))),
         true,
         "documents/member-order.compact.json",
         false);
@@ -625,9 +623,8 @@ public final class CodecScenarios {
   private static Relationships sharedAuthorRelationship() {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
-        "author",
-        Relationship.withData(
-            new RelationshipData.SingleLinkage(Models.identifier("people", "9"))));
+        AUTHOR,
+        Relationship.withData(new RelationshipData.SingleLinkage(Models.identifier(PEOPLE, "9"))));
     return Relationships.ofRelationships(relationships);
   }
 

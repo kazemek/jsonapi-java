@@ -7,6 +7,8 @@ import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Passive declaration-shape carriers for the shared write-diagnostics catalog: deliberately
@@ -21,305 +23,90 @@ public final class WriteDiagnosticsFixtures {
 
   /** Resource declaration with an empty {@code type} value. */
   @JsonApiResource(type = "")
-  public static final class EmptyTypeEntity {
-    @JsonApiId private final String id;
-
-    public EmptyTypeEntity(String id) {
-      this.id = id;
-    }
-
-    public String getId() {
-      return id;
-    }
-  }
+  public record EmptyTypeEntity(@JsonApiId String id) {}
 
   /** Resource declaration whose {@code type} contains characters JSON:API forbids. */
   @JsonApiResource(type = "bad type!")
-  public static final class InvalidTypeEntity {
-    @JsonApiId private final String id;
-
-    public InvalidTypeEntity(String id) {
-      this.id = id;
-    }
-
-    public String getId() {
-      return id;
-    }
-  }
+  public record InvalidTypeEntity(@JsonApiId String id) {}
 
   /** Annotated resource without any identifier property. */
   @JsonApiResource(type = "entities")
-  public static final class NoIdEntity {
-    private final String name;
-
-    public NoIdEntity(String name) {
-      this.name = name;
-    }
-
-    public String getName() {
-      return name;
-    }
-  }
+  public record NoIdEntity(String name) {}
 
   /** Annotated resource whose identifier property holds null. */
   @JsonApiResource(type = "entities")
-  public static final class NullIdEntity {
-    @JsonApiId private final @org.jspecify.annotations.Nullable String id;
-
-    public NullIdEntity(@org.jspecify.annotations.Nullable String id) {
-      this.id = id;
-    }
-
-    public @org.jspecify.annotations.Nullable String getId() {
-      return id;
-    }
-  }
+  public record NullIdEntity(@JsonApiId @Nullable String id) {}
 
   /** Identifier member carrying a second role annotation. */
   @JsonApiResource(type = "dup")
-  public static final class DuplicateRoleEntity {
-    @JsonApiId @JsonApiAttribute private final String id;
-
-    public DuplicateRoleEntity(String id) {
-      this.id = id;
-    }
-
-    public String getId() {
-      return id;
-    }
-  }
+  public record DuplicateRoleEntity(@JsonApiId @JsonApiAttribute String id) {}
 
   /** Attribute and relationship mapped onto the same member name. */
   @JsonApiResource(type = "collision")
-  public static final class NameCollisionEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiAttribute(name = "same")
-    private final String fieldA;
-
-    @JsonApiRelationship(name = "same")
-    private final String fieldB;
-
-    public NameCollisionEntity(String id, String fieldA, String fieldB) {
-      this.id = id;
-      this.fieldA = fieldA;
-      this.fieldB = fieldB;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getFieldA() {
-      return fieldA;
-    }
-
-    public String getFieldB() {
-      return fieldB;
-    }
-  }
+  public record NameCollisionEntity(
+      @JsonApiId String id,
+      @JsonApiAttribute(name = "same") String fieldA,
+      @JsonApiRelationship(name = "same") String fieldB) {}
 
   /** Two attributes mapped onto the same wire name. */
   @JsonApiResource(type = "dup-attrs")
-  public static final class DuplicateAttrNameEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiAttribute(name = "same")
-    private final String fieldA;
-
-    @JsonApiAttribute(name = "same")
-    private final String fieldB;
-
-    public DuplicateAttrNameEntity(String id, String fieldA, String fieldB) {
-      this.id = id;
-      this.fieldA = fieldA;
-      this.fieldB = fieldB;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getFieldA() {
-      return fieldA;
-    }
-
-    public String getFieldB() {
-      return fieldB;
-    }
-  }
+  public record DuplicateAttrNameEntity(
+      @JsonApiId String id,
+      @JsonApiAttribute(name = "same") String fieldA,
+      @JsonApiAttribute(name = "same") String fieldB) {}
 
   /** Two relationships mapped onto the same wire name. */
   @JsonApiResource(type = "dup-rels")
-  public static final class DuplicateRelNameEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiRelationship(name = "same")
-    private final String otherA;
-
-    @JsonApiRelationship(name = "same")
-    private final String otherB;
-
-    public DuplicateRelNameEntity(String id, String otherA, String otherB) {
-      this.id = id;
-      this.otherA = otherA;
-      this.otherB = otherB;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getOtherA() {
-      return otherA;
-    }
-
-    public String getOtherB() {
-      return otherB;
-    }
-  }
+  public record DuplicateRelNameEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship(name = "same") String otherA,
+      @JsonApiRelationship(name = "same") String otherB) {}
 
   /** Attribute override containing characters JSON:API forbids. */
   @JsonApiResource(type = "invalid")
-  public static final class InvalidAttrNameEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiAttribute(name = "bad name!")
-    private final String value;
-
-    public InvalidAttrNameEntity(String id, String value) {
-      this.id = id;
-      this.value = value;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getValue() {
-      return value;
-    }
-  }
+  public record InvalidAttrNameEntity(
+      @JsonApiId String id, @JsonApiAttribute(name = "bad name!") String value) {}
 
   /** Attribute override using the reserved {@code type} member name. */
   @JsonApiResource(type = "reserved-attr")
-  public static final class ReservedAttrNameEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiAttribute(name = "type")
-    private final String value;
-
-    public ReservedAttrNameEntity(String id, String value) {
-      this.id = id;
-      this.value = value;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getValue() {
-      return value;
-    }
-  }
+  public record ReservedAttrNameEntity(
+      @JsonApiId String id, @JsonApiAttribute(name = "type") String value) {}
 
   /** Relationship override containing characters JSON:API forbids. */
   @JsonApiResource(type = "invalid-rel")
-  public static final class InvalidRelNameEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiRelationship(name = "bad name!")
-    private final String other;
-
-    public InvalidRelNameEntity(String id, String other) {
-      this.id = id;
-      this.other = other;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getOther() {
-      return other;
-    }
-  }
+  public record InvalidRelNameEntity(
+      @JsonApiId String id, @JsonApiRelationship(name = "bad name!") String other) {}
 
   /** Relationship override using the reserved {@code id} member name. */
   @JsonApiResource(type = "reserved-rel")
-  public static final class ReservedRelNameEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiRelationship(name = "id")
-    private final String other;
-
-    public ReservedRelNameEntity(String id, String other) {
-      this.id = id;
-      this.other = other;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getOther() {
-      return other;
-    }
-  }
+  public record ReservedRelNameEntity(
+      @JsonApiId String id, @JsonApiRelationship(name = "id") String other) {}
 
   /** Attribute getter that always throws. */
   @JsonApiResource(type = "failing-attr")
-  public static final class FailingAttrEntity {
-    @JsonApiId private final String id;
-    @JsonApiAttribute private final String badAttr;
-
-    public FailingAttrEntity(String id, String badAttr) {
-      this.id = id;
-      this.badAttr = badAttr;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getBadAttr() throws java.io.IOException {
-      throw new java.io.IOException("attribute read failure");
+  public record FailingAttrEntity(@JsonApiId String id, @JsonApiAttribute String badAttr) {
+    @Override
+    public String badAttr() {
+      throw new IllegalStateException("attribute read failure");
     }
   }
 
   /** Renamed attribute getter that always throws; failures must report the wire name. */
   @JsonApiResource(type = "renamed-failing-attr")
-  public static final class RenamedFailingAttrEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiAttribute(name = "body-text")
-    private final String badAttr;
-
-    public RenamedFailingAttrEntity(String id, String badAttr) {
-      this.id = id;
-      this.badAttr = badAttr;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public String getBadAttr() throws java.io.IOException {
-      throw new java.io.IOException("attribute read failure");
+  public record RenamedFailingAttrEntity(
+      @JsonApiId String id, @JsonApiAttribute(name = "body-text") String badAttr) {
+    @Override
+    public String badAttr() {
+      throw new IllegalStateException("attribute read failure");
     }
   }
 
   /** Identifier getter that always throws. */
   @JsonApiResource(type = "failing-id")
-  public static final class FailingIdEntity {
-    @JsonApiId private final String id;
-
-    public FailingIdEntity(String id) {
-      this.id = id;
-    }
-
-    public String getId() throws java.io.IOException {
-      throw new java.io.IOException("id read failure");
+  public record FailingIdEntity(@JsonApiId String id) {
+    @Override
+    public String id() {
+      throw new IllegalStateException("id read failure");
     }
   }
 
@@ -327,7 +114,7 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "write-only")
   public static final class MissingAccessorEntity {
     @JsonApiId private final String id;
-    private @org.jspecify.annotations.Nullable String secret;
+    private @Nullable String secret;
 
     public MissingAccessorEntity(String id) {
       this.id = id;
@@ -338,54 +125,37 @@ public final class WriteDiagnosticsFixtures {
     }
 
     @JsonApiAttribute
-    public void setSecret(@org.jspecify.annotations.Nullable String secret) {
+    public void setSecret(@Nullable String secret) {
       this.secret = secret;
     }
   }
 
   /** To-many relationship declared as an unsupported runtime array type. */
   @JsonApiResource(type = "raw-array-rel")
-  public static final class RenamedArrayRelEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiRelationship(name = "ext-values")
-    private final long[] values;
-
-    public RenamedArrayRelEntity(String id, long[] values) {
-      this.id = id;
-      this.values = values;
+  public record RenamedArrayRelEntity(
+      @JsonApiId String id, @JsonApiRelationship(name = "ext-values") long[] values) {
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof RenamedArrayRelEntity(String otherId, long[] otherValues)
+          && Objects.equals(id, otherId)
+          && Arrays.equals(values, otherValues);
     }
 
-    public String getId() {
-      return id;
+    @Override
+    public int hashCode() {
+      return Objects.hash(id, Arrays.hashCode(values));
     }
 
-    public long[] getValues() {
-      return values;
+    @Override
+    public String toString() {
+      return "RenamedArrayRelEntity[id=" + id + ", values=" + Arrays.toString(values) + "]";
     }
   }
 
   /** To-many relationship holding mixed element types. */
   @JsonApiResource(type = "mixed-rel")
-  public static final class RenamedMixedRelEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiRelationship(name = "ext-items")
-    private final List<Object> items;
-
-    public RenamedMixedRelEntity(String id, List<Object> items) {
-      this.id = id;
-      this.items = items;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public List<Object> getItems() {
-      return items;
-    }
-  }
+  public record RenamedMixedRelEntity(
+      @JsonApiId String id, @JsonApiRelationship(name = "ext-items") List<Object> items) {}
 
   /** Raw erased iterable: to-many by declaration with no resolvable content type. */
   public static final class RawBag implements Iterable<Object> {
@@ -403,23 +173,6 @@ public final class WriteDiagnosticsFixtures {
 
   /** To-many relationship declared with an unresolvable erased iterable type. */
   @JsonApiResource(type = "bag-rel")
-  public static final class RenamedBagRelEntity {
-    @JsonApiId private final String id;
-
-    @JsonApiRelationship(name = "ext-bag")
-    private final RawBag things;
-
-    public RenamedBagRelEntity(String id, RawBag things) {
-      this.id = id;
-      this.things = things;
-    }
-
-    public String getId() {
-      return id;
-    }
-
-    public RawBag getThings() {
-      return things;
-    }
-  }
+  public record RenamedBagRelEntity(
+      @JsonApiId String id, @JsonApiRelationship(name = "ext-bag") RawBag things) {}
 }

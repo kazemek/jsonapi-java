@@ -57,6 +57,7 @@ public final class PatchScenarios {
   private static final String NUMBERS = "numbers";
   private static final String SOURCE = "source";
   private static final String DISPLAY_NAME = "displayName";
+  private static final String ADDRESS_STREET = "address-street";
 
   private static final List<PatchScenario> SCENARIOS =
       List.of(
@@ -540,7 +541,7 @@ public final class PatchScenarios {
   private static PatchScenario lowLevelPresenceOrdinaryDomain() {
     return scenario(
         "patch-lowlevel-presence-ordinary-domain",
-        doc("address-street"),
+        doc(ADDRESS_STREET),
         PatchPresenceAddressArticle.class,
         null,
         PatchExpectation.success(
@@ -558,7 +559,7 @@ public final class PatchScenarios {
   private static PatchScenario lowLevelPresenceShapeRejected() {
     return scenario(
         "patch-lowlevel-presence-shape-rejected",
-        doc("address-street"),
+        doc(ADDRESS_STREET),
         PatchPresenceAddressPatchArticle.class,
         null,
         PatchExpectation.binderFailure(
@@ -568,7 +569,7 @@ public final class PatchScenarios {
   private static PatchScenario ordinaryDomainJavaBeanNestedPartial() {
     return scenario(
         "patch-ordinary-domain-javabean-nested-partial",
-        doc("address-street"),
+        doc(ADDRESS_STREET),
         MutableArticle.class,
         null,
         PatchExpectation.success(

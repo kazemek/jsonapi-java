@@ -65,6 +65,9 @@ public final class PatchDtoScenarios {
   private static final String PEOPLE = "people";
   private static final String TITLE_PATH = "/attributes/title";
   private static final String ADDRESS_ATTRIBUTE_PATH = "/attributes/address";
+  private static final String TITLE_ONLY = "title-only";
+  private static final String IDENTITY_ONLY = "identity-only";
+  private static final String ADDRESS_STREET_CITY = "address-street-city";
 
   private static final List<PatchDtoScenario> SCENARIOS =
       List.of(
@@ -304,7 +307,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationNonPatchPresence() {
     return scenario(
         "patch-dto-declaration-non-patch-presence",
-        doc("title-only"),
+        doc(TITLE_ONLY),
         NonPatchPresencePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, TITLE_PATH));
@@ -313,7 +316,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationRawPatchPresence() {
     return scenario(
         "patch-dto-declaration-raw-patch-presence",
-        doc("title-only"),
+        doc(TITLE_ONLY),
         RawPatchPresencePatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, TITLE_PATH));
@@ -322,7 +325,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationDirectPresent() {
     return scenario(
         "patch-dto-declaration-direct-present",
-        doc("title-only"),
+        doc(TITLE_ONLY),
         DirectPresentPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, TITLE_PATH));
@@ -340,7 +343,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario declarationPresenceId() {
     return scenario(
         "patch-dto-declaration-presence-id",
-        doc("identity-only"),
+        doc(IDENTITY_ONLY),
         PresenceIdPatch.class,
         PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/id"));
   }
@@ -381,7 +384,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedOmitted() {
     return scenario(
         "patch-dto-nested-omitted",
-        doc("identity-only"),
+        doc(IDENTITY_ONLY),
         ArticleWithAddressPatch.class,
         PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.omitted())));
   }
@@ -513,7 +516,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedDeclarationMixed() {
     return scenario(
         "patch-dto-nested-declaration-mixed",
-        doc("address-street-city"),
+        doc(ADDRESS_STREET_CITY),
         ArticleWithMixedAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
@@ -522,7 +525,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedDeclarationRaw() {
     return scenario(
         "patch-dto-nested-declaration-raw",
-        doc("address-street-city"),
+        doc(ADDRESS_STREET_CITY),
         ArticleWithRawAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
@@ -531,7 +534,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedDeclarationDirectPresent() {
     return scenario(
         "patch-dto-nested-declaration-direct-present",
-        doc("address-street-city"),
+        doc(ADDRESS_STREET_CITY),
         ArticleWithDirectPresentAddressPatch.class,
         PatchDtoExpectation.binderFailure(
             MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, ADDRESS_ATTRIBUTE_PATH));
@@ -540,7 +543,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario nestedInvalidShapeOmitted() {
     return scenario(
         "patch-dto-nested-invalid-shape-omitted",
-        doc("identity-only"),
+        doc(IDENTITY_ONLY),
         ArticleWithMixedAddressPatch.class,
         PatchDtoExpectation.success("1", addressPatchMembers(PatchPresence.omitted())));
   }
@@ -648,7 +651,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario metaOmitted() {
     return scenario(
         "patch-dto-meta-omitted",
-        doc("identity-only"),
+        doc(IDENTITY_ONLY),
         ArticleWithMetaPatch.class,
         PatchDtoExpectation.success(
             "1",
