@@ -76,8 +76,12 @@
  * io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta}, across domain read, domain write,
  * the low-level {@link io.github.kazemek.jsonapi.jackson.PatchCommand} path (new resource-meta and
  * relationship-meta {@link io.github.kazemek.jsonapi.jackson.PatchChange} variants), and the typed
- * PATCH DTO path. Document-level meta remains document-owned through the domain envelope; no
- * resource annotation means document meta.
+ * PATCH DTO path. Per-linkage identifier meta ({@link
+ * io.github.kazemek.jsonapi.annotation.JsonApiIdentifierMeta}) is a sibling mapping (ADR-017):
+ * read/write overlay {@code ResourceIdentifier.meta}, and PATCH participates only through
+ * whole-linkage replacement — never as an independent {@code PatchChange} or typed PATCH member.
+ * Document-level meta remains document-owned through the domain envelope; no resource annotation
+ * means document meta.
  *
  * <p>Codec and mapping policy, diagnostics, contexts, domain envelope values, and presence-aware
  * update commands are Jackson-major-neutral contracts in {@link io.github.kazemek.jsonapi.jackson};

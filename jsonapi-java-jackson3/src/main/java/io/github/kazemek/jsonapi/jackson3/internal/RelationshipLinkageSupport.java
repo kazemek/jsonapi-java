@@ -8,17 +8,15 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JavaType;
 
 /**
  * Shared relationship linkage rules for flat DTO binding and presence-aware PATCH: cardinality
- * checks, target-class resolution, built-in {@link ResourceIdentifier} maps, and custom linkage
- * mappers.
+ * checks, target-class resolution, built-in {@link ResourceIdentifier} conversion that preserves
+ * identifier meta, and custom linkage mappers.
  */
 final class RelationshipLinkageSupport {
 
@@ -81,14 +79,15 @@ final class RelationshipLinkageSupport {
     boolean empty = validateCardinality(property, data, toMany);
     return switch (data) {
       case RelationshipData.NullLinkage ignored -> null;
-      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) -> linkageMap(identifier);
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          IdentifierMetaSupport.copyLinkageIdentifier(identifier);
       case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
         if (empty) {
           yield List.of();
         }
         List<Object> values = new ArrayList<>(identifiers.size());
         for (ResourceIdentifier identifier : identifiers) {
-          values.add(linkageMap(identifier));
+          values.add(IdentifierMetaSupport.copyLinkageIdentifier(identifier));
         }
         yield values;
       }
@@ -130,14 +129,6 @@ final class RelationshipLinkageSupport {
           "Relationship linkage mapper failed for relationship '" + property.logicalName() + "'",
           e);
     }
-  }
-
-  static Map<String, @Nullable Object> linkageMap(ResourceIdentifier identifier) {
-    Map<String, @Nullable Object> linkage = new LinkedHashMap<>();
-    linkage.put("type", identifier.type());
-    linkage.put("id", identifier.id());
-    linkage.put("lid", identifier.lid());
-    return linkage;
   }
 
   static JavaType unwrapOptionalType(JavaType type) {

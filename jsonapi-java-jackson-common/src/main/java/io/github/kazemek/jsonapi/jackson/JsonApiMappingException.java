@@ -16,7 +16,8 @@ import org.jspecify.annotations.Nullable;
  *       individually escaped ({@code ~} to {@code ~0}, {@code /} to {@code ~1}). Producers that map
  *       one resource object emit <em>resource-relative</em> pointers over JSON:API member names —
  *       {@code /type}, {@code /id}, {@code /lid}, {@code /attributes/headline}, {@code
- *       /relationships/author/data}, {@code /meta}, {@code /relationships/author/meta}. Failures
+ *       /relationships/author/data}, {@code /meta}, {@code /relationships/author/meta}, {@code
+ *       /relationships/author/data/meta}, {@code /relationships/comments/data/0/meta}. Failures
  *       that have no meaningful member location (missing annotations, registry conflicts,
  *       include-path or fieldset specification errors) carry an <em>absent</em> location; the
  *       identifying names remain in the message. Absence is never encoded as {@code ""}, {@code /},

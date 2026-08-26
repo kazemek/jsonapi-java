@@ -13,6 +13,10 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithIdentifierMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithSet;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
@@ -40,6 +44,20 @@ import org.jspecify.annotations.Nullable;
 public final class DomainWriteScenarios {
 
   private static final String COMMENTS = "comments";
+
+  private static final String PEOPLE = "people";
+
+  private static final String ARTICLES = "articles";
+
+  private static final String TITLE = "title";
+
+  private static final String ALICE = "Alice";
+
+  private static final String EDITOR = "editor";
+
+  private static final String ROLE = "role";
+
+  private static final String DISPLAY_NAME = "displayName";
 
   private static final String TAGS = "tags";
 
@@ -115,10 +133,10 @@ public final class DomainWriteScenarios {
               "maps to-one relationship to single linkage",
               DomainWriteOperation.TO_RESOURCE,
               new DomainWriteInput.SingleInput(
-                  () -> new Article("1", "T", "B", List.of(), new Person("p1", "Alice"))),
+                  () -> new Article("1", "T", "B", List.of(), new Person("p1", ALICE))),
               null,
               DomainWriteOutcome.resource(
-                  articleResource("1", "T", "B", List.of(), new Person("p1", "Alice"))),
+                  articleResource("1", "T", "B", List.of(), new Person("p1", ALICE))),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
               "maps empty to-many relationship to empty linkage",
@@ -232,6 +250,86 @@ public final class DomainWriteScenarios {
                       Map.of())),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
+              "maps to-one identifier meta onto linkage",
+              DomainWriteOperation.TO_RESOURCE,
+              new DomainWriteInput.SingleInput(
+                  () ->
+                      new ArticleWithIdentifierMeta(
+                          "1",
+                          "T",
+                          ResourceIdentifier.of(PEOPLE, "p1"),
+                          List.of(),
+                          null,
+                          new AuthorIdMeta(EDITOR),
+                          null)),
+              null,
+              DomainWriteOutcome.resource(
+                  identifierMetaArticle(
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of())),
+              DomainWriteComparisonPolicy.ordered()),
+          new DomainWriteScenario(
+              "maps to-many identifier meta aligned with linkage",
+              DomainWriteOperation.TO_RESOURCE,
+              new DomainWriteInput.SingleInput(
+                  () ->
+                      new ArticleWithIdentifierMeta(
+                          "1",
+                          "T",
+                          null,
+                          List.of(
+                              ResourceIdentifier.of(COMMENTS, "c1"),
+                              ResourceIdentifier.of(COMMENTS, "c2")),
+                          null,
+                          null,
+                          nullableList(new CommentIdMeta(true), null))),
+              null,
+              DomainWriteOutcome.resource(
+                  identifierMetaArticle(
+                      null,
+                      null,
+                      List.of(
+                          identifier(COMMENTS, "c1", Meta.of(Map.of("pinned", true))),
+                          ResourceIdentifier.of(COMMENTS, "c2")))),
+              DomainWriteComparisonPolicy.ordered()),
+          new DomainWriteScenario(
+              "omitted identifier meta leaves ResourceIdentifier meta in place",
+              DomainWriteOperation.TO_RESOURCE,
+              new DomainWriteInput.SingleInput(
+                  () ->
+                      new ArticleWithIdentifierMeta(
+                          "1",
+                          "T",
+                          identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                          List.of(),
+                          null,
+                          null,
+                          null)),
+              null,
+              DomainWriteOutcome.resource(
+                  identifierMetaArticle(
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of())),
+              DomainWriteComparisonPolicy.ordered()),
+          new DomainWriteScenario(
+              "writes relationship meta and identifier meta independently",
+              DomainWriteOperation.TO_RESOURCE,
+              new DomainWriteInput.SingleInput(
+                  () ->
+                      new ArticleWithIdentifierMeta(
+                          "1",
+                          "T",
+                          ResourceIdentifier.of(PEOPLE, "p1"),
+                          List.of(),
+                          new AuthorMeta(ALICE),
+                          new AuthorIdMeta(EDITOR),
+                          null)),
+              null,
+              DomainWriteOutcome.resource(
+                  identifierMetaArticle(
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                      Meta.of(Map.of(DISPLAY_NAME, ALICE)),
+                      List.of())),
+              DomainWriteComparisonPolicy.ordered()),
+          new DomainWriteScenario(
               "null input is rejected",
               DomainWriteOperation.TO_RESOURCE,
               new DomainWriteInput.SingleInput(() -> null),
@@ -251,7 +349,7 @@ public final class DomainWriteScenarios {
   private static ResourceObject articleResource(
       String id, String title, String body, List<Comment> comments, @Nullable Person author) {
     return new ResourceObject(
-        "articles",
+        ARTICLES,
         id,
         null,
         Attributes.ofAttributes(articleAttributes(title, body)),
@@ -264,10 +362,10 @@ public final class DomainWriteScenarios {
 
   private static ResourceObject articleWithSetResource() {
     return new ResourceObject(
-        "articles",
+        ARTICLES,
         "1",
         null,
-        Attributes.ofAttributes(singleAttribute("title", "T")),
+        Attributes.ofAttributes(singleAttribute(TITLE, "T")),
         Relationships.ofRelationships(Map.of(TAGS, relationship(tagsLinkage()))),
         null,
         null,
@@ -282,7 +380,7 @@ public final class DomainWriteScenarios {
 
   private static Map<String, Object> articleAttributes(String title, String body) {
     Map<String, Object> attributes = new LinkedHashMap<>();
-    attributes.put("title", title);
+    attributes.put(TITLE, title);
     attributes.put("body-text", body);
     return attributes;
   }
@@ -304,7 +402,7 @@ public final class DomainWriteScenarios {
       return RelationshipData.NullLinkage.INSTANCE;
     }
     return new RelationshipData.SingleLinkage(
-        new ResourceIdentifier("people", author.id(), null, null, Map.of()));
+        new ResourceIdentifier(PEOPLE, author.id(), null, null, Map.of()));
   }
 
   private static RelationshipData commentsLinkage(List<Comment> comments) {
@@ -321,5 +419,45 @@ public final class DomainWriteScenarios {
       identifiers.add(new ResourceIdentifier(TAGS, tag.name(), null, null, Map.of()));
     }
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
+  }
+
+  private static ResourceObject identifierMetaArticle(
+      @Nullable ResourceIdentifier author,
+      @Nullable Meta authorRelationshipMeta,
+      List<ResourceIdentifier> comments) {
+    Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
+    relationships.put(
+        "author",
+        new Relationship(
+            author == null
+                ? RelationshipData.NullLinkage.INSTANCE
+                : new RelationshipData.SingleLinkage(author),
+            null,
+            authorRelationshipMeta,
+            Map.of()));
+    relationships.put(
+        COMMENTS,
+        new Relationship(
+            new RelationshipData.IdentifierCollectionLinkage(comments), null, null, Map.of()));
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        Attributes.ofAttributes(singleAttribute(TITLE, "T")),
+        Relationships.ofRelationships(relationships),
+        null,
+        null,
+        Map.of());
+  }
+
+  private static ResourceIdentifier identifier(String type, String id, @Nullable Meta meta) {
+    return new ResourceIdentifier(type, id, null, meta, Map.of());
+  }
+
+  @SafeVarargs
+  private static <T> List<@Nullable T> nullableList(@Nullable T... values) {
+    List<@Nullable T> list = new ArrayList<>(values.length);
+    Collections.addAll(list, values);
+    return list;
   }
 }

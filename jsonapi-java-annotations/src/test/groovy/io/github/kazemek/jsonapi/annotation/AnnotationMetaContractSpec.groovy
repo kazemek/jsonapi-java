@@ -79,6 +79,19 @@ class AnnotationMetaContractSpec extends Specification {
     JsonApiRelationshipMeta.declaredMethods*.name as Set == (["value"] as Set)
   }
 
+  def "JsonApiIdentifierMeta has a required non-defaulted value on property targets and is not Inherited"() {
+    expect:
+    assertRuntimeDocumented(JsonApiIdentifierMeta)
+    assertPropertyTargets(JsonApiIdentifierMeta)
+    JsonApiIdentifierMeta.getAnnotation(Inherited) == null
+
+    and:
+    Method valueMethod = JsonApiIdentifierMeta.getDeclaredMethod("value")
+    valueMethod.returnType == String
+    valueMethod.defaultValue == null
+    JsonApiIdentifierMeta.declaredMethods*.name as Set == (["value"] as Set)
+  }
+
   private static void assertRuntimeDocumented(Class<?> annotationType) {
     assert annotationType.getAnnotation(Retention).value() == RetentionPolicy.RUNTIME
     assert annotationType.getAnnotation(Documented) != null

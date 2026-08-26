@@ -7,6 +7,7 @@ import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
 import io.github.kazemek.jsonapi.jackson3.internal.JsonApiDocumentModule;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
+import io.github.kazemek.jsonapi.jackson3.internal.MetaBindingModule;
 import java.util.Map;
 import java.util.Objects;
 import tools.jackson.databind.json.JsonMapper;
@@ -269,12 +270,13 @@ public final class JsonApiJackson3 {
   }
 
   /**
-   * Derives a clean mapper for resource mapping introspection and attribute conversion. Does not
-   * register the JSON:API document module because the resource mapper produces core model objects,
-   * not serialized output.
+   * Derives a mapper for resource mapping introspection, attribute conversion, and binder
+   * construction. Registers {@link MetaBindingModule} so built-in {@code ResourceIdentifier} values
+   * can round-trip identifier meta. Does not register the JSON:API document module because the
+   * resource mapper produces core model objects, not serialized output.
    */
   private static JsonMapper resourceMappingMapper(JsonMapper base) {
-    return base.rebuild().build();
+    return base.rebuild().addModule(new MetaBindingModule()).build();
   }
 
   /**

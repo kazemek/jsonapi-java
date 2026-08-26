@@ -16,6 +16,10 @@ class MappingLocationSpec extends Specification {
     // Tilde escapes before slash so an escaped tilde can never be re-read as an escape sequence.
     MappingLocation.of("a/b~c/d").pointer() == "/a~1b~0c~1d"
     MappingLocation.of("meta").pointer() == "/meta"
+    MappingLocation.of("relationships", "author", "data", "meta").pointer() ==
+        "/relationships/author/data/meta"
+    MappingLocation.of("relationships", "comments", "data", "0", "meta").pointer() ==
+        "/relationships/comments/data/0/meta"
   }
 
   def "parse accepts canonical pointers and rejects malformed ones"() {

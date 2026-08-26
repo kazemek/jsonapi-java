@@ -30,7 +30,9 @@ import tools.jackson.databind.json.JsonMapper;
  * PatchMemberConverter} with the property accessor type as the conversion target. Document {@code
  * included} is never read. A relationship member without {@code data} produces no change; {@code
  * readValue} rejects that shape earlier with {@code RELATIONSHIP_DATA_REQUIRED}, while {@code
- * fromDocument} skips it without re-validation.
+ * fromDocument} skips it without re-validation. Identifier meta is not an independent {@link
+ * PatchChange}; it rides on {@code ResourceIdentifier} values inside {@link
+ * PatchChange.RelationshipChange} when linkage is supplied (ADR-017).
  *
  * <p>Recursive structured attributes (ADR-014) use the {@link StructuredValueBinder}: a supplied
  * attribute whose declared type is an ordinary traversable structured domain value (or a single

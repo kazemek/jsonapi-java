@@ -300,12 +300,26 @@ Diagnostic locations for nested failures are engine-accumulated wire-name locati
     `PatchCommand.changes()` order is deterministic: resource meta first, then attributes, then
     relationships with their meta immediately after the linkage change.
 
+  Per-linkage identifier meta (see [ADR-017](../docs/adr/017-resource-identifier-meta-mapping.md))
+  maps `ResourceIdentifier.meta` to a sibling property via `@JsonApiIdentifierMeta("author")`:
+
+  - **Cardinality:** to-one is one Bean / `Map` / `Object` (at most one `Optional`); to-many is a
+    `List` or array of those objects, index-aligned with linkage identifiers. `Set` and `Map` are
+    rejected.
+  - **Read/write** reuse ADR-015 conversion (configured Jackson, full `JavaType`). A present
+    identifier-meta property is an authoritative overlay; omitting it leaves any
+    `ResourceIdentifier.meta` already on the relationship value in place.
+  - **PATCH:** identifier meta is not independently patchable. Typed PATCH DTOs reject the
+    annotation. Low-level `PatchCommand` emits no identifier-meta `PatchChange`; identifier meta
+    rides on `ResourceIdentifier` values inside whole-linkage `RelationshipChange`. This is
+    ADR-014's atomic container boundary, not element-addressed mutation.
+
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
 when you need a different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
 
 Mapped ordinary values use configured Jackson at the property boundary: resource attributes and
-mapped resource/relationship meta write through their contextualized property serializers, while
+mapped resource/relationship/identifier meta write through their contextualized property serializers, while
 flat reads and supplied PATCH values use the contextualized property deserializer after any
 JSON:API-specific conversion. JSON:API remains authoritative for the identifier wire string,
 relationship linkage, and `PatchPresence` state; those adapter-owned states are not replaced by a
@@ -347,6 +361,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-014 — Recursive structured value PATCH semantics](../docs/adr/014-recursive-structured-value-patch-semantics.md)
 - [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
 - [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
+- [ADR-017 — Flat mapping for resource identifier meta](../docs/adr/017-resource-identifier-meta-mapping.md)
 - [Canonical fixtures](../jsonapi-java-test-support/src/main/resources/jsonapi/corpus/1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -371,7 +386,8 @@ artifact; both majors share the neutral contracts of
   `MappingLocation`, whose segments are individually escaped (`~` to `~0`, `/` to `~1`). Producers
   mapping one resource object emit resource-relative pointers over JSON:API member names:
   `/type`, `/id`, `/lid`, `/attributes/<wire-name>`, `/relationships/<wire-name>/data`,
-  `/meta`, `/relationships/<wire-name>/meta`. Jackson logical property names are translated
+  `/meta`, `/relationships/<wire-name>/meta`, `/relationships/<wire-name>/data/meta`,
+  `/relationships/<wire-name>/data/<index>/meta`. Jackson logical property names are translated
   through the mapping before they appear in a location — a logical name is never reinterpreted as
   pointer syntax. Failures without a meaningful member coordinate (missing annotations, invalid
   type names, registry conflicts, include-path and fieldset specification errors) carry an absent

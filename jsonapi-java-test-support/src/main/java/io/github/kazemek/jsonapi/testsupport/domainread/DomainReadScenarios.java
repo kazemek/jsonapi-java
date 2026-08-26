@@ -11,7 +11,9 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithOptional;
@@ -19,6 +21,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWith
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCreatorArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatDefaultedArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIdentifierMetaArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatInheritedBlog;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIntIdArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatLidArticle;
@@ -30,6 +33,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCre
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatUnregisteredRelationshipsArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +54,10 @@ public final class DomainReadScenarios {
   private static final String AUTHOR = "author";
   private static final String ALICE = "Alice";
   private static final String COMMENTS = "comments";
+  private static final String DISPLAY_NAME = "displayName";
+  private static final String EDITOR = "editor";
   private static final String PEOPLE = "people";
+  private static final String ROLE = "role";
   private static final String TITLE = "title";
   private static final String THINGS = "things";
   private static final String HELLO = "Hello";
@@ -433,7 +440,7 @@ public final class DomainReadScenarios {
               DomainReadInput.single(
                   resourceWithMeta(
                       attrs(TITLE, HELLO),
-                      relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of("displayName", ALICE))),
+                      relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))),
                       Meta.of(Map.of("source", "cms", "note", "n")))),
               FlatMetaArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
@@ -455,12 +462,123 @@ public final class DomainReadScenarios {
               DomainReadInput.single(
                   resourceWithMeta(
                       attrs(TITLE, HELLO),
-                      relsOnlyMeta(Meta.of(Map.of("displayName", ALICE))),
+                      relsOnlyMeta(Meta.of(Map.of(DISPLAY_NAME, ALICE))),
                       null)),
               FlatMetaArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
                   new FlatMetaArticle("1", HELLO, null, null, new AuthorMeta(ALICE)))),
+          new DomainReadScenario(
+              "binds to-one identifier meta",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      rels(
+                          AUTHOR,
+                          toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))))),
+              FlatIdentifierMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatIdentifierMetaArticle(
+                      "1",
+                      HELLO,
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                      null,
+                      null,
+                      new AuthorIdMeta(EDITOR),
+                      null))),
+          new DomainReadScenario(
+              "binds to-many identifier meta aligned with linkage",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      rels(
+                          COMMENTS,
+                          toManyWithIdentifierMetas(
+                              COMMENTS,
+                              List.of("c1", "c2"),
+                              nullableList(Meta.of(Map.of("pinned", true)), null))))),
+              FlatIdentifierMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatIdentifierMetaArticle(
+                      "1",
+                      HELLO,
+                      null,
+                      List.of(
+                          identifier(COMMENTS, "c1", Meta.of(Map.of("pinned", true))),
+                          ResourceIdentifier.of(COMMENTS, "c2")),
+                      null,
+                      null,
+                      nullableList(new CommentIdMeta(true), null)))),
+          new DomainReadScenario(
+              "absent identifier meta leaves identifier-meta properties null",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      rels(
+                          AUTHOR, toOne(PEOPLE, "p1"), COMMENTS, toMany(COMMENTS, List.of("c1"))))),
+              FlatIdentifierMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatIdentifierMetaArticle(
+                      "1",
+                      HELLO,
+                      ResourceIdentifier.of(PEOPLE, "p1"),
+                      List.of(ResourceIdentifier.of(COMMENTS, "c1")),
+                      null,
+                      null,
+                      null))),
+          new DomainReadScenario(
+              "empty identifier meta object binds an empty application value",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.empty())))),
+              FlatIdentifierMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatIdentifierMetaArticle(
+                      "1",
+                      HELLO,
+                      identifier(PEOPLE, "p1", Meta.empty()),
+                      null,
+                      null,
+                      new AuthorIdMeta(null),
+                      null))),
+          new DomainReadScenario(
+              "identifier meta is distinct from relationship meta",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      rels(
+                          AUTHOR,
+                          toOneWithBothMeta(
+                              PEOPLE,
+                              "p1",
+                              Meta.of(Map.of(ROLE, EDITOR)),
+                              Meta.of(Map.of(DISPLAY_NAME, ALICE)))))),
+              FlatIdentifierMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatIdentifierMetaArticle(
+                      "1",
+                      HELLO,
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                      null,
+                      new AuthorMeta(ALICE),
+                      new AuthorIdMeta(EDITOR),
+                      null))),
           new DomainReadScenario(
               "binder never sees document included resources",
               DomainReadInput.includedIsolation(INCLUDED_PRIMARY, INCLUDED_SWAPPED),
@@ -540,6 +658,43 @@ public final class DomainReadScenarios {
   private static Relationship toOne(String type, String id) {
     return Relationship.withData(
         new RelationshipData.SingleLinkage(ResourceIdentifier.of(type, id)));
+  }
+
+  private static Relationship toOneWithIdentifierMeta(String type, String id, Meta identifierMeta) {
+    return new Relationship(
+        new RelationshipData.SingleLinkage(identifier(type, id, identifierMeta)),
+        null,
+        null,
+        Map.of());
+  }
+
+  private static Relationship toOneWithBothMeta(
+      String type, String id, Meta identifierMeta, Meta relationshipMeta) {
+    return new Relationship(
+        new RelationshipData.SingleLinkage(identifier(type, id, identifierMeta)),
+        null,
+        relationshipMeta,
+        Map.of());
+  }
+
+  private static Relationship toManyWithIdentifierMetas(
+      String type, List<String> ids, List<@Nullable Meta> metas) {
+    List<ResourceIdentifier> identifiers = new ArrayList<>(ids.size());
+    for (int i = 0; i < ids.size(); i++) {
+      identifiers.add(identifier(type, ids.get(i), metas.get(i)));
+    }
+    return Relationship.withData(new RelationshipData.IdentifierCollectionLinkage(identifiers));
+  }
+
+  private static ResourceIdentifier identifier(String type, String id, @Nullable Meta meta) {
+    return new ResourceIdentifier(type, id, null, meta, Map.of());
+  }
+
+  @SafeVarargs
+  private static <T> List<@Nullable T> nullableList(@Nullable T... values) {
+    List<@Nullable T> list = new ArrayList<>(values.length);
+    Collections.addAll(list, values);
+    return list;
   }
 
   private static Relationship toMany(String type, List<String> ids) {

@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch;
 
+import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.validation.EndpointIdentity;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
@@ -16,6 +17,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithBox
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithContainerAddress;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithDimensions;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithGeoAddress;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithIdentifierMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMapMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalAddress;
@@ -98,7 +100,10 @@ public final class PatchScenarios {
           resourceMetaStructuredWithOrdering(),
           resourceMetaAtomicMap(),
           relationshipMetaWithData(),
-          resourceMetaSuppliedUnmappedSkipped());
+          resourceMetaSuppliedUnmappedSkipped(),
+          wholeLinkageToOneIdentifierMeta(),
+          wholeLinkageToManyIdentifierMeta(),
+          identifierMetaAnnotationIsNotAnIndependentChange());
 
   private static final FixtureCatalog<PatchScenario> CATALOG =
       FixtureCatalog.of("patch", SCENARIOS);
@@ -658,6 +663,56 @@ public final class PatchScenarios {
         FlatArticle.class,
         null,
         PatchExpectation.success("1", List.of(new PatchChange.AttributeChange(TITLE, TITLE, "T"))));
+  }
+
+  private static PatchScenario wholeLinkageToOneIdentifierMeta() {
+    return scenario(
+        "patch-whole-linkage-to-one-identifier-meta",
+        doc("author-identifier-meta"),
+        FlatArticle.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    AUTHOR,
+                    AUTHOR,
+                    new ResourceIdentifier(
+                        PEOPLE, "p1", null, Meta.of(Map.of("role", "editor")), Map.of())))));
+  }
+
+  private static PatchScenario wholeLinkageToManyIdentifierMeta() {
+    return scenario(
+        "patch-whole-linkage-to-many-identifier-meta",
+        doc("comments-identifier-meta"),
+        FlatArticle.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    COMMENTS,
+                    COMMENTS,
+                    List.of(
+                        new ResourceIdentifier(
+                            COMMENTS, "c1", null, Meta.of(Map.of("pinned", true)), Map.of()),
+                        ResourceIdentifier.of(COMMENTS, "c2"))))));
+  }
+
+  private static PatchScenario identifierMetaAnnotationIsNotAnIndependentChange() {
+    return scenario(
+        "patch-identifier-meta-annotation-is-not-an-independent-change",
+        doc("author-identifier-meta"),
+        ArticleWithIdentifierMeta.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    AUTHOR,
+                    AUTHOR,
+                    new ResourceIdentifier(
+                        PEOPLE, "p1", null, Meta.of(Map.of("role", "editor")), Map.of())))));
   }
 
   private static PatchScenario scenario(

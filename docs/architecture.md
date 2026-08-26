@@ -147,9 +147,13 @@ flowchart TB
 - **Typed path:** every patchable member is declared `PatchPresence<T>`. Nested recursion is
   opt-in through a presence-aware PATCH *shape* (every visible member is itself
   `PatchPresence<…>`).
+- **Identifier meta:** `ResourceIdentifier.meta` is not independently patchable. It rides on
+  `ResourceIdentifier` values inside whole-linkage replacement. ADR-014's atomic `List` / `Set` /
+  array / `Map` boundary forbids element-addressed mutation of to-many linkage identifier meta.
 
 [ADR-012](adr/012-resource-patch-binding.md), [ADR-013](adr/013-direct-typed-patch-dto-binding.md),
-and [ADR-014](adr/014-recursive-structured-value-patch-semantics.md) own the contracts.
+[ADR-014](adr/014-recursive-structured-value-patch-semantics.md), and
+[ADR-017](adr/017-resource-identifier-meta-mapping.md) own the contracts.
 
 ## Diagnostics
 

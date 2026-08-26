@@ -37,6 +37,7 @@ final class ResolvedTypeSupport {
       case RELATIONSHIP -> MappingLocation.of("relationships", property.jsonapiName(), "data");
       case RESOURCE_META -> MappingLocation.of("meta");
       case RELATIONSHIP_META -> MappingLocation.of("relationships", property.jsonapiName(), "meta");
+      case IDENTIFIER_META -> IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName());
     };
   }
 
@@ -59,6 +60,7 @@ final class ResolvedTypeSupport {
       properties.add(mapping.resourceMeta());
     }
     properties.addAll(mapping.relationshipMetaProperties());
+    properties.addAll(mapping.identifierMetaProperties());
     return properties;
   }
 

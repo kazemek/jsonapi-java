@@ -21,6 +21,7 @@ record ReadResourceMapping(
     List<ReadMappingProperty> relationships,
     @Nullable ReadMappingProperty resourceMeta,
     List<ReadMappingProperty> relationshipMetaProperties,
+    List<ReadMappingProperty> identifierMetaProperties,
     JavaType domainType) {
 
   /**
@@ -62,6 +63,12 @@ record ReadResourceMapping(
           new StructuredValueBinder.ConstructionStart(
               RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()),
               property.type()));
+    }
+    for (ReadMappingProperty property : identifierMetaProperties) {
+      starts.put(
+          property.logicalName(),
+          new StructuredValueBinder.ConstructionStart(
+              ResourceMapping.identifierMetaConstructionLocation(property), property.type()));
     }
     return starts;
   }

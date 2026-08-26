@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch;
 
+import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
@@ -20,6 +21,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithBox
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithContainerAddressPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithDirectPresentAddressPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithGeoPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithIdentifierMetaPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMapMetaPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMetaPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMixedAddressPatch;
@@ -114,7 +116,10 @@ public final class PatchDtoScenarios {
           metaAtomicMap(),
           metaOptionalObject(),
           metaEmptyObject(),
-          metaOmitted());
+          metaOmitted(),
+          wholeLinkageToOneIdentifierMeta(),
+          wholeLinkageToManyIdentifierMeta(),
+          identifierMetaAnnotationRejected());
 
   private static final FixtureCatalog<PatchDtoScenario> CATALOG =
       FixtureCatalog.of("patch-dto", SCENARIOS);
@@ -660,6 +665,49 @@ public final class PatchDtoScenarios {
                 PatchPresence.omitted(),
                 PatchPresence.omitted(),
                 PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario wholeLinkageToOneIdentifierMeta() {
+    return scenario(
+        "patch-dto-whole-linkage-to-one-identifier-meta",
+        doc("author-identifier-meta"),
+        ArticlePatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            article(
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.present(
+                    new ResourceIdentifier(
+                        PEOPLE, "p1", null, Meta.of(Map.of("role", "editor")), Map.of())),
+                PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario wholeLinkageToManyIdentifierMeta() {
+    return scenario(
+        "patch-dto-whole-linkage-to-many-identifier-meta",
+        doc("comments-identifier-meta"),
+        ArticlePatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            article(
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.present(
+                    List.of(
+                        new ResourceIdentifier(
+                            COMMENTS, "c1", null, Meta.of(Map.of("pinned", true)), Map.of()),
+                        ResourceIdentifier.of(COMMENTS, "c2"))))));
+  }
+
+  private static PatchDtoScenario identifierMetaAnnotationRejected() {
+    return scenario(
+        "patch-dto-identifier-meta-annotation-rejected",
+        doc(IDENTITY_ONLY),
+        ArticleWithIdentifierMetaPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/relationships/author/data/meta"));
   }
 
   private static Map<String, PatchPresence<?>> metaPatchMembers(

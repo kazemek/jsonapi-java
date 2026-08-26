@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
+import io.github.kazemek.jsonapi.annotation.JsonApiIdentifierMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta;
@@ -35,39 +36,28 @@ final class MappingDefinitionResolver {
     String resourceType = validateResourceTypeName(resourceTypeName(resourceMetadata), rawType);
 
     List<BeanPropertyDefinition> propertyDefinitions = beanDescription.findProperties();
-    List<MappingProperty> identifierProperties = new ArrayList<>();
-    List<MappingProperty> attributeProperties = new ArrayList<>();
-    List<MappingProperty> relationshipProperties = new ArrayList<>();
-    List<MappingProperty> resourceMetaProperties = new ArrayList<>();
-    List<MappingProperty> relationshipMetaProperties = new ArrayList<>();
-
-    classifyProperties(
-        propertyDefinitions,
-        rawType,
-        identifierProperties,
-        attributeProperties,
-        relationshipProperties,
-        resourceMetaProperties,
-        relationshipMetaProperties);
+    ClassifiedProperties classified = classifyProperties(propertyDefinitions, rawType);
     validatePropertyRoles(
-        identifierProperties,
-        attributeProperties,
-        relationshipProperties,
-        resourceMetaProperties,
-        relationshipMetaProperties,
+        classified.identifiers,
+        classified.attributes,
+        classified.relationships,
+        classified.resourceMeta,
+        classified.relationshipMeta,
+        classified.identifierMeta,
         rawType);
 
     MappingProperty identifier =
-        identifierProperties.isEmpty() ? null : identifierProperties.getFirst();
+        classified.identifiers.isEmpty() ? null : classified.identifiers.getFirst();
     MappingProperty resourceMeta =
-        resourceMetaProperties.isEmpty() ? null : resourceMetaProperties.getFirst();
+        classified.resourceMeta.isEmpty() ? null : classified.resourceMeta.getFirst();
     return new ResourceMapping(
         resourceType,
         identifier,
-        List.copyOf(attributeProperties),
-        List.copyOf(relationshipProperties),
+        List.copyOf(classified.attributes),
+        List.copyOf(classified.relationships),
         resourceMeta,
-        List.copyOf(relationshipMetaProperties),
+        List.copyOf(classified.relationshipMeta),
+        List.copyOf(classified.identifierMeta),
         beanDescription.getType());
   }
 
@@ -91,6 +81,7 @@ final class MappingDefinitionResolver {
     List<ReadMappingProperty> relationshipProperties = new ArrayList<>();
     List<ReadMappingProperty> resourceMetaProperties = new ArrayList<>();
     List<ReadMappingProperty> relationshipMetaProperties = new ArrayList<>();
+    List<ReadMappingProperty> identifierMetaProperties = new ArrayList<>();
 
     for (PropertyPair pair :
         mergeProperties(deserializationDescription, serializationDescription)) {
@@ -115,6 +106,7 @@ final class MappingDefinitionResolver {
         case RELATIONSHIP -> relationshipProperties.add(mappingProperty);
         case RESOURCE_META -> resourceMetaProperties.add(mappingProperty);
         case RELATIONSHIP_META -> relationshipMetaProperties.add(mappingProperty);
+        case IDENTIFIER_META -> identifierMetaProperties.add(mappingProperty);
       }
     }
     validatePropertyRoles(
@@ -123,6 +115,7 @@ final class MappingDefinitionResolver {
         relationshipProperties,
         resourceMetaProperties,
         relationshipMetaProperties,
+        identifierMetaProperties,
         rawType);
 
     ReadMappingProperty identifier =
@@ -136,6 +129,7 @@ final class MappingDefinitionResolver {
         List.copyOf(relationshipProperties),
         resourceMeta,
         List.copyOf(relationshipMetaProperties),
+        List.copyOf(identifierMetaProperties),
         deserializationDescription.getType());
   }
 
@@ -183,14 +177,9 @@ final class MappingDefinitionResolver {
     return resourceTypeName;
   }
 
-  private static void classifyProperties(
-      List<BeanPropertyDefinition> propertyDefinitions,
-      Class<?> rawType,
-      List<MappingProperty> identifierProperties,
-      List<MappingProperty> attributeProperties,
-      List<MappingProperty> relationshipProperties,
-      List<MappingProperty> resourceMetaProperties,
-      List<MappingProperty> relationshipMetaProperties) {
+  private static ClassifiedProperties classifyProperties(
+      List<BeanPropertyDefinition> propertyDefinitions, Class<?> rawType) {
+    ClassifiedProperties classified = new ClassifiedProperties();
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
       RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
       String logicalName = propertyDefinition.getName();
@@ -210,22 +199,37 @@ final class MappingDefinitionResolver {
         continue;
       }
 
-      MappingProperty mappingProperty =
-          new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role);
-      switch (role) {
-        case ID -> identifierProperties.add(mappingProperty);
-        case ATTRIBUTE -> attributeProperties.add(mappingProperty);
-        case RELATIONSHIP -> relationshipProperties.add(mappingProperty);
-        case RESOURCE_META -> resourceMetaProperties.add(mappingProperty);
-        case RELATIONSHIP_META -> relationshipMetaProperties.add(mappingProperty);
+      classified.add(
+          new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role));
+    }
+    return classified;
+  }
+
+  private static final class ClassifiedProperties {
+    private final List<MappingProperty> identifiers = new ArrayList<>();
+    private final List<MappingProperty> attributes = new ArrayList<>();
+    private final List<MappingProperty> relationships = new ArrayList<>();
+    private final List<MappingProperty> resourceMeta = new ArrayList<>();
+    private final List<MappingProperty> relationshipMeta = new ArrayList<>();
+    private final List<MappingProperty> identifierMeta = new ArrayList<>();
+
+    private void add(MappingProperty mappingProperty) {
+      switch (mappingProperty.role()) {
+        case ID -> identifiers.add(mappingProperty);
+        case ATTRIBUTE -> attributes.add(mappingProperty);
+        case RELATIONSHIP -> relationships.add(mappingProperty);
+        case RESOURCE_META -> resourceMeta.add(mappingProperty);
+        case RELATIONSHIP_META -> relationshipMeta.add(mappingProperty);
+        case IDENTIFIER_META -> identifierMeta.add(mappingProperty);
       }
     }
   }
 
   /**
    * Resource-relative wire location of one classified member: {@code /id}, {@code
-   * /attributes/<name>}, {@code /relationships/<name>/data}, {@code /meta}, or {@code
-   * /relationships/<name>/meta}. The name is escaped as pointer segments per RFC 6901.
+   * /attributes/<name>}, {@code /relationships/<name>/data}, {@code /meta}, {@code
+   * /relationships/<name>/meta}, or {@code /relationships/<name>/data/meta}. The name is escaped as
+   * pointer segments per RFC 6901.
    */
   private static MappingLocation wireLocation(PropertyRole role, String jsonapiName) {
     return switch (role) {
@@ -234,6 +238,7 @@ final class MappingDefinitionResolver {
       case RELATIONSHIP -> relationshipLocation(jsonapiName);
       case RESOURCE_META -> RelationshipMetaSupport.resourceMetaLocation();
       case RELATIONSHIP_META -> RelationshipMetaSupport.relationshipMetaLocation(jsonapiName);
+      case IDENTIFIER_META -> IdentifierMetaSupport.identifierMetaLocation(jsonapiName);
     };
   }
 
@@ -294,6 +299,10 @@ final class MappingDefinitionResolver {
         JsonApiRelationshipMeta annotation = annotations.relationshipMeta();
         yield Objects.requireNonNull(annotation).value();
       }
+      case IDENTIFIER_META -> {
+        JsonApiIdentifierMeta annotation = annotations.identifierMeta();
+        yield Objects.requireNonNull(annotation).value();
+      }
     };
   }
 
@@ -304,6 +313,7 @@ final class MappingDefinitionResolver {
           case ATTRIBUTE -> MappingDiagnostic.INVALID_ATTRIBUTE_NAME;
           case RELATIONSHIP -> MappingDiagnostic.INVALID_RELATIONSHIP_NAME;
           case RELATIONSHIP_META -> MappingDiagnostic.INVALID_RELATIONSHIP_META_TARGET;
+          case IDENTIFIER_META -> MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET;
           default -> null;
         };
     if (diagnostic == null) {
@@ -331,6 +341,7 @@ final class MappingDefinitionResolver {
       List<? extends MappingPropertyView> relationshipProperties,
       List<? extends MappingPropertyView> resourceMetaProperties,
       List<? extends MappingPropertyView> relationshipMetaProperties,
+      List<? extends MappingPropertyView> identifierMetaProperties,
       Class<?> rawType) {
     requireSingleIdentifier(identifierProperties, rawType);
     rejectDuplicateNames(
@@ -343,6 +354,7 @@ final class MappingDefinitionResolver {
     rejectAttributeRelationshipCollisions(attributeProperties, relationshipProperties, rawType);
     requireSingleResourceMeta(resourceMetaProperties, rawType);
     validateRelationshipMetaTargets(relationshipMetaProperties, relationshipProperties, rawType);
+    validateIdentifierMetaTargets(identifierMetaProperties, relationshipProperties, rawType);
   }
 
   private static void requireSingleIdentifier(
@@ -406,6 +418,46 @@ final class MappingDefinitionResolver {
             rawType,
             RelationshipMetaSupport.relationshipMetaLocation(target),
             "Multiple relationship meta properties target relationship '"
+                + target
+                + "' on "
+                + rawType.getName()
+                + "; at most one is allowed");
+      }
+    }
+  }
+
+  private static void validateIdentifierMetaTargets(
+      List<? extends MappingPropertyView> identifierMetaProperties,
+      List<? extends MappingPropertyView> relationshipProperties,
+      Class<?> rawType) {
+    if (identifierMetaProperties.isEmpty()) {
+      return;
+    }
+    Set<String> relationshipNames = new HashSet<>();
+    for (MappingPropertyView relationship : relationshipProperties) {
+      relationshipNames.add(relationship.jsonapiName());
+    }
+    Set<String> seen = new HashSet<>();
+    for (MappingPropertyView property : identifierMetaProperties) {
+      String target = property.jsonapiName();
+      if (!relationshipNames.contains(target)) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.UNRESOLVED_IDENTIFIER_META,
+            rawType,
+            IdentifierMetaSupport.identifierMetaLocation(target),
+            "@JsonApiIdentifierMeta for property '"
+                + property.logicalName()
+                + "' references unknown relationship '"
+                + target
+                + "' on "
+                + rawType.getName());
+      }
+      if (!seen.add(target)) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.DUPLICATE_ROLE,
+            rawType,
+            IdentifierMetaSupport.identifierMetaLocation(target),
+            "Multiple identifier meta properties target relationship '"
                 + target
                 + "' on "
                 + rawType.getName()
@@ -531,7 +583,8 @@ final class MappingDefinitionResolver {
       @Nullable JsonApiAttribute attribute,
       @Nullable JsonApiRelationship relationship,
       @Nullable JsonApiMeta meta,
-      @Nullable JsonApiRelationshipMeta relationshipMeta) {
+      @Nullable JsonApiRelationshipMeta relationshipMeta,
+      @Nullable JsonApiIdentifierMeta identifierMeta) {
 
     static RoleAnnotations from(BeanPropertyDefinition propertyDefinition) {
       return from(List.of(propertyDefinition));
@@ -550,7 +603,8 @@ final class MappingDefinitionResolver {
           findAnnotationAnywhere(members, JsonApiAttribute.class),
           findAnnotationAnywhere(members, JsonApiRelationship.class),
           findAnnotationAnywhere(members, JsonApiMeta.class),
-          findAnnotationAnywhere(members, JsonApiRelationshipMeta.class));
+          findAnnotationAnywhere(members, JsonApiRelationshipMeta.class),
+          findAnnotationAnywhere(members, JsonApiIdentifierMeta.class));
     }
 
     private static <A extends Annotation> @Nullable A findAnnotationAnywhere(
@@ -570,7 +624,8 @@ final class MappingDefinitionResolver {
           + (attribute != null ? 1 : 0)
           + (relationship != null ? 1 : 0)
           + (meta != null ? 1 : 0)
-          + (relationshipMeta != null ? 1 : 0);
+          + (relationshipMeta != null ? 1 : 0)
+          + (identifierMeta != null ? 1 : 0);
     }
 
     boolean hasAny() {
@@ -592,6 +647,9 @@ final class MappingDefinitionResolver {
       }
       if (relationshipMeta != null) {
         return PropertyRole.RELATIONSHIP_META;
+      }
+      if (identifierMeta != null) {
+        return PropertyRole.IDENTIFIER_META;
       }
       return null;
     }

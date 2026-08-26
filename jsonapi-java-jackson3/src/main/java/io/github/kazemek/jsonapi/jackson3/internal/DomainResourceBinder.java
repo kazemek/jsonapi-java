@@ -11,7 +11,9 @@ import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -36,9 +38,9 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Diagnostic locations follow the shared mapping-location contract: resource-relative pointers
  * over wire names ({@code /type}, {@code /id}, {@code /lid}, {@code /attributes/<name>}, {@code
- * /relationships/<name>/data}, meta locations). Bean-construction failures translate their Jackson
- * failure paths through this mapping; unmappable paths carry an absent location instead of a
- * logical property name.
+ * /relationships/<name>/data}, resource/relationship meta locations, identifier-meta locations).
+ * Bean-construction failures translate their Jackson failure paths through this mapping; unmappable
+ * paths carry an absent location instead of a logical property name.
  */
 public final class DomainResourceBinder {
 
@@ -95,6 +97,7 @@ public final class DomainResourceBinder {
     bindRelationships(resource, mapping, properties, rawType);
     bindResourceMeta(resource, mapping, properties, rawType);
     bindRelationshipMeta(resource, mapping, properties, rawType);
+    bindIdentifierMeta(resource, mapping, properties, rawType);
     return convertBean(properties, targetType, rawType, mapping, identifierLocation);
   }
 
@@ -247,6 +250,82 @@ public final class DomainResourceBinder {
           rawType);
       properties.put(property.logicalName(), relationship.meta().members());
     }
+  }
+
+  /**
+   * Binds per-linkage identifier {@code meta} under each mapped identifier-meta property. To-one
+   * absent identifier meta omits the property. To-many binds an aligned list only when at least one
+   * identifier carries meta; elements without meta are {@code null}.
+   */
+  private void bindIdentifierMeta(
+      ResourceObject resource,
+      ReadResourceMapping mapping,
+      Map<String, @Nullable Object> properties,
+      Class<?> rawType) {
+    if (mapping.identifierMetaProperties().isEmpty()) {
+      return;
+    }
+    Relationships relationships = resource.relationships();
+    if (relationships == null) {
+      return;
+    }
+    Map<String, ReadMappingProperty> relationshipsByName = new LinkedHashMap<>();
+    for (ReadMappingProperty relationship : mapping.relationships()) {
+      relationshipsByName.put(relationship.jsonapiName(), relationship);
+    }
+    for (ReadMappingProperty property : mapping.identifierMetaProperties()) {
+      Object bound = identifierMetaBinding(relationships, relationshipsByName, property, rawType);
+      if (bound != null) {
+        properties.put(property.logicalName(), bound);
+      }
+    }
+  }
+
+  private @Nullable Object identifierMetaBinding(
+      Relationships relationships,
+      Map<String, ReadMappingProperty> relationshipsByName,
+      ReadMappingProperty property,
+      Class<?> rawType) {
+    Relationship relationship = relationships.relationships().get(property.jsonapiName());
+    if (relationship == null) {
+      return null;
+    }
+    RelationshipData data = relationship.data();
+    if (data == null) {
+      return null;
+    }
+    ReadMappingProperty relationshipProperty = relationshipsByName.get(property.jsonapiName());
+    if (relationshipProperty == null) {
+      return null;
+    }
+    boolean toMany = DomainResourceWriter.isToManyType(relationshipProperty.type());
+    requireDeserializable(
+        property, ResourceMapping.identifierMetaConstructionLocation(property), rawType);
+    return identifierMetaValue(data, toMany);
+  }
+
+  private static @Nullable Object identifierMetaValue(RelationshipData data, boolean toMany) {
+    return switch (data) {
+      case RelationshipData.NullLinkage ignored -> null;
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          identifier.meta() == null ? null : identifier.meta().members();
+      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
+        if (!toMany) {
+          yield null;
+        }
+        boolean anyMeta = false;
+        List<@Nullable Object> values = new ArrayList<>(identifiers.size());
+        for (ResourceIdentifier identifier : identifiers) {
+          if (identifier.meta() != null) {
+            anyMeta = true;
+            values.add(identifier.meta().members());
+          } else {
+            values.add(null);
+          }
+        }
+        yield anyMeta ? values : null;
+      }
+    };
   }
 
   private static @Nullable RelationshipData relationshipData(

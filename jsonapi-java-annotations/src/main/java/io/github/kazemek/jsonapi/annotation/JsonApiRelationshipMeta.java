@@ -8,7 +8,8 @@ import java.lang.annotation.Target;
 
 /**
  * Marks a domain property as the complete JSON:API {@code meta} object of a specific mapped
- * relationship, without requiring a relationship-envelope property.
+ * relationship, without requiring a relationship-envelope property. This is relationship-level meta
+ * ({@code Relationship.meta}), not per-linkage identifier meta ({@link JsonApiIdentifierMeta}).
  *
  * <p>{@link #value()} is required and has no default: it references the target relationship's
  * resolved JSON:API member (wire) name — the value of {@link JsonApiRelationship#name()} when set,

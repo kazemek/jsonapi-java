@@ -14,9 +14,10 @@ import org.jspecify.annotations.Nullable;
  *
  * <p><strong>Coordinate contract.</strong> Mapping producers address members of one resource object
  * with resource-relative pointers such as {@code /type}, {@code /id}, {@code /lid}, {@code
- * /attributes/headline}, {@code /relationships/author/data}, {@code /meta}, and {@code
- * /relationships/author/meta}. Typed-envelope composition prepends document-relative prefixes
- * ({@code /data}, {@code /data/<index>}, {@code /included/<index>}) through {@link
+ * /attributes/headline}, {@code /relationships/author/data}, {@code /meta}, {@code
+ * /relationships/author/meta}, {@code /relationships/author/data/meta}, and {@code
+ * /relationships/comments/data/0/meta}. Typed-envelope composition prepends document-relative
+ * prefixes ({@code /data}, {@code /data/<index>}, {@code /included/<index>}) through {@link
  * #append(MappingLocation)}, which cannot produce malformed syntax because both operands are built
  * from validated, individually escaped, non-empty segments. Failures without a meaningful member
  * location are represented as an absent location, never as {@code ""} or {@code /}.
