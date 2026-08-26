@@ -42,7 +42,7 @@ counters).
 | `jsonapi-java-jackson-common/` | Jackson-major-neutral policy, diagnostic, context, envelope, and update-command contracts       |
 | [`jsonapi-java-test-support/`](jsonapi-java-test-support/README.md) | Internal shared test-support: scenario catalogs, classpath JSON:API corpus, and pinned schema resources (not a published module) |
 | `build-logic/`                 | Shared Gradle convention plugins                                                                 |
-| `docs/`                        | Vision, conformance, and architecture decision records                                           |
+| `docs/`                        | Vision, architecture overview, conformance, and architecture decision records |
 
 ## Module registry
 
@@ -68,6 +68,7 @@ not duplicate those module-specific contracts.
 - [Jackson 3 module](jsonapi-java-jackson3/README.md)
 - [Jackson common contracts module](jsonapi-java-jackson-common/README.md)
 - [Vision](docs/vision.md) — stable product direction and principles
+- [Architecture](docs/architecture.md) — current cross-module mental model and flows
 - [Conformance checklist](docs/conformance.md) — current JSON:API 1.1 feature status
 - [Architecture decision records](docs/adr/README.md)
 - [Agent workflow](AGENTS.md) — knowledge ownership, routing, and completion gates

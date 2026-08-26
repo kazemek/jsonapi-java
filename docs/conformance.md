@@ -9,7 +9,7 @@ writer/reader, domain-to-resource mapping, compound inclusion, sparse fieldsets,
 typed domain envelopes, and presence-aware PATCH binding (low-level commands and direct typed PATCH
 DTOs). `jsonapi-java-jackson-common` owns
 Jackson-major-neutral policy, diagnostics, contexts, envelope values, and presence-aware update
-contracts. Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
+contracts. How those modules fit together is in [`docs/architecture.md`](architecture.md). Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
 evidence only. The capability-tagged document corpus, closed negative corpus, and dual-success
 ambiguous primary-data cases in `jsonapi-java-test-support` (`jsonapi/corpus/1.1/`) are the shared codec contract for every
 Jackson major. Jackson 2 presence-aware PATCH binding, query parsing, and Spring adapters remain

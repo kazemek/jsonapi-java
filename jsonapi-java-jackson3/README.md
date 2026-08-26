@@ -332,6 +332,7 @@ artifact; both majors share the neutral contracts of
 
 ## Further reading
 
+- [Architecture overview](../docs/architecture.md)
 - [Conformance checklist](../docs/conformance.md)
 - [ADR-002 — Wire states](../docs/adr/002-document-representation.md)
 - [ADR-004 — Jackson integration](../docs/adr/004-jackson-integration.md)
@@ -432,17 +433,21 @@ artifact; both majors share the neutral contracts of
   null variants; emit/decode `{}` / `[]` for present-empty wrappers and empty collections.
   Serialize flat wrappers from `flatten()` / `Meta.members()`.
 - **Mapper isolation:** Factories accept configured `JsonMapper` instances, never builders, and do
-  not mutate them. Capabilities derive isolated mappers only where their implementation requires
-  it. Close only parsers created by convenience overloads; leave caller-owned streams/parsers open.
+  not mutate them. Token-driven document reading uses the supplied mapper directly; other
+  capabilities derive isolated mappers only where their implementation requires it. Close only
+  parsers created by convenience overloads; leave caller-owned streams/parsers open.
 - **Nullness:** Production packages are `@NullMarked` (JSpecify only). Use `@Nullable` for
   absence and intentionally null map values. Do not import `core.internal`.
 - **Mapping grammar:** JSON:API member-name validation delegates to
   `core.validation.MemberNames`. Do not import `core.internal`.
-- **Presence-aware PATCH:** `JsonApiPatchReader` validates with forced `UPDATE_REQUEST` usage, then
-  binds only supplied mapped attributes and relationships into a common `PatchCommand`. Never call
-  `JsonApiResourceBinder` / whole-DTO construction, never read `included`, never prefix binder
-  pointers with `/data`. Explicit attribute JSON `null` stores `value == null` (including Optional
-  properties). Identity comes from resource `id` only (no `lid` fallback) and is never a change.
+- **Presence-aware PATCH:** This name is the omitted / explicit-null / present update contract
+  (ADR-012), not the typed nested-shape declaration in ADR-014. `JsonApiPatchReader` validates with
+  forced `UPDATE_REQUEST` usage, then binds only supplied mapped attributes and relationships into
+  a common `PatchCommand`. Never call `JsonApiResourceBinder` / whole-DTO construction, never read
+  `included`, never prefix binder pointers with `/data`. Explicit attribute JSON `null` stores
+  `value == null` (including Optional properties). Identity comes from resource `id` only (no
+  `lid` fallback) and is never a change. Adjacent terms are listed in
+  [architecture](../docs/architecture.md#terminology).
 - **Direct typed PATCH DTO:** `JsonApiPatchDtoReader` shares the same validate-on-read contract and
   binds the update into an annotated PATCH DTO whose patchable members are exactly
   `PatchPresence<T>`. Both paths share `PatchMemberConverter` (per-member conversion against an

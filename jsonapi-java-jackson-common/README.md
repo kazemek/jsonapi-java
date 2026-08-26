@@ -45,6 +45,7 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
 
+- [Architecture overview](../docs/architecture.md)
 - [Conformance checklist](../docs/conformance.md)
 - [ADR-004 — Jackson integration](../docs/adr/004-jackson-integration.md)
 - [ADR-007 — Module boundaries](../docs/adr/007-module-boundaries.md)
@@ -81,9 +82,10 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   (ADR-014); an empty `StructuredPatch` is a supplied empty structured object, never a clear-all.
   NullAway
   enforces this on Java `main` sources (ADR-009).
-- **Diagnostics:** `JsonApiMappingException` carries a stable `MappingDiagnostic`; read failures
-  use `JsonApiDocumentReadException` with `CodecFailureCategory`, a JSON Pointer-like path, and a
-  safe `SourceLocation`. Do not introduce new failure types without an implementation plan.
+- **Diagnostics:** Three families stay distinct: core validation (`JsonApiValidationException`),
+  codec/read (`JsonApiDocumentReadException`), and mapping (`JsonApiMappingException`). See
+  [architecture](../docs/architecture.md) for the taxonomy and `JsonApiMappingException` for the
+  mapping-location contract. Do not introduce new failure types without an implementation plan.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout; unit/contract
   tests of moved types live here, while Jackson-bound integration suites stay in the adapters.
   JaCoCo floors are regression ratchets after meaningful ownership tests, not proof that a contract

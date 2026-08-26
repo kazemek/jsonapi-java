@@ -42,7 +42,6 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class DomainPatchBinder {
 
-  private static final MappingLocation TYPE_LOCATION = MappingLocation.of("type");
   private static final MappingLocation ID_LOCATION = MappingLocation.of("id");
 
   private final MappingDefinitionCache cache;
@@ -82,18 +81,7 @@ public final class DomainPatchBinder {
 
   private void validateResourceType(
       ResourceObject resource, ResourceMapping mapping, Class<?> rawType) {
-    String expectedType = mapping.resourceType();
-    if (!expectedType.equals(resource.type())) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.RESOURCE_TYPE_MISMATCH,
-          rawType,
-          TYPE_LOCATION,
-          "Resource object type '"
-              + resource.type()
-              + "' does not match expected type '"
-              + expectedType
-              + "'");
-    }
+    ResourceTypeMatch.requireMatching(mapping.resourceType(), resource, rawType);
   }
 
   /**
