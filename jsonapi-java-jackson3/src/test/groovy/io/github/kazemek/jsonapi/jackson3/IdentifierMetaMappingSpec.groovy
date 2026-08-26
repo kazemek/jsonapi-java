@@ -1,12 +1,18 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.PatchChange
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.ArrayIdentifierMetaArticle
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.EncodedIdMeta
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.GenericIdentifierMetaArticle
+import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.GetterOnlyIdentifierMeta
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.IdMetaBox
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.NonEmittingIdentifierMetaArticle
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.RenamedRelationshipIdentifierMetaArticle
@@ -176,5 +182,51 @@ class IdentifierMetaMappingSpec extends Specification {
     command.changes()[0] instanceof PatchChange.RelationshipChange
     def author = ((Optional) command.changes()[0].value()).get()
     author == new ResourceIdentifier("people", "p1", null, Meta.of([role: "editor"]), [:])
+  }
+
+  def "absent identifier meta on present linkage omits a getter-only identifier-meta property"() {
+    given:
+    def resource = new ResourceObject(
+        "articles",
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        [author: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "p1")))]),
+        null,
+        null,
+        [:])
+
+    when:
+    def bound = binder().fromResource(resource, GetterOnlyIdentifierMeta)
+
+    then:
+    bound.id == "1"
+    bound.author == ResourceIdentifier.of("people", "p1")
+  }
+
+  def "supplied identifier meta on a getter-only property is rejected"() {
+    given:
+    def resource = new ResourceObject(
+        "articles",
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        [author: Relationship.withData(
+          new RelationshipData.SingleLinkage(
+          new ResourceIdentifier("people", "p1", null, Meta.of([role: "editor"]), [:])))]),
+        null,
+        null,
+        [:])
+
+    when:
+    binder().fromResource(resource, GetterOnlyIdentifierMeta)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
+    e.propertyPath() == "/relationships/author/data/meta"
   }
 }

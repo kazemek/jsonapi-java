@@ -299,9 +299,13 @@ public final class DomainResourceBinder {
       return null;
     }
     boolean toMany = DomainResourceWriter.isToManyType(relationshipProperty.type());
+    Object bound = identifierMetaValue(data, toMany);
+    if (bound == null) {
+      return null;
+    }
     requireDeserializable(
         property, ResourceMapping.identifierMetaConstructionLocation(property), rawType);
-    return identifierMetaValue(data, toMany);
+    return bound;
   }
 
   private static @Nullable Object identifierMetaValue(RelationshipData data, boolean toMany) {

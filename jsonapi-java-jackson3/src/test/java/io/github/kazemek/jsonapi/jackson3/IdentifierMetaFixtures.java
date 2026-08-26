@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiIdentifierMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -79,4 +80,21 @@ public final class IdentifierMetaFixtures {
       @JsonApiRelationship ResourceIdentifier author,
       @JsonApiIdentifierMeta("author") @JsonInclude(JsonInclude.Include.NON_EMPTY)
           Map<String, String> authorIdMeta) {}
+
+  /**
+   * Getter-only identifier meta: omitted identifier meta must still bind ordinary linkage; supplied
+   * identifier meta must fail as a non-deserializable property.
+   */
+  @JsonApiResource(type = "articles")
+  public static final class GetterOnlyIdentifierMeta {
+    @JsonApiId public String id;
+
+    @JsonApiRelationship public ResourceIdentifier author;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @JsonApiIdentifierMeta("author")
+    public AuthorIdMeta getAuthorIdMeta() {
+      return new AuthorIdMeta("derived");
+    }
+  }
 }

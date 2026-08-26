@@ -110,7 +110,7 @@ JSON:API representation and configured Jackson are both authoritative, in differ
 | Document envelope, member presence, sealed explicit-null vs Java absence, identifier wire strings, relationship linkage, `PatchPresence` state | JSON:API / this library |
 | Aggregate document rules (identity uniqueness, full linkage, update-request shape, endpoint identity) | `jsonapi-java-core` validation |
 | Class-level `@JsonApiResource` type names, including class-level mix-ins | Configured Jackson introspection |
-| Ordinary attribute and resource/relationship-meta property serialization and deserialization | Configured Jackson at the mapped property |
+| Ordinary attribute and resource/relationship/identifier-meta property serialization and deserialization | Configured Jackson at the mapped property |
 | Bean construction, creators, naming, visibility, modules | Configured Jackson |
 | `ResourceTypeRegistry` | Explicit wire-type → Java-target dispatch. It does not interpret annotations; registration keys come from the same configured-Jackson metadata authority. |
 
