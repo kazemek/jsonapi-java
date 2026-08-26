@@ -121,18 +121,7 @@ public final class DomainPatchDtoBinder {
 
   private void validateResourceType(
       ResourceObject resource, ResourceMapping mapping, Class<?> rawType) {
-    String expectedType = mapping.resourceType();
-    if (!expectedType.equals(resource.type())) {
-      throw new JsonApiMappingException(
-          MappingDiagnostic.RESOURCE_TYPE_MISMATCH,
-          rawType,
-          MappingLocation.of("type"),
-          "Resource object type '"
-              + resource.type()
-              + "' does not match expected type '"
-              + expectedType
-              + "'");
-    }
+    ResourceTypeMatch.requireMatching(mapping.resourceType(), resource, rawType);
   }
 
   /**

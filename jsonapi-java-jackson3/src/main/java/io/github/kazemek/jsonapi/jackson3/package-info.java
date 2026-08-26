@@ -10,7 +10,9 @@
  * <p>Jackson-major adapters use a configured {@link tools.jackson.databind.json.JsonMapper} as the
  * canonical construction input. Capability-specific contexts and policy objects remain explicit,
  * and convenience factories choose documented defaults on top of the mapper-instance seam; {@code
- * JsonMapper.Builder} overloads are intentionally not part of the public contract. This
+ * JsonMapper.Builder} overloads are intentionally not part of the public contract. Token-driven
+ * document reading uses the supplied mapper directly; capabilities that need adapter modules or
+ * isolated introspection state derive a mapper internally and never mutate the caller. This
  * mapper-instance construction rule is the semantic reference for the future Jackson 2 adapter and
  * for Spring integration; parity does not require duplicating this facade's convenience overloads.
  *

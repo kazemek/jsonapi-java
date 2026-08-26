@@ -4,7 +4,8 @@
 
 This document is stable product direction and principles. It does not describe what currently
 exists; current capability lives in the [root module registry](../README.md) and each module
-README. Future work coordination, when used, lives in an external coordinating layer—not in this
+README. The current cross-module mental model lives in [`docs/architecture.md`](architecture.md).
+Future work coordination, when used, lives in an external coordinating layer—not in this
 repository. Authority and owner/reference rules are in [`AGENTS.md`](../AGENTS.md).
 
 ## Product boundary

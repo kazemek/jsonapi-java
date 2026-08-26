@@ -1,0 +1,268 @@
+# Architecture
+
+Current maintainer-facing mental model of the implemented JSON:API Java stack. This page describes
+the architecture as it exists after the pre-Jackson-2 stabilization work. It is not a history of
+how the design evolved, and it is not a proposal for a later redesign.
+
+Detailed contracts live in module READMEs, public Javadoc, and accepted ADRs. This document
+explains how those pieces fit together.
+
+## Documentation ownership
+
+| Surface | Owns |
+|---------|------|
+| Root [`README.md`](../README.md) | Project overview, module registry, entry points |
+| This page | Cross-module mental model and flows |
+| `<module>/README.md` | Module ownership, usage, local contributor guidance |
+| [`docs/adr/`](adr/README.md) | Consequential, hard-to-reverse *why* decisions |
+| [`docs/conformance.md`](conformance.md) | Current JSON:API 1.1 feature support |
+| [`docs/vision.md`](vision.md) | Stable product direction, distinct from this snapshot |
+
+## Module responsibilities
+
+These are ownership boundaries, not a complete Gradle dependency graph. Jackson 2 is planned and
+consumes the same `jackson-common` contracts; it is not an implemented module today.
+
+```mermaid
+flowchart TB
+  subgraph published["Published library modules"]
+    CORE["jsonapi-java-core<br/>JSON:API document model and validation"]
+    ANN["jsonapi-java-annotations<br/>mapping role metadata only"]
+    COMMON["jsonapi-java-jackson-common<br/>Jackson-major-neutral contracts"]
+    J3["jsonapi-java-jackson3<br/>Jackson 3 codec, introspection, and binding"]
+  end
+
+  APP["Application: persistence, endpoints, authorization, query"]
+
+  J3 --> COMMON
+  J3 --> CORE
+  J3 --> ANN
+  COMMON --> CORE
+  APP --> J3
+```
+
+Shared semantic catalogs live in unpublished `jsonapi-java-test-support`. Adapter test suites
+consume that module (`testImplementation`); it is not a production dependency of Jackson 3. The
+[Test support](#test-support) diagram shows catalog consumption.
+
+| Module | Responsibility |
+|--------|----------------|
+| [`jsonapi-java-core`](../jsonapi-java-core/README.md) | Immutable JSON:API document model and aggregate validation. No Jackson. |
+| [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
+| [`jsonapi-java-jackson-common`](../jsonapi-java-jackson-common/README.md) | Jackson-import-free policy, diagnostics, contexts, envelopes, and PATCH command contracts shared by Jackson majors. |
+| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. |
+| [`jsonapi-java-test-support`](../jsonapi-java-test-support/README.md) | Unpublished shared semantic catalogs, corpus, and pinned schemas. |
+| Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
+
+[ADR-007](adr/007-module-boundaries.md) records why these modules exist.
+[ADR-010](adr/010-architectural-tests.md) enforces the production dependency allowlists.
+
+## Primary data flows
+
+Reads are document-first: wire JSON becomes a validated core `JsonApiDocument` before any domain
+or PATCH binding. Writes map application values to core model objects, then validate before
+emission. [ADR-006](adr/006-read-boundary.md) and [ADR-011](adr/011-flat-dto-read-binding.md)
+own those boundaries.
+
+```mermaid
+flowchart LR
+  JSON["Wire JSON"] --> READER["JsonApiDocumentReader<br/>token-driven decode"]
+  READER --> COREDOC["Validated JsonApiDocument"]
+  COREDOC --> BIND["Flat DTO binder"]
+  COREDOC --> ENV["Typed domain envelope"]
+  COREDOC --> PATCHCMD["Low-level PatchCommand"]
+  COREDOC --> PATCHDTO["Typed PatchPresence DTO"]
+  BIND --> APP["Application values"]
+  ENV --> APP
+  PATCHCMD --> APP
+  PATCHDTO --> APP
+```
+
+```mermaid
+flowchart LR
+  APP["Application values"] --> MAP["JsonApiResourceMapper<br/>configured-Jackson write mapping"]
+  MAP --> COREDOC["JsonApiDocument"]
+  MAP --> MAPPED["MappedDocument<br/>plus sparse provenance"]
+  COREDOC --> WRITER["JsonApiDocumentWriter"]
+  MAPPED --> WRITER
+  WRITER --> VAL["Core validation"]
+  VAL --> JSON["Wire JSON"]
+```
+
+Public Jackson 3 entry points are created from `JsonApiJackson3`. Codec paths are
+`JsonApiDocumentReader` / `JsonApiDocumentWriter`. Mapping paths are `JsonApiResourceMapper`
+(write), `JsonApiResourceBinder` (flat read), `JsonApiDomainDocumentReader` (typed envelope),
+`JsonApiPatchReader`, and `JsonApiPatchDtoReader`.
+
+Convenience writes infer a root `JavaType` from the concrete runtime class. Directly parameterized
+roots such as `Container<Thing>` use the overloads that accept a complete `JavaType`; that declared
+type is retained through attributes, relationship targets, and compound inclusion. An
+unparameterized generic root fails at the mapped member that needs the missing declaration rather
+than guessing from runtime contents. See the Jackson 3 README and
+[ADR-005](adr/005-domain-mapping-and-inclusion.md).
+
+## Authority map
+
+JSON:API representation and configured Jackson are both authoritative, in different places.
+
+| Concern | Authority |
+|---------|-----------|
+| Document envelope, member presence, sealed explicit-null vs Java absence, identifier wire strings, relationship linkage, `PatchPresence` state | JSON:API / this library |
+| Aggregate document rules (identity uniqueness, full linkage, update-request shape, endpoint identity) | `jsonapi-java-core` validation |
+| Class-level `@JsonApiResource` type names, including class-level mix-ins | Configured Jackson introspection |
+| Ordinary attribute and resource/relationship-meta property serialization and deserialization | Configured Jackson at the mapped property |
+| Bean construction, creators, naming, visibility, modules | Configured Jackson |
+| `ResourceTypeRegistry` | Explicit wire-type → Java-target dispatch. It does not interpret annotations; registration keys come from the same configured-Jackson metadata authority. |
+
+`MappingDefinitionCache` is the Jackson 3 source of class-level resource metadata and of the two
+direction-specific mapping views:
+
+- serialization-oriented `ResourceMapping` for writes and both PATCH binders;
+- deserialization-oriented `ReadResourceMapping` for ordinary flat reads.
+
+Those caches stay separate because they answer different questions. Write mapping must not be
+relaxed to make read-only shapes bind, and read bindability follows Jackson's effective
+deserialization model rather than getters. See [ADR-004](adr/004-jackson-integration.md) and the
+Jackson 3 module README.
+
+## PATCH projections
+
+Low-level `PatchCommand` and typed `PatchPresence<T>` DTOs are two projections of the same
+validated update document, not competing APIs. Both run validate-on-read with
+`DocumentUsage.UPDATE_REQUEST`, bind only the primary resource object, and never read `included`.
+Applications authorize and apply the result.
+
+```mermaid
+flowchart TB
+  DOC["Validated update JsonApiDocument"] --> LOW["JsonApiPatchReader"]
+  DOC --> TYPED["JsonApiPatchDtoReader"]
+  LOW --> CMD["PatchCommand: identity plus supplied PatchChange list"]
+  TYPED --> DTO["Annotated DTO: each patchable member is PatchPresence of T"]
+  LOW --> SHARED["Shared PatchMemberConverter and StructuredValueBinder"]
+  TYPED --> SHARED
+```
+
+- **Low-level path:** supplied mapped members become `PatchChange` entries. Nested ordinary
+  structured values can recurse into `StructuredPatch` supplied-only changes.
+- **Typed path:** every patchable member is declared `PatchPresence<T>`. Nested recursion is
+  opt-in through a presence-aware PATCH *shape* (every visible member is itself
+  `PatchPresence<…>`).
+
+[ADR-012](adr/012-resource-patch-binding.md), [ADR-013](adr/013-direct-typed-patch-dto-binding.md),
+and [ADR-014](adr/014-recursive-structured-value-patch-semantics.md) own the contracts.
+
+## Diagnostics
+
+Three exception families remain distinct. Do not collapse them.
+
+| Family | Type | When | Coordinates |
+|--------|------|------|-------------|
+| Core validation | `JsonApiValidationException` | Direct validator use, including document writers after mapping | `ValidationRuleCode` + JSON Pointer-like path |
+| Codec / read | `JsonApiDocumentReadException` | Token-driven document reading | `CodecFailureCategory`, JSON Pointer-like path, safe `SourceLocation`. `ruleCode()` is present when a core constructor (`LOCAL_VALIDATION`) or aggregate validator (`AGGREGATE_VALIDATION`) failed during read. |
+| Mapping | `JsonApiMappingException` | Domain write, flat bind, envelope bind, PATCH bind, registry/fieldset/include specification | `MappingDiagnostic` + optional `MappingLocation` |
+
+Mapping locations follow one coordinate contract:
+
+- present locations are RFC 6901 JSON Pointers built through `MappingLocation`, with `~` and `/`
+  escaped per segment;
+- resource-object producers emit resource-relative pointers over JSON:API member names
+  (`/type`, `/id`, `/attributes/…`, `/relationships/…/data`, meta locations);
+- typed-envelope composition joins a resource-relative location under a document prefix
+  (`/data`, `/data/<index>`, `/included/<index>`) structurally, never by string concatenation;
+- failures with no meaningful member coordinate carry an absent location (`null`), never `""` or
+  `/`.
+
+`JsonApiMappingException` Javadoc is the canonical location contract.
+[ADR-003](adr/003-validation-and-immutability.md) covers core validation construction.
+
+## Sparse-fieldset provenance
+
+Sparse fieldsets are mapping provenance, not a caller-owned validation switch.
+
+```mermaid
+flowchart LR
+  CTX["CompoundSerializationContext<br/>fieldsets plus FieldPolicy"] --> MAP["toMappedDocument / toMappedResourceCollection"]
+  MAP --> MD["MappedDocument<br/>document plus exemption identities"]
+  MD --> WRITER["JsonApiDocumentWriter"]
+  WRITER --> COMPOSE["Compose exemptions into bound ValidationContext"]
+  COMPOSE --> VAL["Validate, then emit"]
+```
+
+- Fieldsets apply only on the `MappedDocument` mapping overloads. The unmapped `toDocument` /
+  `toResourceCollection` overloads reject a non-empty fieldset map.
+- Exemptions name included resources whose inbound linkage an applied fieldset removed.
+- The writer composes those identities into its bound `ValidationContext` before validation.
+  Callers do not translate mapping provenance into validation policy.
+- Relaxation is per exempted resource identity, not document-wide: unrelated full-linkage defects
+  still fail.
+
+[ADR-005](adr/005-domain-mapping-and-inclusion.md) separates linkage from inclusion. The Jackson 3
+README records the writer-boundary contract.
+
+## Jackson-major boundary
+
+`jsonapi-java-jackson-common` stays free of `tools.jackson.*` and `com.fasterxml.jackson.*`.
+Jackson 3 (and later Jackson 2) own major-specific factories, parsers, serializers, introspection,
+and mapper derivation. There is no runtime major detection and no lowest-common-denominator
+Jackson abstraction.
+
+Adapter construction is mapper-instance based: a fully configured mapper plus the capability's
+policy/context and required collaborators. Convenience factories choose documented defaults and
+delegate. Capabilities do not mutate the caller's mapper.
+
+Mapper *use* vs *derivation* is capability-specific:
+
+| Capability | Mapper handling |
+|------------|-----------------|
+| Document reader | Uses the supplied mapper directly for token-driven parsing |
+| Typed domain document reader | Uses the supplied mapper for document decode; derives an isolated binder mapper |
+| Presence-aware PATCH reader | Uses the supplied mapper for document decode; derives an isolated binder mapper |
+| Typed PATCH DTO reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `PatchPresence` module |
+| Document writer | Derives a mapper and registers the JSON:API document module |
+| Resource mapper / flat binder | Derive isolated mappers for introspection and conversion |
+
+[ADR-016](adr/016-jackson-adapter-construction.md) is the construction policy.
+
+## Test support
+
+Shared cross-adapter semantics live in `jsonapi-java-test-support`. Jackson-major mechanism tests
+stay local to the adapter.
+
+```mermaid
+flowchart LR
+  TS["jsonapi-java-test-support<br/>canonical models, catalogs, corpus, schemas"] --> J3["Jackson 3 shared-catalog suites"]
+  TS --> J2["Future Jackson 2 shared-catalog suites"]
+  J3L["Jackson 3 local *Fixtures.java"] --> J3
+  J2L["Jackson 2 local *Fixtures.java"] --> J2
+```
+
+The test-support README is the placement contract: reuse shared catalogs first; keep mix-ins,
+naming strategies, custom serializers, `JavaType` mechanics, and mapper isolation local; do not
+reintroduce a global adapter `testmodel` package.
+
+## Terminology
+
+These names are adjacent and easy to conflate. They are not synonyms.
+
+| Term | Meaning |
+|------|---------|
+| Presence-aware PATCH | The update contract that distinguishes omitted members, explicit JSON `null`, and supplied values. |
+| Presence-aware nested PATCH shape | Typed-path declaration: every visible member of a nested type is `PatchPresence<…>`. Ordinary beans on the low-level path are not this. |
+| `PatchCommand` | Low-level projection: identity plus a list of supplied `PatchChange`s. |
+| `PatchPresence<T>` | Typed DTO member projection of the same tri-state. |
+| `JsonApiDocument` | Validated core wire document. |
+| `MappedDocument` | Core document plus sparse-fieldset linkage-exemption provenance from one mapping call. |
+| `ResourceMapping` | Serialization-oriented write/PATCH metadata. |
+| `ReadResourceMapping` | Deserialization-oriented flat-read metadata. |
+| `ResourceTypeRegistry` | Wire JSON:API type → Java target dispatch, not a second annotation interpreter. |
+
+## Further reading
+
+- [jsonapi-java-core](../jsonapi-java-core/README.md)
+- [jsonapi-java-annotations](../jsonapi-java-annotations/README.md)
+- [jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md)
+- [jsonapi-java-jackson3](../jsonapi-java-jackson3/README.md)
+- [jsonapi-java-test-support](../jsonapi-java-test-support/README.md)
+- [ADR index](adr/README.md)
+- [Conformance](conformance.md)
+- [Vision](vision.md)

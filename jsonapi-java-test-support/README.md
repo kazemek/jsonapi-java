@@ -142,6 +142,7 @@ PATCH DTO catalogs are in this module.
 
 ## Further reading
 
+- [Architecture overview](../docs/architecture.md)
 - [JSON:API 1.1 corpus](src/main/resources/jsonapi/corpus/1.1/README.md)
 - [Pinned JSON:API schemas](src/main/resources/jsonapi/schema/vendor/1.1-pr1603/README.md)
 - [Conformance checklist](../docs/conformance.md)

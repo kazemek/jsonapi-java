@@ -28,6 +28,7 @@ This module does not provide Jackson codecs, document model types, inclusion/fet
 
 ## Further reading
 
+- [Architecture overview](../docs/architecture.md)
 - [Conformance checklist](../docs/conformance.md) — annotation metadata
 - [ADR-004 — Jackson introspection](../docs/adr/004-jackson-integration.md)
 - [ADR-005 — Linkage vs inclusion](../docs/adr/005-domain-mapping-and-inclusion.md)

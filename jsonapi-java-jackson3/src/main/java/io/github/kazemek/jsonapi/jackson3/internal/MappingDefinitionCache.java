@@ -10,6 +10,7 @@ import tools.jackson.databind.JavaType;
 import tools.jackson.databind.PropertyName;
 import tools.jackson.databind.SerializationConfig;
 import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.cfg.MapperConfig;
 import tools.jackson.databind.deser.SettableBeanProperty;
 import tools.jackson.databind.deser.bean.BeanDeserializerBase;
 import tools.jackson.databind.introspect.AnnotatedClass;
@@ -195,24 +196,27 @@ public final class MappingDefinitionCache {
     return targets;
   }
 
-  private static int configHash(SerializationConfig config) {
+  /**
+   * Identity fragment shared by serialization and deserialization cache keys: naming strategy and
+   * default visibility. The two {@code configHash} overloads stay separate because the caches
+   * answer different questions; deserialization also includes the active view.
+   */
+  private static int configIdentity(MapperConfig<?> config) {
     int result =
         config.getPropertyNamingStrategy() != null
             ? config.getPropertyNamingStrategy().hashCode()
             : 0;
-    result = 31 * result + config.getDefaultVisibilityChecker().hashCode();
-    return result;
+    return 31 * result + config.getDefaultVisibilityChecker().hashCode();
+  }
+
+  private static int configHash(SerializationConfig config) {
+    return configIdentity(config);
   }
 
   private static int configHash(DeserializationConfig config) {
-    int result =
-        config.getPropertyNamingStrategy() != null
-            ? config.getPropertyNamingStrategy().hashCode()
-            : 0;
-    result = 31 * result + config.getDefaultVisibilityChecker().hashCode();
+    int result = configIdentity(config);
     Class<?> activeView = config.getActiveView();
-    result = 31 * result + (activeView == null ? 0 : activeView.hashCode());
-    return result;
+    return 31 * result + (activeView == null ? 0 : activeView.hashCode());
   }
 
   record ValidatedMapping(ResourceMapping mapping, Optional<MappingProperty> unresolvedProperty) {}

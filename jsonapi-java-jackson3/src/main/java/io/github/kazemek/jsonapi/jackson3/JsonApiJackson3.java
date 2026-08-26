@@ -19,9 +19,12 @@ import tools.jackson.databind.json.JsonMapper;
  * mapper first, followed by the policy, context, and collaborators required by its capability.
  * Convenience factories select documented defaults and delegate to the canonical seam; mapper
  * builders are intentionally not accepted. Factory construction never mutates or replaces the
- * caller's configuration in place. Public surface consists of {@link JsonApiDocumentWriter}, {@link
- * JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link JsonApiResourceBinder}, {@link
- * JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and {@link JsonApiPatchDtoReader}.
+ * caller's configuration in place. Token-driven document reading uses the supplied mapper directly.
+ * Capabilities that need adapter-specific modules or isolated introspection state derive a mapper
+ * via {@link JsonMapper#rebuild()}. Public surface consists of {@link JsonApiDocumentWriter},
+ * {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link JsonApiResourceBinder},
+ * {@link JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and {@link
+ * JsonApiPatchDtoReader}.
  */
 public final class JsonApiJackson3 {
 

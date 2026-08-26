@@ -95,7 +95,8 @@ those capabilities are unavailable.
   implementation permission. An authorized workflow may execute an approved review directly rather
   than requiring another explicit instruction.
 - Read `settings.gradle.kts`, the module README, changed-package `package-info.java`, exact sources
-  and mirrored tests, then only directly relevant ADRs or conformance sections.
+  and mirrored tests, then only directly relevant ADRs or conformance sections. Read
+  `docs/architecture.md` when the work is cross-module.
 - Read `docs/vision.md` only for new modules, product-boundary changes, or stable direction.
 
 # Architecture Constraints
@@ -119,12 +120,13 @@ Every durable fact has one canonical owner; other documents should link or provi
 | Fact | Canonical owner |
 |------|-----------------|
 | Current module capability and usage | `<module>/README.md` |
+| Current cross-module architecture mental model | `docs/architecture.md` |
 | Human-readable module inventory | root `README.md` |
 | Actual build membership | `settings.gradle.kts` |
 | Package responsibility and invariants | `package-info.java` |
 | Public API contract and semantics | Javadoc |
 | Behavioral proof | tests |
-| Cross-cutting architecture and rationale | accepted ADR under `docs/adr/` |
+| Cross-cutting architecture rationale | accepted ADR under `docs/adr/` |
 | JSON:API compliance state | `docs/conformance.md` |
 | Workflow and agent routing | this file and `.agents/skills/` |
 | Planning/review finding severity and stage ownership | `.agents/skills/review-findings.md` |

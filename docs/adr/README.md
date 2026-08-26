@@ -1,6 +1,7 @@
 # Architecture Decision Records
 
-ADRs record consequential, hard-to-reverse “why” decisions. Stable product direction lives in
+ADRs record consequential, hard-to-reverse “why” decisions. The current cross-module mental model
+lives in [`docs/architecture.md`](../architecture.md). Stable product direction lives in
 [`docs/vision.md`](../vision.md); current capability lives in module READMEs and
 [`docs/conformance.md`](../conformance.md). Owner and conflict rules are in
 [`AGENTS.md`](../../AGENTS.md).
