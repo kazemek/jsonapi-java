@@ -24,6 +24,12 @@ import java.util.Set;
  */
 public final class WriteDiagnosticsScenarios {
 
+  private static final String COMMENTS = "comments";
+  private static final String PEOPLE = "people";
+  private static final String EDITOR = "editor";
+  private static final String AUTHOR_DATA_META = "/relationships/author/data/meta";
+  private static final String COMMENTS_DATA_META = "/relationships/comments/data/meta";
+
   private static final List<WriteDiagnosticScenario> SCENARIOS =
       List.of(
           new WriteDiagnosticScenario(
@@ -146,8 +152,7 @@ public final class WriteDiagnosticsScenarios {
                   new WriteDiagnosticsFixtures.RenamedMixedRelEntity(
                       "1",
                       List.of(
-                          io.github.kazemek.jsonapi.core.model.ResourceIdentifier.of(
-                              "comments", "1"),
+                          io.github.kazemek.jsonapi.core.model.ResourceIdentifier.of(COMMENTS, "1"),
                           new Object())),
               MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
               "/relationships/ext-items/data"),
@@ -165,11 +170,11 @@ public final class WriteDiagnosticsScenarios {
               () ->
                   new WriteDiagnosticsFixtures.DuplicateIdentifierMetaEntity(
                       "1",
-                      ResourceIdentifier.of("people", "p1"),
+                      ResourceIdentifier.of(PEOPLE, "p1"),
                       new AuthorIdMeta("a"),
                       new AuthorIdMeta("b")),
               MappingDiagnostic.DUPLICATE_ROLE,
-              "/relationships/author/data/meta"),
+              AUTHOR_DATA_META),
           new WriteDiagnosticScenario(
               "unmapped-identifier-meta",
               "Identifier meta targeting an undeclared relationship is UNRESOLVED_IDENTIFIER_META",
@@ -183,55 +188,51 @@ public final class WriteDiagnosticsScenarios {
               "Scalar to-one identifier meta is INVALID_IDENTIFIER_META_TARGET",
               () ->
                   new WriteDiagnosticsFixtures.ScalarIdentifierMetaEntity(
-                      "1", ResourceIdentifier.of("people", "p1"), "editor"),
+                      "1", ResourceIdentifier.of(PEOPLE, "p1"), EDITOR),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              "/relationships/author/data/meta"),
+              AUTHOR_DATA_META),
           new WriteDiagnosticScenario(
               "set-to-many-identifier-meta",
               "Set to-many identifier meta is INVALID_IDENTIFIER_META_TARGET",
               () ->
                   new WriteDiagnosticsFixtures.SetIdentifierMetaEntity(
                       "1",
-                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      List.of(ResourceIdentifier.of(COMMENTS, "c1")),
                       Set.of(new CommentIdMeta(true))),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              "/relationships/comments/data/meta"),
+              COMMENTS_DATA_META),
           new WriteDiagnosticScenario(
               "map-to-many-identifier-meta",
               "Map to-many identifier meta is INVALID_IDENTIFIER_META_TARGET",
               () ->
                   new WriteDiagnosticsFixtures.MapIdentifierMetaEntity(
                       "1",
-                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      List.of(ResourceIdentifier.of(COMMENTS, "c1")),
                       Map.of("c1", new CommentIdMeta(true))),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              "/relationships/comments/data/meta"),
+              COMMENTS_DATA_META),
           new WriteDiagnosticScenario(
               "list-identifier-meta-on-to-one",
               "List identifier meta on a to-one relationship is INVALID_IDENTIFIER_META_TARGET",
               () ->
                   new WriteDiagnosticsFixtures.ListOnToOneIdentifierMetaEntity(
-                      "1",
-                      ResourceIdentifier.of("people", "p1"),
-                      List.of(new AuthorIdMeta("editor"))),
+                      "1", ResourceIdentifier.of(PEOPLE, "p1"), List.of(new AuthorIdMeta(EDITOR))),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              "/relationships/author/data/meta"),
+              AUTHOR_DATA_META),
           new WriteDiagnosticScenario(
               "bean-identifier-meta-on-to-many",
               "Bean identifier meta on a to-many relationship is INVALID_IDENTIFIER_META_TARGET",
               () ->
                   new WriteDiagnosticsFixtures.BeanOnToManyIdentifierMetaEntity(
-                      "1",
-                      List.of(ResourceIdentifier.of("comments", "c1")),
-                      new CommentIdMeta(true)),
+                      "1", List.of(ResourceIdentifier.of(COMMENTS, "c1")), new CommentIdMeta(true)),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              "/relationships/comments/data/meta"),
+              COMMENTS_DATA_META),
           new WriteDiagnosticScenario(
               "empty-identifier-meta-member-name",
               "Empty identifier-meta value is INVALID_IDENTIFIER_META_TARGET with no location",
               () ->
                   new WriteDiagnosticsFixtures.EmptyNameIdentifierMetaEntity(
-                      "1", ResourceIdentifier.of("people", "p1"), new AuthorIdMeta("editor")),
+                      "1", ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
               null),
           new WriteDiagnosticScenario(
@@ -239,16 +240,16 @@ public final class WriteDiagnosticsScenarios {
               "To-one identifier meta with null linkage is INVALID_IDENTIFIER_META_TARGET",
               () ->
                   new ArticleWithIdentifierMeta(
-                      "1", "T", null, List.of(), null, new AuthorIdMeta("editor"), null),
+                      "1", "T", null, List.of(), null, new AuthorIdMeta(EDITOR), null),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              "/relationships/author/data/meta"),
+              AUTHOR_DATA_META),
           new WriteDiagnosticScenario(
               "to-many-identifier-meta-length-mismatch",
               "To-many identifier meta length mismatch is INVALID_IDENTIFIER_META_TARGET at data",
               () ->
                   new WriteDiagnosticsFixtures.LengthMismatchIdentifierMetaEntity(
                       "1",
-                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      List.of(ResourceIdentifier.of(COMMENTS, "c1")),
                       List.of(new CommentIdMeta(true), new CommentIdMeta(false))),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
               "/relationships/comments/data"));
