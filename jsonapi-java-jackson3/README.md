@@ -333,9 +333,10 @@ derive isolated mappers via `rebuild()`; `reader` uses the supplied mapper direc
 decoding, and `domainDocumentReader` uses it for decoding while deriving its binder mapper. No
 construction path mutates the caller's mapper. Writers validate before emission. Readers decode
 through public core constructors, then run aggregate validation. Mappers and binders introspect
-types for resource metadata but do not register a Jackson module (the PATCH DTO reader additionally
-derives a binder mapper with an internal `PatchPresence` module; the caller's mapper is still never
-mutated).
+types for resource metadata. Derived mapping and PATCH binder mappers register the internal
+`MetaBindingModule` so built-in `ResourceIdentifier` values can round-trip identifier meta; the
+PATCH DTO binder additionally registers the internal `PatchPresence` module. None of those paths
+register the JSON:API document module.
 
 ## Non-goals
 

@@ -219,11 +219,11 @@ Mapper *use* vs *derivation* is capability-specific:
 | Capability | Mapper handling |
 |------------|-----------------|
 | Document reader | Uses the supplied mapper directly for token-driven parsing |
-| Typed domain document reader | Uses the supplied mapper for document decode; derives an isolated binder mapper |
-| Presence-aware PATCH reader | Uses the supplied mapper for document decode; derives an isolated binder mapper |
-| Typed PATCH DTO reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `PatchPresence` module |
+| Typed domain document reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `MetaBindingModule` |
+| Presence-aware PATCH reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `MetaBindingModule` |
+| Typed PATCH DTO reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `MetaBindingModule` and `PatchPresence` modules |
 | Document writer | Derives a mapper and registers the JSON:API document module |
-| Resource mapper / flat binder | Derive isolated mappers for introspection and conversion |
+| Resource mapper / flat binder | Derive isolated mappers for introspection and conversion; register the internal `MetaBindingModule` |
 
 [ADR-016](adr/016-jackson-adapter-construction.md) is the construction policy.
 
