@@ -307,12 +307,14 @@ Diagnostic locations for nested failures are engine-accumulated wire-name locati
     `List` or array of those objects, index-aligned with linkage identifiers. `Set` and `Map` are
     rejected.
   - **Read/write** reuse ADR-015 conversion (configured Jackson, full `JavaType`). A present
-    identifier-meta property is an authoritative overlay; omitting it leaves any
-    `ResourceIdentifier.meta` already on the relationship value in place.
+    identifier-meta property is an authoritative overlay; omitting it, or a Jackson serializer that
+    emits nothing, leaves any `ResourceIdentifier.meta` already on the relationship value in place.
+    Built-in linkage conversion preserves identifier meta and still drops additional members.
   - **PATCH:** identifier meta is not independently patchable. Typed PATCH DTOs reject the
     annotation. Low-level `PatchCommand` emits no identifier-meta `PatchChange`; identifier meta
-    rides on `ResourceIdentifier` values inside whole-linkage `RelationshipChange`. This is
-    ADR-014's atomic container boundary, not element-addressed mutation.
+    rides on `ResourceIdentifier` values inside whole-linkage `RelationshipChange`, including when
+    linkage is coerced to array, `Set`, or `Optional`. This is ADR-014's atomic container boundary,
+    not element-addressed mutation.
 
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only

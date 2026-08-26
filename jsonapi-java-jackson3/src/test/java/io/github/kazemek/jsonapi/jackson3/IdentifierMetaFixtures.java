@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiIdentifierMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -9,15 +10,14 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.ValueSerializer;
 import tools.jackson.databind.annotation.JsonSerialize;
 
 /**
- * Identifier-meta declaration and conversion fixtures owned by {@code IdentifierMetaMappingSpec}
- * (ADR-017).
+ * Identifier-meta conversion fixtures owned by {@code IdentifierMetaMappingSpec} (ADR-017).
+ * Declaration and write-failure carriers live in the shared write-diagnostics catalog.
  */
 public final class IdentifierMetaFixtures {
 
@@ -74,55 +74,9 @@ public final class IdentifierMetaFixtures {
   }
 
   @JsonApiResource(type = "articles")
-  public record DuplicateIdentifierMetaArticle(
+  public record NonEmittingIdentifierMetaArticle(
       @JsonApiId String id,
       @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("author") AuthorIdMeta first,
-      @JsonApiIdentifierMeta("author") AuthorIdMeta second) {}
-
-  @JsonApiResource(type = "articles")
-  public record UnmappedIdentifierMetaArticle(
-      @JsonApiId String id, @JsonApiIdentifierMeta("nonexistent") AuthorIdMeta authorIdMeta) {}
-
-  @JsonApiResource(type = "articles")
-  public record ScalarIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("author") String authorIdMeta) {}
-
-  @JsonApiResource(type = "articles")
-  public record SetIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") Set<CommentIdMeta> commentIdMetas) {}
-
-  @JsonApiResource(type = "articles")
-  public record MapIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") Map<String, CommentIdMeta> commentIdMetas) {}
-
-  @JsonApiResource(type = "articles")
-  public record ListOnToOneIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("author") List<AuthorIdMeta> authorIdMeta) {}
-
-  @JsonApiResource(type = "articles")
-  public record BeanOnToManyIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") CommentIdMeta commentIdMetas) {}
-
-  @JsonApiResource(type = "articles")
-  public record EmptyNameIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("") AuthorIdMeta authorIdMeta) {}
-
-  @JsonApiResource(type = "articles")
-  public record LengthMismatchIdentifierMetaArticle(
-      @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") List<CommentIdMeta> commentIdMetas) {}
+      @JsonApiIdentifierMeta("author") @JsonInclude(JsonInclude.Include.NON_EMPTY)
+          Map<String, String> authorIdMeta) {}
 }

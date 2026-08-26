@@ -11,6 +11,7 @@ import io.github.kazemek.jsonapi.jackson.PatchCommand;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainPatchBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
+import io.github.kazemek.jsonapi.jackson3.internal.MetaBindingModule;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
@@ -27,7 +28,9 @@ import tools.jackson.databind.json.JsonMapper;
  * {@link #fromDocument} binds without re-validation. Codec and aggregate failures stay {@link
  * io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException}; bind failures stay {@link
  * io.github.kazemek.jsonapi.jackson.JsonApiMappingException} with resource-relative pointers and
- * are never prefixed with {@code /data}.
+ * are never prefixed with {@code /data}. Built-in linkage conversion preserves {@code
+ * ResourceIdentifier.meta} through a binder mapper that can round-trip core {@link
+ * io.github.kazemek.jsonapi.core.model.Meta} (ADR-017).
  *
  * <p>Close/ownership rules match {@link JsonApiDocumentReader}: convenience overloads close parsers
  * they create; caller-owned streams and parsers stay open. Construct via {@link
@@ -51,7 +54,7 @@ public final class JsonApiPatchReader {
             .withDocumentUsage(DocumentUsage.UPDATE_REQUEST);
     DocumentReadContext readContext = DocumentReadContext.of(forced, PrimaryDataKind.RESOURCE);
     this.documentReader = new JsonApiDocumentReader(base, readContext);
-    this.binderMapper = base.rebuild().build();
+    this.binderMapper = base.rebuild().addModule(new MetaBindingModule()).build();
     this.binder =
         new DomainPatchBinder(
             binderMapper,

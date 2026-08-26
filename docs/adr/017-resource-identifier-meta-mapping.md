@@ -58,10 +58,11 @@ elements without meta are Java `null`. Built-in `ResourceIdentifier` linkage con
 identifier meta (additional members remain dropped).
 
 Write: when `@JsonApiIdentifierMeta` is present and non-null it is an authoritative overlay on the
-constructed identifiers. Omitted identifier-meta leaves any `ResourceIdentifier.meta` already on
-the relationship value in place (passthrough). To-one identifier meta with null linkage, to-many
-length mismatch, and converted non-object members fail with stable diagnostics. Relationship
-linkage, resource identity, and ADR-015 relationship meta are unchanged.
+constructed identifiers. Omitted identifier-meta, or a configured serializer that emits nothing,
+leaves any `ResourceIdentifier.meta` already on the relationship value in place (passthrough).
+To-one identifier meta with null linkage, to-many length mismatch, and converted non-object members
+fail with stable diagnostics. Relationship linkage, resource identity, and ADR-015 relationship
+meta are unchanged.
 
 ### PATCH
 
@@ -69,7 +70,8 @@ Identifier meta is **not independently patchable**.
 
 - No `PatchChange` variant is added. Low-level `PatchCommand` skips identifier-meta properties as
   separate changes. Identifier meta rides on `ResourceIdentifier` values inside
-  `RelationshipChange` when linkage is supplied.
+  `RelationshipChange` when linkage is supplied, including after coercion to array, `Set`, or
+  `Optional`.
 - Typed `PatchPresence<T>` DTOs reject `@JsonApiIdentifierMeta` at declaration time with
   `INVALID_PATCH_PROPERTY_TYPE`. Applications that need identifier meta on PATCH supply it on the
   `ResourceIdentifier` (or collection of them) that replaces the relationship.

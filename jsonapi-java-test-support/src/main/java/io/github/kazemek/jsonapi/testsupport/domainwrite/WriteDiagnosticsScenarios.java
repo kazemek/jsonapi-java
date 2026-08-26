@@ -1,18 +1,26 @@
 package io.github.kazemek.jsonapi.testsupport.domainwrite;
 
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithIdentifierMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.WriteDiagnosticsFixtures;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * The shared resource-write diagnostics catalog consumed by Jackson-major contract tests.
  *
- * <p>Each entry maps one deliberately mis-declared carrier from {@code fixtures.domainwrite}
- * through the adapter's own writer and pins the expected semantic diagnostic category plus either
- * the stable wire location (resource-relative JSON Pointer) or an absent location for class-level
- * and specification failures. The catalog grows by addition; adapter suites pick entries up through
- * {@link #catalog()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario id.
+ * <p>Each entry maps one deliberately mis-declared or invalid-instance carrier through the
+ * adapter's own writer and pins the expected semantic diagnostic category plus either the stable
+ * wire location (resource-relative JSON Pointer) or an absent location for class-level and
+ * specification failures. Identifier-meta declaration and overlay failures (ADR-017) live here so
+ * every Jackson major iterates them. The catalog grows by addition; adapter suites pick entries up
+ * through {@link #catalog()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario
+ * id.
  */
 public final class WriteDiagnosticsScenarios {
 
@@ -150,7 +158,100 @@ public final class WriteDiagnosticsScenarios {
                   new WriteDiagnosticsFixtures.RenamedBagRelEntity(
                       "1", new WriteDiagnosticsFixtures.RawBag(new Object())),
               MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
-              "/relationships/ext-bag/data"));
+              "/relationships/ext-bag/data"),
+          new WriteDiagnosticScenario(
+              "duplicate-identifier-meta-at-data-meta",
+              "Two identifier-meta properties for one relationship are DUPLICATE_ROLE",
+              () ->
+                  new WriteDiagnosticsFixtures.DuplicateIdentifierMetaEntity(
+                      "1",
+                      ResourceIdentifier.of("people", "p1"),
+                      new AuthorIdMeta("a"),
+                      new AuthorIdMeta("b")),
+              MappingDiagnostic.DUPLICATE_ROLE,
+              "/relationships/author/data/meta"),
+          new WriteDiagnosticScenario(
+              "unmapped-identifier-meta",
+              "Identifier meta targeting an undeclared relationship is UNRESOLVED_IDENTIFIER_META",
+              () ->
+                  new WriteDiagnosticsFixtures.UnmappedIdentifierMetaEntity(
+                      "1", new AuthorIdMeta("x")),
+              MappingDiagnostic.UNRESOLVED_IDENTIFIER_META,
+              "/relationships/nonexistent/data/meta"),
+          new WriteDiagnosticScenario(
+              "scalar-to-one-identifier-meta",
+              "Scalar to-one identifier meta is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.ScalarIdentifierMetaEntity(
+                      "1", ResourceIdentifier.of("people", "p1"), "editor"),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/author/data/meta"),
+          new WriteDiagnosticScenario(
+              "set-to-many-identifier-meta",
+              "Set to-many identifier meta is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.SetIdentifierMetaEntity(
+                      "1",
+                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      Set.of(new CommentIdMeta(true))),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/comments/data/meta"),
+          new WriteDiagnosticScenario(
+              "map-to-many-identifier-meta",
+              "Map to-many identifier meta is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.MapIdentifierMetaEntity(
+                      "1",
+                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      Map.of("c1", new CommentIdMeta(true))),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/comments/data/meta"),
+          new WriteDiagnosticScenario(
+              "list-identifier-meta-on-to-one",
+              "List identifier meta on a to-one relationship is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.ListOnToOneIdentifierMetaEntity(
+                      "1",
+                      ResourceIdentifier.of("people", "p1"),
+                      List.of(new AuthorIdMeta("editor"))),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/author/data/meta"),
+          new WriteDiagnosticScenario(
+              "bean-identifier-meta-on-to-many",
+              "Bean identifier meta on a to-many relationship is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.BeanOnToManyIdentifierMetaEntity(
+                      "1",
+                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      new CommentIdMeta(true)),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/comments/data/meta"),
+          new WriteDiagnosticScenario(
+              "empty-identifier-meta-member-name",
+              "Empty identifier-meta value is INVALID_IDENTIFIER_META_TARGET with no location",
+              () ->
+                  new WriteDiagnosticsFixtures.EmptyNameIdentifierMetaEntity(
+                      "1", ResourceIdentifier.of("people", "p1"), new AuthorIdMeta("editor")),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              null),
+          new WriteDiagnosticScenario(
+              "to-one-identifier-meta-without-linkage",
+              "To-one identifier meta with null linkage is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new ArticleWithIdentifierMeta(
+                      "1", "T", null, List.of(), null, new AuthorIdMeta("editor"), null),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/author/data/meta"),
+          new WriteDiagnosticScenario(
+              "to-many-identifier-meta-length-mismatch",
+              "To-many identifier meta length mismatch is INVALID_IDENTIFIER_META_TARGET at data",
+              () ->
+                  new WriteDiagnosticsFixtures.LengthMismatchIdentifierMetaEntity(
+                      "1",
+                      List.of(ResourceIdentifier.of("comments", "c1")),
+                      List.of(new CommentIdMeta(true), new CommentIdMeta(false))),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              "/relationships/comments/data"));
 
   private static final FixtureCatalog<WriteDiagnosticScenario> CATALOG =
       FixtureCatalog.of("write-diagnostics", SCENARIOS);

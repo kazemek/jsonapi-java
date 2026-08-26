@@ -497,8 +497,8 @@ public final class DomainResourceWriter {
 
   /**
    * When {@code @JsonApiIdentifierMeta} is present and non-null, it is authoritative for identifier
-   * meta on the constructed linkage. Omitted identifier-meta leaves any {@link
-   * ResourceIdentifier#meta()} already on the relationship value in place.
+   * meta on the constructed linkage. Omitted identifier-meta, or a serializer that emits nothing,
+   * leaves any {@link ResourceIdentifier#meta()} already on the relationship value in place.
    */
   private RelationshipData overlayIdentifierMeta(
       Object resource,
@@ -516,13 +516,15 @@ public final class DomainResourceWriter {
         ? overlayToManyIdentifierMeta(
             resource, mapping, identifierMetaProperty, rawValue, value, linkage, relationshipName)
         : overlayToOneIdentifierMeta(
-            resource, mapping, identifierMetaProperty, linkage, relationshipName);
+            resource, mapping, identifierMetaProperty, rawValue, value, linkage, relationshipName);
   }
 
   private RelationshipData overlayToOneIdentifierMeta(
       Object resource,
       ResourceMapping mapping,
       MappingProperty identifierMetaProperty,
+      @Nullable Object rawValue,
+      Object value,
       RelationshipData linkage,
       String relationshipName) {
     MappingLocation metaLocation = IdentifierMetaSupport.identifierMetaLocation(relationshipName);
@@ -534,8 +536,30 @@ public final class DomainResourceWriter {
               metaLocation,
               "Identifier meta requires linkage for relationship '" + relationshipName + "'");
       case RelationshipData.SingleLinkage(ResourceIdentifier identifier) -> {
-        Meta meta = buildMetaValue(resource, mapping, identifierMetaProperty, metaLocation);
-        yield new RelationshipData.SingleLinkage(IdentifierMetaSupport.withMeta(identifier, meta));
+        Object converted;
+        try {
+          PropertyScopedValueConverter.SerializationResult serialized =
+              propertyScoped.serialize(
+                  mapping.domainType(),
+                  identifierMetaProperty.definition().getFullName().getSimpleName(),
+                  resource,
+                  rawValue,
+                  value);
+          if (!serialized.emitted()) {
+            yield linkage;
+          }
+          converted = serialized.value();
+        } catch (RuntimeException e) {
+          throw new JsonApiMappingException(
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              resource.getClass(),
+              metaLocation,
+              "Failed to convert identifier meta for relationship '" + relationshipName + "'",
+              e);
+        }
+        yield new RelationshipData.SingleLinkage(
+            IdentifierMetaSupport.withMeta(
+                identifier, metaFromConverted(converted, resource, metaLocation)));
       }
       case RelationshipData.IdentifierCollectionLinkage ignored ->
           throw new JsonApiMappingException(

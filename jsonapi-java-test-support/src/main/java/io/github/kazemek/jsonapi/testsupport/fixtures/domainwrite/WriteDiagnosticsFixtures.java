@@ -2,20 +2,27 @@ package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
+import io.github.kazemek.jsonapi.annotation.JsonApiIdentifierMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Passive declaration-shape carriers for the shared write-diagnostics catalog: deliberately
  * mis-declared resources (missing annotations, duplicate roles, name collisions, invalid or
- * reserved names), throwing accessors, write-only properties, and unsupported relationship value
- * shapes. Adapter suites map instances of these carriers through their own resource writer and
- * assert the shared semantic diagnostic categories and wire locations.
+ * reserved names), throwing accessors, write-only properties, unsupported relationship value
+ * shapes, and invalid identifier-meta declarations (ADR-017). Adapter suites map instances of these
+ * carriers through their own resource writer and assert the shared semantic diagnostic categories
+ * and wire locations.
  */
 public final class WriteDiagnosticsFixtures {
 
@@ -216,4 +223,66 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "bag-rel")
   public record RenamedBagRelEntity(
       @JsonApiId String id, @JsonApiRelationship(name = "ext-bag") RawBag things) {}
+
+  /** Two identifier-meta properties targeting the same relationship. */
+  @JsonApiResource(type = "articles")
+  public record DuplicateIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship ResourceIdentifier author,
+      @JsonApiIdentifierMeta("author") AuthorIdMeta first,
+      @JsonApiIdentifierMeta("author") AuthorIdMeta second) {}
+
+  /** Identifier meta targeting a relationship that is not declared. */
+  @JsonApiResource(type = "articles")
+  public record UnmappedIdentifierMetaEntity(
+      @JsonApiId String id, @JsonApiIdentifierMeta("nonexistent") AuthorIdMeta authorIdMeta) {}
+
+  /** Scalar to-one identifier meta (must be Bean / Map / Object). */
+  @JsonApiResource(type = "articles")
+  public record ScalarIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship ResourceIdentifier author,
+      @JsonApiIdentifierMeta("author") String authorIdMeta) {}
+
+  /** Set-shaped to-many identifier meta (must be List or array). */
+  @JsonApiResource(type = "articles")
+  public record SetIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship List<ResourceIdentifier> comments,
+      @JsonApiIdentifierMeta("comments") Set<CommentIdMeta> commentIdMetas) {}
+
+  /** Map-shaped to-many identifier meta (must be List or array). */
+  @JsonApiResource(type = "articles")
+  public record MapIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship List<ResourceIdentifier> comments,
+      @JsonApiIdentifierMeta("comments") Map<String, CommentIdMeta> commentIdMetas) {}
+
+  /** List identifier meta on a to-one relationship. */
+  @JsonApiResource(type = "articles")
+  public record ListOnToOneIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship ResourceIdentifier author,
+      @JsonApiIdentifierMeta("author") List<AuthorIdMeta> authorIdMeta) {}
+
+  /** Single bean identifier meta on a to-many relationship. */
+  @JsonApiResource(type = "articles")
+  public record BeanOnToManyIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship List<ResourceIdentifier> comments,
+      @JsonApiIdentifierMeta("comments") CommentIdMeta commentIdMetas) {}
+
+  /** Empty identifier-meta member name. */
+  @JsonApiResource(type = "articles")
+  public record EmptyNameIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship ResourceIdentifier author,
+      @JsonApiIdentifierMeta("") AuthorIdMeta authorIdMeta) {}
+
+  /** To-many identifier meta whose length does not match linkage. */
+  @JsonApiResource(type = "articles")
+  public record LengthMismatchIdentifierMetaEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship List<ResourceIdentifier> comments,
+      @JsonApiIdentifierMeta("comments") List<CommentIdMeta> commentIdMetas) {}
 }
