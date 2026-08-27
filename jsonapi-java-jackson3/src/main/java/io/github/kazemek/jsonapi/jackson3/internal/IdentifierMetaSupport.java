@@ -4,29 +4,20 @@ import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
-import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Shared helpers for identifier-meta mapping properties, diagnostic locations, and linkage copies
- * that preserve {@link ResourceIdentifier#meta()} (ADR-017).
+ * Shared helpers for identifier-meta diagnostic locations and {@link ResourceIdentifier} copies
+ * that preserve identifier meta (ADR-017).
  */
 final class IdentifierMetaSupport {
 
   private IdentifierMetaSupport() {}
 
   /**
-   * Builds a target-relationship-jsonapi-name to identifier-meta property map. The resolver
-   * guarantees at most one identifier-meta property per target, so keys are unique.
-   */
-  static Map<String, MappingProperty> byTarget(List<MappingProperty> identifierMetaProperties) {
-    return PatchMemberConverter.byJsonapiName(identifierMetaProperties);
-  }
-
-  /**
    * Resource-relative diagnostic location for to-one identifier meta, or for declaration failures
-   * that address the identifier-meta property as a whole.
+   * that address identifier meta as a whole.
    */
   static MappingLocation identifierMetaLocation(String relationshipName) {
     return MappingLocation.of(
@@ -47,15 +38,27 @@ final class IdentifierMetaSupport {
 
   /**
    * Copies linkage identity and identifier meta, dropping additional members (existing built-in
-   * conversion scope).
+   * read-side conversion scope).
    */
   static ResourceIdentifier copyLinkageIdentifier(ResourceIdentifier identifier) {
     return new ResourceIdentifier(
         identifier.type(), identifier.id(), identifier.lid(), identifier.meta(), Map.of());
   }
 
+  /** Overlays identifier meta while preserving type, id, lid, and additional members. */
   static ResourceIdentifier withMeta(ResourceIdentifier identifier, @Nullable Meta meta) {
+    return copyPreservingAdditionalMembers(identifier, meta);
+  }
+
+  /**
+   * NullAway models the generated {@link ResourceIdentifier} constructor as {@code Map<String,
+   * Object>} additional members; the record component allows nullable values. The map is already
+   * validated by the source identifier.
+   */
+  @SuppressWarnings("NullAway")
+  private static ResourceIdentifier copyPreservingAdditionalMembers(
+      ResourceIdentifier identifier, @Nullable Meta meta) {
     return new ResourceIdentifier(
-        identifier.type(), identifier.id(), identifier.lid(), meta, Map.of());
+        identifier.type(), identifier.id(), identifier.lid(), meta, identifier.additionalMembers());
   }
 }

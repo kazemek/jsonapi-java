@@ -16,8 +16,8 @@ import java.lang.annotation.Target;
  *
  * <p>At most one {@code @JsonApiMeta} property is allowed per mapped resource. Resource-side meta
  * is distinct from document-level meta (owned by the document envelope), relationship meta (owned
- * by {@link JsonApiRelationshipMeta}), and per-linkage identifier meta (owned by {@link
- * JsonApiIdentifierMeta}); no annotation ambiguously means document meta.
+ * by {@link JsonApiRelationshipMeta}), and per-linkage identifier meta (owned by {@code
+ * RelationshipLinkage}); no annotation ambiguously means document meta.
  *
  * <p>This annotation is not {@link java.lang.annotation.Inherited}.
  */

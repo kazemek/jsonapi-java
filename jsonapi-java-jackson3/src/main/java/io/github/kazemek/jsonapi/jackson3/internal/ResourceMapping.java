@@ -14,7 +14,6 @@ record ResourceMapping(
     List<MappingProperty> relationships,
     @Nullable MappingProperty resourceMeta,
     List<MappingProperty> relationshipMetaProperties,
-    List<MappingProperty> identifierMetaProperties,
     JavaType domainType) {
 
   /**
@@ -22,10 +21,9 @@ record ResourceMapping(
    * resource-relative wire location plus declared type. Identifiers use {@code identifierLocation}
    * ({@code /id} or {@code /lid}, depending on what the resource supplied), attributes start at
    * {@code /attributes/<wire-name>}, relationships at {@code /relationships/<wire-name>/data},
-   * resource meta at {@code /meta}, relationship meta at {@code /relationships/<wire-name>/meta},
-   * to-one identifier meta at {@code /relationships/<wire-name>/data/meta}, and to-many identifier
-   * meta at {@code /relationships/<wire-name>/data}. Shared by the flat binder and the typed PATCH
-   * DTO binder so construction-failure translation cannot drift.
+   * resource meta at {@code /meta}, and relationship meta at {@code
+   * /relationships/<wire-name>/meta}. Shared by the flat binder and the typed PATCH DTO binder so
+   * construction-failure translation cannot drift.
    */
   Map<String, StructuredValueBinder.ConstructionStart> constructionStartsByLogicalName(
       @Nullable MappingLocation identifierLocation) {
@@ -63,20 +61,6 @@ record ResourceMapping(
               RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()),
               property.accessor().getType()));
     }
-    for (MappingProperty property : identifierMetaProperties) {
-      starts.put(
-          property.logicalName(),
-          new StructuredValueBinder.ConstructionStart(
-              identifierMetaConstructionLocation(property), property.accessor().getType()));
-    }
     return starts;
-  }
-
-  static MappingLocation identifierMetaConstructionLocation(MappingPropertyView property) {
-    JavaType type = RelationshipLinkageSupport.unwrapOptionalType(property.type());
-    if (DomainResourceWriter.isToManyType(type)) {
-      return RelationshipLinkageSupport.relationshipLocation(property);
-    }
-    return IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName());
   }
 }

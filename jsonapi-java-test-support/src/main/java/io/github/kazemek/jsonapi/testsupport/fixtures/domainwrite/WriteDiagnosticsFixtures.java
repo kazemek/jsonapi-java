@@ -2,27 +2,24 @@ package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
-import io.github.kazemek.jsonapi.annotation.JsonApiIdentifierMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Passive declaration-shape carriers for the shared write-diagnostics catalog: deliberately
  * mis-declared resources (missing annotations, duplicate roles, name collisions, invalid or
  * reserved names), throwing accessors, write-only properties, unsupported relationship value
- * shapes, and invalid identifier-meta declarations (ADR-017). Adapter suites map instances of these
- * carriers through their own resource writer and assert the shared semantic diagnostic categories
- * and wire locations.
+ * shapes, and invalid {@code RelationshipLinkage} declarations (ADR-017). Adapter suites map
+ * instances of these carriers through their own resource writer and assert the shared semantic
+ * diagnostic categories and wire locations.
  */
 public final class WriteDiagnosticsFixtures {
 
@@ -224,65 +221,29 @@ public final class WriteDiagnosticsFixtures {
   public record RenamedBagRelEntity(
       @JsonApiId String id, @JsonApiRelationship(name = "ext-bag") RawBag things) {}
 
-  /** Two identifier-meta properties targeting the same relationship. */
+  /** Raw erased {@code RelationshipLinkage} (generic information is required). */
   @JsonApiResource(type = "articles")
-  public record DuplicateIdentifierMetaEntity(
-      @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("author") AuthorIdMeta first,
-      @JsonApiIdentifierMeta("author") AuthorIdMeta second) {}
+  @SuppressWarnings("rawtypes")
+  public record RawRelationshipLinkageEntity(
+      @JsonApiId String id, @JsonApiRelationship RelationshipLinkage author) {}
 
-  /** Identifier meta targeting a relationship that is not declared. */
+  /** Nested {@code RelationshipLinkage} as the wrapped target type. */
   @JsonApiResource(type = "articles")
-  public record UnmappedIdentifierMetaEntity(
-      @JsonApiId String id, @JsonApiIdentifierMeta("nonexistent") AuthorIdMeta authorIdMeta) {}
-
-  /** Scalar to-one identifier meta (must be Bean / Map / Object). */
-  @JsonApiResource(type = "articles")
-  public record ScalarIdentifierMetaEntity(
+  public record NestedRelationshipLinkageEntity(
       @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("author") String authorIdMeta) {}
+      @JsonApiRelationship
+          RelationshipLinkage<RelationshipLinkage<ResourceIdentifier, AuthorIdMeta>, AuthorIdMeta>
+              author) {}
 
-  /** Set-shaped to-many identifier meta (must be List or array). */
+  /** Scalar identifier-meta type inside the wrapper (must be Bean / Map / Object). */
   @JsonApiResource(type = "articles")
-  public record SetIdentifierMetaEntity(
+  public record ScalarMetaRelationshipLinkageEntity(
       @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") Set<CommentIdMeta> commentIdMetas) {}
+      @JsonApiRelationship RelationshipLinkage<ResourceIdentifier, String> author) {}
 
-  /** Map-shaped to-many identifier meta (must be List or array). */
+  /** List-shaped identifier-meta type inside the wrapper (must be a whole-meta object). */
   @JsonApiResource(type = "articles")
-  public record MapIdentifierMetaEntity(
+  public record ListMetaRelationshipLinkageEntity(
       @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") Map<String, CommentIdMeta> commentIdMetas) {}
-
-  /** List identifier meta on a to-one relationship. */
-  @JsonApiResource(type = "articles")
-  public record ListOnToOneIdentifierMetaEntity(
-      @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("author") List<AuthorIdMeta> authorIdMeta) {}
-
-  /** Single bean identifier meta on a to-many relationship. */
-  @JsonApiResource(type = "articles")
-  public record BeanOnToManyIdentifierMetaEntity(
-      @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") CommentIdMeta commentIdMetas) {}
-
-  /** Empty identifier-meta member name. */
-  @JsonApiResource(type = "articles")
-  public record EmptyNameIdentifierMetaEntity(
-      @JsonApiId String id,
-      @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiIdentifierMeta("") AuthorIdMeta authorIdMeta) {}
-
-  /** To-many identifier meta whose length does not match linkage. */
-  @JsonApiResource(type = "articles")
-  public record LengthMismatchIdentifierMetaEntity(
-      @JsonApiId String id,
-      @JsonApiRelationship List<ResourceIdentifier> comments,
-      @JsonApiIdentifierMeta("comments") List<CommentIdMeta> commentIdMetas) {}
+      @JsonApiRelationship RelationshipLinkage<ResourceIdentifier, List<AuthorIdMeta>> author) {}
 }

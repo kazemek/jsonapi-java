@@ -1,29 +1,100 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
+import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JavaType;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.type.TypeFactory;
 
 /**
  * Shared relationship linkage rules for flat DTO binding and presence-aware PATCH: cardinality
- * checks, target-class resolution, built-in {@link ResourceIdentifier} conversion that preserves
- * identifier meta, and custom linkage mappers.
+ * checks, target-class resolution, opt-in {@link RelationshipLinkage} unwrap/wrap, built-in {@link
+ * ResourceIdentifier} conversion that preserves identifier meta, and custom linkage mappers.
  */
 final class RelationshipLinkageSupport {
 
   private RelationshipLinkageSupport() {}
 
+  static boolean isLinkageType(JavaType type) {
+    return type.getRawClass() == RelationshipLinkage.class;
+  }
+
+  /**
+   * Returns the {@link RelationshipLinkage} JavaType of a relationship property, or {@code null}
+   * when the property is an ordinary target. Looks through one {@link Optional} and, for to-many
+   * properties, through the collection/array content type.
+   */
+  static @Nullable JavaType linkageJavaType(JavaType propertyType) {
+    JavaType unwrapped = unwrapTransportWrappers(propertyType);
+    if (isLinkageType(unwrapped)) {
+      return unwrapped;
+    }
+    if (DomainResourceWriter.isToManyType(unwrapped)) {
+      JavaType content = DomainResourceWriter.resolveContentType(unwrapped);
+      if (content != null) {
+        JavaType contentUnwrapped = unwrapOptionalType(content);
+        if (isLinkageType(contentUnwrapped)) {
+          return contentUnwrapped;
+        }
+      }
+    }
+    return null;
+  }
+
+  static JavaType linkageTargetType(JavaType linkageType) {
+    return linkageType.containedType(0);
+  }
+
+  static JavaType linkageMetaType(JavaType linkageType) {
+    return linkageType.containedType(1);
+  }
+
+  /**
+   * The JavaType against which ordinary target conversion runs. For a wrapper property this is
+   * {@code T} (or a collection/array of {@code T}); otherwise the original property type.
+   */
+  static JavaType targetMappingType(JavaType propertyType, TypeFactory typeFactory) {
+    JavaType unwrapped = unwrapTransportWrappers(propertyType);
+    JavaType linkageType = linkageJavaType(unwrapped);
+    if (linkageType == null) {
+      return propertyType;
+    }
+    JavaType target = linkageTargetType(linkageType);
+    if (!DomainResourceWriter.isToManyType(unwrapped)) {
+      return target;
+    }
+    if (unwrapped.isArrayType()) {
+      return typeFactory.constructArrayType(target);
+    }
+    Class<?> raw = unwrapped.getRawClass();
+    if (Set.class.isAssignableFrom(raw)) {
+      @SuppressWarnings("unchecked")
+      Class<? extends Collection> setType = (Class<? extends Collection>) raw;
+      return typeFactory.constructCollectionType(setType, target);
+    }
+    return typeFactory.constructCollectionType(List.class, target);
+  }
+
   static Class<?> resolveTargetClass(
       JavaType propertyType, boolean toMany, MappingPropertyView property) {
+    JavaType linkageType = linkageJavaType(propertyType);
+    if (linkageType != null) {
+      return linkageTargetType(linkageType).getRawClass();
+    }
     if (toMany) {
       JavaType contentType = DomainResourceWriter.resolveContentType(propertyType);
       if (contentType == null) {
@@ -129,6 +200,93 @@ final class RelationshipLinkageSupport {
           "Relationship linkage mapper failed for relationship '" + property.logicalName() + "'",
           e);
     }
+  }
+
+  /**
+   * When the relationship is a {@link RelationshipLinkage} (or a collection of them), wraps each
+   * converted target with the identifier meta belonging to that exact resource identifier.
+   */
+  static @Nullable Object wrapConverted(
+      MappingPropertyView property,
+      RelationshipData data,
+      @Nullable Object converted,
+      JsonMapper mapper) {
+    JavaType linkageType = linkageJavaType(property.type());
+    if (linkageType == null) {
+      return converted;
+    }
+    JavaType metaType = linkageMetaType(linkageType);
+    boolean toMany = DomainResourceWriter.isToManyType(unwrapTransportWrappers(property.type()));
+    if (!toMany) {
+      if (converted == null) {
+        return null;
+      }
+      return new RelationshipLinkage<>(
+          converted, convertIdentifierMeta(singleIdentifier(data), metaType, mapper, property, -1));
+    }
+    List<ResourceIdentifier> identifiers =
+        switch (data) {
+          case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> ids) -> ids;
+          default -> List.of();
+        };
+    if (converted == null || identifiers.isEmpty()) {
+      return List.of();
+    }
+    List<?> targets = DomainResourceWriter.convertToCollection(converted);
+    List<Object> wrapped = new ArrayList<>(targets.size());
+    int count = Math.min(targets.size(), identifiers.size());
+    for (int index = 0; index < count; index++) {
+      Object target = targets.get(index);
+      if (target == null) {
+        continue;
+      }
+      wrapped.add(
+          new RelationshipLinkage<>(
+              target,
+              convertIdentifierMeta(identifiers.get(index), metaType, mapper, property, index)));
+    }
+    return wrapped;
+  }
+
+  private static @Nullable ResourceIdentifier singleIdentifier(RelationshipData data) {
+    return switch (data) {
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) -> identifier;
+      default -> null;
+    };
+  }
+
+  private static @Nullable Object convertIdentifierMeta(
+      @Nullable ResourceIdentifier identifier,
+      JavaType metaType,
+      JsonMapper mapper,
+      MappingPropertyView property,
+      int index) {
+    if (identifier == null || identifier.meta() == null) {
+      return null;
+    }
+    Meta meta = identifier.meta();
+    MappingLocation location =
+        index < 0
+            ? IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName())
+            : IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName(), index);
+    try {
+      return mapper.convertValue(meta.members(), metaType);
+    } catch (RuntimeException e) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_META_TARGET,
+          rawTypeOf(property),
+          location,
+          "Failed to convert identifier meta for relationship '" + property.logicalName() + "'",
+          e);
+    }
+  }
+
+  static JavaType unwrapTransportWrappers(JavaType type) {
+    JavaType current = type;
+    if (current.getRawClass() == PatchPresence.class && current.containedTypeCount() == 1) {
+      current = current.containedType(0);
+    }
+    return unwrapOptionalType(current);
   }
 
   static JavaType unwrapOptionalType(JavaType type) {

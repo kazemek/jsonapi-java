@@ -8,12 +8,14 @@ import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentsRelationshipMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithOptional;
@@ -21,12 +23,12 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWith
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCreatorArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatDefaultedArticle;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIdentifierMetaArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatInheritedBlog;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIntIdArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatLidArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatMetaArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatMutableArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRelationshipLinkageArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIgnored;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing;
@@ -56,6 +58,7 @@ public final class DomainReadScenarios {
   private static final String COMMENTS = "comments";
   private static final String DISPLAY_NAME = "displayName";
   private static final String EDITOR = "editor";
+  private static final String PINNED = "pinned";
   private static final String PEOPLE = "people";
   private static final String ROLE = "role";
   private static final String TITLE = "title";
@@ -478,19 +481,20 @@ public final class DomainReadScenarios {
                       rels(
                           AUTHOR,
                           toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))))),
-              FlatIdentifierMetaArticle.class,
+              FlatRelationshipLinkageArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatIdentifierMetaArticle(
+                  new FlatRelationshipLinkageArticle(
                       "1",
                       HELLO,
-                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                      new RelationshipLinkage<>(
+                          identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                          new AuthorIdMeta(EDITOR)),
                       null,
                       null,
-                      new AuthorIdMeta(EDITOR),
                       null))),
           new DomainReadScenario(
-              "binds to-many identifier meta aligned with linkage",
+              "binds to-many identifier meta on each wrapper element",
               DomainReadInput.single(
                   resource(
                       ARTICLES,
@@ -501,22 +505,23 @@ public final class DomainReadScenarios {
                           toManyWithIdentifierMetas(
                               COMMENTS,
                               List.of("c1", "c2"),
-                              nullableList(Meta.of(Map.of("pinned", true)), null))))),
-              FlatIdentifierMetaArticle.class,
+                              nullableList(Meta.of(Map.of(PINNED, true)), null))))),
+              FlatRelationshipLinkageArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatIdentifierMetaArticle(
+                  new FlatRelationshipLinkageArticle(
                       "1",
                       HELLO,
                       null,
                       List.of(
-                          identifier(COMMENTS, "c1", Meta.of(Map.of("pinned", true))),
-                          ResourceIdentifier.of(COMMENTS, "c2")),
+                          new RelationshipLinkage<>(
+                              identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))),
+                              new CommentIdMeta(true)),
+                          new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)),
                       null,
-                      null,
-                      nullableList(new CommentIdMeta(true), null)))),
+                      null))),
           new DomainReadScenario(
-              "absent identifier meta leaves identifier-meta properties null",
+              "absent identifier meta leaves wrapper meta null",
               DomainReadInput.single(
                   resource(
                       ARTICLES,
@@ -524,15 +529,15 @@ public final class DomainReadScenarios {
                       attrs(TITLE, HELLO),
                       rels(
                           AUTHOR, toOne(PEOPLE, "p1"), COMMENTS, toMany(COMMENTS, List.of("c1"))))),
-              FlatIdentifierMetaArticle.class,
+              FlatRelationshipLinkageArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatIdentifierMetaArticle(
+                  new FlatRelationshipLinkageArticle(
                       "1",
                       HELLO,
-                      ResourceIdentifier.of(PEOPLE, "p1"),
-                      List.of(ResourceIdentifier.of(COMMENTS, "c1")),
-                      null,
+                      new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), null),
+                      List.of(
+                          new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), null)),
                       null,
                       null))),
           new DomainReadScenario(
@@ -543,16 +548,16 @@ public final class DomainReadScenarios {
                       "1",
                       attrs(TITLE, HELLO),
                       rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.empty())))),
-              FlatIdentifierMetaArticle.class,
+              FlatRelationshipLinkageArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatIdentifierMetaArticle(
+                  new FlatRelationshipLinkageArticle(
                       "1",
                       HELLO,
-                      identifier(PEOPLE, "p1", Meta.empty()),
+                      new RelationshipLinkage<>(
+                          identifier(PEOPLE, "p1", Meta.empty()), new AuthorIdMeta(null)),
                       null,
                       null,
-                      new AuthorIdMeta(null),
                       null))),
           new DomainReadScenario(
               "identifier meta is distinct from relationship meta",
@@ -567,18 +572,28 @@ public final class DomainReadScenarios {
                               PEOPLE,
                               "p1",
                               Meta.of(Map.of(ROLE, EDITOR)),
-                              Meta.of(Map.of(DISPLAY_NAME, ALICE)))))),
-              FlatIdentifierMetaArticle.class,
+                              Meta.of(Map.of(DISPLAY_NAME, ALICE))),
+                          COMMENTS,
+                          toManyWithBothMeta(
+                              COMMENTS,
+                              List.of("c1"),
+                              nullableList(Meta.of(Map.of(PINNED, true))),
+                              Meta.of(Map.of("status", "open")))))),
+              FlatRelationshipLinkageArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
-                  new FlatIdentifierMetaArticle(
+                  new FlatRelationshipLinkageArticle(
                       "1",
                       HELLO,
-                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
-                      null,
+                      new RelationshipLinkage<>(
+                          identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                          new AuthorIdMeta(EDITOR)),
+                      List.of(
+                          new RelationshipLinkage<>(
+                              identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))),
+                              new CommentIdMeta(true))),
                       new AuthorMeta(ALICE),
-                      new AuthorIdMeta(EDITOR),
-                      null))),
+                      new CommentsRelationshipMeta("open")))),
           new DomainReadScenario(
               "binder never sees document included resources",
               DomainReadInput.includedIsolation(INCLUDED_PRIMARY, INCLUDED_SWAPPED),
@@ -684,6 +699,19 @@ public final class DomainReadScenarios {
       identifiers.add(identifier(type, ids.get(i), metas.get(i)));
     }
     return Relationship.withData(new RelationshipData.IdentifierCollectionLinkage(identifiers));
+  }
+
+  private static Relationship toManyWithBothMeta(
+      String type, List<String> ids, List<@Nullable Meta> identifierMetas, Meta relationshipMeta) {
+    List<ResourceIdentifier> identifiers = new ArrayList<>(ids.size());
+    for (int i = 0; i < ids.size(); i++) {
+      identifiers.add(identifier(type, ids.get(i), identifierMetas.get(i)));
+    }
+    return new Relationship(
+        new RelationshipData.IdentifierCollectionLinkage(identifiers),
+        null,
+        relationshipMeta,
+        Map.of());
   }
 
   private static ResourceIdentifier identifier(String type, String id, @Nullable Meta meta) {

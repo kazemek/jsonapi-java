@@ -206,6 +206,33 @@ final class PropertyScopedValueConverter {
     return new SerializerPropertyResolution(true, null);
   }
 
+  /**
+   * Serializes {@code value} using the configured serializer for {@code declaredType}, preserving
+   * generic {@link JavaType} information that {@code convertValue(value, Object.class)} would lose.
+   */
+  SerializationResult serializeDeclared(JavaType declaredType, Object value) {
+    SerializationContextExt serializationContext = serializationMapper._serializationContext();
+    ValueSerializer<Object> serializer =
+        serializationContext.findTypedValueSerializer(declaredType, true);
+    try (TokenBuffer buffer = conversionBuffer(serializationContext)) {
+      serializer.serialize(value, buffer, serializationContext);
+      DeserializationContextExt deserializationContext = mapper._deserializationContext();
+      try (JsonParser parser = buffer.asParser(deserializationContext)) {
+        deserializationContext.assignParser(parser);
+        JsonToken token = parser.nextToken();
+        if (token == null) {
+          return new SerializationResult(false, null);
+        }
+        return new SerializationResult(
+            true, deserializationContext.readValue(parser, Object.class));
+      }
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IllegalStateException("Failed to serialize value through Jackson", e);
+    }
+  }
+
   private record SerializerPropertyResolution(
       boolean beanSerializerAvailable, @Nullable BeanPropertyWriter property) {}
 }

@@ -6,6 +6,7 @@ import io.github.kazemek.jsonapi.core.validation.EndpointIdentity;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchChange;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.jackson.StructuredMember;
 import io.github.kazemek.jsonapi.jackson.StructuredMemberState;
 import io.github.kazemek.jsonapi.jackson.StructuredPatch;
@@ -17,12 +18,13 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithBox
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithContainerAddress;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithDimensions;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithGeoAddress;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithIdentifierMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMapMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalAddress;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalCity;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithTags;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.MutableArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PatchPresenceAddressArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PatchPresenceAddressPatchArticle;
@@ -59,6 +61,8 @@ public final class PatchScenarios {
   private static final String NUMBERS = "numbers";
   private static final String SOURCE = "source";
   private static final String DISPLAY_NAME = "displayName";
+  private static final String ROLE = "role";
+  private static final String EDITOR = "editor";
   private static final String ADDRESS_STREET = "address-street";
 
   private static final List<PatchScenario> SCENARIOS =
@@ -103,7 +107,7 @@ public final class PatchScenarios {
           resourceMetaSuppliedUnmappedSkipped(),
           wholeLinkageToOneIdentifierMeta(),
           wholeLinkageToManyIdentifierMeta(),
-          identifierMetaAnnotationIsNotAnIndependentChange());
+          wrapperWholeLinkageIsNotAnIndependentChange());
 
   private static final FixtureCatalog<PatchScenario> CATALOG =
       FixtureCatalog.of("patch", SCENARIOS);
@@ -678,7 +682,7 @@ public final class PatchScenarios {
                     AUTHOR,
                     AUTHOR,
                     new ResourceIdentifier(
-                        PEOPLE, "p1", null, Meta.of(Map.of("role", "editor")), Map.of())))));
+                        PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of())))));
   }
 
   private static PatchScenario wholeLinkageToManyIdentifierMeta() {
@@ -699,11 +703,11 @@ public final class PatchScenarios {
                         ResourceIdentifier.of(COMMENTS, "c2"))))));
   }
 
-  private static PatchScenario identifierMetaAnnotationIsNotAnIndependentChange() {
+  private static PatchScenario wrapperWholeLinkageIsNotAnIndependentChange() {
     return scenario(
-        "patch-identifier-meta-annotation-is-not-an-independent-change",
+        "patch-wrapper-whole-linkage-is-not-an-independent-change",
         doc("author-identifier-meta"),
-        ArticleWithIdentifierMeta.class,
+        ArticleWithRelationshipLinkage.class,
         null,
         PatchExpectation.success(
             "1",
@@ -711,8 +715,10 @@ public final class PatchScenarios {
                 new PatchChange.RelationshipChange(
                     AUTHOR,
                     AUTHOR,
-                    new ResourceIdentifier(
-                        PEOPLE, "p1", null, Meta.of(Map.of("role", "editor")), Map.of())))));
+                    new RelationshipLinkage<>(
+                        new ResourceIdentifier(
+                            PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of()),
+                        new AuthorIdMeta(EDITOR))))));
   }
 
   private static PatchScenario scenario(

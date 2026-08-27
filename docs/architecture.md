@@ -110,7 +110,7 @@ JSON:API representation and configured Jackson are both authoritative, in differ
 | Document envelope, member presence, sealed explicit-null vs Java absence, identifier wire strings, relationship linkage, `PatchPresence` state | JSON:API / this library |
 | Aggregate document rules (identity uniqueness, full linkage, update-request shape, endpoint identity) | `jsonapi-java-core` validation |
 | Class-level `@JsonApiResource` type names, including class-level mix-ins | Configured Jackson introspection |
-| Ordinary attribute and resource/relationship/identifier-meta property serialization and deserialization | Configured Jackson at the mapped property |
+| Ordinary attribute and resource/relationship-meta property serialization and deserialization; `RelationshipLinkage` identifier-meta conversion | Configured Jackson at the mapped property / wrapper meta `JavaType` |
 | Bean construction, creators, naming, visibility, modules | Configured Jackson |
 | `ResourceTypeRegistry` | Explicit wire-type → Java-target dispatch. It does not interpret annotations; registration keys come from the same configured-Jackson metadata authority. |
 
@@ -147,9 +147,11 @@ flowchart TB
 - **Typed path:** every patchable member is declared `PatchPresence<T>`. Nested recursion is
   opt-in through a presence-aware PATCH *shape* (every visible member is itself
   `PatchPresence<…>`).
-- **Identifier meta:** `ResourceIdentifier.meta` is not independently patchable. It rides on
-  `ResourceIdentifier` values inside whole-linkage replacement. ADR-014's atomic `List` / `Set` /
-  array / `Map` boundary forbids element-addressed mutation of to-many linkage identifier meta.
+- **Identifier meta:** `ResourceIdentifier.meta` is not independently patchable. Applications that
+  need it opt into `RelationshipLinkage<T, M>` on the relationship property. Identifier meta rides on
+  whole-linkage replacement (`RelationshipChange` values that carry `ResourceIdentifier` and/or
+  `RelationshipLinkage`). ADR-014's atomic `List` / `Set` / array / `Map` boundary forbids
+  element-addressed mutation of to-many linkage identifier meta.
 
 [ADR-012](adr/012-resource-patch-binding.md), [ADR-013](adr/013-direct-typed-patch-dto-binding.md),
 [ADR-014](adr/014-recursive-structured-value-patch-semantics.md), and

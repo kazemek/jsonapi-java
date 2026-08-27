@@ -11,9 +11,7 @@ import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -97,7 +95,6 @@ public final class DomainResourceBinder {
     bindRelationships(resource, mapping, properties, rawType);
     bindResourceMeta(resource, mapping, properties, rawType);
     bindRelationshipMeta(resource, mapping, properties, rawType);
-    bindIdentifierMeta(resource, mapping, properties, rawType);
     return convertBean(properties, targetType, rawType, mapping, identifierLocation);
   }
 
@@ -252,86 +249,6 @@ public final class DomainResourceBinder {
     }
   }
 
-  /**
-   * Binds per-linkage identifier {@code meta} under each mapped identifier-meta property. To-one
-   * absent identifier meta omits the property. To-many binds an aligned list only when at least one
-   * identifier carries meta; elements without meta are {@code null}.
-   */
-  private void bindIdentifierMeta(
-      ResourceObject resource,
-      ReadResourceMapping mapping,
-      Map<String, @Nullable Object> properties,
-      Class<?> rawType) {
-    if (mapping.identifierMetaProperties().isEmpty()) {
-      return;
-    }
-    Relationships relationships = resource.relationships();
-    if (relationships == null) {
-      return;
-    }
-    Map<String, ReadMappingProperty> relationshipsByName = new LinkedHashMap<>();
-    for (ReadMappingProperty relationship : mapping.relationships()) {
-      relationshipsByName.put(relationship.jsonapiName(), relationship);
-    }
-    for (ReadMappingProperty property : mapping.identifierMetaProperties()) {
-      Object bound = identifierMetaBinding(relationships, relationshipsByName, property, rawType);
-      if (bound != null) {
-        properties.put(property.logicalName(), bound);
-      }
-    }
-  }
-
-  private @Nullable Object identifierMetaBinding(
-      Relationships relationships,
-      Map<String, ReadMappingProperty> relationshipsByName,
-      ReadMappingProperty property,
-      Class<?> rawType) {
-    Relationship relationship = relationships.relationships().get(property.jsonapiName());
-    if (relationship == null) {
-      return null;
-    }
-    RelationshipData data = relationship.data();
-    if (data == null) {
-      return null;
-    }
-    ReadMappingProperty relationshipProperty = relationshipsByName.get(property.jsonapiName());
-    if (relationshipProperty == null) {
-      return null;
-    }
-    boolean toMany = DomainResourceWriter.isToManyType(relationshipProperty.type());
-    Object bound = identifierMetaValue(data, toMany);
-    if (bound == null) {
-      return null;
-    }
-    requireDeserializable(
-        property, ResourceMapping.identifierMetaConstructionLocation(property), rawType);
-    return bound;
-  }
-
-  private static @Nullable Object identifierMetaValue(RelationshipData data, boolean toMany) {
-    return switch (data) {
-      case RelationshipData.NullLinkage ignored -> null;
-      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
-          identifier.meta() == null ? null : identifier.meta().members();
-      case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> identifiers) -> {
-        if (!toMany) {
-          yield null;
-        }
-        boolean anyMeta = false;
-        List<@Nullable Object> values = new ArrayList<>(identifiers.size());
-        for (ResourceIdentifier identifier : identifiers) {
-          if (identifier.meta() != null) {
-            anyMeta = true;
-            values.add(identifier.meta().members());
-          } else {
-            values.add(null);
-          }
-        }
-        yield anyMeta ? values : null;
-      }
-    };
-  }
-
   private static @Nullable RelationshipData relationshipData(
       Relationships relationships, MappingPropertyView property) {
     Relationship relationship = relationships.relationships().get(property.jsonapiName());
@@ -346,25 +263,31 @@ public final class DomainResourceBinder {
       ReadMappingProperty property,
       RelationshipData data) {
     JavaType propertyType = property.type();
-    boolean toMany = DomainResourceWriter.isToManyType(propertyType);
+    boolean toMany =
+        DomainResourceWriter.isToManyType(
+            RelationshipLinkageSupport.unwrapTransportWrappers(propertyType));
     Class<?> targetClass =
         RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
+    JavaType mappingType =
+        RelationshipLinkageSupport.targetMappingType(propertyType, mapper.getTypeFactory());
+    boolean mappingToMany = DomainResourceWriter.isToManyType(mappingType);
+    Object converted;
     if (targetClass == ResourceIdentifier.class) {
-      properties.put(
-          property.logicalName(),
-          RelationshipLinkageSupport.builtInLinkage(property, data, toMany));
-      return;
+      converted = RelationshipLinkageSupport.builtInLinkage(property, data, mappingToMany);
+    } else {
+      RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
+      if (linkageMapper == null) {
+        throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
+      }
+      JavaType mapperTargetType =
+          mappingToMany ? mappingType : RelationshipLinkageSupport.unwrapOptionalType(mappingType);
+      converted =
+          RelationshipLinkageSupport.mappedLinkage(
+              property, data, mappingToMany, linkageMapper, mapperTargetType);
     }
-    RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
-    if (linkageMapper == null) {
-      throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
-    }
-    JavaType mapperTargetType =
-        toMany ? propertyType : RelationshipLinkageSupport.unwrapOptionalType(propertyType);
     properties.put(
         property.logicalName(),
-        RelationshipLinkageSupport.mappedLinkage(
-            property, data, toMany, linkageMapper, mapperTargetType));
+        RelationshipLinkageSupport.wrapConverted(property, data, converted, mapper));
   }
 
   private static void requireDeserializable(

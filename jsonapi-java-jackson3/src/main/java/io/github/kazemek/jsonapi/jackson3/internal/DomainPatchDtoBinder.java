@@ -36,10 +36,6 @@ import tools.jackson.databind.json.JsonMapper;
  * MappingDiagnostic#UNKNOWN_PATCH_MEMBER} at their escaped supplied wire name. Document {@code
  * included} is never read.
  *
- * <p>{@code @JsonApiIdentifierMeta} members are rejected at declaration time with {@link
- * MappingDiagnostic#INVALID_PATCH_PROPERTY_TYPE}: identifier meta is not independently patchable
- * and participates only as {@code ResourceIdentifier.meta} on whole-linkage replacement (ADR-017).
- *
  * <p>Recursive structured attributes (ADR-014) use the {@link StructuredValueBinder}: a nested
  * member whose inner type is a deliberately presence-aware PATCH shape is bound as a complete
  * nested {@link PresenceMarker} tree so the single whole-tree {@code convertValue} preserves the
@@ -162,18 +158,7 @@ public final class DomainPatchDtoBinder {
           rawType,
           RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
     }
-    if (!mapping.identifierMetaProperties().isEmpty()) {
-      MappingProperty property = mapping.identifierMetaProperties().getFirst();
-      throw new JsonApiMappingException(
-          MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE,
-          rawType,
-          IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName()),
-          "PATCH DTO member '"
-              + property.logicalName()
-              + "' annotated with @JsonApiIdentifierMeta is not independently patchable; "
-              + "identifier meta participates only as part of whole-linkage replacement on "
-              + rawType.getName());
-    }
+    wholeMetaTarget.validateRelationshipLinkageMeta(mapping.relationships(), rawType);
   }
 
   private void validatePatchableProperty(

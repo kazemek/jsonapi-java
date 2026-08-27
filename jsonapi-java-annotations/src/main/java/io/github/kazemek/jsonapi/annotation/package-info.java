@@ -3,9 +3,10 @@
  * dependencies.
  *
  * <p>These annotations declare resource type, identifier, attribute-name, relationship-name,
- * resource-meta, relationship-meta, and identifier-meta roles for later Jackson mapping. They store
- * metadata only: they do not discover logical properties, validate member names, convert
- * identifiers, or request inclusion.
+ * resource-meta, and relationship-meta roles for later Jackson mapping. They store metadata only:
+ * they do not discover logical properties, validate member names, convert identifiers, or request
+ * inclusion. Per-linkage identifier meta is an opt-in {@code RelationshipLinkage} value, not an
+ * annotation.
  *
  * <p>See ADR-004, ADR-005, ADR-007, ADR-009, and {@code docs/conformance.md}.
  */

@@ -26,8 +26,9 @@ import tools.jackson.databind.json.JsonMapper;
  * java.util.List}, {@link java.util.Set}, or array variants) bind from linkage directly; any other
  * target class requires a registered {@link RelationshipLinkageMapper}. Built-in identifier linkage
  * preserves {@code ResourceIdentifier.meta} (ADR-017) and still drops additional members. Write
- * overlay of application-owned identifier meta is a sibling {@code @JsonApiIdentifierMeta} mapping,
- * not relationship-level {@code meta}.
+ * overlay of application-owned identifier meta uses opt-in {@link
+ * io.github.kazemek.jsonapi.jackson.RelationshipLinkage}; it is not relationship-level {@code
+ * meta}.
  *
  * <p>Binding failures throw {@link JsonApiMappingException} with a stable {@link MappingDiagnostic}
  * and a resource-relative JSON Pointer-like path.

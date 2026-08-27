@@ -12,11 +12,13 @@ import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithIdentifierMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentsRelationshipMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithSet;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
@@ -254,34 +256,38 @@ public final class DomainWriteScenarios {
               DomainWriteOperation.TO_RESOURCE,
               new DomainWriteInput.SingleInput(
                   () ->
-                      new ArticleWithIdentifierMeta(
+                      new ArticleWithRelationshipLinkage(
                           "1",
                           "T",
-                          ResourceIdentifier.of(PEOPLE, "p1"),
+                          new RelationshipLinkage<>(
+                              ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)),
                           List.of(),
                           null,
-                          new AuthorIdMeta(EDITOR),
                           null)),
               null,
               DomainWriteOutcome.resource(
                   identifierMetaArticle(
-                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of())),
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                      null,
+                      List.of(),
+                      null)),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
-              "maps to-many identifier meta aligned with linkage",
+              "maps to-many identifier meta with each wrapper element",
               DomainWriteOperation.TO_RESOURCE,
               new DomainWriteInput.SingleInput(
                   () ->
-                      new ArticleWithIdentifierMeta(
+                      new ArticleWithRelationshipLinkage(
                           "1",
                           "T",
                           null,
                           List.of(
-                              ResourceIdentifier.of(COMMENTS, "c1"),
-                              ResourceIdentifier.of(COMMENTS, "c2")),
+                              new RelationshipLinkage<>(
+                                  ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)),
+                              new RelationshipLinkage<>(
+                                  ResourceIdentifier.of(COMMENTS, "c2"), null)),
                           null,
-                          null,
-                          nullableList(new CommentIdMeta(true), null))),
+                          null)),
               null,
               DomainWriteOutcome.resource(
                   identifierMetaArticle(
@@ -289,45 +295,60 @@ public final class DomainWriteScenarios {
                       null,
                       List.of(
                           identifier(COMMENTS, "c1", Meta.of(Map.of("pinned", true))),
-                          ResourceIdentifier.of(COMMENTS, "c2")))),
+                          ResourceIdentifier.of(COMMENTS, "c2")),
+                      null)),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
-              "omitted identifier meta leaves ResourceIdentifier meta in place",
+              "null wrapper meta leaves ResourceIdentifier meta in place",
               DomainWriteOperation.TO_RESOURCE,
               new DomainWriteInput.SingleInput(
                   () ->
-                      new ArticleWithIdentifierMeta(
+                      new ArticleWithRelationshipLinkage(
                           "1",
                           "T",
-                          identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                          new RelationshipLinkage<>(
+                              identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null),
                           List.of(),
-                          null,
                           null,
                           null)),
               null,
               DomainWriteOutcome.resource(
                   identifierMetaArticle(
-                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of())),
+                      identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                      null,
+                      List.of(),
+                      null)),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
               "writes relationship meta and identifier meta independently",
               DomainWriteOperation.TO_RESOURCE,
               new DomainWriteInput.SingleInput(
                   () ->
-                      new ArticleWithIdentifierMeta(
+                      new ArticleWithRelationshipLinkage(
                           "1",
                           "T",
-                          ResourceIdentifier.of(PEOPLE, "p1"),
-                          List.of(),
+                          new RelationshipLinkage<>(
+                              ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)),
+                          List.of(
+                              new RelationshipLinkage<>(
+                                  ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true))),
                           new AuthorMeta(ALICE),
-                          new AuthorIdMeta(EDITOR),
-                          null)),
+                          new CommentsRelationshipMeta("open"))),
               null,
               DomainWriteOutcome.resource(
                   identifierMetaArticle(
                       identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
                       Meta.of(Map.of(DISPLAY_NAME, ALICE)),
-                      List.of())),
+                      List.of(identifier(COMMENTS, "c1", Meta.of(Map.of("pinned", true)))),
+                      Meta.of(Map.of("status", "open")))),
+              DomainWriteComparisonPolicy.ordered()),
+          new DomainWriteScenario(
+              "writes an empty to-many RelationshipLinkage collection",
+              DomainWriteOperation.TO_RESOURCE,
+              new DomainWriteInput.SingleInput(
+                  () -> new ArticleWithRelationshipLinkage("1", "T", null, List.of(), null, null)),
+              null,
+              DomainWriteOutcome.resource(identifierMetaArticle(null, null, List.of(), null)),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
               "null input is rejected",
@@ -424,7 +445,8 @@ public final class DomainWriteScenarios {
   private static ResourceObject identifierMetaArticle(
       @Nullable ResourceIdentifier author,
       @Nullable Meta authorRelationshipMeta,
-      List<ResourceIdentifier> comments) {
+      List<ResourceIdentifier> comments,
+      @Nullable Meta commentsRelationshipMeta) {
     Map<String, @Nullable Relationship> relationships = new LinkedHashMap<>();
     relationships.put(
         "author",
@@ -438,7 +460,10 @@ public final class DomainWriteScenarios {
     relationships.put(
         COMMENTS,
         new Relationship(
-            new RelationshipData.IdentifierCollectionLinkage(comments), null, null, Map.of()));
+            new RelationshipData.IdentifierCollectionLinkage(comments),
+            null,
+            commentsRelationshipMeta,
+            Map.of()));
     return new ResourceObject(
         ARTICLES,
         "1",
@@ -452,12 +477,5 @@ public final class DomainWriteScenarios {
 
   private static ResourceIdentifier identifier(String type, String id, @Nullable Meta meta) {
     return new ResourceIdentifier(type, id, null, meta, Map.of());
-  }
-
-  @SafeVarargs
-  private static <T> List<@Nullable T> nullableList(@Nullable T... values) {
-    List<@Nullable T> list = new ArrayList<>(values.length);
-    Collections.addAll(list, values);
-    return list;
   }
 }

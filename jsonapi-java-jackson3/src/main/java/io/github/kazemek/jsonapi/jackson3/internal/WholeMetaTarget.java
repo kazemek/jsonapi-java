@@ -4,12 +4,10 @@ import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.ValueDeserializer;
@@ -24,9 +22,8 @@ import tools.jackson.databind.type.LogicalType;
  * its own role's wrapper chain against these rules. Read/write and low-level domain mappings allow
  * at most one {@link Optional} wrapper around a Bean / {@link Map} / {@link Object} target; typed
  * PATCH DTOs allow exactly one {@code PatchPresence<T>} wrapper and at most one {@link Optional}
- * inside it. Identifier-meta properties follow the same object-shape rule for to-one linkage;
- * to-many identifier meta must be a {@link List} or array of those object targets, aligned with
- * linkage order (ADR-017).
+ * inside it. Identifier meta on an opt-in {@code RelationshipLinkage<T, M>} follows the same
+ * object-shape rule for {@code M} (ADR-017).
  *
  * <p>Whether an effective target is a legal whole-meta object target is decided by Jackson, not a
  * manually maintained scalar taxonomy: after rejecting primitives, containers, and the already
@@ -82,8 +79,7 @@ final class WholeMetaTarget {
             RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
       }
     }
-    validateIdentifierMetaTargets(
-        mapping.identifierMetaProperties(), mapping.relationships(), rawType);
+    validateRelationshipLinkageMeta(mapping.relationships(), rawType);
   }
 
   /** Validates whole-meta targets using effective deserialization-side property types. */
@@ -102,82 +98,42 @@ final class WholeMetaTarget {
             RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
       }
     }
-    validateIdentifierMetaTargets(
-        mapping.identifierMetaProperties(), mapping.relationships(), rawType);
+    validateRelationshipLinkageMeta(mapping.relationships(), rawType);
   }
 
-  private void validateIdentifierMetaTargets(
-      List<? extends MappingPropertyView> identifierMetaProperties,
-      List<? extends MappingPropertyView> relationships,
-      Class<?> rawType) {
-    if (identifierMetaProperties.isEmpty()) {
-      return;
-    }
-    Map<String, MappingPropertyView> relationshipsByName = new LinkedHashMap<>();
-    for (MappingPropertyView relationship : relationships) {
-      relationshipsByName.put(relationship.jsonapiName(), relationship);
-    }
-    for (MappingPropertyView property : identifierMetaProperties) {
-      MappingPropertyView relationship = relationshipsByName.get(property.jsonapiName());
-      if (relationship == null) {
+  void validateRelationshipLinkageMeta(
+      List<? extends MappingPropertyView> relationships, Class<?> rawType) {
+    for (MappingPropertyView property : relationships) {
+      JavaType linkageType = RelationshipLinkageSupport.linkageJavaType(property.type());
+      if (linkageType == null) {
         continue;
       }
-      boolean toMany = DomainResourceWriter.isToManyType(relationship.type());
-      JavaType declared = property.type();
       MappingLocation location =
           IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName());
-      if (toMany) {
-        if (invalidToManyIdentifierMetaTarget(declared)) {
-          throw invalidIdentifierMetaTarget(property, rawType, location, true);
-        }
-      } else if (invalidReadWriteTarget(declared)) {
-        throw invalidIdentifierMetaTarget(property, rawType, location, false);
+      if (linkageType.containedTypeCount() < 2
+          || linkageType.getBindings().isEmpty()
+          || RelationshipLinkageSupport.isLinkageType(
+              RelationshipLinkageSupport.unwrapOptionalType(
+                  RelationshipLinkageSupport.linkageTargetType(linkageType)))) {
+        throw invalidIdentifierMetaTarget(property, rawType, location);
+      }
+      JavaType metaType = RelationshipLinkageSupport.linkageMetaType(linkageType);
+      if (invalidReadWriteTarget(metaType)) {
+        throw invalidIdentifierMetaTarget(property, rawType, location);
       }
     }
-  }
-
-  /**
-   * To-many identifier meta must be a {@link List} or array of Bean / Map / Object, with at most
-   * one {@link Optional} around the sequence. {@code Set} and {@code Map} are rejected: alignment
-   * is by linkage order, not by unordered identity or map-key addressing.
-   */
-  boolean invalidToManyIdentifierMetaTarget(JavaType declared) {
-    JavaType collection = unwrapOptional(declared);
-    if (isOptional(collection)) {
-      return true;
-    }
-    JavaType element = identifierMetaElementType(collection);
-    if (element == null || isOptional(element)) {
-      return true;
-    }
-    return !isObjectCompatible(element);
-  }
-
-  static @Nullable JavaType identifierMetaElementType(JavaType type) {
-    if (type.isArrayType()) {
-      return type.getContentType();
-    }
-    if (type.isTypeOrSubTypeOf(List.class) && type.containedTypeCount() > 0) {
-      return type.containedType(0);
-    }
-    return null;
   }
 
   private static JsonApiMappingException invalidIdentifierMetaTarget(
-      MappingPropertyView property, Class<?> rawType, MappingLocation location, boolean toMany) {
-    String shape =
-        toMany
-            ? "a List or array of Bean, Map, or Object (with at most one Optional wrapper)"
-            : "a Bean, Map, or Object (with at most one Optional wrapper)";
+      MappingPropertyView property, Class<?> rawType, MappingLocation location) {
     return new JsonApiMappingException(
         MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
         rawType,
         location,
-        "Identifier meta property '"
+        "Relationship '"
             + property.logicalName()
-            + "' must be "
-            + shape
-            + " matching the target relationship cardinality on "
+            + "' RelationshipLinkage meta type must be a Bean, Map, or Object (with at most one"
+            + " Optional wrapper) on "
             + rawType.getName());
   }
 

@@ -198,24 +198,30 @@ final class PatchMemberConverter {
    */
   @Nullable Object convertRelationship(
       MappingProperty property, RelationshipData data, JavaType targetType) {
-    boolean toMany = DomainResourceWriter.isToManyType(targetType);
+    boolean toMany =
+        DomainResourceWriter.isToManyType(
+            RelationshipLinkageSupport.unwrapTransportWrappers(targetType));
     Class<?> targetClass =
         RelationshipLinkageSupport.resolveTargetClass(targetType, toMany, property);
+    JavaType mappingType =
+        RelationshipLinkageSupport.targetMappingType(targetType, mapper.getTypeFactory());
+    boolean mappingToMany = DomainResourceWriter.isToManyType(mappingType);
     Object intermediate;
     if (targetClass == ResourceIdentifier.class) {
-      intermediate = RelationshipLinkageSupport.builtInLinkage(property, data, toMany);
+      intermediate = RelationshipLinkageSupport.builtInLinkage(property, data, mappingToMany);
     } else {
       RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
       if (linkageMapper == null) {
         throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
       }
       JavaType mapperTargetType =
-          toMany ? targetType : RelationshipLinkageSupport.unwrapOptionalType(targetType);
+          mappingToMany ? mappingType : RelationshipLinkageSupport.unwrapOptionalType(mappingType);
       intermediate =
           RelationshipLinkageSupport.mappedLinkage(
-              property, data, toMany, linkageMapper, mapperTargetType);
+              property, data, mappingToMany, linkageMapper, mapperTargetType);
     }
-    return finalizeRelationshipValue(intermediate, targetType, property);
+    Object wrapped = RelationshipLinkageSupport.wrapConverted(property, data, intermediate, mapper);
+    return finalizeRelationshipValue(wrapped, targetType, property);
   }
 
   private @Nullable Object finalizeRelationshipValue(
