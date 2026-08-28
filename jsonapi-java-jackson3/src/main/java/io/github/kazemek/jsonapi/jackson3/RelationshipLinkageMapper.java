@@ -22,14 +22,21 @@ import tools.jackson.databind.JavaType;
  * <p>{@code targetType} is {@code T} for to-one properties and for each wrapped to-many occurrence,
  * or the collection type of {@code T} for ordinary to-many properties ({@link java.util.Optional}
  * unwrapped). The returned value is placed directly into the binder's synthetic property map, so it
- * must be coercible to {@code targetType}; a {@code null} return binds the property to {@code
- * null}. Wrapped to-many properties never reassociate a collection-level mapper result by index.
+ * must be coercible to {@code targetType}. A {@code null} return binds a to-one property to {@code
+ * null}. For a wrapped to-many occurrence, {@code null} is {@link
+ * MappingDiagnostic#LINKAGE_MAPPING_FAILED}: {@link
+ * io.github.kazemek.jsonapi.jackson.RelationshipLinkage#target()} cannot be null, and omitting the
+ * wire identifier would drop a linkage entry. Wrapped to-many properties never reassociate a
+ * collection-level mapper result by index.
  */
 @FunctionalInterface
 public interface RelationshipLinkageMapper {
 
   /**
-   * Converts linkage to a property value, or returns {@code null} for an empty value.
+   * Converts linkage to a property value, or returns {@code null} for an empty to-one value.
+   *
+   * <p>A {@code null} return for a wrapped to-many occurrence fails mapping with {@link
+   * MappingDiagnostic#LINKAGE_MAPPING_FAILED}.
    *
    * @throws RuntimeException when the linkage cannot be converted; the binder reports this as
    *     {@link MappingDiagnostic#LINKAGE_MAPPING_FAILED}

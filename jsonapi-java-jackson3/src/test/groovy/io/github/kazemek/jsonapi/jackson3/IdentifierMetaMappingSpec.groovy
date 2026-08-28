@@ -368,6 +368,37 @@ class IdentifierMetaMappingSpec extends Specification {
     byId.c2.meta().pinned() == false
   }
 
+  def "null mapper result for a wrapped to-many occurrence is LINKAGE_MAPPING_FAILED"() {
+    given:
+    def linkageMapper = { RelationshipData data, JavaType target ->
+      null
+    } as RelationshipLinkageMapper
+    def binder = JsonApiJackson3.resourceBinder(
+        JsonMapper.builder().build(), IdentifierConverter.defaults(), [(FlatAuthor): linkageMapper])
+    def resource = new ResourceObject(
+        "articles",
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        [comments: Relationship.withData(
+          new RelationshipData.IdentifierCollectionLinkage([
+            new ResourceIdentifier("comments", "c1", null, Meta.of([pinned: true]), [:]),
+            new ResourceIdentifier("comments", "c2", null, null, [:])
+          ]))]),
+        null,
+        null,
+        [:])
+
+    when:
+    binder.fromResource(resource, WrappedMappedSetArticle)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.LINKAGE_MAPPING_FAILED
+    e.propertyPath() == "/relationships/comments/data/0"
+  }
+
   def "converted scalar identifier meta is INVALID_META_TARGET"() {
     given:
     def article = new ScalarSerializedMetaArticle(

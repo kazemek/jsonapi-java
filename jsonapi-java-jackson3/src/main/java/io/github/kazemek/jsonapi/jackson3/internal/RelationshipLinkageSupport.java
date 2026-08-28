@@ -276,7 +276,17 @@ final class RelationshipLinkageSupport {
                   targetType,
                   property);
       if (target == null) {
-        continue;
+        throw new JsonApiMappingException(
+            MappingDiagnostic.LINKAGE_MAPPING_FAILED,
+            rawTypeOf(property),
+            MappingLocation.of(
+                JsonApiMembers.RELATIONSHIPS,
+                property.jsonapiName(),
+                JsonApiMembers.DATA,
+                Integer.toString(index)),
+            "Relationship linkage mapper returned null for relationship '"
+                + property.logicalName()
+                + "'");
       }
       wrapped.add(
           new RelationshipLinkage<>(
