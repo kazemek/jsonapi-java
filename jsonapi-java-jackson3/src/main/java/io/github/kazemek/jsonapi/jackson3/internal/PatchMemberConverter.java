@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
-import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
@@ -198,20 +197,10 @@ final class PatchMemberConverter {
    */
   @Nullable Object convertRelationship(
       MappingProperty property, RelationshipData data, JavaType targetType) {
-    boolean toMany =
-        DomainResourceWriter.isToManyType(
-            RelationshipLinkageSupport.unwrapTransportWrappers(targetType));
-    Class<?> targetClass =
-        RelationshipLinkageSupport.resolveTargetClass(targetType, toMany, property);
     JavaType mappingType =
         RelationshipLinkageSupport.targetMappingType(targetType, mapper.getTypeFactory());
-    RelationshipLinkageMapper linkageMapper = null;
-    if (targetClass != ResourceIdentifier.class) {
-      linkageMapper = linkageMappers.get(targetClass);
-      if (linkageMapper == null) {
-        throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
-      }
-    }
+    RelationshipLinkageMapper linkageMapper =
+        RelationshipLinkageSupport.selectLinkageMapper(targetType, property, linkageMappers);
     Object wrapped =
         RelationshipLinkageSupport.convertLinkage(
             property, data, linkageMapper, mappingType, mapper);

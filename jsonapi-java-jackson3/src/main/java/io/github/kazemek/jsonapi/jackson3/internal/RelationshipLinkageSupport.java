@@ -13,6 +13,7 @@ import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -89,7 +90,7 @@ final class RelationshipLinkageSupport {
     return typeFactory.constructCollectionType(List.class, target);
   }
 
-  static Class<?> resolveTargetClass(
+  private static Class<?> resolveTargetClass(
       JavaType propertyType, boolean toMany, MappingPropertyView property) {
     JavaType linkageType = linkageJavaType(propertyType);
     if (linkageType != null) {
@@ -109,6 +110,27 @@ final class RelationshipLinkageSupport {
       return contentType.getRawClass();
     }
     return unwrapOptionalType(propertyType).getRawClass();
+  }
+
+  /**
+   * Returns the registered mapper for the relationship target, or {@code null} when the built-in
+   * {@link ResourceIdentifier} conversion applies. Read binding and PATCH conversion share this so
+   * they cannot resolve different mappers for the same declared type.
+   */
+  static @Nullable RelationshipLinkageMapper selectLinkageMapper(
+      JavaType propertyType,
+      MappingPropertyView property,
+      Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
+    boolean toMany = DomainResourceWriter.isToManyType(unwrapTransportWrappers(propertyType));
+    Class<?> targetClass = resolveTargetClass(propertyType, toMany, property);
+    if (targetClass == ResourceIdentifier.class) {
+      return null;
+    }
+    RelationshipLinkageMapper mapper = linkageMappers.get(targetClass);
+    if (mapper == null) {
+      throw unsupportedRelationshipTarget(property, targetClass);
+    }
+    return mapper;
   }
 
   /**

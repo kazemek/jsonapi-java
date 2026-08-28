@@ -4,7 +4,6 @@ import io.github.kazemek.jsonapi.core.model.Attributes;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
-import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
@@ -263,20 +262,10 @@ public final class DomainResourceBinder {
       ReadMappingProperty property,
       RelationshipData data) {
     JavaType propertyType = property.type();
-    boolean toMany =
-        DomainResourceWriter.isToManyType(
-            RelationshipLinkageSupport.unwrapTransportWrappers(propertyType));
-    Class<?> targetClass =
-        RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
     JavaType mappingType =
         RelationshipLinkageSupport.targetMappingType(propertyType, mapper.getTypeFactory());
-    RelationshipLinkageMapper linkageMapper = null;
-    if (targetClass != ResourceIdentifier.class) {
-      linkageMapper = linkageMappers.get(targetClass);
-      if (linkageMapper == null) {
-        throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
-      }
-    }
+    RelationshipLinkageMapper linkageMapper =
+        RelationshipLinkageSupport.selectLinkageMapper(propertyType, property, linkageMappers);
     properties.put(
         property.logicalName(),
         RelationshipLinkageSupport.convertLinkage(
