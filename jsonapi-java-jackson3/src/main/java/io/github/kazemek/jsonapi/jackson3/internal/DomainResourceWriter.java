@@ -14,6 +14,7 @@ import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -367,10 +368,11 @@ public final class DomainResourceWriter {
     JavaType propertyType = property.accessor().getType();
     MappingLocation relationshipLocation =
         RelationshipLinkageSupport.relationshipLocation(property);
+    boolean toMany = isToManyType(propertyType);
     RelationshipData linkage =
-        isToManyType(propertyType)
-            ? extractToManyLinkage(value, propertyType, relationshipLocation)
-            : extractToOneLinkage(value, propertyType);
+        toMany
+            ? extractToManyLinkage(resource, property, value, propertyType, relationshipLocation)
+            : extractToOneLinkage(resource, property, value, propertyType);
     Meta meta = null;
     MappingProperty metaProperty = relationshipMetaByTarget.get(property.jsonapiName());
     if (metaProperty != null) {
@@ -483,8 +485,118 @@ public final class DomainResourceWriter {
             cause);
   }
 
-  private RelationshipData extractToOneLinkage(@Nullable Object value, JavaType propertyType) {
+  /**
+   * Overlay wrapper {@code meta} onto constructed linkage. {@code meta == null} supplies no new
+   * identifier meta and leaves any {@link ResourceIdentifier#meta()} already on the target in
+   * place. A non-null meta value is authoritative. Unrelated identifier members are preserved.
+   */
+  private RelationshipData applyWrapperMeta(
+      Object resource,
+      JavaType metaType,
+      @Nullable Object metaValue,
+      RelationshipData linkage,
+      String relationshipName,
+      int index) {
+    MappingLocation metaLocation =
+        index < 0
+            ? IdentifierMetaSupport.identifierMetaLocation(relationshipName)
+            : IdentifierMetaSupport.identifierMetaLocation(relationshipName, index);
+    if (linkage instanceof RelationshipData.NullLinkage) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+          resource.getClass(),
+          metaLocation,
+          "RelationshipLinkage requires a mappable target for relationship '"
+              + relationshipName
+              + "'");
+    }
+    if (metaValue == null) {
+      return linkage;
+    }
+    Object converted;
+    try {
+      PropertyScopedValueConverter.SerializationResult serialized =
+          propertyScoped.serializeDeclared(metaType, metaValue);
+      if (!serialized.emitted()) {
+        return linkage;
+      }
+      converted = serialized.value();
+    } catch (RuntimeException e) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.INVALID_META_TARGET,
+          resource.getClass(),
+          metaLocation,
+          "Failed to convert identifier meta for relationship '" + relationshipName + "'",
+          e);
+    }
+    Meta meta = metaFromConverted(converted, resource, metaLocation);
+    return switch (linkage) {
+      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
+          new RelationshipData.SingleLinkage(IdentifierMetaSupport.withMeta(identifier, meta));
+      default ->
+          throw new JsonApiMappingException(
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              resource.getClass(),
+              metaLocation,
+              "Identifier meta requires to-one linkage for relationship '"
+                  + relationshipName
+                  + "'");
+    };
+  }
+
+  private @Nullable Meta metaFromConverted(
+      @Nullable Object converted, Object resource, MappingLocation metaLocation) {
+    if (converted == null) {
+      return null;
+    }
+    if (!(converted instanceof Map<?, ?> map)) {
+      throw metaValueFailure(
+          resource,
+          metaLocation,
+          "Converted identifier meta value is not an object (expected a JSON object, got "
+              + convertedTypeName(converted)
+              + ")",
+          null);
+    }
+    try {
+      return Meta.of(castMembers(map, resource, metaLocation));
+    } catch (JsonApiValidationException e) {
+      throw metaValueFailure(resource, metaLocation, "Invalid identifier meta members", e);
+    }
+  }
+
+  private RelationshipData extractToOneLinkage(
+      Object resource, MappingProperty property, @Nullable Object value, JavaType propertyType) {
     value = unwrapOptional(value);
+    JavaType linkageType = RelationshipLinkageSupport.linkageJavaType(propertyType);
+    if (linkageType != null) {
+      if (value == null) {
+        return RelationshipData.NullLinkage.INSTANCE;
+      }
+      if (!(value instanceof RelationshipLinkage<?, ?>(Object target, Object meta))) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+            value.getClass(),
+            RelationshipLinkageSupport.relationshipLocation(property),
+            "Relationship '"
+                + property.logicalName()
+                + "' requires RelationshipLinkage values, got "
+                + value.getClass().getName());
+      }
+      RelationshipData data =
+          extractToOneLinkage(
+              resource,
+              property,
+              target,
+              RelationshipLinkageSupport.linkageTargetType(linkageType));
+      return applyWrapperMeta(
+          resource,
+          RelationshipLinkageSupport.linkageMetaType(linkageType),
+          meta,
+          data,
+          property.jsonapiName(),
+          -1);
+    }
     return switch (value) {
       case null -> RelationshipData.NullLinkage.INSTANCE;
       case ResourceIdentifier resourceIdentifier ->
@@ -507,9 +619,18 @@ public final class DomainResourceWriter {
   }
 
   private RelationshipData extractToManyLinkage(
-      @Nullable Object value, JavaType propType, MappingLocation relationshipLocation) {
+      Object resource,
+      MappingProperty property,
+      @Nullable Object value,
+      JavaType propType,
+      MappingLocation relationshipLocation) {
     if (value == null) {
       return RelationshipData.IdentifierCollectionLinkage.empty();
+    }
+    JavaType linkageType = RelationshipLinkageSupport.linkageJavaType(propType);
+    if (linkageType != null) {
+      List<Object> items = convertToCollection(value, relationshipLocation);
+      return toManyWrappedLinkage(resource, property, items, linkageType, relationshipLocation);
     }
     List<Object> items = convertToCollection(value, relationshipLocation);
     if (items.isEmpty()) {
@@ -523,6 +644,43 @@ public final class DomainResourceWriter {
       case Mixed(Object firstNonResourceIdentifier) ->
           throw mixedToManyElements(firstNonResourceIdentifier, relationshipLocation);
     };
+  }
+
+  private RelationshipData toManyWrappedLinkage(
+      Object resource,
+      MappingProperty property,
+      List<Object> items,
+      JavaType linkageType,
+      MappingLocation relationshipLocation) {
+    if (items.isEmpty()) {
+      return RelationshipData.IdentifierCollectionLinkage.empty();
+    }
+    JavaType targetType = RelationshipLinkageSupport.linkageTargetType(linkageType);
+    JavaType metaType = RelationshipLinkageSupport.linkageMetaType(linkageType);
+    List<ResourceIdentifier> identifiers = new ArrayList<>();
+    int index = 0;
+    for (Object item : items) {
+      Object unwrappedItem = unwrapOptional(item);
+      if (unwrappedItem == null) {
+        continue;
+      }
+      if (!(unwrappedItem instanceof RelationshipLinkage<?, ?>(Object target, Object meta))) {
+        throw new JsonApiMappingException(
+            MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+            unwrappedItem.getClass(),
+            relationshipLocation,
+            "To-many RelationshipLinkage collection contains "
+                + unwrappedItem.getClass().getName());
+      }
+      RelationshipData data = extractToOneLinkage(resource, property, target, targetType);
+      RelationshipData overlaid =
+          applyWrapperMeta(resource, metaType, meta, data, property.jsonapiName(), index);
+      if (overlaid instanceof RelationshipData.SingleLinkage(ResourceIdentifier identifier)) {
+        identifiers.add(identifier);
+        index++;
+      }
+    }
+    return new RelationshipData.IdentifierCollectionLinkage(identifiers);
   }
 
   private static ToManyClassification classifyToManyItems(List<?> items) {

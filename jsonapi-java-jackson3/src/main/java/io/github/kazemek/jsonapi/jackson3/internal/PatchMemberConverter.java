@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
-import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
@@ -198,24 +197,14 @@ final class PatchMemberConverter {
    */
   @Nullable Object convertRelationship(
       MappingProperty property, RelationshipData data, JavaType targetType) {
-    boolean toMany = DomainResourceWriter.isToManyType(targetType);
-    Class<?> targetClass =
-        RelationshipLinkageSupport.resolveTargetClass(targetType, toMany, property);
-    Object intermediate;
-    if (targetClass == ResourceIdentifier.class) {
-      intermediate = RelationshipLinkageSupport.builtInLinkage(property, data, toMany);
-    } else {
-      RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
-      if (linkageMapper == null) {
-        throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
-      }
-      JavaType mapperTargetType =
-          toMany ? targetType : RelationshipLinkageSupport.unwrapOptionalType(targetType);
-      intermediate =
-          RelationshipLinkageSupport.mappedLinkage(
-              property, data, toMany, linkageMapper, mapperTargetType);
-    }
-    return finalizeRelationshipValue(intermediate, targetType, property);
+    JavaType mappingType =
+        RelationshipLinkageSupport.targetMappingType(targetType, mapper.getTypeFactory());
+    RelationshipLinkageMapper linkageMapper =
+        RelationshipLinkageSupport.selectLinkageMapper(targetType, property, linkageMappers);
+    Object wrapped =
+        RelationshipLinkageSupport.convertLinkage(
+            property, data, linkageMapper, mappingType, mapper);
+    return finalizeRelationshipValue(wrapped, targetType, property);
   }
 
   private @Nullable Object finalizeRelationshipValue(

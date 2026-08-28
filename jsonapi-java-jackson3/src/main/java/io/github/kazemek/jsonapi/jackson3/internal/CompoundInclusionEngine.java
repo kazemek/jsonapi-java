@@ -9,6 +9,7 @@ import io.github.kazemek.jsonapi.jackson.IncludePath;
 import io.github.kazemek.jsonapi.jackson.IncludePolicy;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -168,6 +169,12 @@ public final class CompoundInclusionEngine {
             "Cannot resolve collection content type for include path '" + dottedThrough + "'");
       }
       relatedType = unwrapOptionalType(contentType);
+    }
+    JavaType linkageType = RelationshipLinkageSupport.linkageJavaType(relatedType);
+    if (linkageType != null) {
+      relatedType =
+          RelationshipLinkageSupport.unwrapOptionalType(
+              RelationshipLinkageSupport.linkageTargetType(linkageType));
     }
     return relatedType;
   }
@@ -389,11 +396,17 @@ public final class CompoundInclusionEngine {
         List<Object> domainObjects = new ArrayList<>();
         for (Object item : items) {
           Object unwrapped = DomainResourceWriter.unwrapOptional(item);
+          if (unwrapped instanceof RelationshipLinkage<?, ?>(Object target, Object ignored)) {
+            unwrapped = target;
+          }
           if (isIncludableDomainObject(unwrapped)) {
             domainObjects.add(unwrapped);
           }
         }
         return domainObjects;
+      }
+      if (value instanceof RelationshipLinkage<?, ?>(Object target, Object ignored)) {
+        value = target;
       }
       if (isIncludableDomainObject(value)) {
         return List.of(value);
@@ -404,7 +417,8 @@ public final class CompoundInclusionEngine {
     private static boolean isIncludableDomainObject(@Nullable Object value) {
       return value != null
           && !(value instanceof ResourceIdentifier)
-          && !(value instanceof RelationshipData);
+          && !(value instanceof RelationshipData)
+          && !(value instanceof RelationshipLinkage<?, ?>);
     }
   }
 

@@ -4,6 +4,9 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -13,9 +16,10 @@ import org.jspecify.annotations.Nullable;
 /**
  * Passive declaration-shape carriers for the shared write-diagnostics catalog: deliberately
  * mis-declared resources (missing annotations, duplicate roles, name collisions, invalid or
- * reserved names), throwing accessors, write-only properties, and unsupported relationship value
- * shapes. Adapter suites map instances of these carriers through their own resource writer and
- * assert the shared semantic diagnostic categories and wire locations.
+ * reserved names), throwing accessors, write-only properties, unsupported relationship value
+ * shapes, and invalid {@code RelationshipLinkage} declarations (ADR-017). Adapter suites map
+ * instances of these carriers through their own resource writer and assert the shared semantic
+ * diagnostic categories and wire locations.
  */
 public final class WriteDiagnosticsFixtures {
 
@@ -216,4 +220,30 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "bag-rel")
   public record RenamedBagRelEntity(
       @JsonApiId String id, @JsonApiRelationship(name = "ext-bag") RawBag things) {}
+
+  /** Raw erased {@code RelationshipLinkage} (generic information is required). */
+  @JsonApiResource(type = "articles")
+  @SuppressWarnings("rawtypes")
+  public record RawRelationshipLinkageEntity(
+      @JsonApiId String id, @JsonApiRelationship RelationshipLinkage author) {}
+
+  /** Nested {@code RelationshipLinkage} as the wrapped target type. */
+  @JsonApiResource(type = "articles")
+  public record NestedRelationshipLinkageEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship
+          RelationshipLinkage<RelationshipLinkage<ResourceIdentifier, AuthorIdMeta>, AuthorIdMeta>
+              author) {}
+
+  /** Scalar identifier-meta type inside the wrapper (must be Bean / Map / Object). */
+  @JsonApiResource(type = "articles")
+  public record ScalarMetaRelationshipLinkageEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship RelationshipLinkage<ResourceIdentifier, String> author) {}
+
+  /** List-shaped identifier-meta type inside the wrapper (must be a whole-meta object). */
+  @JsonApiResource(type = "articles")
+  public record ListMetaRelationshipLinkageEntity(
+      @JsonApiId String id,
+      @JsonApiRelationship RelationshipLinkage<ResourceIdentifier, List<AuthorIdMeta>> author) {}
 }

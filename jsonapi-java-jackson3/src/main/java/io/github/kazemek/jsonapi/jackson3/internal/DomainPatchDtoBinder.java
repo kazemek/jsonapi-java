@@ -158,6 +158,7 @@ public final class DomainPatchDtoBinder {
           rawType,
           RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
     }
+    wholeMetaTarget.validateRelationshipLinkageMeta(mapping.relationships(), rawType);
   }
 
   private void validatePatchableProperty(

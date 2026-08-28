@@ -35,39 +35,26 @@ final class MappingDefinitionResolver {
     String resourceType = validateResourceTypeName(resourceTypeName(resourceMetadata), rawType);
 
     List<BeanPropertyDefinition> propertyDefinitions = beanDescription.findProperties();
-    List<MappingProperty> identifierProperties = new ArrayList<>();
-    List<MappingProperty> attributeProperties = new ArrayList<>();
-    List<MappingProperty> relationshipProperties = new ArrayList<>();
-    List<MappingProperty> resourceMetaProperties = new ArrayList<>();
-    List<MappingProperty> relationshipMetaProperties = new ArrayList<>();
-
-    classifyProperties(
-        propertyDefinitions,
-        rawType,
-        identifierProperties,
-        attributeProperties,
-        relationshipProperties,
-        resourceMetaProperties,
-        relationshipMetaProperties);
+    ClassifiedProperties classified = classifyProperties(propertyDefinitions, rawType);
     validatePropertyRoles(
-        identifierProperties,
-        attributeProperties,
-        relationshipProperties,
-        resourceMetaProperties,
-        relationshipMetaProperties,
+        classified.identifiers,
+        classified.attributes,
+        classified.relationships,
+        classified.resourceMeta,
+        classified.relationshipMeta,
         rawType);
 
     MappingProperty identifier =
-        identifierProperties.isEmpty() ? null : identifierProperties.getFirst();
+        classified.identifiers.isEmpty() ? null : classified.identifiers.getFirst();
     MappingProperty resourceMeta =
-        resourceMetaProperties.isEmpty() ? null : resourceMetaProperties.getFirst();
+        classified.resourceMeta.isEmpty() ? null : classified.resourceMeta.getFirst();
     return new ResourceMapping(
         resourceType,
         identifier,
-        List.copyOf(attributeProperties),
-        List.copyOf(relationshipProperties),
+        List.copyOf(classified.attributes),
+        List.copyOf(classified.relationships),
         resourceMeta,
-        List.copyOf(relationshipMetaProperties),
+        List.copyOf(classified.relationshipMeta),
         beanDescription.getType());
   }
 
@@ -183,14 +170,9 @@ final class MappingDefinitionResolver {
     return resourceTypeName;
   }
 
-  private static void classifyProperties(
-      List<BeanPropertyDefinition> propertyDefinitions,
-      Class<?> rawType,
-      List<MappingProperty> identifierProperties,
-      List<MappingProperty> attributeProperties,
-      List<MappingProperty> relationshipProperties,
-      List<MappingProperty> resourceMetaProperties,
-      List<MappingProperty> relationshipMetaProperties) {
+  private static ClassifiedProperties classifyProperties(
+      List<BeanPropertyDefinition> propertyDefinitions, Class<?> rawType) {
+    ClassifiedProperties classified = new ClassifiedProperties();
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
       RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
       String logicalName = propertyDefinition.getName();
@@ -210,14 +192,26 @@ final class MappingDefinitionResolver {
         continue;
       }
 
-      MappingProperty mappingProperty =
-          new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role);
-      switch (role) {
-        case ID -> identifierProperties.add(mappingProperty);
-        case ATTRIBUTE -> attributeProperties.add(mappingProperty);
-        case RELATIONSHIP -> relationshipProperties.add(mappingProperty);
-        case RESOURCE_META -> resourceMetaProperties.add(mappingProperty);
-        case RELATIONSHIP_META -> relationshipMetaProperties.add(mappingProperty);
+      classified.add(
+          new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role));
+    }
+    return classified;
+  }
+
+  private static final class ClassifiedProperties {
+    private final List<MappingProperty> identifiers = new ArrayList<>();
+    private final List<MappingProperty> attributes = new ArrayList<>();
+    private final List<MappingProperty> relationships = new ArrayList<>();
+    private final List<MappingProperty> resourceMeta = new ArrayList<>();
+    private final List<MappingProperty> relationshipMeta = new ArrayList<>();
+
+    private void add(MappingProperty mappingProperty) {
+      switch (mappingProperty.role()) {
+        case ID -> identifiers.add(mappingProperty);
+        case ATTRIBUTE -> attributes.add(mappingProperty);
+        case RELATIONSHIP -> relationships.add(mappingProperty);
+        case RESOURCE_META -> resourceMeta.add(mappingProperty);
+        case RELATIONSHIP_META -> relationshipMeta.add(mappingProperty);
       }
     }
   }

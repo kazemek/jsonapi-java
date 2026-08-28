@@ -25,9 +25,10 @@ import tools.jackson.databind.json.JsonMapper;
  * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} (and {@link java.util.Optional}, {@link
  * java.util.List}, {@link java.util.Set}, or array variants) bind from linkage directly; any other
  * target class requires a registered {@link RelationshipLinkageMapper}. Built-in identifier linkage
- * materializes {@code type}/{@code id}/{@code lid} only; identifier {@code meta} and additional
- * members are not carried into bound relationship values (mirroring the write mapping, which
- * produces identifiers without meta or additional members).
+ * preserves {@code ResourceIdentifier.meta} (ADR-017) and still drops additional members. Write
+ * overlay of application-owned identifier meta uses opt-in {@link
+ * io.github.kazemek.jsonapi.jackson.RelationshipLinkage}; it is not relationship-level {@code
+ * meta}.
  *
  * <p>Binding failures throw {@link JsonApiMappingException} with a stable {@link MappingDiagnostic}
  * and a resource-relative JSON Pointer-like path.

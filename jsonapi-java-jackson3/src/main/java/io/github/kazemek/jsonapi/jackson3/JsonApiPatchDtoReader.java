@@ -10,6 +10,7 @@ import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainPatchDtoBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
+import io.github.kazemek.jsonapi.jackson3.internal.MetaBindingModule;
 import io.github.kazemek.jsonapi.jackson3.internal.PatchPresenceModule;
 import java.io.InputStream;
 import java.util.Map;
@@ -56,7 +57,11 @@ public final class JsonApiPatchDtoReader {
             .withDocumentUsage(DocumentUsage.UPDATE_REQUEST);
     DocumentReadContext readContext = DocumentReadContext.of(forced, PrimaryDataKind.RESOURCE);
     this.documentReader = new JsonApiDocumentReader(base, readContext);
-    this.binderMapper = base.rebuild().addModule(new PatchPresenceModule()).build();
+    this.binderMapper =
+        base.rebuild()
+            .addModule(new PatchPresenceModule())
+            .addModule(new MetaBindingModule())
+            .build();
     this.binder =
         new DomainPatchDtoBinder(
             binderMapper,

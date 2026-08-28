@@ -6,9 +6,10 @@
  * DocumentReadContext}, {@link DocumentEnvelope}, {@link MappedDocument}, {@link IncludePath},
  * {@link IncludePolicy}, {@link FieldPolicy}, {@link DomainData}, {@link IncludedResources}, {@link
  * IdentifierConverter}, {@link PatchCommand}, {@link PatchChange}, {@link PatchPresence}, {@link
- * StructuredPatch}, {@link StructuredMember}, {@link StructuredMemberState}, {@link
- * JsonApiMappingException}, {@link JsonApiDocumentReadException}, {@link MappingDiagnostic}, {@link
- * CodecFailureCategory}, {@link SourceLocation}, and the supporting allowance and kind types.
+ * RelationshipLinkage}, {@link StructuredPatch}, {@link StructuredMember}, {@link
+ * StructuredMemberState}, {@link JsonApiMappingException}, {@link JsonApiDocumentReadException},
+ * {@link MappingDiagnostic}, {@link CodecFailureCategory}, {@link SourceLocation}, and the
+ * supporting allowance and kind types.
  *
  * <p>Mapping-diagnostic locations are major-neutral: a mapping failure carries either an absent
  * location or a valid JSON Pointer built through {@link MappingLocation}. Producers address one

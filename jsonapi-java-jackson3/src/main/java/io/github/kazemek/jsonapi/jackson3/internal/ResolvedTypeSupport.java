@@ -136,6 +136,10 @@ final class ResolvedTypeSupport {
 
   private static boolean hasUnresolvedRelationshipTarget(JavaType propertyType, Type memberType) {
     JavaType unwrapped = RelationshipLinkageSupport.unwrapOptionalType(propertyType);
+    JavaType linkageType = RelationshipLinkageSupport.linkageJavaType(unwrapped);
+    if (linkageType != null && isRawGeneric(linkageType)) {
+      return true;
+    }
     if (isRawGeneric(unwrapped)) {
       return true;
     }

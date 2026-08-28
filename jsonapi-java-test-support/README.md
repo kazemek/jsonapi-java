@@ -92,7 +92,7 @@ feature packages; passive application-shaped carriers live only under `testsuppo
 Canonical carrier families kept deliberately small: the domain-write graph (`Article` / `Person` /
 `Comment`), the ordinary flat-read family around `FlatArticle`, the typed PATCH family around
 `ArticlePatch` with compact structured values (`Address`, `Geo`, containers), the compact
-`ArticleMeta` / `AuthorMeta` meta family, and intentional mutable JavaBean shapes
+`ArticleMeta` / `AuthorMeta` / `AuthorIdMeta` / `CommentIdMeta` meta family, and intentional mutable JavaBean shapes
 (`FlatMutableArticle`, `MutableAddress` / `MutableAddressPatch`) where bean semantics are part of
 the contract.
 

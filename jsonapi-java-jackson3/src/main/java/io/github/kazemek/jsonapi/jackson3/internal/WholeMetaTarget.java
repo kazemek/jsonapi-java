@@ -4,6 +4,7 @@ import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +22,8 @@ import tools.jackson.databind.type.LogicalType;
  * its own role's wrapper chain against these rules. Read/write and low-level domain mappings allow
  * at most one {@link Optional} wrapper around a Bean / {@link Map} / {@link Object} target; typed
  * PATCH DTOs allow exactly one {@code PatchPresence<T>} wrapper and at most one {@link Optional}
- * inside it.
+ * inside it. Identifier meta on an opt-in {@code RelationshipLinkage<T, M>} follows the same
+ * object-shape rule for {@code M} (ADR-017).
  *
  * <p>Whether an effective target is a legal whole-meta object target is decided by Jackson, not a
  * manually maintained scalar taxonomy: after rejecting primitives, containers, and the already
@@ -77,6 +79,7 @@ final class WholeMetaTarget {
             RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
       }
     }
+    validateRelationshipLinkageMeta(mapping.relationships(), rawType);
   }
 
   /** Validates whole-meta targets using effective deserialization-side property types. */
@@ -95,6 +98,43 @@ final class WholeMetaTarget {
             RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()));
       }
     }
+    validateRelationshipLinkageMeta(mapping.relationships(), rawType);
+  }
+
+  void validateRelationshipLinkageMeta(
+      List<? extends MappingPropertyView> relationships, Class<?> rawType) {
+    for (MappingPropertyView property : relationships) {
+      JavaType linkageType = RelationshipLinkageSupport.linkageJavaType(property.type());
+      if (linkageType == null) {
+        continue;
+      }
+      MappingLocation location =
+          IdentifierMetaSupport.identifierMetaLocation(property.jsonapiName());
+      if (linkageType.containedTypeCount() < 2
+          || linkageType.getBindings().isEmpty()
+          || RelationshipLinkageSupport.isLinkageType(
+              RelationshipLinkageSupport.unwrapOptionalType(
+                  RelationshipLinkageSupport.linkageTargetType(linkageType)))) {
+        throw invalidIdentifierMetaTarget(property, rawType, location);
+      }
+      JavaType metaType = RelationshipLinkageSupport.linkageMetaType(linkageType);
+      if (invalidReadWriteTarget(metaType)) {
+        throw invalidIdentifierMetaTarget(property, rawType, location);
+      }
+    }
+  }
+
+  private static JsonApiMappingException invalidIdentifierMetaTarget(
+      MappingPropertyView property, Class<?> rawType, MappingLocation location) {
+    return new JsonApiMappingException(
+        MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+        rawType,
+        location,
+        "Relationship '"
+            + property.logicalName()
+            + "' RelationshipLinkage meta type must be a Bean, Map, or Object (with at most one"
+            + " Optional wrapper) on "
+            + rawType.getName());
   }
 
   private static JsonApiMappingException invalidTarget(

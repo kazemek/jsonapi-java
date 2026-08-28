@@ -300,13 +300,40 @@ Diagnostic locations for nested failures are engine-accumulated wire-name locati
     `PatchCommand.changes()` order is deterministic: resource meta first, then attributes, then
     relationships with their meta immediately after the linkage change.
 
+  Per-linkage identifier meta (see [ADR-017](../docs/adr/017-resource-identifier-meta-mapping.md))
+  is an opt-in `RelationshipLinkage<T, M>` on the relationship property:
+
+  ```java
+  @JsonApiRelationship
+  RelationshipLinkage<Person, AuthorMeta> author;
+
+  @JsonApiRelationship
+  List<RelationshipLinkage<Comment, CommentMeta>> comments;
+  ```
+
+  - **Opt-in:** ordinary `@JsonApiRelationship Person` / `List<Comment>` / `Set` / array /
+    `Optional` / `ResourceIdentifier` / custom linkage mapping remain unchanged when identifier
+    meta is not needed.
+  - **Transparency:** `target` is mapped by the existing relationship pipeline. `meta` maps only to
+    `ResourceIdentifier.meta`. `@JsonApiRelationshipMeta` continues to own `Relationship.meta`.
+  - **To-many:** each wrapper element owns its identifier meta. `Set<RelationshipLinkage<…>>` is
+    valid because association is structural.
+  - **Null meta:** `meta == null` is no overlay; existing `ResourceIdentifier.meta` on a direct
+    identifier target is preserved. Write overlay keeps `type` / `id` / `lid` /
+    `additionalMembers`.
+  - **PATCH:** identifier meta is not independently patchable. Typed
+    `PatchPresence<RelationshipLinkage<T, M>>` and low-level `RelationshipChange` replace whole
+    linkage, including any identifier meta. There is no identifier-meta `PatchChange` and no
+    element-addressed mutation.
+
 By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
 when you need a different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
 
 Mapped ordinary values use configured Jackson at the property boundary: resource attributes and
 mapped resource/relationship meta write through their contextualized property serializers, while
-flat reads and supplied PATCH values use the contextualized property deserializer after any
+`RelationshipLinkage` identifier meta converts through configured Jackson against the wrapper's
+meta `JavaType`. Flat reads and supplied PATCH values use the contextualized property deserializer after any
 JSON:API-specific conversion. JSON:API remains authoritative for the identifier wire string,
 relationship linkage, and `PatchPresence` state; those adapter-owned states are not replaced by a
 property serializer or deserializer. If no mapped property can be resolved, the adapter retains its
@@ -317,9 +344,10 @@ derive isolated mappers via `rebuild()`; `reader` uses the supplied mapper direc
 decoding, and `domainDocumentReader` uses it for decoding while deriving its binder mapper. No
 construction path mutates the caller's mapper. Writers validate before emission. Readers decode
 through public core constructors, then run aggregate validation. Mappers and binders introspect
-types for resource metadata but do not register a Jackson module (the PATCH DTO reader additionally
-derives a binder mapper with an internal `PatchPresence` module; the caller's mapper is still never
-mutated).
+types for resource metadata. Derived mapping and PATCH binder mappers register the internal
+`MetaBindingModule` so built-in `ResourceIdentifier` values can round-trip identifier meta; the
+PATCH DTO binder additionally registers the internal `PatchPresence` module. None of those paths
+register the JSON:API document module.
 
 ## Non-goals
 
@@ -347,6 +375,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-014 — Recursive structured value PATCH semantics](../docs/adr/014-recursive-structured-value-patch-semantics.md)
 - [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
 - [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
+- [ADR-017 — Opt-in RelationshipLinkage for resource identifier meta](../docs/adr/017-resource-identifier-meta-mapping.md)
 - [Canonical fixtures](../jsonapi-java-test-support/src/main/resources/jsonapi/corpus/1.1/README.md)
 - [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
 - [Root agent workflow](../AGENTS.md)
@@ -371,7 +400,8 @@ artifact; both majors share the neutral contracts of
   `MappingLocation`, whose segments are individually escaped (`~` to `~0`, `/` to `~1`). Producers
   mapping one resource object emit resource-relative pointers over JSON:API member names:
   `/type`, `/id`, `/lid`, `/attributes/<wire-name>`, `/relationships/<wire-name>/data`,
-  `/meta`, `/relationships/<wire-name>/meta`. Jackson logical property names are translated
+  `/meta`, `/relationships/<wire-name>/meta`, `/relationships/<wire-name>/data/meta`,
+  `/relationships/<wire-name>/data/<index>/meta`. Jackson logical property names are translated
   through the mapping before they appear in a location — a logical name is never reinterpreted as
   pointer syntax. Failures without a meaningful member coordinate (missing annotations, invalid
   type names, registry conflicts, include-path and fieldset specification errors) carry an absent
@@ -384,8 +414,10 @@ artifact; both majors share the neutral contracts of
   translate their Jackson failure path into the mapped member's wire pointer (deeply, through
   resolved shape metadata); unmappable paths carry no location. Missing members are omitted;
   explicit JSON `null` binds null; relationship linkage binds `ResourceIdentifier` (plus
-  Optional/List/Set/array shapes) directly, and any other target class needs a registered
-   `RelationshipLinkageMapper`. Read bindability follows Jackson's deserialization metadata rather
+          Optional/List/Set/array shapes) directly, and any other target class needs a registered
+   `RelationshipLinkageMapper`. To-many `RelationshipLinkage` collections map each identifier
+   occurrence as `T` before wrapping, so a custom mapper cannot reorder target/meta ownership.
+   Read bindability follows Jackson's deserialization metadata rather
    than the serialization accessor: supplied getter-only or otherwise non-deserializable mapped
    members fail with `NON_DESERIALIZABLE_PROPERTY`. Bind failures throw
    `JsonApiMappingException`, never `JsonApiDocumentReadException`.

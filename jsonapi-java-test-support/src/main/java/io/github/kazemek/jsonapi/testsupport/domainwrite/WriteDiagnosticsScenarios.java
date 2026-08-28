@@ -1,20 +1,30 @@
 package io.github.kazemek.jsonapi.testsupport.domainwrite;
 
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.WriteDiagnosticsFixtures;
 import java.util.List;
 
 /**
  * The shared resource-write diagnostics catalog consumed by Jackson-major contract tests.
  *
- * <p>Each entry maps one deliberately mis-declared carrier from {@code fixtures.domainwrite}
- * through the adapter's own writer and pins the expected semantic diagnostic category plus either
- * the stable wire location (resource-relative JSON Pointer) or an absent location for class-level
- * and specification failures. The catalog grows by addition; adapter suites pick entries up through
- * {@link #catalog()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario id.
+ * <p>Each entry maps one deliberately mis-declared or invalid-instance carrier through the
+ * adapter's own writer and pins the expected semantic diagnostic category plus either the stable
+ * wire location (resource-relative JSON Pointer) or an absent location for class-level and
+ * specification failures. {@code RelationshipLinkage} declaration failures (ADR-017) live here so
+ * every Jackson major iterates them. The catalog grows by addition; adapter suites pick entries up
+ * through {@link #catalog()} and dispatch on {@link WriteDiagnosticScenario}, never on a scenario
+ * id.
  */
 public final class WriteDiagnosticsScenarios {
+
+  private static final String COMMENTS = "comments";
+  private static final String PEOPLE = "people";
+  private static final String EDITOR = "editor";
+  private static final String AUTHOR_DATA_META = "/relationships/author/data/meta";
 
   private static final List<WriteDiagnosticScenario> SCENARIOS =
       List.of(
@@ -138,8 +148,7 @@ public final class WriteDiagnosticsScenarios {
                   new WriteDiagnosticsFixtures.RenamedMixedRelEntity(
                       "1",
                       List.of(
-                          io.github.kazemek.jsonapi.core.model.ResourceIdentifier.of(
-                              "comments", "1"),
+                          io.github.kazemek.jsonapi.core.model.ResourceIdentifier.of(COMMENTS, "1"),
                           new Object())),
               MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
               "/relationships/ext-items/data"),
@@ -150,7 +159,45 @@ public final class WriteDiagnosticsScenarios {
                   new WriteDiagnosticsFixtures.RenamedBagRelEntity(
                       "1", new WriteDiagnosticsFixtures.RawBag(new Object())),
               MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
-              "/relationships/ext-bag/data"));
+              "/relationships/ext-bag/data"),
+          new WriteDiagnosticScenario(
+              "raw-relationship-linkage",
+              "Raw RelationshipLinkage is UNRESOLVED_GENERIC_TYPE at relationship data",
+              () ->
+                  new WriteDiagnosticsFixtures.RawRelationshipLinkageEntity(
+                      "1", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), null)),
+              MappingDiagnostic.UNRESOLVED_GENERIC_TYPE,
+              "/relationships/author/data"),
+          new WriteDiagnosticScenario(
+              "nested-relationship-linkage-target",
+              "Nested RelationshipLinkage as target is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.NestedRelationshipLinkageEntity(
+                      "1",
+                      new RelationshipLinkage<>(
+                          new RelationshipLinkage<>(
+                              ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)),
+                          new AuthorIdMeta(EDITOR))),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              AUTHOR_DATA_META),
+          new WriteDiagnosticScenario(
+              "scalar-relationship-linkage-meta",
+              "Scalar RelationshipLinkage meta type is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.ScalarMetaRelationshipLinkageEntity(
+                      "1", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), EDITOR)),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              AUTHOR_DATA_META),
+          new WriteDiagnosticScenario(
+              "list-relationship-linkage-meta",
+              "List RelationshipLinkage meta type is INVALID_IDENTIFIER_META_TARGET",
+              () ->
+                  new WriteDiagnosticsFixtures.ListMetaRelationshipLinkageEntity(
+                      "1",
+                      new RelationshipLinkage<>(
+                          ResourceIdentifier.of(PEOPLE, "p1"), List.of(new AuthorIdMeta(EDITOR)))),
+              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+              AUTHOR_DATA_META));
 
   private static final FixtureCatalog<WriteDiagnosticScenario> CATALOG =
       FixtureCatalog.of("write-diagnostics", SCENARIOS);

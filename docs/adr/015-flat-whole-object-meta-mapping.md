@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
-**Amendment:** 2026-08-22 — write-side Jackson authority
+**Amendment:** 2026-08-22 — write-side Jackson authority; 2026-08-26 — identifier meta moved to ADR-017
 
 ## Context
 
@@ -35,8 +35,8 @@ record Article(
     @JsonApiRelationshipMeta("author") AuthorRelationshipMeta authorMeta) {}
 ```
 
-`ResourceIdentifier.meta` is deliberately out of scope; it is a separate per-linkage-element
-cardinality/ownership problem outside this ADR's scope.
+`ResourceIdentifier.meta` is specified by [ADR-017](017-resource-identifier-meta-mapping.md); it is
+a separate per-linkage-element mapping and must not be modeled as relationship meta.
 
 ### Public API
 
@@ -167,4 +167,5 @@ tests.
   branch). Documented compatibility consideration.
 - Document-level meta remains document-owned; no resource annotation ambiguously means document
   meta.
-- `ResourceIdentifier.meta` remains unmapped and outside this ADR's scope.
+- `ResourceIdentifier.meta` is specified by [ADR-017](017-resource-identifier-meta-mapping.md), not
+  this ADR.

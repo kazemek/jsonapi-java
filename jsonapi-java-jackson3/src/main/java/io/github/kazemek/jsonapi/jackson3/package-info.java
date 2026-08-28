@@ -35,11 +35,13 @@
  *
  * <p>Configured Jackson is also authoritative at the mapped-property boundary for ordinary values:
  * attributes and mapped resource/relationship meta use contextualized property serializers on
- * write, and flat reads plus supplied PATCH values use contextualized property deserializers after
- * JSON:API-specific conversion. JSON:API remains authoritative for the identifier wire string,
- * relationship linkage, and {@link io.github.kazemek.jsonapi.jackson.PatchPresence} state; those
- * adapter-owned wire states are not replaced by property customization. Type/module conversion is
- * retained as the fallback when no mapped property can be resolved.
+ * write, and {@code RelationshipLinkage} identifier meta converts through configured Jackson
+ * against the wrapper's meta {@code JavaType}. Flat reads plus supplied PATCH values use
+ * contextualized property deserializers after JSON:API-specific conversion. JSON:API remains
+ * authoritative for the identifier wire string, relationship linkage, and {@link
+ * io.github.kazemek.jsonapi.jackson.PatchPresence} state; those adapter-owned wire states are not
+ * replaced by property customization. Type/module conversion is retained as the fallback when no
+ * mapped property can be resolved.
  *
  * <p>Typed domain envelopes use {@link JsonApiJackson3#domainDocumentReader} with an explicit
  * {@link ResourceTypeRegistry}: a dispatch-only registry keyed by each registered target's
@@ -76,7 +78,11 @@
  * io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta}, across domain read, domain write,
  * the low-level {@link io.github.kazemek.jsonapi.jackson.PatchCommand} path (new resource-meta and
  * relationship-meta {@link io.github.kazemek.jsonapi.jackson.PatchChange} variants), and the typed
- * PATCH DTO path. Document-level meta remains document-owned through the domain envelope; no
+ * PATCH DTO path. Per-linkage identifier meta is an opt-in {@link
+ * io.github.kazemek.jsonapi.jackson.RelationshipLinkage} (ADR-017): {@code target} maps as the
+ * ordinary relationship target and {@code meta} maps to {@code ResourceIdentifier.meta}. PATCH
+ * participates only through whole-linkage replacement — never as an independent {@code PatchChange}
+ * or typed PATCH member. Document-level meta remains document-owned through the domain envelope; no
  * resource annotation means document meta.
  *
  * <p>Codec and mapping policy, diagnostics, contexts, domain envelope values, and presence-aware

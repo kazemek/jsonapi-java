@@ -89,6 +89,7 @@ deferred.
 | `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
 | `@JsonApiMeta` whole resource-side meta                      | supported | One property per resource; complete `ResourceObject.meta` object; read/write/PATCH (ADR-015) |
 | `@JsonApiRelationshipMeta(value)` relationship meta          | supported | Required wire-name reference to a mapped relationship; one per relationship; read/write/PATCH (ADR-015) |
+| `RelationshipLinkage<T, M>` identifier meta                  | supported | Opt-in wrapper; `target` maps as the ordinary relationship target; `meta` maps to `ResourceIdentifier.meta`; read/write; PATCH only via whole-linkage replacement (ADR-017) |
 
 ## Codec / wire format (supported)
 

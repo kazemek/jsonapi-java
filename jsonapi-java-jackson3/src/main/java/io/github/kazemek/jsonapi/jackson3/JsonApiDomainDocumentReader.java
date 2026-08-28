@@ -15,6 +15,7 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.MappingLocation;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
+import io.github.kazemek.jsonapi.jackson3.internal.MetaBindingModule;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -67,7 +68,7 @@ public final class JsonApiDomainDocumentReader {
       Map<Class<?>, RelationshipLinkageMapper> linkageMappers) {
     this.documentReader = new JsonApiDocumentReader(base, context);
     this.registry = Objects.requireNonNull(registry, "registry");
-    this.binderMapper = base.rebuild().build();
+    this.binderMapper = base.rebuild().addModule(new MetaBindingModule()).build();
     this.binder =
         new DomainResourceBinder(
             binderMapper,

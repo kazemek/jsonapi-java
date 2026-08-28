@@ -4,7 +4,6 @@ import io.github.kazemek.jsonapi.core.model.Attributes;
 import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
-import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
@@ -36,9 +35,9 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>Diagnostic locations follow the shared mapping-location contract: resource-relative pointers
  * over wire names ({@code /type}, {@code /id}, {@code /lid}, {@code /attributes/<name>}, {@code
- * /relationships/<name>/data}, meta locations). Bean-construction failures translate their Jackson
- * failure paths through this mapping; unmappable paths carry an absent location instead of a
- * logical property name.
+ * /relationships/<name>/data}, resource/relationship meta locations, identifier-meta locations).
+ * Bean-construction failures translate their Jackson failure paths through this mapping; unmappable
+ * paths carry an absent location instead of a logical property name.
  */
 public final class DomainResourceBinder {
 
@@ -263,25 +262,14 @@ public final class DomainResourceBinder {
       ReadMappingProperty property,
       RelationshipData data) {
     JavaType propertyType = property.type();
-    boolean toMany = DomainResourceWriter.isToManyType(propertyType);
-    Class<?> targetClass =
-        RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
-    if (targetClass == ResourceIdentifier.class) {
-      properties.put(
-          property.logicalName(),
-          RelationshipLinkageSupport.builtInLinkage(property, data, toMany));
-      return;
-    }
-    RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
-    if (linkageMapper == null) {
-      throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
-    }
-    JavaType mapperTargetType =
-        toMany ? propertyType : RelationshipLinkageSupport.unwrapOptionalType(propertyType);
+    JavaType mappingType =
+        RelationshipLinkageSupport.targetMappingType(propertyType, mapper.getTypeFactory());
+    RelationshipLinkageMapper linkageMapper =
+        RelationshipLinkageSupport.selectLinkageMapper(propertyType, property, linkageMappers);
     properties.put(
         property.logicalName(),
-        RelationshipLinkageSupport.mappedLinkage(
-            property, data, toMany, linkageMapper, mapperTargetType));
+        RelationshipLinkageSupport.convertLinkage(
+            property, data, linkageMapper, mappingType, mapper));
   }
 
   private static void requireDeserializable(

@@ -31,8 +31,12 @@ contexts (`DocumentReadContext`, `CompoundSerializationContext`, `DocumentEnvelo
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`), identifier
 conversion (`IdentifierConverter`), domain envelope values (`DomainData`, `IncludedResources`), and
 presence-aware update contracts (`PatchCommand`, `PatchChange`, `PatchPresence`,
-`StructuredPatch`, `StructuredMember`, `StructuredMemberState`; `PatchChange` sealed variants also
-cover resource-meta and relationship-meta changes per [ADR-015](../docs/adr/015-flat-whole-object-meta-mapping.md)). No type in this
+`RelationshipLinkage`, `StructuredPatch`, `StructuredMember`, `StructuredMemberState`). `PatchChange`
+sealed variants cover resource-meta and relationship-meta changes per
+[ADR-015](../docs/adr/015-flat-whole-object-meta-mapping.md); identifier meta is not a variant.
+Applications that need `ResourceIdentifier.meta` opt into `RelationshipLinkage<T, M>`; identifier
+meta rides on whole-linkage `RelationshipChange` values per
+[ADR-017](../docs/adr/017-resource-identifier-meta-mapping.md). No type in this
 package imports or exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories,
 readers, writers, binders, and mapping introspection stay in the major-specific adapter packages.
 
@@ -51,7 +55,9 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - [ADR-007 — Module boundaries](../docs/adr/007-module-boundaries.md)
 - [ADR-009 — JSpecify nullness](../docs/adr/009-jspecify-nullness.md)
 - [ADR-010 — Architectural tests](../docs/adr/010-architectural-tests.md)
+- [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
 - [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
+- [ADR-017 — Opt-in RelationshipLinkage for resource identifier meta](../docs/adr/017-resource-identifier-meta-mapping.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents

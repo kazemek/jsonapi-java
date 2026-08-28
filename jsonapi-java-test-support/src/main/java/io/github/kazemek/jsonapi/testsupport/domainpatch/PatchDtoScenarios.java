@@ -1,9 +1,11 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch;
 
+import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressPatch;
@@ -27,8 +29,11 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOpt
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalCityPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalMetaPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRawAddressPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRelationshipLinkagePatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.BoxPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.DirectPresentPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.GeoPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.IntIdPatch;
@@ -63,6 +68,8 @@ public final class PatchDtoScenarios {
   private static final String SUBTITLE = "subtitle";
   private static final String ADDRESS = "address";
   private static final String PEOPLE = "people";
+  private static final String ROLE = "role";
+  private static final String EDITOR = "editor";
   private static final String TITLE_PATH = "/attributes/title";
   private static final String ADDRESS_ATTRIBUTE_PATH = "/attributes/address";
   private static final String TITLE_ONLY = "title-only";
@@ -114,7 +121,11 @@ public final class PatchDtoScenarios {
           metaAtomicMap(),
           metaOptionalObject(),
           metaEmptyObject(),
-          metaOmitted());
+          metaOmitted(),
+          wholeLinkageToOneIdentifierMeta(),
+          wholeLinkageToManyIdentifierMeta(),
+          wrapperWholeLinkageToOneIdentifierMeta(),
+          wrapperWholeLinkageToManyIdentifierMeta());
 
   private static final FixtureCatalog<PatchDtoScenario> CATALOG =
       FixtureCatalog.of("patch-dto", SCENARIOS);
@@ -660,6 +671,85 @@ public final class PatchDtoScenarios {
                 PatchPresence.omitted(),
                 PatchPresence.omitted(),
                 PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario wholeLinkageToOneIdentifierMeta() {
+    return scenario(
+        "patch-dto-whole-linkage-to-one-identifier-meta",
+        doc("author-identifier-meta"),
+        ArticlePatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            article(
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.present(
+                    new ResourceIdentifier(
+                        PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of())),
+                PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario wholeLinkageToManyIdentifierMeta() {
+    return scenario(
+        "patch-dto-whole-linkage-to-many-identifier-meta",
+        doc("comments-identifier-meta"),
+        ArticlePatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            article(
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.present(
+                    List.of(
+                        new ResourceIdentifier(
+                            COMMENTS, "c1", null, Meta.of(Map.of("pinned", true)), Map.of()),
+                        ResourceIdentifier.of(COMMENTS, "c2"))))));
+  }
+
+  private static PatchDtoScenario wrapperWholeLinkageToOneIdentifierMeta() {
+    return scenario(
+        "patch-dto-wrapper-whole-linkage-to-one-identifier-meta",
+        doc("author-identifier-meta"),
+        ArticleWithRelationshipLinkagePatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            linkageArticle(
+                PatchPresence.omitted(),
+                PatchPresence.present(
+                    new RelationshipLinkage<>(
+                        new ResourceIdentifier(
+                            PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of()),
+                        new AuthorIdMeta(EDITOR))),
+                PatchPresence.omitted())));
+  }
+
+  private static PatchDtoScenario wrapperWholeLinkageToManyIdentifierMeta() {
+    return scenario(
+        "patch-dto-wrapper-whole-linkage-to-many-identifier-meta",
+        doc("comments-identifier-meta"),
+        ArticleWithRelationshipLinkagePatch.class,
+        PatchDtoExpectation.success(
+            "1",
+            linkageArticle(
+                PatchPresence.omitted(),
+                PatchPresence.omitted(),
+                PatchPresence.present(
+                    List.of(
+                        new RelationshipLinkage<>(
+                            new ResourceIdentifier(
+                                COMMENTS, "c1", null, Meta.of(Map.of("pinned", true)), Map.of()),
+                            new CommentIdMeta(true)),
+                        new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null))))));
+  }
+
+  private static Map<String, PatchPresence<?>> linkageArticle(
+      PatchPresence<?> title, PatchPresence<?> author, PatchPresence<?> comments) {
+    Map<String, PatchPresence<?>> members = LinkedHashMap.newLinkedHashMap(3);
+    members.put(TITLE, title);
+    members.put(AUTHOR, author);
+    members.put(COMMENTS, comments);
+    return members;
   }
 
   private static Map<String, PatchPresence<?>> metaPatchMembers(

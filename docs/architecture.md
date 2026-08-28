@@ -110,7 +110,7 @@ JSON:API representation and configured Jackson are both authoritative, in differ
 | Document envelope, member presence, sealed explicit-null vs Java absence, identifier wire strings, relationship linkage, `PatchPresence` state | JSON:API / this library |
 | Aggregate document rules (identity uniqueness, full linkage, update-request shape, endpoint identity) | `jsonapi-java-core` validation |
 | Class-level `@JsonApiResource` type names, including class-level mix-ins | Configured Jackson introspection |
-| Ordinary attribute and resource/relationship-meta property serialization and deserialization | Configured Jackson at the mapped property |
+| Ordinary attribute and resource/relationship-meta property serialization and deserialization; `RelationshipLinkage` identifier-meta conversion | Configured Jackson at the mapped property / wrapper meta `JavaType` |
 | Bean construction, creators, naming, visibility, modules | Configured Jackson |
 | `ResourceTypeRegistry` | Explicit wire-type → Java-target dispatch. It does not interpret annotations; registration keys come from the same configured-Jackson metadata authority. |
 
@@ -147,9 +147,15 @@ flowchart TB
 - **Typed path:** every patchable member is declared `PatchPresence<T>`. Nested recursion is
   opt-in through a presence-aware PATCH *shape* (every visible member is itself
   `PatchPresence<…>`).
+- **Identifier meta:** `ResourceIdentifier.meta` is not independently patchable. Applications that
+  need it opt into `RelationshipLinkage<T, M>` on the relationship property. Identifier meta rides on
+  whole-linkage replacement (`RelationshipChange` values that carry `ResourceIdentifier` and/or
+  `RelationshipLinkage`). ADR-014's atomic `List` / `Set` / array / `Map` boundary forbids
+  element-addressed mutation of to-many linkage identifier meta.
 
 [ADR-012](adr/012-resource-patch-binding.md), [ADR-013](adr/013-direct-typed-patch-dto-binding.md),
-and [ADR-014](adr/014-recursive-structured-value-patch-semantics.md) own the contracts.
+[ADR-014](adr/014-recursive-structured-value-patch-semantics.md), and
+[ADR-017](adr/017-resource-identifier-meta-mapping.md) own the contracts.
 
 ## Diagnostics
 
@@ -215,11 +221,11 @@ Mapper *use* vs *derivation* is capability-specific:
 | Capability | Mapper handling |
 |------------|-----------------|
 | Document reader | Uses the supplied mapper directly for token-driven parsing |
-| Typed domain document reader | Uses the supplied mapper for document decode; derives an isolated binder mapper |
-| Presence-aware PATCH reader | Uses the supplied mapper for document decode; derives an isolated binder mapper |
-| Typed PATCH DTO reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `PatchPresence` module |
+| Typed domain document reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `MetaBindingModule` |
+| Presence-aware PATCH reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `MetaBindingModule` |
+| Typed PATCH DTO reader | Uses the supplied mapper for document decode; derives an isolated binder mapper and registers the internal `MetaBindingModule` and `PatchPresence` modules |
 | Document writer | Derives a mapper and registers the JSON:API document module |
-| Resource mapper / flat binder | Derive isolated mappers for introspection and conversion |
+| Resource mapper / flat binder | Derive isolated mappers for introspection and conversion; register the internal `MetaBindingModule` |
 
 [ADR-016](adr/016-jackson-adapter-construction.md) is the construction policy.
 

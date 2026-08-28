@@ -5,7 +5,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One requested change in a {@link PatchCommand}: a supplied mapped attribute, relationship, or
- * resource-side meta location.
+ * resource-side meta location. Identifier meta ({@code ResourceIdentifier.meta}) is not an
+ * independent change variant; applications that need it opt into {@link RelationshipLinkage} and it
+ * participates only as part of whole-linkage replacement on {@link RelationshipChange}.
  *
  * <p>Omitted members never appear. Explicit attribute JSON {@code null} is {@code value == null} on
  * a present {@link AttributeChange}. Relationship {@code NullLinkage} is Java {@code null} or empty
@@ -47,7 +49,14 @@ public sealed interface PatchChange
     }
   }
 
-  /** A supplied mapped relationship linkage replacement. */
+  /**
+   * A supplied mapped relationship linkage replacement.
+   *
+   * <p>When the converted value is a {@code ResourceIdentifier}, a {@link RelationshipLinkage}, or
+   * a collection of either, identifier meta rides on those values. There is no separate
+   * identifier-meta change; supplying linkage replaces the whole linkage including per-identifier
+   * meta (ADR-017).
+   */
   record RelationshipChange(String jsonapiName, String logicalName, @Nullable Object value)
       implements PatchChange {
     public RelationshipChange {
