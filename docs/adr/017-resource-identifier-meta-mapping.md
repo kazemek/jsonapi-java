@@ -109,7 +109,9 @@ A configured serializer that emits nothing is treated as no overlay (same preser
 Read: convert the identifier through the existing target mapping for `T`, convert
 `ResourceIdentifier.meta` through configured Jackson against the full generic `JavaType` of `M`,
 and construct `RelationshipLinkage<T, M>`. Each to-many wrapper element receives the meta belonging
-to that exact resource identifier.
+to that exact resource identifier. Custom to-many `RelationshipLinkageMapper` invocations for
+wrapped properties therefore map each identifier occurrence as `T` (`SingleLinkage`) before
+constructing that element's wrapper; collection-level mapper results are not reassociated by index.
 
 Write: map `target` exactly as an ordinary relationship target; serialize `M` through configured
 Jackson (full `JavaType`); require a JSON object; overlay the resulting `Meta` onto the constructed

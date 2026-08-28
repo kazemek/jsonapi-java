@@ -270,24 +270,17 @@ public final class DomainResourceBinder {
         RelationshipLinkageSupport.resolveTargetClass(propertyType, toMany, property);
     JavaType mappingType =
         RelationshipLinkageSupport.targetMappingType(propertyType, mapper.getTypeFactory());
-    boolean mappingToMany = DomainResourceWriter.isToManyType(mappingType);
-    Object converted;
-    if (targetClass == ResourceIdentifier.class) {
-      converted = RelationshipLinkageSupport.builtInLinkage(property, data, mappingToMany);
-    } else {
-      RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
+    RelationshipLinkageMapper linkageMapper = null;
+    if (targetClass != ResourceIdentifier.class) {
+      linkageMapper = linkageMappers.get(targetClass);
       if (linkageMapper == null) {
         throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
       }
-      JavaType mapperTargetType =
-          mappingToMany ? mappingType : RelationshipLinkageSupport.unwrapOptionalType(mappingType);
-      converted =
-          RelationshipLinkageSupport.mappedLinkage(
-              property, data, mappingToMany, linkageMapper, mapperTargetType);
     }
     properties.put(
         property.logicalName(),
-        RelationshipLinkageSupport.wrapConverted(property, data, converted, mapper));
+        RelationshipLinkageSupport.convertLinkage(
+            property, data, linkageMapper, mappingType, mapper));
   }
 
   private static void requireDeserializable(

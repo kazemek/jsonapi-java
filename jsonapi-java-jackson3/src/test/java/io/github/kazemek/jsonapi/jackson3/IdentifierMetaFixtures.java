@@ -132,4 +132,10 @@ public final class IdentifierMetaFixtures {
       @JsonApiId String id,
       @JsonApiRelationship
           RelationshipLinkage<LinkageMapperFixtures.FlatAuthor, AuthorIdMeta> author) {}
+
+  @JsonApiResource(type = "articles")
+  public record WrappedMappedSetArticle(
+      @JsonApiId String id,
+      @JsonApiRelationship
+          Set<RelationshipLinkage<LinkageMapperFixtures.FlatAuthor, CommentIdMeta>> comments) {}
 }

@@ -13,15 +13,17 @@ import tools.jackson.databind.JavaType;
  * JsonApiJackson3#resourceBinder(tools.jackson.databind.json.JsonMapper, IdentifierConverter,
  * java.util.Map)} when a relationship property's target type is not one of the built-in {@link
  * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} shapes. The binder invokes the mapper
- * only for {@link RelationshipData.SingleLinkage} (to-one properties) and non-empty {@link
- * RelationshipData.IdentifierCollectionLinkage} (to-many properties); explicit null and empty
- * linkage short-circuit without a mapper call, and to-one versus to-many cardinality is enforced
- * before invocation.
+ * only for {@link RelationshipData.SingleLinkage} (to-one properties, including each occurrence of
+ * a to-many {@link io.github.kazemek.jsonapi.jackson.RelationshipLinkage} collection) and non-empty
+ * {@link RelationshipData.IdentifierCollectionLinkage} (ordinary to-many properties); explicit null
+ * and empty linkage short-circuit without a mapper call, and to-one versus to-many cardinality is
+ * enforced before invocation.
  *
- * <p>{@code targetType} is the property's Java type with {@link java.util.Optional} unwrapped (a
- * collection type for to-many properties). The returned value is placed directly into the binder's
- * synthetic property map, so it must be coercible to {@code targetType}; a {@code null} return
- * binds the property to {@code null}.
+ * <p>{@code targetType} is {@code T} for to-one properties and for each wrapped to-many occurrence,
+ * or the collection type of {@code T} for ordinary to-many properties ({@link java.util.Optional}
+ * unwrapped). The returned value is placed directly into the binder's synthetic property map, so it
+ * must be coercible to {@code targetType}; a {@code null} return binds the property to {@code
+ * null}. Wrapped to-many properties never reassociate a collection-level mapper result by index.
  */
 @FunctionalInterface
 public interface RelationshipLinkageMapper {

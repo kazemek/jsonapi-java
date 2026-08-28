@@ -414,8 +414,10 @@ artifact; both majors share the neutral contracts of
   translate their Jackson failure path into the mapped member's wire pointer (deeply, through
   resolved shape metadata); unmappable paths carry no location. Missing members are omitted;
   explicit JSON `null` binds null; relationship linkage binds `ResourceIdentifier` (plus
-  Optional/List/Set/array shapes) directly, and any other target class needs a registered
-   `RelationshipLinkageMapper`. Read bindability follows Jackson's deserialization metadata rather
+          Optional/List/Set/array shapes) directly, and any other target class needs a registered
+   `RelationshipLinkageMapper`. To-many `RelationshipLinkage` collections map each identifier
+   occurrence as `T` before wrapping, so a custom mapper cannot reorder target/meta ownership.
+   Read bindability follows Jackson's deserialization metadata rather
    than the serialization accessor: supplied getter-only or otherwise non-deserializable mapped
    members fail with `NON_DESERIALIZABLE_PROPERTY`. Bind failures throw
    `JsonApiMappingException`, never `JsonApiDocumentReadException`.

@@ -145,7 +145,37 @@ final class RelationshipLinkageSupport {
     };
   }
 
-  static @Nullable Object builtInLinkage(
+  /**
+   * Converts relationship linkage to the property value, wrapping {@link RelationshipLinkage}
+   * occurrences when the property opts in. To-many wrappers map each identifier to {@code T} before
+   * attaching that identifier's meta, so a collection-level custom mapper cannot reorder or resize
+   * the association.
+   */
+  static @Nullable Object convertLinkage(
+      MappingPropertyView property,
+      RelationshipData data,
+      @Nullable RelationshipLinkageMapper linkageMapper,
+      JavaType mappingType,
+      JsonMapper jacksonMapper) {
+    JavaType linkageType = linkageJavaType(property.type());
+    boolean propertyToMany =
+        DomainResourceWriter.isToManyType(unwrapTransportWrappers(property.type()));
+    if (linkageType != null && propertyToMany) {
+      return wrapToManyOccurrences(property, data, linkageMapper, jacksonMapper, linkageType);
+    }
+    boolean mappingToMany = DomainResourceWriter.isToManyType(mappingType);
+    JavaType mapperTargetType = mappingToMany ? mappingType : unwrapOptionalType(mappingType);
+    Object converted =
+        linkageMapper == null
+            ? builtInLinkage(property, data, mappingToMany)
+            : mappedLinkage(property, data, mappingToMany, linkageMapper, mapperTargetType);
+    if (linkageType == null) {
+      return converted;
+    }
+    return wrapToOne(property, data, converted, jacksonMapper, linkageType);
+  }
+
+  private static @Nullable Object builtInLinkage(
       MappingPropertyView property, RelationshipData data, boolean toMany) {
     boolean empty = validateCardinality(property, data, toMany);
     return switch (data) {
@@ -165,7 +195,7 @@ final class RelationshipLinkageSupport {
     };
   }
 
-  static @Nullable Object mappedLinkage(
+  private static @Nullable Object mappedLinkage(
       MappingPropertyView property,
       RelationshipData data,
       boolean toMany,
@@ -185,7 +215,7 @@ final class RelationshipLinkageSupport {
     };
   }
 
-  static @Nullable Object invokeLinkageMapper(
+  private static @Nullable Object invokeLinkageMapper(
       RelationshipLinkageMapper linkageMapper,
       RelationshipData data,
       JavaType targetType,
@@ -202,48 +232,55 @@ final class RelationshipLinkageSupport {
     }
   }
 
-  /**
-   * When the relationship is a {@link RelationshipLinkage} (or a collection of them), wraps each
-   * converted target with the identifier meta belonging to that exact resource identifier.
-   */
-  static @Nullable Object wrapConverted(
+  private static @Nullable Object wrapToOne(
       MappingPropertyView property,
       RelationshipData data,
       @Nullable Object converted,
-      JsonMapper mapper) {
-    JavaType linkageType = linkageJavaType(property.type());
-    if (linkageType == null) {
-      return converted;
+      JsonMapper jacksonMapper,
+      JavaType linkageType) {
+    if (converted == null) {
+      return null;
     }
-    JavaType metaType = linkageMetaType(linkageType);
-    boolean toMany = DomainResourceWriter.isToManyType(unwrapTransportWrappers(property.type()));
-    if (!toMany) {
-      if (converted == null) {
-        return null;
-      }
-      return new RelationshipLinkage<>(
-          converted, convertIdentifierMeta(singleIdentifier(data), metaType, mapper, property, -1));
-    }
+    return new RelationshipLinkage<>(
+        converted,
+        convertIdentifierMeta(
+            singleIdentifier(data), linkageMetaType(linkageType), jacksonMapper, property, -1));
+  }
+
+  private static Object wrapToManyOccurrences(
+      MappingPropertyView property,
+      RelationshipData data,
+      @Nullable RelationshipLinkageMapper linkageMapper,
+      JsonMapper jacksonMapper,
+      JavaType linkageType) {
+    boolean empty = validateCardinality(property, data, true);
     List<ResourceIdentifier> identifiers =
         switch (data) {
           case RelationshipData.IdentifierCollectionLinkage(List<ResourceIdentifier> ids) -> ids;
           default -> List.of();
         };
-    if (converted == null || identifiers.isEmpty()) {
+    if (empty) {
       return List.of();
     }
-    List<?> targets = DomainResourceWriter.convertToCollection(converted);
-    List<Object> wrapped = new ArrayList<>(targets.size());
-    int count = Math.min(targets.size(), identifiers.size());
-    for (int index = 0; index < count; index++) {
-      Object target = targets.get(index);
+    JavaType targetType = linkageTargetType(linkageType);
+    JavaType metaType = linkageMetaType(linkageType);
+    List<Object> wrapped = new ArrayList<>(identifiers.size());
+    for (int index = 0; index < identifiers.size(); index++) {
+      ResourceIdentifier identifier = identifiers.get(index);
+      Object target =
+          linkageMapper == null
+              ? IdentifierMetaSupport.copyLinkageIdentifier(identifier)
+              : invokeLinkageMapper(
+                  linkageMapper,
+                  new RelationshipData.SingleLinkage(identifier),
+                  targetType,
+                  property);
       if (target == null) {
         continue;
       }
       wrapped.add(
           new RelationshipLinkage<>(
-              target,
-              convertIdentifierMeta(identifiers.get(index), metaType, mapper, property, index)));
+              target, convertIdentifierMeta(identifier, metaType, jacksonMapper, property, index)));
     }
     return wrapped;
   }

@@ -205,22 +205,16 @@ final class PatchMemberConverter {
         RelationshipLinkageSupport.resolveTargetClass(targetType, toMany, property);
     JavaType mappingType =
         RelationshipLinkageSupport.targetMappingType(targetType, mapper.getTypeFactory());
-    boolean mappingToMany = DomainResourceWriter.isToManyType(mappingType);
-    Object intermediate;
-    if (targetClass == ResourceIdentifier.class) {
-      intermediate = RelationshipLinkageSupport.builtInLinkage(property, data, mappingToMany);
-    } else {
-      RelationshipLinkageMapper linkageMapper = linkageMappers.get(targetClass);
+    RelationshipLinkageMapper linkageMapper = null;
+    if (targetClass != ResourceIdentifier.class) {
+      linkageMapper = linkageMappers.get(targetClass);
       if (linkageMapper == null) {
         throw RelationshipLinkageSupport.unsupportedRelationshipTarget(property, targetClass);
       }
-      JavaType mapperTargetType =
-          mappingToMany ? mappingType : RelationshipLinkageSupport.unwrapOptionalType(mappingType);
-      intermediate =
-          RelationshipLinkageSupport.mappedLinkage(
-              property, data, mappingToMany, linkageMapper, mapperTargetType);
     }
-    Object wrapped = RelationshipLinkageSupport.wrapConverted(property, data, intermediate, mapper);
+    Object wrapped =
+        RelationshipLinkageSupport.convertLinkage(
+            property, data, linkageMapper, mappingType, mapper);
     return finalizeRelationshipValue(wrapped, targetType, property);
   }
 

@@ -32,6 +32,7 @@ import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.SnakeIdMeta
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.SnakeIdentifierMeta
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.WrappedDomainArticle
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.WrappedMappedArticle
+import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.WrappedMappedSetArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta
@@ -324,6 +325,47 @@ class IdentifierMetaMappingSpec extends Specification {
     seenTypes.every { it.rawClass == FlatAuthor }
     bound.author().target() == new FlatAuthor("people", "p1")
     bound.author().meta() == new AuthorIdMeta("editor")
+  }
+
+  def "custom to-many mapper cannot desynchronize wrapper target and meta"() {
+    given:
+    def seenCollectionMapping = false
+    def linkageMapper = { RelationshipData data, JavaType target ->
+      if (data instanceof RelationshipData.SingleLinkage) {
+        def identifier = ((RelationshipData.SingleLinkage) data).identifier()
+        return new FlatAuthor(identifier.type(), identifier.id())
+      }
+      seenCollectionMapping = true
+      def identifiers = ((RelationshipData.IdentifierCollectionLinkage) data).identifiers()
+      return identifiers.reverse().collect { new FlatAuthor(it.type(), it.id()) } as Set
+    } as RelationshipLinkageMapper
+    def binder = JsonApiJackson3.resourceBinder(
+        JsonMapper.builder().build(), IdentifierConverter.defaults(), [(FlatAuthor): linkageMapper])
+    def resource = new ResourceObject(
+        "articles",
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        [comments: Relationship.withData(
+          new RelationshipData.IdentifierCollectionLinkage([
+            new ResourceIdentifier("comments", "c1", null, Meta.of([pinned: true]), [:]),
+            new ResourceIdentifier("comments", "c2", null, Meta.of([pinned: false]), [:])
+          ]))]),
+        null,
+        null,
+        [:])
+
+    when:
+    def bound = binder.fromResource(resource, WrappedMappedSetArticle)
+
+    then:
+    !seenCollectionMapping
+    def byId = bound.comments().collectEntries { [it.target().id(), it] }
+    byId.c1.target() == new FlatAuthor("comments", "c1")
+    byId.c1.meta().pinned() == true
+    byId.c2.target() == new FlatAuthor("comments", "c2")
+    byId.c2.meta().pinned() == false
   }
 
   def "converted scalar identifier meta is INVALID_META_TARGET"() {
