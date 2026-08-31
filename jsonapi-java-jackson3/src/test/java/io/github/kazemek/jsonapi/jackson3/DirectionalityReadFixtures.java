@@ -17,6 +17,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiResource;
  * DomainDocumentReaderSpec}; each nested shape isolates one Jackson access mechanic (setter-only,
  * creator-only, injected creator, root-typed, write-only, getter-only, view-restricted).
  */
+@SuppressWarnings({"unused", "NullAway"})
 public final class DirectionalityReadFixtures {
 
   private DirectionalityReadFixtures() {}

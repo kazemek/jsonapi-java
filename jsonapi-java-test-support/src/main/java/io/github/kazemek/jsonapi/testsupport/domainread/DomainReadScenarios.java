@@ -56,6 +56,7 @@ import org.jspecify.annotations.Nullable;
  * suites pick them up through {@link #catalog()}. Consumers dispatch on the {@link DomainReadInput}
  * variant and {@link ConverterBehavior}, never on a scenario id.
  */
+@SuppressWarnings({"unchecked", "SameParameterValue"})
 public final class DomainReadScenarios {
 
   private static final String ARTICLES = "articles";

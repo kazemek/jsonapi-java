@@ -530,18 +530,14 @@ public final class DomainResourceWriter {
           e);
     }
     Meta meta = metaFromConverted(converted, resource, metaLocation);
-    return switch (linkage) {
-      case RelationshipData.SingleLinkage(ResourceIdentifier identifier) ->
-          new RelationshipData.SingleLinkage(IdentifierMetaSupport.withMeta(identifier, meta));
-      default ->
-          throw new JsonApiMappingException(
-              MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              resource.getClass(),
-              metaLocation,
-              "Identifier meta requires to-one linkage for relationship '"
-                  + relationshipName
-                  + "'");
-    };
+    if (linkage instanceof RelationshipData.SingleLinkage(ResourceIdentifier identifier)) {
+      return new RelationshipData.SingleLinkage(IdentifierMetaSupport.withMeta(identifier, meta));
+    }
+    throw new JsonApiMappingException(
+        MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
+        resource.getClass(),
+        metaLocation,
+        "Identifier meta requires to-one linkage for relationship '" + relationshipName + "'");
   }
 
   private @Nullable Meta metaFromConverted(

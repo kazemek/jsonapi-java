@@ -53,6 +53,7 @@ import org.jspecify.annotations.Nullable;
  * suites pick them up through {@link #catalog()}. Consumers dispatch on the {@link
  * DomainWriteOperation}/{@link DomainWriteInput} descriptor, never on a scenario id.
  */
+@SuppressWarnings({"unchecked", "SameParameterValue"})
 public final class DomainWriteScenarios {
 
   private static final String COMMENTS = "comments";
@@ -733,7 +734,9 @@ public final class DomainWriteScenarios {
                   () ->
                       new RelationshipContainerFixtures.ArticleWithNullableIdentifierArray(
                           "1",
-                          new ResourceIdentifier[] {null, ResourceIdentifier.of(COMMENTS, "1")})),
+                          new @Nullable ResourceIdentifier[] {
+                            null, ResourceIdentifier.of(COMMENTS, "1")
+                          })),
               null,
               DomainWriteOutcome.resource(
                   itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1")))),

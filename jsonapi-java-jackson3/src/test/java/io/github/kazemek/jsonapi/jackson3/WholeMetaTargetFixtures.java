@@ -13,6 +13,7 @@ import java.util.Objects;
  * TypeDeserializer} decoration for concrete and abstract {@code @JsonTypeInfo} meta types.
  * Major-neutral whole-meta declaration and bind semantics live in shared catalogs.
  */
+@SuppressWarnings({"unused", "NullAway"})
 public final class WholeMetaTargetFixtures {
 
   private WholeMetaTargetFixtures() {}

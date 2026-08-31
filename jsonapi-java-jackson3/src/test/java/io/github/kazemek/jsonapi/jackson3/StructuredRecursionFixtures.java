@@ -17,6 +17,7 @@ import tools.jackson.databind.deser.std.StdDeserializer;
  * PatchStructuredBindingSpec} and the internal {@code StructuredValueBinderSpec} engine tests
  * (ADR-014).
  */
+@SuppressWarnings({"unused", "NullAway"})
 public final class StructuredRecursionFixtures {
 
   private StructuredRecursionFixtures() {}
