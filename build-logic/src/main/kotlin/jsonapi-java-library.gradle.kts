@@ -86,7 +86,7 @@ val jacocoCoverageFloorsByProject =
         "jsonapi-java-test-support" to
             JacocoCoverageFloors(
                 "0.98".toBigDecimal(),
-                "0.87".toBigDecimal(),
+                "0.90".toBigDecimal(),
                 testSupportFixtureExclusions,
             ),
     )

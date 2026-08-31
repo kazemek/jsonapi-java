@@ -15,9 +15,10 @@ import spock.lang.Specification
 // domain document reader (Jackson 3 in DomainDocumentReaderSpec; Jackson 2 likewise later), so
 // every entry must stay self-consistent. These
 // tests enforce the local invariants that hold for any catalog entry regardless of catalog size:
-// unique stable ids, resolvable codec/binding/core documents, per-variant field invariants
-// (document-binding variants require entryPoint and readerContext; registry variants omit both),
-// and the FixtureCatalog contract. They fail fast on malformed entries instead of surfacing as
+// resolvable codec/binding/core documents, per-variant field invariants
+// (document-binding variants require entryPoint and readerContext; registry variants omit both).
+// Duplicate ids and generic catalog behavior belong to FixtureCatalogSpec. They fail fast on
+// malformed entries instead of surfacing as
 // confusing cross-module test failures.
 //
 // The catalog grows by addition: adding a scenario is a one-step action that the adapter suites
@@ -49,16 +50,6 @@ class EnvelopeReadScenariosCatalogSpec extends Specification {
     "independent envelopes sharing linkage never inject included DTOs",
     "reader-derived envelope collections are mutation-safe"
   ]
-
-  def "catalog ids are unique"() {
-    expect:
-    EnvelopeReadScenarios.catalog().all()*.id.toSet().size() == EnvelopeReadScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    EnvelopeReadScenarios.catalog().all().every { EnvelopeReadScenarios.catalog().byId(it.id).is(it) }
-  }
 
   def "initial inventory is the closed shared DomainDocumentReaderSpec names"() {
     expect:
@@ -185,20 +176,6 @@ class EnvelopeReadScenariosCatalogSpec extends Specification {
         pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite"
       }
     }
-  }
-
-  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
-    expect:
-    EnvelopeReadScenarios.catalog().where({ true })*.id == EnvelopeReadScenarios.catalog().all()*.id
-    EnvelopeReadScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids"() {
-    when:
-    EnvelopeReadScenarios.catalog().byId("no such scenario")
-
-    then:
-    thrown(IllegalArgumentException)
   }
 
   def "document-binding rejects an empty case list"() {

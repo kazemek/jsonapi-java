@@ -24,12 +24,10 @@ import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericVa
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedOptionalArticle
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchExpectation
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenario
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenarios
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchVerifier
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithSet
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
@@ -59,7 +57,7 @@ class PatchBindingSpec extends Specification {
     def result = execute(scenario, reader)
 
     then:
-    assertExpectation(scenario, result)
+    PatchVerifier.verify(scenario, result)
 
     where:
     scenario << PatchScenarios.catalog().all()
@@ -509,39 +507,6 @@ class PatchBindingSpec extends Specification {
     ]
   }
 
-  def "built-in to-many Set and array relationship conversion"() {
-    given:
-    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
-    def setJson =
-        '{"data":{"type":"articles","id":"1","relationships":{"tags":{"data":[{"type":"tags","id":"t1"}]}}}}'
-    def arrayJson =
-        '{"data":{"type":"articles","id":"1","relationships":{"comments":{"data":[{"type":"comments","id":"c1"}]}}}}'
-    def emptySetJson =
-        '{"data":{"type":"articles","id":"1","relationships":{"tags":{"data":[]}}}}'
-    def emptyArrayJson =
-        '{"data":{"type":"articles","id":"1","relationships":{"comments":{"data":[]}}}}'
-
-    when:
-    def setCommand = reader.readValue(setJson, FlatArticleWithSet)
-    def arrayCommand = reader.readValue(arrayJson, FlatArticleWithArray)
-    def emptySetCommand = reader.readValue(emptySetJson, FlatArticleWithSet)
-    def emptyArrayCommand = reader.readValue(emptyArrayJson, FlatArticleWithArray)
-
-    then:
-    setCommand.changes().size() == 1
-    setCommand.changes()[0].value() instanceof Set
-    ((Set) setCommand.changes()[0].value()).size() == 1
-    arrayCommand.changes().size() == 1
-    arrayCommand.changes()[0].value() instanceof ResourceIdentifier[]
-    ((ResourceIdentifier[]) arrayCommand.changes()[0].value()).length == 1
-    emptySetCommand.changes().size() == 1
-    emptySetCommand.changes()[0].value() instanceof Set
-    ((Set) emptySetCommand.changes()[0].value()).isEmpty()
-    emptyArrayCommand.changes().size() == 1
-    emptyArrayCommand.changes()[0].value() instanceof ResourceIdentifier[]
-    ((ResourceIdentifier[]) emptyArrayCommand.changes()[0].value()).length == 0
-  }
-
   def "mapper factory with ValidationContext and IdentifierConverter binds"() {
     given:
     def converter = new IdentifierConverter() {
@@ -593,33 +558,6 @@ class PatchBindingSpec extends Specification {
         ValidationContext.defaults().withDocumentUsage(DocumentUsage.UPDATE_REQUEST),
         PrimaryDataKind.RESOURCE))
         .readValue(json)
-  }
-
-  private static void assertExpectation(PatchScenario scenario, Object result) {
-    def expectation = scenario.expectation()
-    if (expectation instanceof PatchExpectation.Success) {
-      assert result instanceof PatchCommand
-      def command = (PatchCommand) result
-      assert command.resourceType() == scenario.targetType()
-      assert command.identity() == expectation.identity()
-      assert command.changes() == expectation.changes()
-      return
-    }
-    if (expectation instanceof PatchExpectation.ReaderFailure) {
-      assert result instanceof JsonApiDocumentReadException
-      def ex = (JsonApiDocumentReadException) result
-      assert ex.ruleCode() == expectation.code()
-      assert ex.jsonPointer() == expectation.jsonPointer()
-      return
-    }
-    if (expectation instanceof PatchExpectation.BinderFailure) {
-      assert result instanceof JsonApiMappingException
-      def ex = (JsonApiMappingException) result
-      assert ex.diagnostic() == expectation.diagnostic()
-      assert ex.propertyPath() == expectation.propertyPath()
-      return
-    }
-    throw new IllegalArgumentException("Unknown expectation: " + expectation)
   }
 
   static class CloseTrackingInputStream extends FilterInputStream {

@@ -6,16 +6,6 @@ import spock.lang.Specification
 
 class PatchScenariosCatalogSpec extends Specification {
 
-  def "catalog ids are unique"() {
-    expect:
-    PatchScenarios.catalog().all()*.id.toSet().size() == PatchScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    PatchScenarios.catalog().all().every { PatchScenarios.catalog().byId(it.id).is(it) }
-  }
-
   def "every scenario carries exactly one JSON document and one discriminated expectation"() {
     expect:
     PatchScenarios.catalog().all().every { scenario ->
@@ -69,20 +59,5 @@ class PatchScenariosCatalogSpec extends Specification {
         assert expectation.propertyPath().startsWith("/")
       }
     }
-  }
-
-  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
-    expect:
-    PatchScenarios.catalog().where({ true })*.id == PatchScenarios.catalog().all()*.id
-    PatchScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids with the unified message"() {
-    when:
-    PatchScenarios.catalog().byId("no such scenario")
-
-    then:
-    def ex = thrown(IllegalArgumentException)
-    ex.message == "Unknown patch scenario id: no such scenario"
   }
 }

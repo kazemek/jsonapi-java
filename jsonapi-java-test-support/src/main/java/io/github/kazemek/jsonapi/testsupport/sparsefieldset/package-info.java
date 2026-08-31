@@ -2,7 +2,8 @@
  * Version-neutral sparse-fieldset write fixture catalog: shared annotated models plus the {@link
  * SparseFieldsetScenarios} catalog and the {@link SparseFieldsetOperation} / {@link
  * SparseFieldsetRequest} / {@link SparseFieldsetExpectation} value types consumed by Jackson-major
- * sparse-fieldset contract tests.
+ * sparse-fieldset contract tests. {@link FieldsetResourceState#assertMatches} is the shared
+ * resource-state comparator, including resource-level meta.
  *
  * <p>Types in this package are major-neutral (see ADR-004 and ADR-010): they import only
  * annotations, Jackson common, {@code domainwrite} models, JSpecify, and JDK types — never {@code

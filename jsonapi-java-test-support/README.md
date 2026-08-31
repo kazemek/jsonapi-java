@@ -71,6 +71,15 @@ These rules are the durable contributor/agent contract for where new tests and f
 7. **Shared wire-semantic JSON belongs in the central corpus**, loaded through
    `TestSupportResources` — not in long inline strings duplicated across suites. Short inline
    payloads inside focused mechanism probes remain fine.
+8. **Generic `FixtureCatalog` behavior is tested once** in `FixtureCatalogSpec` (duplicate ids,
+   registration order, `byId`, unknown-id area labels, `where`, immutability). Feature
+   `*ScenariosCatalogSpec` classes own feature-specific catalog integrity, not a second copy of
+   the catalog implementation.
+
+If Jackson 2 must prove the same behavior with the same application-shaped model and expected
+JSON:API semantics, that contract belongs in this module. Jackson-major serializers,
+deserializers, annotations, introspection, naming, `JavaType`, and mapper behavior stay
+adapter-local.
 
 ## Packages
 
@@ -81,18 +90,20 @@ feature packages; passive application-shaped carriers live only under `testsuppo
 |----------------------------------------------------------------|--------------------------------------------------------------------|
 | `io.github.kazemek.jsonapi.testsupport`                        | `Scenario` / `FixtureCatalog` contract and `TestSupportResources` |
 | `io.github.kazemek.jsonapi.testsupport.codec`                  | `CodecScenario` capability metadata, `CodecScenarios` catalog, `AmbiguousPrimaryDataScenarios`, JSON-P-backed `NegativeCodecScenarios`, `SchemaKind` / `SchemaDisagreement` |
-| `io.github.kazemek.jsonapi.testsupport.domainwrite`            | `DomainWriteScenarios` catalog plus the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types, and the `WriteDiagnosticsScenarios` semantic failure catalog with `WriteDiagnosticScenario` |
-| `io.github.kazemek.jsonapi.testsupport.domainread`             | `DomainReadScenarios` catalog plus the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types |
+| `io.github.kazemek.jsonapi.testsupport.domainwrite`            | `DomainWriteScenarios` catalog plus the `DomainWriteOperation` / `DomainWriteInput` / `DomainWriteOutcome` / `DomainWriteComparisonPolicy` value types, `DomainWriteVerifier`, and the `WriteDiagnosticsScenarios` semantic failure catalog with `WriteDiagnosticScenario` |
+| `io.github.kazemek.jsonapi.testsupport.domainread`             | `DomainReadScenarios` catalog plus the `DomainReadInput` / `ConverterBehavior` / `DomainReadExpectation` value types and `DomainReadVerifier` |
 | `io.github.kazemek.jsonapi.testsupport.compoundwrite`          | `CompoundWriteScenarios` catalog plus the `CompoundWriteRequest` / `CompoundWriteExpectation` / `CompoundWriteSide` value types |
-| `io.github.kazemek.jsonapi.testsupport.sparsefieldset`         | `SparseFieldsetScenarios` catalog plus the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types |
+| `io.github.kazemek.jsonapi.testsupport.sparsefieldset`         | `SparseFieldsetScenarios` catalog plus the `SparseFieldsetOperation` / `SparseFieldsetRequest` / `SparseFieldsetExpectation` value types and `FieldsetResourceState.assertMatches` |
 | `io.github.kazemek.jsonapi.testsupport.enveloperead`           | `EnvelopeReadScenarios` catalog plus the `EnvelopeReadVariant` / `EnvelopeReadInput` / `EnvelopeReadExpectation` value types |
-| `io.github.kazemek.jsonapi.testsupport.domainpatch`            | Presence-aware PATCH (`PatchScenarios` + `PatchScenario` / `PatchExpectation`) and direct typed PATCH DTO (`PatchDtoScenarios` + `PatchDtoScenario` / `PatchDtoExpectation`) catalogs |
+| `io.github.kazemek.jsonapi.testsupport.domainpatch`            | Presence-aware PATCH (`PatchScenarios` + `PatchScenario` / `PatchExpectation` + `PatchVerifier`) and direct typed PATCH DTO (`PatchDtoScenarios` + `PatchDtoScenario` / `PatchDtoExpectation` + `PatchDtoVerifier`) catalogs |
 | `io.github.kazemek.jsonapi.testsupport.fixtures.*`             | **Passive carriers only**, grouped by feature (`domainread`, `domainwrite`, `domainpatch`, `compoundwrite`, `sparsefieldset`, `enveloperead`): annotated records/beans, structured values, presence-wrapper shapes, instrumented access-counting models, and intentionally invalid declaration targets. No catalogs, loaders, descriptors, or invariant logic may live here — ArchUnit enforces this structurally. |
 
-Canonical carrier families kept deliberately small: the domain-write graph (`Article` / `Person` /
-`Comment`), the ordinary flat-read family around `FlatArticle`, the typed PATCH family around
-`ArticlePatch` with compact structured values (`Address`, `Geo`, containers), the compact
-`ArticleMeta` / `AuthorMeta` / `AuthorIdMeta` / `CommentIdMeta` meta family, and intentional mutable JavaBean shapes
+Canonical carrier families kept deliberately small: the domain-write graph (`Article` /
+`Person` / `Comment`), the ordinary flat-read family around `FlatArticle`, supported
+`RelationshipLinkage` container shapes (`array` / `Set` / `Optional` / `Map` identifier meta),
+the typed PATCH family around `ArticlePatch` with compact structured values (`Address`, `Geo`,
+containers), the compact `ArticleMeta` / `AuthorMeta` / `AuthorIdMeta` / `CommentIdMeta` meta
+family plus whole-meta declaration targets, and intentional mutable JavaBean shapes
 (`FlatMutableArticle`, `MutableAddress` / `MutableAddressPatch`) where bean semantics are part of
 the contract.
 
@@ -170,17 +181,22 @@ PATCH DTO catalogs are in this module.
   `EnvelopeReadExpectation`, never on scenario ids. `PatchScenarios` ids are stable; adapter
   suites dispatch on `PatchExpectation`, never on scenario ids.
 - **Domain-write catalog:** `DomainWriteScenariosCatalogSpec` enforces the local invariants that
-  hold for every entry regardless of catalog size: unique stable ids, exactly one
+  hold for every entry regardless of catalog size: exactly one
   operation/typed input/envelope state/discriminated outcome/comparison policy, complete expected
   outcomes, and valid policies (entries reference existing relationships; unordered comparison
-  only for to-many linkage). Adapter suites iterate the whole catalog directly
+  only for to-many linkage). Duplicate ids and generic catalog behavior belong to
+  `FixtureCatalogSpec`. Adapter suites iterate the whole catalog directly
   (`catalog().all()`) through their own mapper, so adding a scenario is a one-step action: add it
   to the catalog and the adapter suites pick it up automatically. Adapter-specific behavior (Jackson API surface, mapper-factory wiring) is
-  documented in the adapter-local specs themselves, not enumerated in a manifest.
+  documented in the adapter-local specs themselves, not enumerated in a manifest. Semantic
+  comparison lives in `DomainWriteVerifier` so Jackson 2 does not copy resource/document
+  comparison. Identifier-meta containers, whole-meta declarations, Optional/array relationship
+  shapes, and inherited JavaBean properties that every Jackson major must prove identically
+  belong here, not in adapter-local specs.
 - **Domain-read catalog:** `DomainReadScenariosCatalogSpec` enforces the local invariants that
-  hold for every entry regardless of catalog size: unique stable ids, exactly one input
+  hold for every entry regardless of catalog size: exactly one input
   variant/converter-behavior discriminator/discriminated expectation, resolvable target DTO
-  classes in the shared `domainread`/`domainwrite` packages, and either a complete bound value
+  classes in the shared `domainread`/`domainwrite`/`domainpatch` packages, and either a complete bound value
   or a known diagnostic (`propertyPath` only when the shared catalog asserts it; expected
   `propertyPath` values are resource-relative JSON Pointer text per the adapter mapping-location
   contract, or null when the catalog pins no location). Adapter suites
@@ -189,9 +205,11 @@ PATCH DTO catalogs are in this module.
   never read `included` (ADR-011). Jackson-derived property-name paths and major-specific cause
   types stay in adapter-local supplementary assertions. Adapter-specific behavior (custom
   deserializers, naming strategies, mix-ins, `JavaType` entry points, linkage mappers) is
-  documented in the adapter-local specs themselves, not enumerated in a manifest.
+  documented in the adapter-local specs themselves, not enumerated in a manifest. Semantic
+  comparison lives in `DomainReadVerifier`; adapter suites keep only Jackson-derived cause
+  details locally.
 - **Compound-write catalog:** `CompoundWriteScenariosCatalogSpec` enforces the local invariants that
-  hold for every entry regardless of catalog size: unique stable ids, exactly one request
+  hold for every entry regardless of catalog size: exactly one request
   variant/discriminated expectation, resolvable included identities or known diagnostics, and the
   absent-`included` versus present-empty-array distinction. Adapter suites iterate the whole
   catalog directly (`catalog().all()`) through their own mapper. Canonical codec compound documents do not replace
@@ -199,16 +217,17 @@ PATCH DTO catalogs are in this module.
   round-trip serialization) is documented in the adapter-local specs themselves, not enumerated
   in a manifest.
 - **Sparse-fieldset catalog:** `SparseFieldsetScenariosCatalogSpec` enforces the local invariants
-  that hold for every entry regardless of catalog size: unique stable ids, exactly one
+  that hold for every entry regardless of catalog size: exactly one
   operation/request variant/discriminated expectation, resolvable resource states or known
   diagnostics, and the absent-`included` versus present-list distinction. The mapped-success
   expectation pins whether the mapping yields sparse-fieldset linkage-exemption provenance.
   Adapter suites iterate the whole catalog directly (`catalog().all()`) through their own mapper.
-  Exact single-read access counts, fieldset-map
+  `FieldsetResourceState.assertMatches` is the shared mapped-resource comparison so Jackson 2
+  does not copy fieldset identity/attribute/relationship/meta assertions. Exact single-read access counts, fieldset-map
   and `FieldAllowance` mutation isolation, duplicate-name collapse, and writer-owned provenance
   composition/validation stay in adapter-local specs, not enumerated in a manifest.
 - **Envelope-read catalog:** `EnvelopeReadScenariosCatalogSpec` enforces the local invariants that
-  hold for every entry regardless of catalog size: unique stable ids, resolvable codec scenario ids
+  hold for every entry regardless of catalog size: resolvable codec scenario ids
   and named `envelope-binding/` documents, the per-variant field invariants (document-binding
   variants require `entryPoint` and `readerContext`; registry variants omit both), and either
   complete envelope values (including absent versus present-empty `included`) or a known mapping
@@ -222,7 +241,8 @@ PATCH DTO catalogs are in this module.
   entry regardless of catalog size: unique stable ids, exactly one JSON document and discriminated
   `PatchExpectation`, and resolvable target DTOs in `domainread` / `domainwrite` / `domainpatch`.
   Adapter suites iterate the whole catalog directly (`catalog().all()`) through their own patch
-  reader. Adapter-local cases (custom deserializers,
+  reader. Semantic comparison, including array-valued `PatchChange` members, lives in
+  `PatchVerifier`. Adapter-local cases (custom deserializers,
   linkage mappers, Optional attribute null, `fromDocument` missing id, naming strategies, nested
   wrapper customization, shape-translated construction-failure pointers) stay in adapter specs only.
 - **Typed PATCH DTO catalog:** `PatchDtoScenariosCatalogSpec` enforces the local invariants that
@@ -316,7 +336,7 @@ PATCH DTO catalogs are in this module.
   `SparseFieldsetExpectation.MappedSuccess.included` / `zeroReads`;
   `SparseFieldsetExpectation.UnmappedSuccess.included`;
   `SparseFieldsetExpectation.Failure.propertyPath` / `resourceClass`;
-  `FieldsetResourceState.id` / `attributeNames` / `relationshipNames`;
+  `FieldsetResourceState.id` / `attributeNames` / `relationshipNames` / `meta`;
   `EnvelopeReadExpectation.BoundEnvelope` members that are absent (`data`, `included`, `errors`,
   `jsonapi`, `links`, `meta`); `EnvelopeReadExpectation.Failure.propertyPath` / `resourceClass`;
   `EnvelopeReadVariant.RegistryAttempt.propertyPath`; `PatchScenario.expectedEndpointIdentity`;
@@ -327,6 +347,8 @@ PATCH DTO catalogs are in this module.
   catalog, the compound-write catalog, the sparse-fieldset catalog, the typed-envelope catalog,
   the presence-aware PATCH catalog, and the typed PATCH DTO catalog. No runner-side completeness
   bookkeeping is required: the catalog integrity specs own stable ids and invariants, and a new
-  scenario reaches every adapter automatically. Jackson-API-specific behavior (mix-ins,
+  scenario reaches every adapter automatically. Adapter suites invoke shared semantic verifiers
+  (`DomainWriteVerifier`, `DomainReadVerifier`, `PatchVerifier`, `PatchDtoVerifier`, `FieldsetResourceState.assertMatches`)
+  rather than copying document/resource comparison. Jackson-API-specific behavior (mix-ins,
   serializers, naming strategies, converter wiring, custom deserializers, linkage mappers) stays
   in adapter-local specs with local fixtures, documented there.

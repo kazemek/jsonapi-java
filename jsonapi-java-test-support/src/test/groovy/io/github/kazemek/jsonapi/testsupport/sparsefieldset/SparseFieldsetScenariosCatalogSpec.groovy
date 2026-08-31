@@ -10,25 +10,16 @@ import spock.lang.Specification
 // shared by every Jackson major. Adapter suites iterate the whole catalog directly through their
 // own mapper (Jackson 3 in SparseFieldsetSpec; Jackson 2 likewise later), so every entry must stay
 // self-consistent. These tests
-// enforce the local invariants that hold for any catalog entry regardless of catalog size: unique
-// stable ids, exactly one operation/request variant/discriminated expectation, resolvable resource
-// states or known diagnostics, and the FixtureCatalog contract. They fail fast on malformed
+// enforce the local invariants that hold for any catalog entry regardless of catalog size: exactly
+// one operation/request variant/discriminated expectation, and resolvable resource
+// states or known diagnostics. Duplicate ids and generic catalog behavior belong to
+// FixtureCatalogSpec. They fail fast on malformed
 // entries instead of surfacing as confusing cross-module test failures.
 //
 // The catalog grows by addition: adding a scenario is a one-step action that the adapter suites
 // pick up automatically. Adapter-specific behavior is documented in the adapter-local specs
 // themselves, not enumerated here.
 class SparseFieldsetScenariosCatalogSpec extends Specification {
-
-  def "catalog ids are unique"() {
-    expect:
-    SparseFieldsetScenarios.catalog().all()*.id.toSet().size() == SparseFieldsetScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    SparseFieldsetScenarios.catalog().all().every { SparseFieldsetScenarios.catalog().byId(it.id).is(it) }
-  }
 
   def "catalog uses each operation and request variant"() {
     expect:
@@ -138,20 +129,6 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
         assertFresh(request.supplier())
       }
     }
-  }
-
-  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
-    expect:
-    SparseFieldsetScenarios.catalog().where({ true })*.id == SparseFieldsetScenarios.catalog().all()*.id
-    SparseFieldsetScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids"() {
-    when:
-    SparseFieldsetScenarios.catalog().byId("no such scenario")
-
-    then:
-    thrown(IllegalArgumentException)
   }
 
   def "scenario rejects an isolation expectation without a concurrent request"() {

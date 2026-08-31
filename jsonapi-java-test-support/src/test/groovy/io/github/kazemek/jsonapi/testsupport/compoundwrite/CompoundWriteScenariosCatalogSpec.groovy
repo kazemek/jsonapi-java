@@ -8,24 +8,15 @@ import spock.lang.Specification
 // own mapper (Jackson 3 in CompoundSerializationSpec; Jackson 2 likewise later), so every entry
 // must stay self-consistent. These
 // tests enforce the local invariants that hold for any catalog entry regardless of catalog size:
-// unique stable ids, exactly one request variant/discriminated expectation, resolvable included
+// exactly one request variant/discriminated expectation, resolvable included
 // identities or known diagnostics, and the absent-included versus present-empty-array distinction.
+// Duplicate ids and generic catalog behavior belong to FixtureCatalogSpec.
 // They fail fast on malformed entries instead of surfacing as confusing cross-module test failures.
 //
 // The catalog grows by addition: adding a scenario is a one-step action that the adapter suites
 // pick up automatically. Adapter-specific behavior is documented in the adapter-local specs
 // themselves, not enumerated here.
 class CompoundWriteScenariosCatalogSpec extends Specification {
-
-  def "catalog ids are unique"() {
-    expect:
-    CompoundWriteScenarios.catalog().all()*.id.toSet().size() == CompoundWriteScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    CompoundWriteScenarios.catalog().all().every { CompoundWriteScenarios.catalog().byId(it.id).is(it) }
-  }
 
   def "catalog uses each request variant"() {
     expect:
@@ -119,20 +110,6 @@ class CompoundWriteScenariosCatalogSpec extends Specification {
 
     then:
     thrown(IllegalStateException)
-  }
-
-  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
-    expect:
-    CompoundWriteScenarios.catalog().where({ true })*.id == CompoundWriteScenarios.catalog().all()*.id
-    CompoundWriteScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids"() {
-    when:
-    CompoundWriteScenarios.catalog().byId("no such scenario")
-
-    then:
-    thrown(IllegalArgumentException)
   }
 
   def "success rejects mismatched off-path and delta"() {

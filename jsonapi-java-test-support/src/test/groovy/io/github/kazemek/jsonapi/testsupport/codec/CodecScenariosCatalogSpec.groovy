@@ -35,20 +35,13 @@ class CodecScenariosCatalogSpec extends Specification {
     }
   }
 
-  def "catalog and manifest fixture ids are unique"() {
+  def "manifest fixture ids are unique"() {
     given:
     def manifest = new JsonSlurper().parseText(TestSupportResources.readCorpusUtf8("manifest.json")) as Map
     def manifestIds = (manifest.fixtures as List).collect { it.id as String }
-    def catalogIds = CodecScenarios.catalog().all()*.id
 
     expect:
-    catalogIds.size() == catalogIds.toSet().size()
     manifestIds.size() == manifestIds.toSet().size()
-  }
-
-  def "byId returns each registered fixture"() {
-    expect:
-    CodecScenarios.catalog().all().every { CodecScenarios.catalog().byId(it.id).is(it) }
   }
 
   def "every fixture is classified for a schema kind"() {
@@ -123,15 +116,6 @@ class CodecScenariosCatalogSpec extends Specification {
   def "every fixture participates in at least one codec suite"() {
     expect:
     CodecScenarios.catalog().all().every { it.writable || it.readable }
-  }
-
-  def "byId rejects unknown ids with the unified message"() {
-    when:
-    CodecScenarios.catalog().byId("no-such-scenario")
-
-    then:
-    def ex = thrown(IllegalArgumentException)
-    ex.message == "Unknown codec scenario id: no-such-scenario"
   }
 
   private static boolean schemaDisagreementValid(CodecScenario fixture) {

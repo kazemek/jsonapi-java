@@ -15,16 +15,6 @@ class PatchDtoScenariosCatalogSpec extends Specification {
     PatchDtoScenarios.catalog().where({ it.id().contains("declaration") }).size() >= 1
   }
 
-  def "catalog ids are unique"() {
-    expect:
-    PatchDtoScenarios.catalog().all()*.id.toSet().size() == PatchDtoScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    PatchDtoScenarios.catalog().all().every { PatchDtoScenarios.catalog().byId(it.id).is(it) }
-  }
-
   def "every scenario carries exactly one JSON document and one discriminated expectation"() {
     expect:
     PatchDtoScenarios.catalog().all().every { scenario ->
@@ -88,20 +78,5 @@ class PatchDtoScenariosCatalogSpec extends Specification {
       expectation instanceof PatchDtoExpectation.BinderFailure &&
           expectation.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE
     }
-  }
-
-  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
-    expect:
-    PatchDtoScenarios.catalog().where({ true })*.id == PatchDtoScenarios.catalog().all()*.id
-    PatchDtoScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids with the unified message"() {
-    when:
-    PatchDtoScenarios.catalog().byId("no such scenario")
-
-    then:
-    def ex = thrown(IllegalArgumentException)
-    ex.message == "Unknown patch-dto scenario id: no such scenario"
   }
 }

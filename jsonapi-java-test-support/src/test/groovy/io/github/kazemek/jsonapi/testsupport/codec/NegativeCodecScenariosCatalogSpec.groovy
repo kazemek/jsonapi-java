@@ -63,21 +63,6 @@ class NegativeCodecScenariosCatalogSpec extends Specification {
     NegativeCodecScenarios.catalog().all().every { entry -> ruleCodeValid(entry) }
   }
 
-  def "where shim filters the catalog"() {
-    expect:
-    NegativeCodecScenarios.catalog().where({ true })*.id == NegativeCodecScenarios.catalog().all()*.id
-    NegativeCodecScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids with the unified message"() {
-    when:
-    NegativeCodecScenarios.catalog().byId("no-such-scenario")
-
-    then:
-    def ex = thrown(IllegalArgumentException)
-    ex.message == "Unknown negative-codec scenario id: no-such-scenario"
-  }
-
   private static boolean categoryAndPointerValid(NegativeCodecScenario entry) {
     def knownCategory = CodecFailureCategory.values().any { it.name() == entry.category }
     return knownCategory && validJsonPointer(entry.pointer)

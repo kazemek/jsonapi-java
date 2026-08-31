@@ -12,10 +12,13 @@ import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMapMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentsRelationshipMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithOptional;
@@ -34,6 +37,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIg
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatUnregisteredRelationshipsArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.RelationshipLinkageContainerFixtures;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -67,6 +71,8 @@ public final class DomainReadScenarios {
   private static final String MY_BLOG = "My Blog";
   private static final String REL_AUTHOR_DATA = "/relationships/author/data";
   private static final String REL_COMMENTS_DATA = "/relationships/comments/data";
+  private static final String META_PATH = "/meta";
+  private static final String SOURCE = "source";
 
   private static final String INCLUDED_PRIMARY = doc("included-isolation-primary");
   private static final String INCLUDED_SWAPPED = doc("included-isolation-swapped");
@@ -444,7 +450,7 @@ public final class DomainReadScenarios {
                   resourceWithMeta(
                       attrs(TITLE, HELLO),
                       relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))),
-                      Meta.of(Map.of("source", "cms", "note", "n")))),
+                      Meta.of(Map.of(SOURCE, "cms", "note", "n")))),
               FlatMetaArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
@@ -595,6 +601,201 @@ public final class DomainReadScenarios {
                       new AuthorMeta(ALICE),
                       new CommentsRelationshipMeta("open")))),
           new DomainReadScenario(
+              "binds array to-many identifier meta on each wrapper element",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      null,
+                      rels(
+                          COMMENTS,
+                          toManyWithIdentifierMetas(
+                              COMMENTS,
+                              List.of("c1", "c2"),
+                              nullableList(Meta.of(Map.of(PINNED, true)), null))))),
+              RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle(
+                      "1",
+                      new RelationshipLinkage[] {
+                        new RelationshipLinkage<>(
+                            identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))),
+                            new CommentIdMeta(true)),
+                        new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
+                      }))),
+          new DomainReadScenario(
+              "binds Set of RelationshipLinkage identifier meta",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      null,
+                      rels(
+                          COMMENTS,
+                          toManyWithIdentifierMetas(
+                              COMMENTS,
+                              List.of("c1"),
+                              nullableList(Meta.of(Map.of(PINNED, true))))))),
+              RelationshipLinkageContainerFixtures.SetRelationshipLinkageArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new RelationshipLinkageContainerFixtures.SetRelationshipLinkageArticle(
+                      "1",
+                      Set.of(
+                          new RelationshipLinkage<>(
+                              identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))),
+                              new CommentIdMeta(true)))))),
+          new DomainReadScenario(
+              "binds Optional RelationshipLinkage identifier meta",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      null,
+                      rels(
+                          AUTHOR,
+                          toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))))),
+              RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle(
+                      "1",
+                      Optional.of(
+                          new RelationshipLinkage<>(
+                              identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                              new AuthorIdMeta(EDITOR)))))),
+          new DomainReadScenario(
+              "binds Map identifier meta on to-many RelationshipLinkage",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      null,
+                      rels(
+                          COMMENTS,
+                          toManyWithIdentifierMetas(
+                              COMMENTS,
+                              List.of("c1"),
+                              nullableList(Meta.of(Map.of(PINNED, true))))))),
+              RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle(
+                      "1",
+                      List.of(
+                          new RelationshipLinkage<>(
+                              identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))),
+                              Map.of(PINNED, true)))))),
+          new DomainReadScenario(
+              "binds renamed RelationshipLinkage identifier meta from the wire name",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      null,
+                      rels(
+                          AUTHOR,
+                          toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))))),
+              RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle(
+                      "1",
+                      new RelationshipLinkage<>(
+                          identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))),
+                          new AuthorIdMeta(EDITOR))))),
+          new DomainReadScenario(
+              "binds identifier lid with identifier meta and drops additional members",
+              DomainReadInput.single(
+                  resource(
+                      ARTICLES,
+                      "1",
+                      attrs(TITLE, HELLO),
+                      rels(
+                          AUTHOR,
+                          Relationship.withData(
+                              new RelationshipData.SingleLinkage(
+                                  identifier(
+                                      PEOPLE,
+                                      null,
+                                      "lid-1",
+                                      Meta.of(Map.of(ROLE, EDITOR)),
+                                      Map.of("ext:href", "https://example.test/p1"))))))),
+              FlatRelationshipLinkageArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new FlatRelationshipLinkageArticle(
+                      "1",
+                      HELLO,
+                      new RelationshipLinkage<>(
+                          identifier(
+                              PEOPLE, null, "lid-1", Meta.of(Map.of(ROLE, EDITOR)), Map.of()),
+                          new AuthorIdMeta(EDITOR)),
+                      null,
+                      null,
+                      null))),
+          new DomainReadScenario(
+              "empty map meta binds an empty map",
+              DomainReadInput.single(resourceWithMeta(null, null, Meta.empty())),
+              ArticleWithMapMeta.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(new ArticleWithMapMeta("1", null, null, Map.of(), null))),
+          new DomainReadScenario(
+              "populated map meta binds resource and relationship members",
+              DomainReadInput.single(
+                  resourceWithMeta(
+                      attrs(TITLE, HELLO),
+                      relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))),
+                      Meta.of(Map.of(SOURCE, "cms")))),
+              ArticleWithMapMeta.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new ArticleWithMapMeta(
+                      "1",
+                      HELLO,
+                      ResourceIdentifier.of(PEOPLE, "p1"),
+                      Map.of(SOURCE, "cms"),
+                      Map.of(DISPLAY_NAME, ALICE)))),
+          new DomainReadScenario(
+              "Optional-wrapped bean meta binds present Optional",
+              DomainReadInput.single(
+                  resourceWithMeta(
+                      attrs(TITLE, HELLO), null, Meta.of(Map.of(SOURCE, "cms", "note", "n")))),
+              ArticleWithOptionalMeta.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new ArticleWithOptionalMeta(
+                      "1",
+                      HELLO,
+                      null,
+                      Optional.of(new ArticleMeta("cms", "n")),
+                      Optional.empty()))),
+          new DomainReadScenario(
+              "scalar whole-meta target is INVALID_META_TARGET",
+              DomainReadInput.single(resource(ARTICLES, "1", null, null)),
+              WholeMetaTargetFixtures.ScalarMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.failure(MappingDiagnostic.INVALID_META_TARGET, META_PATH)),
+          new DomainReadScenario(
+              "UUID whole-meta target is INVALID_META_TARGET",
+              DomainReadInput.single(resource(ARTICLES, "1", null, null)),
+              WholeMetaTargetFixtures.UuidMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.failure(MappingDiagnostic.INVALID_META_TARGET, META_PATH)),
+          new DomainReadScenario(
+              "java.time whole-meta target is INVALID_META_TARGET",
+              DomainReadInput.single(resource(ARTICLES, "1", null, null)),
+              WholeMetaTargetFixtures.InstantMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.failure(MappingDiagnostic.INVALID_META_TARGET, META_PATH)),
+          new DomainReadScenario(
+              "URI whole-meta target is INVALID_META_TARGET",
+              DomainReadInput.single(resource(ARTICLES, "1", null, null)),
+              WholeMetaTargetFixtures.UriMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.failure(MappingDiagnostic.INVALID_META_TARGET, META_PATH)),
+          new DomainReadScenario(
               "binder never sees document included resources",
               DomainReadInput.includedIsolation(INCLUDED_PRIMARY, INCLUDED_SWAPPED),
               FlatArticle.class,
@@ -715,7 +916,16 @@ public final class DomainReadScenarios {
   }
 
   private static ResourceIdentifier identifier(String type, String id, @Nullable Meta meta) {
-    return new ResourceIdentifier(type, id, null, meta, Map.of());
+    return identifier(type, id, null, meta, Map.of());
+  }
+
+  private static ResourceIdentifier identifier(
+      String type,
+      @Nullable String id,
+      @Nullable String lid,
+      @Nullable Meta meta,
+      Map<String, Object> additionalMembers) {
+    return new ResourceIdentifier(type, id, lid, meta, additionalMembers);
   }
 
   @SafeVarargs

@@ -7,25 +7,16 @@ import spock.lang.Specification
 // every Jackson major. Adapter suites iterate the whole catalog directly through their own binder
 // (Jackson 3 in ResourceBinderSpec; Jackson 2 likewise later), so every entry must stay
 // self-consistent. These tests enforce the local
-// invariants that hold for any catalog entry regardless of catalog size: unique stable ids, exactly
+// invariants that hold for any catalog entry regardless of catalog size: exactly
 // one input variant/converter discriminator/discriminated expectation, resolvable target DTO
-// classes, and complete bound values or known diagnostics. They fail fast on malformed entries
+// classes, and complete bound values or known diagnostics. Duplicate ids and generic catalog
+// behavior belong to FixtureCatalogSpec. They fail fast on malformed entries
 // instead of surfacing as confusing cross-module test failures.
 //
 // The catalog grows by addition: adding a scenario is a one-step action that the adapter suites
 // pick up automatically. Adapter-specific behavior is documented in the adapter-local specs
 // themselves, not enumerated here.
 class DomainReadScenariosCatalogSpec extends Specification {
-
-  def "catalog ids are unique"() {
-    expect:
-    DomainReadScenarios.catalog().all()*.id.toSet().size() == DomainReadScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    DomainReadScenarios.catalog().all().every { DomainReadScenarios.catalog().byId(it.id).is(it) }
-  }
 
   def "every scenario carries exactly one input variant, converter behavior, and discriminated expectation"() {
     expect:
@@ -45,7 +36,8 @@ class DomainReadScenariosCatalogSpec extends Specification {
     DomainReadScenarios.catalog().all().every { scenario ->
       def pkg = scenario.targetType().packageName
       pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainread" ||
-          pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite"
+          pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite" ||
+          pkg == "io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch"
     }
   }
 
@@ -93,19 +85,5 @@ class DomainReadScenariosCatalogSpec extends Specification {
         assert input.swappedIncludedJson().contains("\"included\"")
       }
     }
-  }
-
-  def "where with a matching predicate returns the full catalog and a rejecting predicate is empty"() {
-    expect:
-    DomainReadScenarios.catalog().where({ true })*.id == DomainReadScenarios.catalog().all()*.id
-    DomainReadScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids"() {
-    when:
-    DomainReadScenarios.catalog().byId("no such scenario")
-
-    then:
-    thrown(IllegalArgumentException)
   }
 }

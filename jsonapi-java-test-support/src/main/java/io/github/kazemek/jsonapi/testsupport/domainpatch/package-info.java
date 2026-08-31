@@ -1,6 +1,8 @@
 /**
  * Shared presence-aware PATCH fixtures: {@link PatchScenario} and {@link PatchDtoScenario} catalog
- * entries and expectation types reused by Jackson-major contract tests.
+ * entries and expectation types reused by Jackson-major contract tests. {@link PatchVerifier}
+ * compares low-level {@code PatchCommand} outcomes, including array-valued changes. {@link
+ * PatchDtoVerifier} compares direct typed PATCH DTO outcomes.
  *
  * <p>Payloads are Jackson-major-neutral JSON documents plus expected changes or diagnostics. Shared
  * flat DTOs live in {@code domainread} / {@code domainwrite}; this package adds PATCH-specific
