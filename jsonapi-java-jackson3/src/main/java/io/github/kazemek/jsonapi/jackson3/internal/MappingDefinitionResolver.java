@@ -182,39 +182,44 @@ final class MappingDefinitionResolver {
       List<BeanPropertyDefinition> propertyDefinitions, Class<?> rawType) {
     ClassifiedProperties classified = new ClassifiedProperties();
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
-      RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
-      String jacksonName = propertyDefinition.getName();
-      String logicalName = propertyDefinition.getInternalName();
-      // Role and wire name resolve from annotations plus configured Jackson so member-level
-      // declaration failures can report the member's resource-relative wire location even when
-      // the accessor is missing. Unannotated properties do not participate. Merged Jackson
-      // names are rejected before that skip so role-bearing collisions cannot disappear.
-      rejectConflictingJacksonName(annotations, jacksonName, rawType);
-      PropertyRole role = resolveRole(annotations, jacksonName, logicalName, rawType);
-      if (role == null) {
-        continue;
+      MappingProperty mappingProperty = classifyProperty(propertyDefinition, rawType);
+      if (mappingProperty != null) {
+        classified.add(mappingProperty);
       }
-      String jsonapiName = resolveJsonapiName(annotations, jacksonName, role);
-      validateJsonApiName(jsonapiName, role, logicalName, rawType);
-      AnnotatedMember accessor =
-          requireAccessorIfAnnotated(
-              propertyDefinition,
-              logicalName,
-              rawType,
-              annotations,
-              wireLocation(role, jsonapiName));
-      if (accessor == null) {
-        continue;
-      }
-
-      classified.add(
-          new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role));
     }
     List<MappingProperty> boundMeta =
         bindWriteRelationshipMeta(classified.relationshipMeta, classified.relationships, rawType);
     classified.relationshipMeta.clear();
     classified.relationshipMeta.addAll(boundMeta);
     return classified;
+  }
+
+  /**
+   * Classifies one Jackson property into a write mapping member, or {@code null} when it does not
+   * participate. Role and wire name resolve from annotations plus configured Jackson so
+   * member-level declaration failures can report the member's resource-relative wire location even
+   * when the accessor is missing. Unannotated properties do not participate. Merged Jackson names
+   * are rejected before that skip so role-bearing collisions cannot disappear.
+   */
+  private static @Nullable MappingProperty classifyProperty(
+      BeanPropertyDefinition propertyDefinition, Class<?> rawType) {
+    RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
+    String jacksonName = propertyDefinition.getName();
+    String logicalName = propertyDefinition.getInternalName();
+    rejectConflictingJacksonName(annotations, jacksonName, rawType);
+    PropertyRole role = resolveRole(annotations, jacksonName, logicalName, rawType);
+    if (role == null) {
+      return null;
+    }
+    String jsonapiName = resolveJsonapiName(annotations, jacksonName, role);
+    validateJsonApiName(jsonapiName, role, logicalName, rawType);
+    AnnotatedMember accessor =
+        requireAccessorIfAnnotated(
+            propertyDefinition, logicalName, rawType, annotations, wireLocation(role, jsonapiName));
+    if (accessor == null) {
+      return null;
+    }
+    return new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role);
   }
 
   private static final class ClassifiedProperties {
