@@ -44,6 +44,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.OptionalPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PresenceIdPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.RawPatchPresencePatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.UnannotatedPatch;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +76,9 @@ public final class PatchDtoScenarios {
   private static final String TITLE_ONLY = "title-only";
   private static final String IDENTITY_ONLY = "identity-only";
   private static final String ADDRESS_STREET_CITY = "address-street-city";
+  private static final String TITLE_WITH_META_SOURCE = "title-with-meta-source";
+  private static final String AUTHOR_IDENTIFIER_META = "author-identifier-meta";
+  private static final String META_PATH = "/meta";
 
   private static final List<PatchDtoScenario> SCENARIOS =
       List.of(
@@ -125,7 +129,14 @@ public final class PatchDtoScenarios {
           wholeLinkageToOneIdentifierMeta(),
           wholeLinkageToManyIdentifierMeta(),
           wrapperWholeLinkageToOneIdentifierMeta(),
-          wrapperWholeLinkageToManyIdentifierMeta());
+          wrapperWholeLinkageToManyIdentifierMeta(),
+          unknownResourceMeta(),
+          unknownRelationshipMeta(),
+          scalarMetaTarget(),
+          nestedPresenceMetaTarget(),
+          uuidMetaTarget(),
+          objectMetaAtomic(),
+          metaConversionFailure());
 
   private static final FixtureCatalog<PatchDtoScenario> CATALOG =
       FixtureCatalog.of("patch-dto", SCENARIOS);
@@ -676,7 +687,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario wholeLinkageToOneIdentifierMeta() {
     return scenario(
         "patch-dto-whole-linkage-to-one-identifier-meta",
-        doc("author-identifier-meta"),
+        doc(AUTHOR_IDENTIFIER_META),
         ArticlePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -710,7 +721,7 @@ public final class PatchDtoScenarios {
   private static PatchDtoScenario wrapperWholeLinkageToOneIdentifierMeta() {
     return scenario(
         "patch-dto-wrapper-whole-linkage-to-one-identifier-meta",
-        doc("author-identifier-meta"),
+        doc(AUTHOR_IDENTIFIER_META),
         ArticleWithRelationshipLinkagePatch.class,
         PatchDtoExpectation.success(
             "1",
@@ -741,6 +752,65 @@ public final class PatchDtoScenarios {
                                 COMMENTS, "c1", null, Meta.of(Map.of("pinned", true)), Map.of()),
                             new CommentIdMeta(true)),
                         new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null))))));
+  }
+
+  private static PatchDtoScenario unknownResourceMeta() {
+    return scenario(
+        "patch-dto-unknown-resource-meta",
+        doc(TITLE_WITH_META_SOURCE),
+        WholeMetaTargetFixtures.NoMetaPatch.class,
+        PatchDtoExpectation.binderFailure(MappingDiagnostic.UNKNOWN_PATCH_MEMBER, META_PATH));
+  }
+
+  private static PatchDtoScenario unknownRelationshipMeta() {
+    return scenario(
+        "patch-dto-unknown-relationship-meta",
+        doc("author-meta-with-data"),
+        WholeMetaTargetFixtures.NoRelMetaPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.UNKNOWN_PATCH_MEMBER, "/relationships/author/meta"));
+  }
+
+  private static PatchDtoScenario scalarMetaTarget() {
+    return scenario(
+        "patch-dto-scalar-meta-target",
+        doc(TITLE_WITH_META_SOURCE),
+        WholeMetaTargetFixtures.ScalarMetaPatch.class,
+        PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
+  }
+
+  private static PatchDtoScenario nestedPresenceMetaTarget() {
+    return scenario(
+        "patch-dto-nested-presence-meta-target",
+        doc(TITLE_WITH_META_SOURCE),
+        WholeMetaTargetFixtures.NestedPresenceMetaPatch.class,
+        PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
+  }
+
+  private static PatchDtoScenario uuidMetaTarget() {
+    return scenario(
+        "patch-dto-uuid-meta-target",
+        doc(IDENTITY_ONLY),
+        WholeMetaTargetFixtures.UuidMetaPatch.class,
+        PatchDtoExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
+  }
+
+  private static PatchDtoScenario objectMetaAtomic() {
+    return scenario(
+        "patch-dto-object-meta-atomic",
+        doc("meta-source-only"),
+        WholeMetaTargetFixtures.ObjectMetaPatch.class,
+        PatchDtoExpectation.success(
+            "1", Map.of("meta", PatchPresence.present(Map.of("source", "cms")))));
+  }
+
+  private static PatchDtoScenario metaConversionFailure() {
+    return scenario(
+        "patch-dto-meta-conversion-failure",
+        doc("meta-source-object"),
+        ArticleWithMetaPatch.class,
+        PatchDtoExpectation.binderFailure(
+            MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, "/meta/source"));
   }
 
   private static Map<String, PatchPresence<?>> linkageArticle(

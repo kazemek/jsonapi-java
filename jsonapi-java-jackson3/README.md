@@ -503,19 +503,30 @@ artifact; both majors share the neutral contracts of
   `jsonapi-java-test-support` catalogs, and each catalog runner iterates the complete shared
   catalog directly (`catalog().all()`), so a new scenario is picked up without runner changes;
   catalog completeness and stable ids are owned by the test-support catalog integrity specs.
-  Flat binder contract cases come from `DomainReadScenarios` (`ResourceBinderSpec`, which keeps
-  Jackson-API-specific cases local). Compound-inclusion contract cases come from
+  Shared semantic comparison lives in test-support (`DomainWriteVerifier`, `DomainReadVerifier`,
+  `PatchVerifier`, `PatchDtoVerifier`, `FieldsetResourceState.assertMatches`). Identifier-meta, whole-meta, and
+  relationship-container mechanism probes stay in `IdentifierMetaMappingSpec`,
+  `FlatMetaMappingSpec`, and `ResourceMappingJacksonFeaturesSpec` (naming, mix-ins, `@JsonIgnore`,
+  `@JsonCreator`, custom serializers/deserializers, `JavaType`, TypeDeserializer, linkage
+  mappers, `IdentifierConverter` injection).
+  Flat binder contract cases come from `DomainReadScenarios` (`ResourceBinderSpec` uses
+  `DomainReadVerifier` and keeps Jackson-API-specific cases local). Compound-inclusion contract cases come from
   `CompoundWriteScenarios` (`CompoundSerializationSpec`). Sparse-fieldset contract cases come from
-  `SparseFieldsetScenarios` (`SparseFieldsetSpec`, which keeps harness-level assertions such as
+  `SparseFieldsetScenarios` (`SparseFieldsetSpec` uses `FieldsetResourceState.assertMatches` and keeps harness-level assertions such as
   mutation isolation, duplicate collapse, exact access counts, and writer-owned provenance
   composition and validation local). Typed envelope contract cases come from
   `EnvelopeReadScenarios` (`DomainDocumentReaderSpec`, which keeps `metaAs`, `JavaType`
   registrations, mapper-instance factory forms, custom linkage mappers, caller-owned streams,
   malformed input, and validation failures local). Presence-aware PATCH contract cases come from
-  `PatchScenarios` (`PatchBindingSpec`, which keeps custom deserializers, custom linkage
+  `PatchScenarios` (`PatchBindingSpec` uses `PatchVerifier` and keeps custom deserializers, custom linkage
   conversion, Optional attribute null, `fromDocument` missing id, factory overloads, ownership,
   and illegal primary-data matrices local). Direct typed PATCH DTO contract cases come from
-  `PatchDtoScenarios` (`PatchDtoBindingSpec`, which keeps generics/`JavaType`, wrapper-level
+  `PatchDtoScenarios` (`PatchDtoBindingSpec` uses `PatchDtoVerifier` and keeps generics/`JavaType`, wrapper-level
   `@JsonDeserialize`/`@JsonSerialize` rejection, inner-type customization, custom linkage mappers,
   naming strategy, `fromDocument`, and construction robustness under `NON_ABSENT`/`NON_EMPTY`
-  local).
+  local). Domain-write catalog cases come from `DomainWriteScenarios` (`ResourceMapperSpec` uses
+  `DomainWriteVerifier`). `IdentifierMetaMappingSpec`, `FlatMetaMappingSpec`, and
+  `ResourceMappingJacksonFeaturesSpec` keep only Jackson 3 mechanism probes (naming strategies,
+  custom serializers/deserializers, `JavaType`, TypeDeserializer, mix-ins, `@JsonIgnore`,
+  `@JsonCreator`, identifier converters, linkage mappers, `fromDocument` data-less relationship
+  meta, and wire-level codec rejection of `meta: null`).

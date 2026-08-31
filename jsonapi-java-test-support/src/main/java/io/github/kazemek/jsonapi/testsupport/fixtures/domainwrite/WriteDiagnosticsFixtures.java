@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -246,4 +247,13 @@ public final class WriteDiagnosticsFixtures {
   public record ListMetaRelationshipLinkageEntity(
       @JsonApiId String id,
       @JsonApiRelationship RelationshipLinkage<ResourceIdentifier, List<AuthorIdMeta>> author) {}
+
+  /** Empty {@link Optional} identifier is {@code MISSING_IDENTIFIER}. */
+  @JsonApiResource(type = "articles")
+  public record EmptyOptionalIdEntity(@JsonApiId Optional<String> id, String title) {}
+
+  /** Declared {@code List<Object>} to-many is an unresolvable collection element type. */
+  @JsonApiResource(type = "articles")
+  public record ObjectElementListRelEntity(
+      @JsonApiId String id, @JsonApiRelationship List<Object> items) {}
 }

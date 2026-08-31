@@ -1,6 +1,8 @@
 /**
  * Version-neutral flat domain-to-resource write fixture catalog: shared annotated domain models
- * plus scenario expectations consumed by Jackson-major contract tests.
+ * plus scenario expectations consumed by Jackson-major contract tests. {@link DomainWriteVerifier}
+ * is the shared semantic comparator for catalog outcomes; adapter suites invoke their own mapper
+ * and hand the result here.
  *
  * <p>Types in this package are major-neutral (see ADR-004 and ADR-010): they import only core,
  * annotations, Jackson common, JSpecify, and JDK types — never {@code tools.jackson..} or {@code

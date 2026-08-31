@@ -31,24 +31,4 @@ class AmbiguousPrimaryDataScenariosCatalogSpec extends Specification {
       assert TestSupportResources.corpusExists(entry.expectedPath)
     }
   }
-
-  def "byId returns each registered case"() {
-    expect:
-    AmbiguousPrimaryDataScenarios.catalog().all().every { AmbiguousPrimaryDataScenarios.catalog().byId(it.id).is(it) }
-  }
-
-  def "where shim filters the catalog"() {
-    expect:
-    AmbiguousPrimaryDataScenarios.catalog().where({ true })*.id == AmbiguousPrimaryDataScenarios.catalog().all()*.id
-    AmbiguousPrimaryDataScenarios.catalog().where({ false }).isEmpty()
-  }
-
-  def "byId rejects unknown ids with the unified message"() {
-    when:
-    AmbiguousPrimaryDataScenarios.catalog().byId("no-such-scenario")
-
-    then:
-    def ex = thrown(IllegalArgumentException)
-    ex.message == "Unknown ambiguous-primary-data scenario id: no-such-scenario"
-  }
 }

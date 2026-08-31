@@ -4,6 +4,7 @@ import io.github.kazemek.jsonapi.jackson.IncludePath;
 import io.github.kazemek.jsonapi.jackson.IncludePolicy;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.RelationshipAllowance;
+import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ConflictArticle;
@@ -12,6 +13,9 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.DeepNode;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.LinkedArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ModeratedComment;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.PolymorphicArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.WrappedLinkageArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person;
@@ -265,6 +269,12 @@ public final class CompoundWriteScenarios {
               CompoundWriteScenarios::deepRoot,
               CompoundWriteExpectation.included(ref(NODES, "2"), ref(NODES, "3")),
               CHILD_CHILD),
+          document(
+              "inclusion walks wrapped Person and Comment RelationshipLinkage targets",
+              CompoundWriteScenarios::wrappedLinkageArticle,
+              CompoundWriteExpectation.included(ref(PEOPLE, "p1"), ref(COMMENTS, "c1")),
+              AUTHOR,
+              COMMENTS),
           new CompoundWriteScenario(
               "concurrent compound mappings isolate included sets",
               CompoundWriteRequest.concurrent(
@@ -419,6 +429,13 @@ public final class CompoundWriteScenarios {
     DeepNode leaf = new DeepNode("3", "leaf", null);
     DeepNode mid = new DeepNode("2", "mid", leaf);
     return new DeepNode("1", "root", mid);
+  }
+
+  private static WrappedLinkageArticle wrappedLinkageArticle() {
+    return new WrappedLinkageArticle(
+        "1",
+        new RelationshipLinkage<>(new Person("p1", "Alice"), new AuthorIdMeta("editor")),
+        List.of(new RelationshipLinkage<>(new Comment("c1", "Hi", null), new CommentIdMeta(true))));
   }
 
   private static Iterable<Object> onceIterable(Object... elements) {

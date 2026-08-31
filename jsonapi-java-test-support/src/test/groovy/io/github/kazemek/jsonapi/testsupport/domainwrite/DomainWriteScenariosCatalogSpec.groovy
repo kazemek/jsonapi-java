@@ -12,25 +12,16 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Tag
 // every Jackson major. Adapter suites iterate the whole catalog directly through their own mapper
 // (Jackson 3 in ResourceMapperSpec; Jackson 2 likewise later), so every entry must stay
 // self-consistent. These tests enforce the local
-// invariants that hold for any catalog entry regardless of catalog size: unique stable ids, exactly
+// invariants that hold for any catalog entry regardless of catalog size: exactly
 // one operation/typed input/envelope state/discriminated outcome/policy, complete expected
-// outcomes, and valid comparison policies. They fail fast on malformed entries instead of
+// outcomes, and valid comparison policies. Duplicate ids and generic catalog behavior belong
+// to FixtureCatalogSpec. They fail fast on malformed entries instead of
 // surfacing as confusing cross-module test failures.
 //
 // The catalog grows by addition: adding a scenario is a one-step action that the adapter suites
 // pick up automatically. Adapter-specific behavior is documented in the adapter-local specs
 // themselves, not enumerated here.
 class DomainWriteScenariosCatalogSpec extends Specification {
-
-  def "catalog ids are unique"() {
-    expect:
-    DomainWriteScenarios.catalog().all()*.id.toSet().size() == DomainWriteScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    DomainWriteScenarios.catalog().all().every { DomainWriteScenarios.catalog().byId(it.id).is(it) }
-  }
 
   def "every scenario carries exactly one operation, typed input, discriminated outcome, and policy"() {
     expect:
@@ -153,14 +144,6 @@ class DomainWriteScenariosCatalogSpec extends Specification {
     pojo.getId() == "p9"
     pojo.getName() == "Bean"
     pojo.getComments() == List.of()
-  }
-
-  def "byId rejects unknown ids"() {
-    when:
-    DomainWriteScenarios.catalog().byId("no such scenario")
-
-    then:
-    thrown(IllegalArgumentException)
   }
 
   def "success outcomes reject empty or double values"() {

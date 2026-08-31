@@ -1,7 +1,8 @@
 /**
  * Version-neutral flat resource-to-DTO read fixture catalog: shared annotated DTO models plus
  * {@link DomainReadScenario} / {@link DomainReadScenarios} consumed by Jackson-major binder
- * contract tests.
+ * contract tests. {@link DomainReadVerifier} compares bound values and shared diagnostics; adapter
+ * suites keep Jackson-derived cause types local.
  *
  * <p>Types in this package are major-neutral (see ADR-004 and ADR-010): they import only core,
  * annotations, Jackson common, JSpecify, and JDK types — never {@code tools.jackson..} or {@code

@@ -11,18 +11,6 @@ import spock.lang.Specification
 // resource-relative pointer or an intentionally absent location.
 class WriteDiagnosticsScenariosCatalogSpec extends Specification {
 
-  def "catalog ids are unique"() {
-    expect:
-    WriteDiagnosticsScenarios.catalog().all()*.id.toSet().size() == WriteDiagnosticsScenarios.catalog().all().size()
-  }
-
-  def "byId returns each registered scenario"() {
-    expect:
-    WriteDiagnosticsScenarios.catalog().all().every {
-      WriteDiagnosticsScenarios.catalog().byId(it.id).is(it)
-    }
-  }
-
   def "every scenario carries a known diagnostic and a valid location contract"() {
     expect:
     WriteDiagnosticsScenarios.catalog().all().every { scenario ->
@@ -46,20 +34,6 @@ class WriteDiagnosticsScenariosCatalogSpec extends Specification {
       def second = scenario.entity().get()
       first != null && second != null && !first.is(second)
     }
-  }
-
-  def "byId rejects unknown ids"() {
-    when:
-    WriteDiagnosticsScenarios.catalog().byId("no-such-scenario")
-
-    then:
-    thrown(IllegalArgumentException)
-  }
-
-  def "where filters by predicate without mutating the catalog"() {
-    expect:
-    WriteDiagnosticsScenarios.catalog().where { it.propertyPath() != null }*.id.toSet().size() > 0
-    WriteDiagnosticsScenarios.catalog().all().size() == WriteDiagnosticsScenarios.catalog().where { true }.size()
   }
 
   def "location composition cases pin wire names rather than logical names"() {

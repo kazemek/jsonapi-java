@@ -504,27 +504,7 @@ class SparseFieldsetSpec extends Specification {
   }
 
   private static void assertResource(FieldsetResourceState expected, ResourceObject actual) {
-    assert actual.type() == expected.type()
-    assert actual.id() == expected.id()
-    if (expected.attributeNames() == null) {
-      assert actual.attributes() == null
-    } else {
-      assert actual.attributes() != null
-      assert actual.attributes().attributes().keySet() as List == expected.attributeNames()
-      expected.attributeValues().each { name, value ->
-        assert actual.attributes().attributes().get(name) == value
-      }
-    }
-    if (expected.relationshipNames() == null) {
-      assert actual.relationships() == null
-    } else {
-      assert actual.relationships() != null
-      assert actual.relationships().relationships().keySet() as List == expected.relationshipNames()
-      expected.relationshipLinkage().each { name, data ->
-        Relationship relationship = actual.relationships().relationships().get(name)
-        assert relationship.data() == data
-      }
-    }
+    expected.assertMatches(actual)
   }
 
   private static void assertIncluded(

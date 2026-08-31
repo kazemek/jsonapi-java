@@ -4,9 +4,14 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMapMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.WriteDiagnosticsFixtures;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * The shared resource-write diagnostics catalog consumed by Jackson-major contract tests.
@@ -25,6 +30,8 @@ public final class WriteDiagnosticsScenarios {
   private static final String PEOPLE = "people";
   private static final String EDITOR = "editor";
   private static final String AUTHOR_DATA_META = "/relationships/author/data/meta";
+  private static final String META = "/meta";
+  private static final String AUTHOR_META = "/relationships/author/meta";
 
   private static final List<WriteDiagnosticScenario> SCENARIOS =
       List.of(
@@ -197,7 +204,103 @@ public final class WriteDiagnosticsScenarios {
                       new RelationshipLinkage<>(
                           ResourceIdentifier.of(PEOPLE, "p1"), List.of(new AuthorIdMeta(EDITOR)))),
               MappingDiagnostic.INVALID_IDENTIFIER_META_TARGET,
-              AUTHOR_DATA_META));
+              AUTHOR_DATA_META),
+          new WriteDiagnosticScenario(
+              "empty-optional-id-is-missing-identifier",
+              "Empty Optional identifier is MISSING_IDENTIFIER at /id",
+              () -> new WriteDiagnosticsFixtures.EmptyOptionalIdEntity(Optional.empty(), "Title"),
+              MappingDiagnostic.MISSING_IDENTIFIER,
+              "/id"),
+          new WriteDiagnosticScenario(
+              "object-element-list-to-many-is-unsupported-collection-type",
+              "List<Object> to-many is UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE at data",
+              () ->
+                  new WriteDiagnosticsFixtures.ObjectElementListRelEntity(
+                      "1", List.of(new Object())),
+              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_COLLECTION_TYPE,
+              "/relationships/items/data"),
+          new WriteDiagnosticScenario(
+              "mixed-to-many-unsupported-element-first",
+              "Mixed to-many with an unsupported element first is UNSUPPORTED_RELATIONSHIP_VALUE",
+              () ->
+                  new WriteDiagnosticsFixtures.RenamedMixedRelEntity(
+                      "1",
+                      List.of(
+                          new Object(),
+                          io.github.kazemek.jsonapi.core.model.ResourceIdentifier.of(
+                              COMMENTS, "1"))),
+              MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE,
+              "/relationships/ext-items/data"),
+          new WriteDiagnosticScenario(
+              "duplicate-resource-meta-is-duplicate-role",
+              "Two resource meta properties are DUPLICATE_ROLE",
+              () -> new WholeMetaTargetFixtures.DuplicateMetaArticle("1", "a", "b"),
+              MappingDiagnostic.DUPLICATE_ROLE,
+              null),
+          new WriteDiagnosticScenario(
+              "duplicate-relationship-meta-is-duplicate-role",
+              "Two relationship meta properties for one target are DUPLICATE_ROLE",
+              () ->
+                  new WholeMetaTargetFixtures.DuplicateRelationshipMetaArticle(
+                      "1", ResourceIdentifier.of(PEOPLE, "p1"), "a", "b"),
+              MappingDiagnostic.DUPLICATE_ROLE,
+              null),
+          new WriteDiagnosticScenario(
+              "unmapped-relationship-meta-is-unresolved",
+              "Relationship meta referencing an unmapped relationship is UNRESOLVED_RELATIONSHIP_META",
+              () ->
+                  new WholeMetaTargetFixtures.UnmappedRelationshipMetaArticle(
+                      "1", new AuthorMeta("x")),
+              MappingDiagnostic.UNRESOLVED_RELATIONSHIP_META,
+              null),
+          new WriteDiagnosticScenario(
+              "scalar-resource-meta-is-invalid-meta-target",
+              "Scalar whole-meta target is INVALID_META_TARGET at /meta",
+              () -> new WholeMetaTargetFixtures.ScalarMetaArticle("1", "x"),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "list-resource-meta-is-invalid-meta-target",
+              "List whole-meta target is INVALID_META_TARGET at /meta",
+              () -> new WholeMetaTargetFixtures.ListMetaArticle("1", List.of("x")),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "uuid-resource-meta-is-invalid-meta-target",
+              "UUID whole-meta target is INVALID_META_TARGET at /meta even when absent",
+              () -> new WholeMetaTargetFixtures.UuidMetaArticle("1", null),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "instant-resource-meta-is-invalid-meta-target",
+              "java.time whole-meta target is INVALID_META_TARGET at /meta even when absent",
+              () -> new WholeMetaTargetFixtures.InstantMetaArticle("1", null),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "uri-resource-meta-is-invalid-meta-target",
+              "URI whole-meta target is INVALID_META_TARGET at /meta even when absent",
+              () -> new WholeMetaTargetFixtures.UriMetaArticle("1", null),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "object-meta-scalar-runtime-is-invalid-meta-target",
+              "Object whole-meta with a scalar runtime value is INVALID_META_TARGET at /meta",
+              () -> new WholeMetaTargetFixtures.ObjectMetaArticle("1", "scalar"),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "empty-meta-member-name-is-invalid-meta-target",
+              "Empty meta member name is INVALID_META_TARGET at /meta",
+              () -> new ArticleWithMapMeta("1", "T", null, Map.of("", "bad"), null),
+              MappingDiagnostic.INVALID_META_TARGET,
+              META),
+          new WriteDiagnosticScenario(
+              "empty-relationship-meta-member-name-is-invalid-meta-target",
+              "Empty relationship meta member name is INVALID_META_TARGET at relationship meta",
+              () -> new ArticleWithMapMeta("1", "T", null, null, Map.of("", "bad")),
+              MappingDiagnostic.INVALID_META_TARGET,
+              AUTHOR_META));
 
   private static final FixtureCatalog<WriteDiagnosticScenario> CATALOG =
       FixtureCatalog.of("write-diagnostics", SCENARIOS);

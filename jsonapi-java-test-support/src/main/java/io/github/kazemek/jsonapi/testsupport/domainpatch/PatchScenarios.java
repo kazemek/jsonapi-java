@@ -22,6 +22,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMap
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalAddress;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalCity;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithOptionalMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithRelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithTags;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
@@ -29,7 +30,11 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.MutableArticle
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PatchPresenceAddressArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PatchPresenceAddressPatchArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.PatchPresenceTitleArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithOptional;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithSet;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatIntIdArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIgnored;
@@ -64,6 +69,11 @@ public final class PatchScenarios {
   private static final String ROLE = "role";
   private static final String EDITOR = "editor";
   private static final String ADDRESS_STREET = "address-street";
+  private static final String TAGS = "tags";
+  private static final String PINNED = "pinned";
+  private static final String IDENTITY_ONLY = "identity-only";
+  private static final String AUTHOR_IDENTIFIER_META = "author-identifier-meta";
+  private static final String META_PATH = "/meta";
 
   private static final List<PatchScenario> SCENARIOS =
       List.of(
@@ -107,7 +117,18 @@ public final class PatchScenarios {
           resourceMetaSuppliedUnmappedSkipped(),
           wholeLinkageToOneIdentifierMeta(),
           wholeLinkageToManyIdentifierMeta(),
-          wrapperWholeLinkageIsNotAnIndependentChange());
+          wrapperWholeLinkageIsNotAnIndependentChange(),
+          arrayToManyIdentifierMeta(),
+          emptyArrayRelationship(),
+          setToManyIdentifierMeta(),
+          emptySetRelationship(),
+          optionalToOneIdentifierMeta(),
+          optionalWrappedMetaStructured(),
+          metaConversionFailure(),
+          scalarMetaTarget(),
+          uuidMetaTarget(),
+          instantMetaTarget(),
+          uriMetaTarget());
 
   private static final FixtureCatalog<PatchScenario> CATALOG =
       FixtureCatalog.of("patch", SCENARIOS);
@@ -672,7 +693,7 @@ public final class PatchScenarios {
   private static PatchScenario wholeLinkageToOneIdentifierMeta() {
     return scenario(
         "patch-whole-linkage-to-one-identifier-meta",
-        doc("author-identifier-meta"),
+        doc(AUTHOR_IDENTIFIER_META),
         FlatArticle.class,
         null,
         PatchExpectation.success(
@@ -699,14 +720,14 @@ public final class PatchScenarios {
                     COMMENTS,
                     List.of(
                         new ResourceIdentifier(
-                            COMMENTS, "c1", null, Meta.of(Map.of("pinned", true)), Map.of()),
+                            COMMENTS, "c1", null, Meta.of(Map.of(PINNED, true)), Map.of()),
                         ResourceIdentifier.of(COMMENTS, "c2"))))));
   }
 
   private static PatchScenario wrapperWholeLinkageIsNotAnIndependentChange() {
     return scenario(
         "patch-wrapper-whole-linkage-is-not-an-independent-change",
-        doc("author-identifier-meta"),
+        doc(AUTHOR_IDENTIFIER_META),
         ArticleWithRelationshipLinkage.class,
         null,
         PatchExpectation.success(
@@ -719,6 +740,149 @@ public final class PatchScenarios {
                         new ResourceIdentifier(
                             PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of()),
                         new AuthorIdMeta(EDITOR))))));
+  }
+
+  private static PatchScenario arrayToManyIdentifierMeta() {
+    return scenario(
+        "patch-array-to-many-identifier-meta",
+        doc("comments-identifier-meta"),
+        FlatArticleWithArray.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    COMMENTS,
+                    COMMENTS,
+                    new ResourceIdentifier[] {
+                      new ResourceIdentifier(
+                          COMMENTS, "c1", null, Meta.of(Map.of(PINNED, true)), Map.of()),
+                      ResourceIdentifier.of(COMMENTS, "c2")
+                    }))));
+  }
+
+  private static PatchScenario emptyArrayRelationship() {
+    return scenario(
+        "patch-empty-array-relationship",
+        doc("relationship-empty-collection"),
+        FlatArticleWithArray.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    COMMENTS, COMMENTS, new ResourceIdentifier[0]))));
+  }
+
+  private static PatchScenario setToManyIdentifierMeta() {
+    return scenario(
+        "patch-set-to-many-identifier-meta",
+        doc("tags-identifier-meta"),
+        FlatArticleWithSet.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    TAGS,
+                    TAGS,
+                    Set.of(
+                        new ResourceIdentifier(
+                            TAGS, "t1", null, Meta.of(Map.of(PINNED, true)), Map.of()))))));
+  }
+
+  private static PatchScenario emptySetRelationship() {
+    return scenario(
+        "patch-empty-set-relationship",
+        doc("tags-empty"),
+        FlatArticleWithSet.class,
+        null,
+        PatchExpectation.success(
+            "1", List.of(new PatchChange.RelationshipChange(TAGS, TAGS, Set.of()))));
+  }
+
+  private static PatchScenario optionalToOneIdentifierMeta() {
+    return scenario(
+        "patch-optional-to-one-identifier-meta",
+        doc(AUTHOR_IDENTIFIER_META),
+        FlatArticleWithOptional.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.RelationshipChange(
+                    AUTHOR,
+                    AUTHOR,
+                    Optional.of(
+                        new ResourceIdentifier(
+                            PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of()))))));
+  }
+
+  private static PatchScenario optionalWrappedMetaStructured() {
+    return scenario(
+        "patch-optional-wrapped-meta-structured",
+        doc("title-with-meta-source-note"),
+        ArticleWithOptionalMeta.class,
+        null,
+        PatchExpectation.success(
+            "1",
+            List.of(
+                new PatchChange.ResourceMetaChange(
+                    "meta",
+                    "meta",
+                    new StructuredPatch(
+                        List.of(
+                            new StructuredMember(
+                                SOURCE, SOURCE, new StructuredMemberState.Atomic("cms")),
+                            new StructuredMember(
+                                "note", "note", new StructuredMemberState.Atomic("n"))))),
+                new PatchChange.AttributeChange(TITLE, TITLE, "T"))));
+  }
+
+  private static PatchScenario metaConversionFailure() {
+    return scenario(
+        "patch-meta-conversion-failure",
+        doc("meta-source-object"),
+        ArticleWithMeta.class,
+        null,
+        PatchExpectation.binderFailure(
+            MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE, "/meta/source"));
+  }
+
+  private static PatchScenario scalarMetaTarget() {
+    return scenario(
+        "patch-scalar-meta-target",
+        doc(IDENTITY_ONLY),
+        WholeMetaTargetFixtures.ScalarMetaArticle.class,
+        null,
+        PatchExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
+  }
+
+  private static PatchScenario uuidMetaTarget() {
+    return scenario(
+        "patch-uuid-meta-target",
+        doc(IDENTITY_ONLY),
+        WholeMetaTargetFixtures.UuidMetaArticle.class,
+        null,
+        PatchExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
+  }
+
+  private static PatchScenario instantMetaTarget() {
+    return scenario(
+        "patch-instant-meta-target",
+        doc(IDENTITY_ONLY),
+        WholeMetaTargetFixtures.InstantMetaArticle.class,
+        null,
+        PatchExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
+  }
+
+  private static PatchScenario uriMetaTarget() {
+    return scenario(
+        "patch-uri-meta-target",
+        doc(IDENTITY_ONLY),
+        WholeMetaTargetFixtures.UriMetaArticle.class,
+        null,
+        PatchExpectation.binderFailure(MappingDiagnostic.INVALID_META_TARGET, META_PATH));
   }
 
   private static PatchScenario scenario(

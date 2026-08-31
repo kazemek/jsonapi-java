@@ -3,8 +3,8 @@ package io.github.kazemek.jsonapi.testsupport.domainwrite;
 import java.util.Map;
 
 /**
- * Comparison policy for a scenario's expected relationship values, consumed by adapter test
- * comparators.
+ * Comparison policy for a scenario's expected relationship values, consumed by {@link
+ * DomainWriteVerifier}.
  *
  * <p>Relationship comparison is {@link ComparisonOrder#ORDERED} by default; the Set-based {@code
  * tags} scenario opts into {@link ComparisonOrder#UNORDERED_IDENTIFIER_PAIRS}.

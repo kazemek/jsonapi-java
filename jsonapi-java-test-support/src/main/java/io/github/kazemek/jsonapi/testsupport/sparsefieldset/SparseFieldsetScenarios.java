@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.sparsefieldset;
 
+import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
@@ -9,6 +10,9 @@ import io.github.kazemek.jsonapi.jackson.IncludePath;
 import io.github.kazemek.jsonapi.jackson.IncludePolicy;
 import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment;
@@ -267,7 +271,23 @@ public final class SparseFieldsetScenarios {
               "full field list keeps the unrestricted resource state",
               SparseFieldsetScenarios::article,
               fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR, COMMENTS, BODY_TEXT))),
-              SparseFieldsetExpectation.mapped(unrestrictedArticle(), null, false)));
+              SparseFieldsetExpectation.mapped(unrestrictedArticle(), null, false)),
+          mappedDocument(
+              "empty fieldset still emits resource meta",
+              SparseFieldsetScenarios::articleWithMeta,
+              fieldsets(Map.of(ARTICLES, List.of())),
+              SparseFieldsetExpectation.mapped(emptyFieldsetArticleWithMeta(), null, false)),
+          mappedDocument(
+              "title-only fieldset keeps resource meta and omits the excluded relationship",
+              SparseFieldsetScenarios::articleWithMeta,
+              fieldsets(Map.of(ARTICLES, List.of(TITLE))),
+              SparseFieldsetExpectation.mapped(titleOnlyArticleWithMeta(), null, false)),
+          mappedDocument(
+              "meta is not a valid sparse-fieldset field name",
+              SparseFieldsetScenarios::articleWithMeta,
+              fieldsets(Map.of(ARTICLES, List.of("meta"))),
+              SparseFieldsetExpectation.failure(
+                  MappingDiagnostic.INVALID_FIELDSET_FIELD, null, ArticleWithMeta.class)));
 
   private static final FixtureCatalog<SparseFieldsetScenario> CATALOG =
       FixtureCatalog.of("sparse-fieldset", SCENARIOS);
@@ -360,6 +380,15 @@ public final class SparseFieldsetScenarios {
     return new Article("1", TITLE_VALUE, BODY_VALUE, List.of(comment5(), comment12()), dan());
   }
 
+  private static ArticleWithMeta articleWithMeta() {
+    return new ArticleWithMeta(
+        "1",
+        "T",
+        ResourceIdentifier.of(PEOPLE, "p1"),
+        new ArticleMeta("cms", "n"),
+        new AuthorMeta("Alice"));
+  }
+
   private static FieldsetResourceState unrestrictedArticle() {
     return FieldsetResourceState.of(
         ARTICLES,
@@ -418,6 +447,23 @@ public final class SparseFieldsetScenarios {
         Map.of(),
         List.of(WRITTEN_BY),
         Map.of(WRITTEN_BY, personLinkage(dan())));
+  }
+
+  private static FieldsetResourceState emptyFieldsetArticleWithMeta() {
+    return FieldsetResourceState.of(
+        ARTICLES, "1", null, Map.of(), null, Map.of(), articleResourceMeta());
+  }
+
+  private static FieldsetResourceState titleOnlyArticleWithMeta() {
+    return FieldsetResourceState.of(
+        ARTICLES, "1", List.of(TITLE), Map.of(TITLE, "T"), null, Map.of(), articleResourceMeta());
+  }
+
+  private static Meta articleResourceMeta() {
+    Map<String, Object> members = new LinkedHashMap<>();
+    members.put("source", "cms");
+    members.put("note", "n");
+    return Meta.of(members);
   }
 
   private static FieldsetResourceState unrestrictedPerson(Person person) {

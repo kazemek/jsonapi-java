@@ -20,8 +20,8 @@ import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadExpectation
 import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadInput
 import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadScenario
 import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadScenarios
+import io.github.kazemek.jsonapi.testsupport.domainread.DomainReadVerifier
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThing
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing
@@ -520,52 +520,10 @@ class ResourceBinderSpec extends Specification {
 
   private static void verifyOutcome(
       DomainReadScenario scenario, Object result, Throwable thrownException) {
-    def expectation = scenario.expectation()
-    if (expectation instanceof DomainReadExpectation.Failure) {
-      assert thrownException instanceof JsonApiMappingException
-      def ex = (JsonApiMappingException) thrownException
-      assert ex.diagnostic() == expectation.diagnostic()
-      if (expectation.propertyPath() != null) {
-        assert ex.propertyPath() == expectation.propertyPath()
-      }
-      if (expectation.resourceClass() != null) {
-        assert ex.resourceClass() == expectation.resourceClass()
-      }
-      assertAdapterLocalFailureDetails(scenario, ex)
-      return
+    DomainReadVerifier.verify(scenario, result, thrownException)
+    if (scenario.expectation() instanceof DomainReadExpectation.Failure) {
+      assertAdapterLocalFailureDetails(scenario, (JsonApiMappingException) thrownException)
     }
-    assert thrownException == null
-    def expected = ((DomainReadExpectation.BoundValue) expectation).value()
-    if (scenario.input() instanceof DomainReadInput.IncludedIsolation) {
-      assert result instanceof List
-      assert ((List) result).size() == 2
-      assertBoundValue(expected, ((List) result)[0])
-      assertBoundValue(expected, ((List) result)[1])
-      return
-    }
-    assertBoundValue(expected, result)
-  }
-
-  private static void assertBoundValue(Object expected, Object actual) {
-    if (expected instanceof FlatArticleWithArray) {
-      def exp = (FlatArticleWithArray) expected
-      def act = (FlatArticleWithArray) actual
-      assert act.id() == exp.id()
-      assert act.title() == exp.title()
-      assert act.comments() == exp.comments()
-      return
-    }
-    if (expected instanceof List) {
-      assert actual instanceof List
-      def expectedList = (List) expected
-      def actualList = (List) actual
-      assert actualList.size() == expectedList.size()
-      expectedList.eachWithIndex { item, index ->
-        assertBoundValue(item, actualList[index])
-      }
-      return
-    }
-    assert actual == expected
   }
 
   // Jackson-derived failure-path shapes and cause types stay adapter-local until Jackson 2 proves

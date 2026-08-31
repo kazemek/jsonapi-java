@@ -51,7 +51,7 @@ consume that module (`testImplementation`); it is not a production dependency of
 | [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
 | [`jsonapi-java-jackson-common`](../jsonapi-java-jackson-common/README.md) | Jackson-import-free policy, diagnostics, contexts, envelopes, and PATCH command contracts shared by Jackson majors. |
 | [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. |
-| [`jsonapi-java-test-support`](../jsonapi-java-test-support/README.md) | Unpublished shared semantic catalogs, corpus, and pinned schemas. |
+| [`jsonapi-java-test-support`](../jsonapi-java-test-support/README.md) | Unpublished shared semantic catalogs, corpus, pinned schemas, and adapter-neutral semantic verifiers. |
 | Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
 
 [ADR-007](adr/007-module-boundaries.md) records why these modules exist.
@@ -244,7 +244,9 @@ flowchart LR
 
 The test-support README is the placement contract: reuse shared catalogs first; keep mix-ins,
 naming strategies, custom serializers, `JavaType` mechanics, and mapper isolation local; do not
-reintroduce a global adapter `testmodel` package.
+reintroduce a global adapter `testmodel` package. Shared semantic verifiers live next to their
+catalogs so a second Jackson major executes the same comparison without copying adapter-local
+assert helpers.
 
 ## Terminology
 

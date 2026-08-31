@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoScenarios
+import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoVerifier
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
@@ -26,7 +27,6 @@ import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericPatch
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.OptionalPatch
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoExpectation
 import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoScenario
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
@@ -58,7 +58,7 @@ class PatchDtoBindingSpec extends Specification {
     def result = execute(scenario, reader)
 
     then:
-    assertExpectation(scenario, result)
+    PatchDtoVerifier.verify(scenario, result)
 
     where:
     scenario << PatchDtoScenarios.catalog().all()
@@ -438,6 +438,23 @@ class PatchDtoBindingSpec extends Specification {
     ex.propertyPath() == "/relationships/bogus"
   }
 
+  def "unknown relationship meta diagnostic names the relationship wire name"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json =
+        '{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"p1"},"meta":{"displayName":"Alice"}}}}}'
+
+    when:
+    reader.readValue(json, io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures.NoRelMetaPatch)
+
+    then:
+    def e = thrown(JsonApiMappingException)
+    e.diagnostic == MappingDiagnostic.UNKNOWN_PATCH_MEMBER
+    e.propertyPath() == "/relationships/author/meta"
+    e.message.contains("Unknown supplied relationship meta 'author'")
+    !e.message.contains("author/meta")
+  }
+
   def "null dtoType reports dtoType in the message"() {
     given:
     def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
@@ -638,38 +655,6 @@ class PatchDtoBindingSpec extends Specification {
     } catch (JsonApiDocumentReadException | JsonApiMappingException ex) {
       return ex
     }
-  }
-
-  private static void assertExpectation(PatchDtoScenario scenario, Object result) {
-    def expectation = scenario.expectation()
-    if (expectation instanceof PatchDtoExpectation.Success) {
-      assert result != null
-      assert scenario.targetType().isInstance(result)
-      assert readMember(result, "id") == expectation.identity()
-      expectation.members().each { name, expected ->
-        assert readMember(result, name) == expected
-      }
-      return
-    }
-    if (expectation instanceof PatchDtoExpectation.ReaderFailure) {
-      assert result instanceof JsonApiDocumentReadException
-      def ex = (JsonApiDocumentReadException) result
-      assert ex.ruleCode() == expectation.code()
-      assert ex.jsonPointer() == expectation.jsonPointer()
-      return
-    }
-    if (expectation instanceof PatchDtoExpectation.BinderFailure) {
-      assert result instanceof JsonApiMappingException
-      def ex = (JsonApiMappingException) result
-      assert ex.diagnostic() == expectation.diagnostic()
-      assert ex.propertyPath() == expectation.propertyPath()
-      return
-    }
-    throw new IllegalArgumentException("Unknown expectation: " + expectation)
-  }
-
-  private static Object readMember(Object dto, String name) {
-    return dto.getClass().getMethod(name).invoke(dto)
   }
 
   private static JsonApiDocument decodeUpdateDocument(String json) {
