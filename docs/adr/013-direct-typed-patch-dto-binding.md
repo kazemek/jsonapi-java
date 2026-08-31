@@ -1,7 +1,8 @@
 # ADR-013: Direct Typed PATCH DTO Binding
 
 **Status:** Accepted  
-**Date:** 2026-08-17
+**Date:** 2026-08-17  
+**Amendment:** 2026-08-31 — unannotated ordinary properties do not participate; conventional `id` remains the identifier convention
 
 ## Context
 
@@ -35,13 +36,14 @@ document and binds it **directly** into an application-owned annotated PATCH DTO
   `PatchPresence<Optional<T>>` remains meaningful: omitted is `Omitted()`, while a supplied `null`
   becomes `Present(Optional.empty())` when that is the inner type's normal conversion result.
 - The identifier binds exactly like normal DTO mapping: a valid identifier mapping (explicit
-  `@JsonApiId` or the implicit logical property named `id`) is required, identity comes from
-  resource `id` only (no `lid` fallback), and identity is never a patchable member (never wrapped
-  in `PatchPresence`).
-- A supplied attribute or relationship not represented by the PATCH DTO is **rejected** with a new
-  stable diagnostic (`UNKNOWN_PATCH_MEMBER`). This intentionally diverges from the low-level
-  `PatchCommand` path, which silently ignores unknown supplied members to stay a lossless change
-  list; direct DTO binding has no lossless intermediate, so rejecting is the safer PATCH default.
+  `@JsonApiId` or the conventional property whose configured Jackson external name is `id`) is
+  required, identity comes from resource `id` only (no `lid` fallback), and identity is never a
+  patchable member (never wrapped in `PatchPresence`).
+- Unannotated ordinary DTO properties do not participate. A supplied document member that does not
+  match a role-annotated (or conventional-`id`) property is **rejected** with
+  `UNKNOWN_PATCH_MEMBER`. This intentionally diverges from the low-level `PatchCommand` path, which
+  silently ignores unknown supplied members to stay a lossless change list; direct DTO binding has
+  no lossless intermediate, so rejecting is the safer PATCH default.
 - PATCH DTOs are ordinary Jackson beans (records, creators, or setter classes) and construction
   preserves Jackson authority (ADR-004) subject to the documented PATCH-wrapper restrictions:
   creators, deserializers, converters, naming, ignore rules, and configured modules all apply

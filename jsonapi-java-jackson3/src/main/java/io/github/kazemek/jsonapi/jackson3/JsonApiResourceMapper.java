@@ -25,7 +25,10 @@ import tools.jackson.databind.JavaType;
  * <p>Construct instances via {@link
  * JsonApiJackson3#resourceMapper(tools.jackson.databind.json.JsonMapper)} or its overloads, never
  * directly. The mapper is safe for concurrent use once created. Mapping uses Jackson's logical
- * property model and caches resolved definitions by type and configuration identity.
+ * property model and caches resolved definitions by type and configuration identity. JSON:API
+ * annotations assign semantic roles; configured Jackson owns property discovery, visibility,
+ * external naming, mix-ins, creators, and value conversion. Unannotated Jackson-visible properties
+ * do not participate, except the conventional identifier whose Jackson external name is {@code id}.
  *
  * <p>Mapping is write-only: this mapper produces core model objects. Feed them to a {@link
  * JsonApiDocumentWriter} for serialization. Read-side flat DTO binding is provided by {@link

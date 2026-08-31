@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiMeta;
@@ -23,14 +24,14 @@ public final class WholeMetaTargetFixtures {
 
   private WholeMetaTargetFixtures() {}
 
-  /** Write/low-level model with a renamed relationship whose meta references the wire name. */
+  /** Write/low-level model with a Jackson-renamed relationship whose meta follows the property. */
   @JsonApiResource(type = "articles")
   public record RenamedRelationshipMetaArticle(
       @JsonApiId String id,
       @JsonApiAttribute String title,
-      @JsonApiRelationship(name = "author") @Nullable ResourceIdentifier writtenBy,
+      @JsonApiRelationship @JsonProperty("author") @Nullable ResourceIdentifier writtenBy,
       @JsonApiMeta @Nullable ArticleMeta meta,
-      @JsonApiRelationshipMeta("author") @Nullable AuthorMeta authorMeta) {}
+      @JsonApiRelationshipMeta(relationship = "writtenBy") @Nullable AuthorMeta authorMeta) {}
 
   /** Invalid declaration: two resource meta properties on one mapping. */
   @JsonApiResource(type = "articles")
@@ -42,13 +43,14 @@ public final class WholeMetaTargetFixtures {
   public record DuplicateRelationshipMetaArticle(
       @JsonApiId String id,
       @JsonApiRelationship ResourceIdentifier author,
-      @JsonApiRelationshipMeta("author") String authorMeta,
-      @JsonApiRelationshipMeta("author") String authorMeta2) {}
+      @JsonApiRelationshipMeta(relationship = "author") String authorMeta,
+      @JsonApiRelationshipMeta(relationship = "author") String authorMeta2) {}
 
   /** Invalid declaration: relationship meta referencing an unmapped relationship. */
   @JsonApiResource(type = "articles")
   public record UnmappedRelationshipMetaArticle(
-      @JsonApiId String id, @JsonApiRelationshipMeta("nonexistent") AuthorMeta authorMeta) {}
+      @JsonApiId String id,
+      @JsonApiRelationshipMeta(relationship = "nonexistent") AuthorMeta authorMeta) {}
 
   /** Invalid declaration: scalar whole-meta target. */
   @JsonApiResource(type = "articles")

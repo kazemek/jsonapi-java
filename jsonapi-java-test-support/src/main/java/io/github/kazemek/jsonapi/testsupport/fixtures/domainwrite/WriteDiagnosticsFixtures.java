@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -50,42 +51,42 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "collision")
   public record NameCollisionEntity(
       @JsonApiId String id,
-      @JsonApiAttribute(name = "same") String fieldA,
-      @JsonApiRelationship(name = "same") String fieldB) {}
+      @JsonApiAttribute @JsonProperty("same") String fieldA,
+      @JsonApiRelationship @JsonProperty("same") String fieldB) {}
 
   /** Two attributes mapped onto the same wire name. */
   @JsonApiResource(type = "dup-attrs")
   public record DuplicateAttrNameEntity(
       @JsonApiId String id,
-      @JsonApiAttribute(name = "same") String fieldA,
-      @JsonApiAttribute(name = "same") String fieldB) {}
+      @JsonApiAttribute @JsonProperty("same") String fieldA,
+      @JsonApiAttribute @JsonProperty("same") String fieldB) {}
 
   /** Two relationships mapped onto the same wire name. */
   @JsonApiResource(type = "dup-rels")
   public record DuplicateRelNameEntity(
       @JsonApiId String id,
-      @JsonApiRelationship(name = "same") String otherA,
-      @JsonApiRelationship(name = "same") String otherB) {}
+      @JsonApiRelationship @JsonProperty("same") String otherA,
+      @JsonApiRelationship @JsonProperty("same") String otherB) {}
 
-  /** Attribute override containing characters JSON:API forbids. */
+  /** Attribute Jackson name containing characters JSON:API forbids. */
   @JsonApiResource(type = "invalid")
   public record InvalidAttrNameEntity(
-      @JsonApiId String id, @JsonApiAttribute(name = "bad name!") String value) {}
+      @JsonApiId String id, @JsonApiAttribute @JsonProperty("bad name!") String value) {}
 
-  /** Attribute override using the reserved {@code type} member name. */
+  /** Attribute Jackson name using the reserved {@code type} member name. */
   @JsonApiResource(type = "reserved-attr")
   public record ReservedAttrNameEntity(
-      @JsonApiId String id, @JsonApiAttribute(name = "type") String value) {}
+      @JsonApiId String id, @JsonApiAttribute @JsonProperty("type") String value) {}
 
-  /** Relationship override containing characters JSON:API forbids. */
+  /** Relationship Jackson name containing characters JSON:API forbids. */
   @JsonApiResource(type = "invalid-rel")
   public record InvalidRelNameEntity(
-      @JsonApiId String id, @JsonApiRelationship(name = "bad name!") String other) {}
+      @JsonApiId String id, @JsonApiRelationship @JsonProperty("bad name!") String other) {}
 
-  /** Relationship override using the reserved {@code id} member name. */
+  /** Relationship Jackson name using the reserved {@code id} member name. */
   @JsonApiResource(type = "reserved-rel")
   public record ReservedRelNameEntity(
-      @JsonApiId String id, @JsonApiRelationship(name = "id") String other) {}
+      @JsonApiId String id, @JsonApiRelationship @JsonProperty("id") String other) {}
 
   /**
    * Attribute getter that always throws. Kept as a JavaBean so the catalog covers a conventional
@@ -121,7 +122,8 @@ public final class WriteDiagnosticsFixtures {
   public static final class RenamedFailingAttrEntity {
     @JsonApiId private final String id;
 
-    @JsonApiAttribute(name = "body-text")
+    @JsonApiAttribute
+    @JsonProperty("body-text")
     private final String badAttr;
 
     public RenamedFailingAttrEntity(String id, String badAttr) {
@@ -179,7 +181,7 @@ public final class WriteDiagnosticsFixtures {
   /** To-many relationship declared as an unsupported runtime array type. */
   @JsonApiResource(type = "raw-array-rel")
   public record RenamedArrayRelEntity(
-      @JsonApiId String id, @JsonApiRelationship(name = "ext-values") long[] values) {
+      @JsonApiId String id, @JsonApiRelationship @JsonProperty("ext-values") long[] values) {
     @Override
     public boolean equals(Object obj) {
       return obj instanceof RenamedArrayRelEntity(String otherId, long[] otherValues)
@@ -201,7 +203,7 @@ public final class WriteDiagnosticsFixtures {
   /** To-many relationship holding mixed element types. */
   @JsonApiResource(type = "mixed-rel")
   public record RenamedMixedRelEntity(
-      @JsonApiId String id, @JsonApiRelationship(name = "ext-items") List<Object> items) {}
+      @JsonApiId String id, @JsonApiRelationship @JsonProperty("ext-items") List<Object> items) {}
 
   /** Raw erased iterable: to-many by declaration with no resolvable content type. */
   public static final class RawBag implements Iterable<Object> {
@@ -220,7 +222,7 @@ public final class WriteDiagnosticsFixtures {
   /** To-many relationship declared with an unresolvable erased iterable type. */
   @JsonApiResource(type = "bag-rel")
   public record RenamedBagRelEntity(
-      @JsonApiId String id, @JsonApiRelationship(name = "ext-bag") RawBag things) {}
+      @JsonApiId String id, @JsonApiRelationship @JsonProperty("ext-bag") RawBag things) {}
 
   /** Raw erased {@code RelationshipLinkage} (generic information is required). */
   @JsonApiResource(type = "articles")
@@ -250,7 +252,8 @@ public final class WriteDiagnosticsFixtures {
 
   /** Empty {@link Optional} identifier is {@code MISSING_IDENTIFIER}. */
   @JsonApiResource(type = "articles")
-  public record EmptyOptionalIdEntity(@JsonApiId Optional<String> id, String title) {}
+  public record EmptyOptionalIdEntity(
+      @JsonApiId Optional<String> id, @JsonApiAttribute String title) {}
 
   /** Declared {@code List<Object>} to-many is an unresolvable collection element type. */
   @JsonApiResource(type = "articles")

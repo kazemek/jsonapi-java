@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -11,6 +12,6 @@ import org.jspecify.annotations.Nullable;
 public record Article(
     @JsonApiId String id,
     @JsonApiAttribute String title,
-    @JsonApiAttribute(name = "body-text") String body,
+    @JsonApiAttribute @JsonProperty("body-text") String body,
     @JsonApiRelationship List<Comment> comments,
     @JsonApiRelationship @Nullable Person author) {}

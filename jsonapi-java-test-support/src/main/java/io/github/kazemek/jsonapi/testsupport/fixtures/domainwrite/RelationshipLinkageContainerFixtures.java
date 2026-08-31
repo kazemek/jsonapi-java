@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -89,6 +90,6 @@ public final class RelationshipLinkageContainerFixtures {
   @JsonApiResource(type = "articles")
   public record RenamedRelationshipLinkageArticle(
       @JsonApiId String id,
-      @JsonApiRelationship(name = "author")
+      @JsonApiRelationship @JsonProperty("author")
           @Nullable RelationshipLinkage<ResourceIdentifier, AuthorIdMeta> writtenBy) {}
 }

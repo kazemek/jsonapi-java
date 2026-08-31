@@ -17,4 +17,5 @@ public record ArticleWithMapMetaPatch(
     @JsonApiAttribute PatchPresence<String> title,
     @JsonApiRelationship PatchPresence<ResourceIdentifier> author,
     @JsonApiMeta PatchPresence<Map<String, Object>> meta,
-    @JsonApiRelationshipMeta("author") PatchPresence<Map<String, Object>> authorMeta) {}
+    @JsonApiRelationshipMeta(relationship = "author")
+        PatchPresence<Map<String, Object>> authorMeta) {}

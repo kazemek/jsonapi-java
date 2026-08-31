@@ -36,7 +36,9 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatRequiredThi
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThingWithIgnored;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatThrowingCreatorThing;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatUnregisteredRelationshipsArticle;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithUnannotatedExtra;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ConventionalId;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.RelationshipLinkageContainerFixtures;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -134,6 +136,20 @@ public final class DomainReadScenarios {
               BlogWithJsonProperty.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(new BlogWithJsonProperty("b1", MY_BLOG))),
+          new DomainReadScenario(
+              "unannotated extra property is not bound as an attribute",
+              DomainReadInput.single(
+                  resource(ARTICLES, "1", attrs(TITLE, HELLO, "ignoredExtra", "secret"), null)),
+              ArticleWithUnannotatedExtra.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(new ArticleWithUnannotatedExtra("1", HELLO, null))),
+          new DomainReadScenario(
+              "binds conventional id property",
+              DomainReadInput.single(
+                  resource("conventionals", "42", attrs("name", "name value"), null)),
+              ConventionalId.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(new ConventionalId("42", "name value"))),
           new DomainReadScenario(
               "@JsonIgnore property is not bound",
               DomainReadInput.single(
@@ -455,6 +471,22 @@ public final class DomainReadScenarios {
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
                   new FlatMetaArticle(
+                      "1",
+                      HELLO,
+                      ResourceIdentifier.of(PEOPLE, "p1"),
+                      new ArticleMeta("cms", "n"),
+                      new AuthorMeta(ALICE)))),
+          new DomainReadScenario(
+              "binds renamed relationship meta from the wire name",
+              DomainReadInput.single(
+                  resourceWithMeta(
+                      attrs(TITLE, HELLO),
+                      relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))),
+                      Meta.of(Map.of(SOURCE, "cms", "note", "n")))),
+              WholeMetaTargetFixtures.RenamedRelationshipMetaArticle.class,
+              ConverterBehavior.DEFAULT_CONVERT_VALUE,
+              DomainReadExpectation.bound(
+                  new WholeMetaTargetFixtures.RenamedRelationshipMetaArticle(
                       "1",
                       HELLO,
                       ResourceIdentifier.of(PEOPLE, "p1"),

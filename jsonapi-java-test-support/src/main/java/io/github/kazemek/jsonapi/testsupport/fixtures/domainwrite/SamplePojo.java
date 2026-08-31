@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -12,7 +13,8 @@ public class SamplePojo {
 
   @JsonApiId private @Nullable String id;
 
-  @JsonApiAttribute(name = "display-name")
+  @JsonApiAttribute
+  @JsonProperty("display-name")
   private @Nullable String name;
 
   @JsonApiRelationship private @Nullable List<Comment> comments;

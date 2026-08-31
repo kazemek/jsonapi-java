@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
@@ -589,21 +590,22 @@ class PatchBindingSpec extends Specification {
   static class FlatLoudThing {
     @JsonApiId String id
     @JsonDeserialize(using = UppercaseDeserializer)
+    @JsonApiAttribute
     String title
   }
 
   @JsonApiResource(type = "articles")
   static class FlatOptionalTitleArticle {
     @JsonApiId String id
-    Optional<String> title
+    @JsonApiAttribute Optional<String> title
   }
 
   @JsonApiResource(type = "articles")
   static class FlatDuplicateAttributeArticle {
     @JsonApiId String id
-    @JsonApiAttribute(name = "title")
+    @JsonApiAttribute @JsonProperty("title")
     String title
-    @JsonApiAttribute(name = "title")
+    @JsonApiAttribute @JsonProperty("title")
     String alsoTitle
   }
 }

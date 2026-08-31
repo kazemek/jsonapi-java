@@ -1,5 +1,7 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -8,4 +10,6 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person;
 /** Article whose author relationship uses a renamed JSON:API member. */
 @JsonApiResource(type = "articles")
 public record ArticleWithRenamedAuthor(
-    @JsonApiId String id, String title, @JsonApiRelationship(name = "written-by") Person author) {}
+    @JsonApiId String id,
+    @JsonApiAttribute String title,
+    @JsonApiRelationship @JsonProperty("written-by") Person author) {}

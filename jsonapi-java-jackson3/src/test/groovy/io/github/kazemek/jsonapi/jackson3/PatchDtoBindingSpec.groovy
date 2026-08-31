@@ -64,19 +64,6 @@ class PatchDtoBindingSpec extends Specification {
     scenario << PatchDtoScenarios.catalog().all()
   }
 
-  def "implicit id property binds without @JsonApiId"() {
-    given:
-    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
-    def json = '{"data":{"type":"articles","id":"9","attributes":{"title":"T"}}}'
-
-    when:
-    def dto = reader.readValue(json, ImplicitIdPatch)
-
-    then:
-    dto.id == "9"
-    dto.title == PatchPresence.present("T")
-  }
-
   def "generic PATCH DTO binds through a parameterized JavaType"() {
     given:
     def mapper = JsonMapper.builder().build()
@@ -692,12 +679,6 @@ class PatchDtoBindingSpec extends Specification {
   }
 
   @JsonApiResource(type = "articles")
-  static class ImplicitIdPatch {
-    String id
-    PatchPresence<String> title
-  }
-
-  @JsonApiResource(type = "articles")
   static class AuthorListPatch {
     @JsonApiId String id
     @JsonApiRelationship PatchPresence<List<AuthorId>> contributors
@@ -719,6 +700,7 @@ class PatchDtoBindingSpec extends Specification {
   static class WrapperDeserializePatch {
     @JsonApiId String id
     @JsonDeserialize(using = UppercaseDeserializer)
+    @JsonApiAttribute
     PatchPresence<String> title
   }
 
@@ -726,6 +708,7 @@ class PatchDtoBindingSpec extends Specification {
   static class WrapperSerializePatch {
     @JsonApiId String id
     @JsonSerialize(using = MarkerSerializer)
+    @JsonApiAttribute
     PatchPresence<String> title
   }
 
@@ -733,6 +716,7 @@ class PatchDtoBindingSpec extends Specification {
   static class WrapperConverterDeserializePatch {
     @JsonApiId String id
     @JsonDeserialize(converter = IdentityConverter)
+    @JsonApiAttribute
     PatchPresence<String> title
   }
 
@@ -740,13 +724,14 @@ class PatchDtoBindingSpec extends Specification {
   static class WrapperConverterSerializePatch {
     @JsonApiId String id
     @JsonSerialize(converter = IdentityConverter)
+    @JsonApiAttribute
     PatchPresence<String> title
   }
 
   @JsonApiResource(type = "articles")
   static class MixinTargetPatch {
     @JsonApiId String id
-    PatchPresence<String> title
+    @JsonApiAttribute PatchPresence<String> title
   }
 
   static abstract class MixInWithDeserializer {

@@ -30,33 +30,33 @@ record ResourceMapping(
     Map<String, StructuredValueBinder.ConstructionStart> starts = new LinkedHashMap<>();
     if (identifierProperty != null && identifierLocation != null) {
       starts.put(
-          identifierProperty.logicalName(),
+          identifierProperty.jacksonName(),
           new StructuredValueBinder.ConstructionStart(
               identifierLocation, identifierProperty.accessor().getType()));
     }
     for (MappingProperty property : attributes) {
       starts.put(
-          property.logicalName(),
+          property.jacksonName(),
           new StructuredValueBinder.ConstructionStart(
               MappingLocation.of("attributes", property.jsonapiName()),
               property.accessor().getType()));
     }
     for (MappingProperty property : relationships) {
       starts.put(
-          property.logicalName(),
+          property.jacksonName(),
           new StructuredValueBinder.ConstructionStart(
               RelationshipLinkageSupport.relationshipLocation(property),
               property.accessor().getType()));
     }
     if (resourceMeta != null) {
       starts.put(
-          resourceMeta.logicalName(),
+          resourceMeta.jacksonName(),
           new StructuredValueBinder.ConstructionStart(
               RelationshipMetaSupport.resourceMetaLocation(), resourceMeta.accessor().getType()));
     }
     for (MappingProperty property : relationshipMetaProperties) {
       starts.put(
-          property.logicalName(),
+          property.jacksonName(),
           new StructuredValueBinder.ConstructionStart(
               RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()),
               property.accessor().getType()));

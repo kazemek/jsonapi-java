@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -40,7 +41,8 @@ public final class AccessCountingFieldsetArticle {
     return title;
   }
 
-  @JsonApiAttribute(name = "body-text")
+  @JsonApiAttribute
+  @JsonProperty("body-text")
   public String getBody() {
     bodyReads++;
     return body;

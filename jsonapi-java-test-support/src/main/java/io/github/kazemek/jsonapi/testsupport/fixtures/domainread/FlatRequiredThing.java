@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
@@ -16,7 +17,8 @@ public final class FlatRequiredThing {
   @JsonCreator
   public FlatRequiredThing(
       @JsonProperty("id") @JsonApiId @Nullable String id,
-      @JsonProperty(value = "required", required = true) @Nullable String required) {
+      @JsonProperty(value = "required", required = true) @JsonApiAttribute
+          @Nullable String required) {
     this.id = id;
     this.required = required;
   }

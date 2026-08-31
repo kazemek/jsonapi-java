@@ -1,7 +1,8 @@
 # ADR-011: Flat DTO Reads Remain Document-First
 
 **Status:** Accepted  
-**Date:** 2026-07-30
+**Date:** 2026-07-30  
+**Amendment:** 2026-08-31 — explicit JSON:API role participation; conventional `id` remains the identifier convention
 
 ## Context
 
@@ -24,6 +25,9 @@ Flat DTO binding:
 
 - uses the same Jackson logical-property metadata, annotations, creator rules, converters, and
   diagnostics in both directions;
+- participates only for properties assigned a JSON:API role (plus the conventional identifier
+  whose configured Jackson external name is `id`); unannotated ordinary properties are not
+  bound as attributes;
 - uses Jackson's effective **deserialization** property model to decide which supplied mapped
   members can participate in ordinary reads; a serialization accessor is not proof of read
   bindability;

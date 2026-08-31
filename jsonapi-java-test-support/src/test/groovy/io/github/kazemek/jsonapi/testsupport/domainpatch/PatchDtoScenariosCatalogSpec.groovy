@@ -71,9 +71,11 @@ class PatchDtoScenariosCatalogSpec extends Specification {
     }
   }
 
-  def "declaration failures use INVALID_PATCH_PROPERTY_TYPE"() {
+  def "declaration type failures use INVALID_PATCH_PROPERTY_TYPE"() {
     expect:
-    PatchDtoScenarios.catalog().where({ it.id().contains("declaration") }).every { scenario ->
+    PatchDtoScenarios.catalog().where({
+      it.id().contains("declaration") && it.id() != "patch-dto-declaration-unannotated-member"
+    }).every { scenario ->
       def expectation = scenario.expectation()
       expectation instanceof PatchDtoExpectation.BinderFailure &&
           expectation.diagnostic() == MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE

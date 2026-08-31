@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -17,6 +18,7 @@ public class FlatInheritedBlog extends FlatBlogBase {
     this.description = description;
   }
 
+  @JsonApiAttribute
   public @Nullable String getDescription() {
     return description;
   }

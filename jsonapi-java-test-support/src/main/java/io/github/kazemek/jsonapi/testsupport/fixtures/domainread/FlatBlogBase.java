@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -25,6 +26,7 @@ public class FlatBlogBase {
     this.id = id;
   }
 
+  @JsonApiAttribute
   public @Nullable String getName() {
     return name;
   }

@@ -17,7 +17,9 @@ import tools.jackson.databind.json.JsonMapper;
  * never directly. The binder is safe for concurrent use once created. Binding uses the mapping
  * definitions (resolver and cache) and one {@link JsonMapper#convertValue(Object, JavaType)} per
  * resource, so Jackson's logical property model, creators, deserializers, converters, naming,
- * mix-ins, and configured modules remain authoritative (ADR-004).
+ * mix-ins, and configured modules remain authoritative (ADR-004). JSON:API annotations assign
+ * semantic roles; unannotated Jackson-visible properties do not participate, except the
+ * conventional identifier whose Jackson external name is {@code id}.
  *
  * <p>Binding is read-only and document-first: callers pass an already-validated {@link
  * ResourceObject} and the binder never parses JSON nor reads document {@code included} (ADR-006,

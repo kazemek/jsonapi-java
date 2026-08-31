@@ -7,15 +7,16 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks a domain property as JSON:API relationship linkage and optionally names it.
+ * Marks a domain property as JSON:API relationship linkage.
  *
- * <p>This annotation identifies linkage and its name only. It does not request inclusion and
- * carries no fetch, cascade, repository, or ORM policy (ADR-005). Relationship properties cease to
- * be default attributes. Annotations never make Jackson-ignored properties visible.
+ * <p>This annotation assigns the relationship semantic role only. It does not name the member,
+ * request inclusion, or carry fetch, cascade, repository, or ORM policy (ADR-005). Configured
+ * Jackson is the sole authority for property discovery, visibility, mix-ins, creators,
+ * serializers/deserializers, cardinality, value-shape, and the external JSON:API relationship
+ * member name ({@code @JsonProperty}, naming strategies, and other Jackson property mechanics).
  *
- * <p>An empty {@link #name()} retains Jackson's logical property name; a non-empty override is
- * interpreted and validated only by Jackson mapping, which also owns cardinality, value-shape, and
- * logical-property conflict diagnostics.
+ * <p>A Jackson-visible property participates as a relationship only when this annotation is
+ * present. Annotations never make Jackson-ignored properties visible.
  *
  * <p>Targets include fields, methods, parameters, and record components. Mapping collapses
  * propagated occurrences into one logical property.
@@ -30,15 +31,4 @@ import java.lang.annotation.Target;
   ElementType.PARAMETER,
   ElementType.RECORD_COMPONENT
 })
-public @interface JsonApiRelationship {
-
-  /**
-   * Optional JSON:API relationship field-name override.
-   *
-   * <p>The empty string is the explicit “use Jackson's logical property name” sentinel, never Java
-   * {@code null}.
-   *
-   * @return field-name override, or {@code ""} to keep Jackson's logical name
-   */
-  String name() default "";
-}
+public @interface JsonApiRelationship {}

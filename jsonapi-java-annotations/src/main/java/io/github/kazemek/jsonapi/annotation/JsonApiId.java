@@ -9,10 +9,17 @@ import java.lang.annotation.Target;
 /**
  * Marks the JSON:API resource identifier on a domain property.
  *
- * <p>An explicit {@code @JsonApiId}, or Jackson mapping's conventional logical property named
- * {@code id}, supplies the identifier. Identifier properties cease to be default attributes.
- * Annotations never make Jackson-ignored properties visible; Jackson mapping resolves visibility
- * through Jackson's logical property model and owns identifier conversion and conflict diagnostics.
+ * <p>An explicit {@code @JsonApiId}, or a Jackson-visible property whose configured Jackson
+ * external name is {@code id}, supplies the identifier. That conventional {@code id} property is
+ * the sole intentional implicit JSON:API property-role convention: otherwise-unclassified
+ * properties do not participate. Identifier properties never become attributes. Annotations never
+ * make Jackson-ignored properties visible; Jackson mapping resolves visibility through Jackson's
+ * logical property model and owns identifier conversion and conflict diagnostics.
+ *
+ * <p>The JSON:API document member for the identifier remains {@code id}. Configured Jackson may
+ * still rename the Java property used to construct or access that identifier; such a rename does
+ * not move the identifier on the wire. A property whose Jackson external name is no longer {@code
+ * id} must be annotated {@code @JsonApiId} to remain the identifier.
  *
  * <p>Targets include fields, methods, parameters, and record components so Java and Jackson can
  * expose the same logical property. Mapping collapses propagated occurrences into one logical

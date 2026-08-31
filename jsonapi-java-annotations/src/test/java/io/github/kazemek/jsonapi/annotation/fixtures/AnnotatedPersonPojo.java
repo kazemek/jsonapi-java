@@ -10,21 +10,19 @@ public final class AnnotatedPersonPojo {
 
   @JsonApiId private final String id;
 
-  @JsonApiAttribute(name = "full-name")
-  private final String name;
+  @JsonApiAttribute private final String name;
 
   @JsonApiAttribute private final String email;
 
-  @JsonApiRelationship(name = "articles")
-  private final String articleIds;
+  @JsonApiRelationship private final String articleIds;
 
   @JsonApiRelationship private final String managerId;
 
   public AnnotatedPersonPojo(
       @JsonApiId String id,
-      @JsonApiAttribute(name = "full-name") String name,
+      @JsonApiAttribute String name,
       @JsonApiAttribute String email,
-      @JsonApiRelationship(name = "articles") String articleIds,
+      @JsonApiRelationship String articleIds,
       @JsonApiRelationship String managerId) {
     this.id = id;
     this.name = name;
@@ -38,7 +36,7 @@ public final class AnnotatedPersonPojo {
     return id;
   }
 
-  @JsonApiAttribute(name = "full-name")
+  @JsonApiAttribute
   public String getName() {
     return name;
   }
@@ -48,7 +46,7 @@ public final class AnnotatedPersonPojo {
     return email;
   }
 
-  @JsonApiRelationship(name = "articles")
+  @JsonApiRelationship
   public String getArticleIds() {
     return articleIds;
   }

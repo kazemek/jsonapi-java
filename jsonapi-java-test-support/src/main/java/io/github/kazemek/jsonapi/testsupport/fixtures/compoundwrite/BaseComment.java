@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -31,6 +32,7 @@ public class BaseComment {
     this.id = id;
   }
 
+  @JsonApiAttribute
   public @Nullable String getBody() {
     return body;
   }

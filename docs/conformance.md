@@ -85,10 +85,10 @@ deferred.
 |--------------------------------------------------------------|-----------|-----------------------------------------------------------------------|
 | `@JsonApiResource(type)` on domain types                     | supported | Runtime-retained, `@Documented`; not `@Inherited`                     |
 | `@JsonApiId` marker on logical properties                    | supported | Fields, methods, parameters, and record components                    |
-| `@JsonApiAttribute(name)` optional attribute rename          | supported | Empty `name()` retains Jackson's logical property name                |
-| `@JsonApiRelationship(name)` linkage metadata                | supported | Name only; no inclusion, fetch, cascade, or persistence elements      |
+| `@JsonApiAttribute` attribute role                           | supported | Role-only; configured Jackson owns the external member name           |
+| `@JsonApiRelationship` linkage role                          | supported | Role-only; no inclusion, fetch, cascade, or persistence elements      |
 | `@JsonApiMeta` whole resource-side meta                      | supported | One property per resource; complete `ResourceObject.meta` object; read/write/PATCH (ADR-015) |
-| `@JsonApiRelationshipMeta(value)` relationship meta          | supported | Required wire-name reference to a mapped relationship; one per relationship; read/write/PATCH (ADR-015) |
+| `@JsonApiRelationshipMeta(relationship)` relationship meta   | supported | Required Jackson property identity of a mapped relationship; meta follows that relationship's Jackson external name; one per relationship; read/write/PATCH (ADR-015) |
 | `RelationshipLinkage<T, M>` identifier meta                  | supported | Opt-in wrapper; `target` maps as the ordinary relationship target; `meta` maps to `ResourceIdentifier.meta`; read/write; PATCH only via whole-linkage replacement (ADR-017) |
 
 ## Codec / wire format (supported)

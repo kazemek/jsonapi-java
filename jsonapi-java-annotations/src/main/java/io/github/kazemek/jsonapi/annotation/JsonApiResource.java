@@ -9,8 +9,10 @@ import java.lang.annotation.Target;
 /**
  * Declares that a domain type maps to a JSON:API resource of the given {@link #type()}.
  *
- * <p>{@code type()} is required and has no default. Member-name grammar validation for the type
- * string is performed when a Jackson mapping definition is built, not by this annotation artifact.
+ * <p>{@code type()} is required and has no default. It is explicit JSON:API semantic data — the
+ * resource {@code type} member — not a Jackson property name. Member-name grammar validation for
+ * the type string is performed when a Jackson mapping definition is built, not by this annotation
+ * artifact.
  *
  * <p>{@code ElementType.TYPE} permits classes, records, interfaces, enums, and annotation types at
  * compile time. Supported domain shapes and diagnostics for unsupported placements are defined by

@@ -32,30 +32,20 @@ class AnnotationMetaContractSpec extends Specification {
     JsonApiId.declaredMethods.length == 0
   }
 
-  def "JsonApiAttribute has name defaulting to empty string on property targets and is not Inherited"() {
+  def "JsonApiAttribute is a runtime Documented marker on property targets and is not Inherited"() {
     expect:
     assertRuntimeDocumented(JsonApiAttribute)
     assertPropertyTargets(JsonApiAttribute)
     JsonApiAttribute.getAnnotation(Inherited) == null
-
-    and:
-    Method nameMethod = JsonApiAttribute.getDeclaredMethod("name")
-    nameMethod.returnType == String
-    nameMethod.defaultValue == ""
-    JsonApiAttribute.declaredMethods*.name as Set == (["name"] as Set)
+    JsonApiAttribute.declaredMethods.length == 0
   }
 
-  def "JsonApiRelationship has name defaulting to empty string on property targets and is not Inherited"() {
+  def "JsonApiRelationship is a runtime Documented marker on property targets and is not Inherited"() {
     expect:
     assertRuntimeDocumented(JsonApiRelationship)
     assertPropertyTargets(JsonApiRelationship)
     JsonApiRelationship.getAnnotation(Inherited) == null
-
-    and:
-    Method nameMethod = JsonApiRelationship.getDeclaredMethod("name")
-    nameMethod.returnType == String
-    nameMethod.defaultValue == ""
-    JsonApiRelationship.declaredMethods*.name as Set == (["name"] as Set)
+    JsonApiRelationship.declaredMethods.length == 0
   }
 
   def "JsonApiMeta is a runtime Documented marker on property targets and is not Inherited"() {
@@ -66,17 +56,17 @@ class AnnotationMetaContractSpec extends Specification {
     JsonApiMeta.declaredMethods.length == 0
   }
 
-  def "JsonApiRelationshipMeta has a required non-defaulted value on property targets and is not Inherited"() {
+  def "JsonApiRelationshipMeta has a required non-defaulted relationship element on property targets and is not Inherited"() {
     expect:
     assertRuntimeDocumented(JsonApiRelationshipMeta)
     assertPropertyTargets(JsonApiRelationshipMeta)
     JsonApiRelationshipMeta.getAnnotation(Inherited) == null
 
     and:
-    Method valueMethod = JsonApiRelationshipMeta.getDeclaredMethod("value")
-    valueMethod.returnType == String
-    valueMethod.defaultValue == null
-    JsonApiRelationshipMeta.declaredMethods*.name as Set == (["value"] as Set)
+    Method relationshipMethod = JsonApiRelationshipMeta.getDeclaredMethod("relationship")
+    relationshipMethod.returnType == String
+    relationshipMethod.defaultValue == null
+    JsonApiRelationshipMeta.declaredMethods*.name as Set == (["relationship"] as Set)
   }
 
   private static void assertRuntimeDocumented(Class<?> annotationType) {

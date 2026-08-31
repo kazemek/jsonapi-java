@@ -1,7 +1,8 @@
 # ADR-005: Separate Linkage from Inclusion
 
 **Status:** Accepted  
-**Date:** 2026-07-26
+**Date:** 2026-07-26  
+**Amendment:** 2026-08-31 — relationship annotation is role-only; Jackson owns the member name
 
 ## Context
 
@@ -11,7 +12,7 @@ Sparse fieldsets also affect full linkage and must share the same serialization 
 
 ## Decision
 
-`@JsonApiRelationship` identifies a relationship and its name only. It carries no fetch, cascade, inclusion, repository, or ORM behavior.
+`@JsonApiRelationship` identifies a relationship role only. Configured Jackson owns the external relationship member name. The annotation carries no fetch, cascade, inclusion, repository, or ORM behavior.
 
 Relationship values produce linkage. Related resources enter `included` only when selected by an explicit serialization context or application policy.
 

@@ -24,7 +24,11 @@ public sealed interface PatchChange
   /** Final JSON:API member name (including attribute/relationship renames). */
   String jsonapiName();
 
-  /** Jackson logical property name on the annotated DTO. */
+  /**
+   * Jackson internal property identity on the annotated DTO (Java field, record component, or
+   * JavaBean name). Distinct from {@link #jsonapiName()}, which is the configured-Jackson external
+   * JSON:API member name.
+   */
   String logicalName();
 
   /** Converted property value; {@code null} means explicit null / null linkage, not omission. */

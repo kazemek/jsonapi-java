@@ -8,7 +8,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 @JsonApiResource(type = "articles")
 public record AnnotatedArticleRecord(
     @JsonApiId String id,
-    @JsonApiAttribute(name = "headline") String title,
+    @JsonApiAttribute String title,
     @JsonApiAttribute String body,
-    @JsonApiRelationship(name = "author") String authorId,
+    @JsonApiRelationship String authorId,
     @JsonApiRelationship String comments) {}

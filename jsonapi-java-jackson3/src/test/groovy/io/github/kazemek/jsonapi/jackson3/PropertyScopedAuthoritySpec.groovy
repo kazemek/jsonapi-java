@@ -614,11 +614,11 @@ class PropertyScopedAuthoritySpec extends Specification {
     @JsonApiAttribute @JsonSerialize(using = StructuredSerializer) StructuredValue details
     @JsonApiMeta @JsonSerialize(using = MetaSerializer) MetaValue meta
     @JsonApiRelationship ResourceIdentifier author
-    @JsonApiRelationshipMeta("author") @JsonSerialize(using = MetaSerializer) MetaValue authorMeta
+    @JsonApiRelationshipMeta(relationship = "author") @JsonSerialize(using = MetaSerializer) MetaValue authorMeta
 
     DirectPropertyArticle(
     String id,
-    String title,
+    @JsonApiAttribute String title,
     StructuredValue details,
     MetaValue meta,
     ResourceIdentifier author,
@@ -635,7 +635,7 @@ class PropertyScopedAuthoritySpec extends Specification {
   @JsonApiResource(type = "ordinary-articles")
   static class OrdinaryPropertyArticle {
     @JsonApiId String id
-    String title
+    @JsonApiAttribute String title
 
     OrdinaryPropertyArticle(String id, String title) {
       this.id = id
@@ -763,7 +763,7 @@ class PropertyScopedAuthoritySpec extends Specification {
   @JsonApiResource(type = "mixin-articles")
   static class MixinPropertyArticle {
     @JsonApiId String id
-    String title
+    @JsonApiAttribute String title
     @JsonApiMeta MetaValue meta
 
     MixinPropertyArticle(String id, String title, MetaValue meta) {
@@ -784,13 +784,13 @@ class PropertyScopedAuthoritySpec extends Specification {
   @JsonApiResource(type = "articles")
   static class DirectIdArticle {
     @JsonApiId @JsonDeserialize(using = IdentifierDeserializer) String id
-    @JsonDeserialize(using = IdentifierDeserializer) String title
+    @JsonDeserialize(using = IdentifierDeserializer) @JsonApiAttribute String title
   }
 
   @JsonApiResource(type = "articles")
   static class MixinIdArticle {
     @JsonApiId String id
-    String title
+    @JsonApiAttribute String title
   }
 
   static abstract class IdDeserializerMixIn {
@@ -808,7 +808,7 @@ class PropertyScopedAuthoritySpec extends Specification {
   @JsonApiResource(type = "articles")
   static class FailingIdArticle {
     @JsonApiId @JsonDeserialize(using = FailingIdentifierDeserializer) String id
-    String title
+    @JsonApiAttribute String title
   }
 
   static class NestedFailingIdentifier {

@@ -73,9 +73,9 @@ public final class WriteDiagnosticsScenarios {
               null),
           new WriteDiagnosticScenario(
               "attribute-relationship-name-collision",
-              "Attribute and relationship mapped to one name are NAME_COLLISION",
+              "Attribute and relationship mapped to one Jackson name are DUPLICATE_ROLE",
               () -> new WriteDiagnosticsFixtures.NameCollisionEntity("1", "a", "b"),
-              MappingDiagnostic.NAME_COLLISION,
+              MappingDiagnostic.DUPLICATE_ROLE,
               null),
           new WriteDiagnosticScenario(
               "duplicate-attribute-names-at-container",
@@ -91,27 +91,27 @@ public final class WriteDiagnosticsScenarios {
               "/relationships/same/data"),
           new WriteDiagnosticScenario(
               "invalid-attribute-name-override",
-              "Attribute override with forbidden characters is INVALID_ATTRIBUTE_NAME",
+              "Attribute Jackson name with forbidden characters is INVALID_ATTRIBUTE_NAME",
               () -> new WriteDiagnosticsFixtures.InvalidAttrNameEntity("1", "v"),
               MappingDiagnostic.INVALID_ATTRIBUTE_NAME,
               null),
           new WriteDiagnosticScenario(
               "reserved-attribute-name-type",
-              "Attribute override using reserved name 'type' is INVALID_ATTRIBUTE_NAME",
+              "Attribute Jackson name using reserved name 'type' is INVALID_ATTRIBUTE_NAME",
               () -> new WriteDiagnosticsFixtures.ReservedAttrNameEntity("1", "v"),
               MappingDiagnostic.INVALID_ATTRIBUTE_NAME,
               null),
           new WriteDiagnosticScenario(
               "invalid-relationship-name-override",
-              "Relationship override with forbidden characters is INVALID_RELATIONSHIP_NAME",
+              "Relationship Jackson name with forbidden characters is INVALID_RELATIONSHIP_NAME",
               () -> new WriteDiagnosticsFixtures.InvalidRelNameEntity("1", "o"),
               MappingDiagnostic.INVALID_RELATIONSHIP_NAME,
               null),
           new WriteDiagnosticScenario(
               "reserved-relationship-name-id",
-              "Relationship override using reserved name 'id' is INVALID_RELATIONSHIP_NAME",
+              "Relationship mapped onto the identifier's Jackson name is DUPLICATE_ROLE",
               () -> new WriteDiagnosticsFixtures.ReservedRelNameEntity("1", "o"),
-              MappingDiagnostic.INVALID_RELATIONSHIP_NAME,
+              MappingDiagnostic.DUPLICATE_ROLE,
               null),
           new WriteDiagnosticScenario(
               "failing-attribute-getter-at-wire-name",

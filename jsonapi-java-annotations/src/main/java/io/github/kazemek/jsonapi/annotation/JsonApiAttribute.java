@@ -7,15 +7,18 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Optionally overrides the JSON:API attribute field name for a domain property.
+ * Marks a domain property as a JSON:API attribute.
  *
- * <p>Jackson remains authoritative for logical property discovery, visibility, names, values, and
- * serialization. An empty {@link #name()} retains Jackson's logical property name; a non-empty
- * override is interpreted and validated (including member-name grammar) only by Jackson mapping.
+ * <p>This annotation assigns the attribute semantic role only. It does not name the member:
+ * configured Jackson is the sole authority for property discovery, visibility, mix-ins, creators,
+ * serializers/deserializers, and the external JSON:API member name ({@code @JsonProperty}, naming
+ * strategies, and other Jackson property mechanics).
  *
- * <p>Annotations never make Jackson-ignored properties visible. Identifier and relationship roles
- * cease to be default attributes; remaining Jackson-visible properties become attributes by default
- * after those roles are applied (ADR-004).
+ * <p>A Jackson-visible property participates as an attribute only when this annotation is present.
+ * Otherwise-unclassified properties do not become attributes by fallback. Annotations never make
+ * Jackson-ignored properties visible. The conventional property whose configured Jackson external
+ * name is {@code id} is the sole intentional implicit JSON:API property-role convention and is
+ * owned by {@link JsonApiId}.
  *
  * <p>Targets include fields, methods, parameters, and record components. Mapping collapses
  * propagated occurrences into one logical property.
@@ -30,15 +33,4 @@ import java.lang.annotation.Target;
   ElementType.PARAMETER,
   ElementType.RECORD_COMPONENT
 })
-public @interface JsonApiAttribute {
-
-  /**
-   * Optional JSON:API attribute field-name override.
-   *
-   * <p>The empty string is the explicit “use Jackson's logical property name” sentinel, never Java
-   * {@code null}.
-   *
-   * @return field-name override, or {@code ""} to keep Jackson's logical name
-   */
-  String name() default "";
-}
+public @interface JsonApiAttribute {}

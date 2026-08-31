@@ -171,5 +171,6 @@ public final class MetaConversionProbeFixtures {
   public record ThrowingRelMetaPatchArticle(
       @JsonApiId String id,
       @JsonApiRelationship PatchPresence<ResourceIdentifier> author,
-      @JsonApiRelationshipMeta("author") PatchPresence<ThrowingRelMetaPatch> authorMeta) {}
+      @JsonApiRelationshipMeta(relationship = "author")
+          PatchPresence<ThrowingRelMetaPatch> authorMeta) {}
 }

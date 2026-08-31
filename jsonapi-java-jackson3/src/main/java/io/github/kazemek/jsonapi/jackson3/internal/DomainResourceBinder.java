@@ -124,7 +124,7 @@ public final class DomainResourceBinder {
     // Keep the parsed JSON:API intermediate in the synthetic property map. The final bean
     // construction then applies the target property's fully contextualized Jackson deserializer
     // exactly once, rather than converting the detached identifier as a root value first.
-    properties.put(identifierProperty.logicalName(), parsed);
+    properties.put(identifierProperty.jacksonName(), parsed);
   }
 
   private JsonApiMappingException identifierConversionFailed(
@@ -172,7 +172,7 @@ public final class DomainResourceBinder {
       }
       requireDeserializable(
           property, MappingLocation.of("attributes", property.jsonapiName()), rawType);
-      properties.put(property.logicalName(), members.get(property.jsonapiName()));
+      properties.put(property.jacksonName(), members.get(property.jsonapiName()));
     }
   }
 
@@ -214,7 +214,7 @@ public final class DomainResourceBinder {
     }
     requireDeserializable(
         resourceMetaProperty, RelationshipMetaSupport.resourceMetaLocation(), rawType);
-    properties.put(resourceMetaProperty.logicalName(), resource.meta().members());
+    properties.put(resourceMetaProperty.jacksonName(), resource.meta().members());
   }
 
   /**
@@ -244,7 +244,7 @@ public final class DomainResourceBinder {
           property,
           RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()),
           rawType);
-      properties.put(property.logicalName(), relationship.meta().members());
+      properties.put(property.jacksonName(), relationship.meta().members());
     }
   }
 
@@ -267,7 +267,7 @@ public final class DomainResourceBinder {
     RelationshipLinkageMapper linkageMapper =
         RelationshipLinkageSupport.selectLinkageMapper(propertyType, property, linkageMappers);
     properties.put(
-        property.logicalName(),
+        property.jacksonName(),
         RelationshipLinkageSupport.convertLinkage(
             property, data, linkageMapper, mappingType, mapper));
   }

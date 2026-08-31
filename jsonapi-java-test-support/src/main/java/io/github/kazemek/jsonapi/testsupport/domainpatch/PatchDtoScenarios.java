@@ -34,6 +34,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.BoxPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ConventionalIdPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.DirectPresentPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.GeoPatch;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.IntIdPatch;
@@ -91,6 +92,7 @@ public final class PatchDtoScenarios {
           relationshipEmptyCollection(),
           relationshipNonEmptyCollection(),
           identityOnly(),
+          conventionalId(),
           wrongPrimaryShape(),
           resourceTypeMismatch(),
           unknownAttribute(),
@@ -274,6 +276,14 @@ public final class PatchDtoScenarios {
                 PatchPresence.omitted())));
   }
 
+  private static PatchDtoScenario conventionalId() {
+    return scenario(
+        "patch-dto-conventional-id",
+        doc(TITLE_ONLY),
+        ConventionalIdPatch.class,
+        PatchDtoExpectation.success("1", Map.of(TITLE, PatchPresence.present("T"))));
+  }
+
   private static PatchDtoScenario wrongPrimaryShape() {
     return scenario(
         "patch-dto-wrong-primary-shape",
@@ -359,7 +369,7 @@ public final class PatchDtoScenarios {
         doc("note-attribute"),
         UnannotatedPatch.class,
         PatchDtoExpectation.binderFailure(
-            MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE, "/attributes/note"));
+            MappingDiagnostic.UNKNOWN_PATCH_MEMBER, "/attributes/note"));
   }
 
   private static PatchDtoScenario declarationPresenceId() {

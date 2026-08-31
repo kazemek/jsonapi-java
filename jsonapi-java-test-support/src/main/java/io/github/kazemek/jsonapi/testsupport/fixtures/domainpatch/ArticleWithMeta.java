@@ -16,4 +16,4 @@ public record ArticleWithMeta(
     @JsonApiAttribute @Nullable String title,
     @JsonApiRelationship @Nullable ResourceIdentifier author,
     @JsonApiMeta @Nullable ArticleMeta meta,
-    @JsonApiRelationshipMeta("author") @Nullable AuthorMeta authorMeta) {}
+    @JsonApiRelationshipMeta(relationship = "author") @Nullable AuthorMeta authorMeta) {}

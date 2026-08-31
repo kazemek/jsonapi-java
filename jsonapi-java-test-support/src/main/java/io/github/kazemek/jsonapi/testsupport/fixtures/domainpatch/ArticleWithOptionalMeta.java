@@ -17,4 +17,4 @@ public record ArticleWithOptionalMeta(
     @JsonApiAttribute @Nullable String title,
     @JsonApiRelationship @Nullable ResourceIdentifier author,
     @JsonApiMeta Optional<ArticleMeta> meta,
-    @JsonApiRelationshipMeta("author") Optional<AuthorMeta> authorMeta) {}
+    @JsonApiRelationshipMeta(relationship = "author") Optional<AuthorMeta> authorMeta) {}

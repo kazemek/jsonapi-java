@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
@@ -30,6 +31,7 @@ public class FlatDefaultedArticle {
     this.id = id;
   }
 
+  @JsonApiAttribute
   public @Nullable String getTitle() {
     return title;
   }
@@ -38,6 +40,7 @@ public class FlatDefaultedArticle {
     this.title = title;
   }
 
+  @JsonApiAttribute
   public String getBody() {
     return body;
   }
