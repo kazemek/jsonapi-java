@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Spotless Format
 
-Format the repository and verify compliance before declaring implementation work complete. Run this before `./gradlew clean build` (whose `check` already executes `spotlessCheck`) and before the `sonar-quality-gate` skill, so the build passes on the first run instead of failing on formatting and requiring a re-run.
+Format the repository and verify compliance before declaring implementation work complete. Run this before `./gradlew clean build` (whose `check` already executes `spotlessCheck`), so the build passes on the first run instead of failing on formatting and requiring a re-run.
 
 ## Applicability
 
@@ -35,7 +35,7 @@ unless the user makes an explicit formatting request.
 ```
 
 3. Interpret the result:
-   - **Exit 0 on both:** Formatting is clean. Continue to any remaining completion gates (e.g. Sonar).
+   - **Exit 0 on both:** Formatting is clean. Continue to any remaining completion gates.
    - **Non-zero exit:** Task is incomplete. Inspect Spotless output, fix remaining issues (or re-run `spotlessApply` after manual edits), then run `spotlessCheck` again.
 
 ## Notes

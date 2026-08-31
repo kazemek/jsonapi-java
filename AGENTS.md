@@ -60,7 +60,6 @@ descriptive, not an automatic task-matching router:
 | Produce a fresh-session review handoff when required | `implementation-handoff` |
 | Add a module or change public packages, entry points, validate/read flows, or non-goals | `module-docs` |
 | Format Spotless-covered files | `spotless-format` |
-| Complete production/test source work | `sonar-quality-gate` |
 
 **Planning uses the capabilities available in the current session.** Establish facts from repository
 evidence and primary sources. When executable tools are available, bounded planning spikes may be
@@ -161,16 +160,19 @@ Classify the final diff; tiers combine when multiple scopes are touched.
 | Docs/planning only (`**/*.md`, `docs/**`, `.agentWork/**`) | Review links, consistency, and section order; no build |
 | Workflow only (`.github/**`, `.editorconfig`, `.gitattributes`, `.gitignore`) | No local gate; CI validates workflow behavior |
 | Build configuration (`**/*.gradle.kts`, `gradle/**`, `build-logic/**`, `config/**`) | `./gradlew clean build`; also Spotless if a covered file/config changed |
-| Module production/test sources (`jsonapi-java-*/src/**`) | `spotless-format` -> `./gradlew clean build` -> `sonar-quality-gate` |
+| Module production/test sources (`jsonapi-java-*/src/**`) | `spotless-format` -> `./gradlew clean build` |
 | Other/unclassified paths, including `fixtures/**` | Classify explicitly; otherwise use the full source tier |
 
 - For covered `.java`, `.groovy`, `.kt`, or `.gradle.kts` changes, run `./gradlew spotlessApply`
   then `./gradlew spotlessCheck` before the build.
-- Source changes are incomplete without the Sonar skill's Quality Gate wait and Issues API script
-  exiting 0 (zero unresolved new-code issues). The script fails closed by default; do not treat a
-  green Quality Gate or a printed non-zero `total` as success. If `SONAR_TOKEN` is unavailable,
-  report the blocker; work remains incomplete until CI passes including that Issues API check.
-- CI runs `./gradlew clean spotlessCheck build jacocoTestReport sonar` on `main` pushes and PRs,
-  then `.agents/skills/sonar-quality-gate/scripts/check-new-code-issues.sh --list` so neither
-  agents nor CI can complete on Quality Gate alone. Failed-run details are in the
-  `gradle-reports` artifact and the Unit tests check.
+- Source completion is the repository's deterministic local gates: Spotless, compilation, tests,
+  JaCoCo floors, ArchUnit, NullAway, and the other repository-local `check` work that `./gradlew
+  clean build` already runs. Do not wait on a local SonarCloud analysis, Quality Gate wait, or
+  Issues API round-trip before opening a PR. Ordinary `./gradlew clean build` stays token-free; do
+  not attach `sonar` to `build`/`check`.
+- CI remains the authority for Sonar. On `main` pushes and PRs, CI runs
+  `./gradlew clean spotlessCheck build jacocoTestReport sonar` (Quality Gate wait) then
+  `.github/scripts/check-new-code-issues.sh --list` so neither agents nor CI can complete on Quality
+  Gate alone. The script fails closed by default; do not treat a green Quality Gate or a printed
+  non-zero `total` as success. Failed-run details are in the `gradle-reports` artifact and the
+  Unit tests check.

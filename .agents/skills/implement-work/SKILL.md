@@ -41,9 +41,9 @@ Use `module-docs` when its trigger applies.
 ## Completion gates
 
 Resolve the change-set from branch and uncommitted Git metadata against an explicit or remote HEAD
-base. Classify paths and run only applicable `AGENTS.md` gates in order. Sonar source work still
-requires Quality Gate success and zero unresolved new-code Issues API results when that gate
-applies.
+base. Classify paths and run only applicable `AGENTS.md` gates in order. Local source completion does
+not include a SonarCloud round-trip; CI remains the authority for Quality Gate and zero
+unresolved new-code issues.
 
 Synchronize affected Snapshot surfaces (module README, package docs, ADR/conformance as needed) so
 no durable fact exists only in a disposable local plan.
