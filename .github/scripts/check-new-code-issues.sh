@@ -52,12 +52,16 @@ for cmd in curl jq; do
   fi
 done
 
+urlencode() {
+  jq -nr --arg v "$1" '$v|@uri'
+}
+
 COMPONENT_KEY="kazemek_jsonapi-java"
 BASE_URL="https://sonarcloud.io/api/issues/search?componentKeys=${COMPONENT_KEY}&resolved=false&inNewCodePeriod=true&ps=${PAGE_SIZE}"
 if [[ -n "${PULL_REQUEST:-}" ]]; then
-  BASE_URL="${BASE_URL}&pullRequest=${PULL_REQUEST}"
+  BASE_URL="${BASE_URL}&pullRequest=$(urlencode "${PULL_REQUEST}")"
 elif [[ -n "${BRANCH:-}" ]]; then
-  BASE_URL="${BASE_URL}&branch=${BRANCH}"
+  BASE_URL="${BASE_URL}&branch=$(urlencode "${BRANCH}")"
 fi
 
 fetch_page() {
