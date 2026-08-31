@@ -126,7 +126,8 @@ final class BeanConstruction {
       return false;
     }
     String first = names.getFirst();
-    return first.equals(property.logicalName())
+    return first.equals(property.jacksonName())
+        || first.equals(property.logicalName())
         || first.equals(property.definition().getFullName().getSimpleName());
   }
 

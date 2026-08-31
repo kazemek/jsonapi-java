@@ -4,8 +4,8 @@ import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 
 /**
- * Invalid direct typed PATCH DTO: an unannotated member defaults to the attribute role and must
- * therefore also be exactly {@code PatchPresence}.
+ * Unannotated ordinary property: it does not participate in JSON:API mapping. A supplied {@code
+ * note} attribute is therefore an unknown typed PATCH member.
  */
 @JsonApiResource(type = "articles")
 public record UnannotatedPatch(@JsonApiId String id, String note) {}

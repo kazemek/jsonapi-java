@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
@@ -585,8 +586,8 @@ class ResourceBinderSpec extends Specification {
   @JsonApiResource(type = "words")
   static class FlatWords {
     @JsonApiId String id
-    int longFieldName
-    int otherValue
+    @JsonApiAttribute int longFieldName
+    @JsonApiAttribute int otherValue
   }
 
   @JsonApiResource(type = "named")
@@ -596,7 +597,7 @@ class ResourceBinderSpec extends Specification {
   }
 
   abstract static class FlatMixInDef {
-    @JsonApiAttribute(name = "custom-name")
+    @JsonApiAttribute @JsonProperty("custom-name")
     abstract String getValue()
   }
 
@@ -615,6 +616,7 @@ class ResourceBinderSpec extends Specification {
   static class FlatLoudThing {
     @JsonApiId String id
     @JsonDeserialize(using = UppercaseDeserializer)
+    @JsonApiAttribute
     String title
   }
 }

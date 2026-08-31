@@ -39,7 +39,7 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
   /** No direct annotation anywhere: only the configured mix-in supplies resource metadata. */
   static class MixinOnlyArticle {
     String id
-    String title
+    @JsonApiAttribute String title
   }
 
   @JsonApiResource(type = "mixin-articles")
@@ -49,7 +49,7 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
   @JsonApiResource(type = "direct-articles")
   static class DirectlyTypedArticle {
     String id
-    String title
+    @JsonApiAttribute String title
   }
 
   @JsonApiResource(type = "resource-bases")
@@ -58,7 +58,7 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
   }
 
   static class ResourceChild extends ResourceBase {
-    String title
+    @JsonApiAttribute String title
   }
 
   @JsonApiResource(type = "interface-resources")
@@ -74,7 +74,7 @@ class ConfiguredResourceMetadataAuthoritySpec extends Specification {
   /** Read/binding DTO whose wire type exists only through its mix-in. */
   static class MixinFlatArticle {
     String id
-    String title
+    @JsonApiAttribute String title
   }
 
   @JsonApiResource(type = "mixin-flat-articles")

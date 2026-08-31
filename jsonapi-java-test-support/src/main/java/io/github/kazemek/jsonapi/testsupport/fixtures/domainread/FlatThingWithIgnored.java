@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -13,7 +14,8 @@ public class FlatThingWithIgnored {
   @JsonApiId private @Nullable String id;
 
   @JsonIgnore
-  @JsonApiAttribute(name = "secret")
+  @JsonApiAttribute
+  @JsonProperty("secret")
   private @Nullable String confidential;
 
   private @Nullable String name;
@@ -43,6 +45,7 @@ public class FlatThingWithIgnored {
     this.confidential = confidential;
   }
 
+  @JsonApiAttribute
   public @Nullable String getName() {
     return name;
   }

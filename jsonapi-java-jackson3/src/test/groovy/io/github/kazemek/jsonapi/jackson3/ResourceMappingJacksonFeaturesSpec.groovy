@@ -1,6 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
@@ -24,8 +25,8 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
   static class ThingWithIgnored {
     @JsonApiId String id
     @JsonIgnore
-    @JsonApiAttribute(name = "secret") String confidential
-    String name
+    @JsonApiAttribute @JsonProperty("secret") String confidential
+    @JsonApiAttribute String name
   }
 
   def "@JsonIgnore excludes property from mapping"() {
@@ -48,7 +49,7 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
   }
 
   abstract static class MixInDef {
-    @JsonApiAttribute(name = "custom-name")
+    @JsonApiAttribute @JsonProperty("custom-name")
     abstract String getValue()
   }
 
@@ -86,8 +87,8 @@ class ResourceMappingJacksonFeaturesSpec extends Specification {
   @JsonApiResource(type = "words")
   static class ThingWithMultipleWords {
     @JsonApiId String id
-    int longFieldName
-    int otherValue
+    @JsonApiAttribute int longFieldName
+    @JsonApiAttribute int otherValue
   }
 
   def "creator-based immutable POJO maps properties"() {

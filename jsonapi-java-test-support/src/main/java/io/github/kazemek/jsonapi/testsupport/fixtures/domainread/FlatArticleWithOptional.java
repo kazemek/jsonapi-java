@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -11,5 +12,5 @@ import org.jspecify.annotations.Nullable;
 @JsonApiResource(type = "articles")
 public record FlatArticleWithOptional(
     @JsonApiId String id,
-    @Nullable String title,
+    @JsonApiAttribute @Nullable String title,
     @JsonApiRelationship Optional<ResourceIdentifier> author) {}

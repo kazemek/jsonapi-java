@@ -22,19 +22,19 @@ class AnnotationUsageFixtureSpec extends Specification {
 
     and:
     RecordComponent title = component(AnnotatedArticleRecord, "title")
-    title.getAnnotation(JsonApiAttribute).name() == "headline"
+    title.getAnnotation(JsonApiAttribute) != null
 
     and:
     RecordComponent body = component(AnnotatedArticleRecord, "body")
-    body.getAnnotation(JsonApiAttribute).name() == ""
+    body.getAnnotation(JsonApiAttribute) != null
 
     and:
     RecordComponent authorId = component(AnnotatedArticleRecord, "authorId")
-    authorId.getAnnotation(JsonApiRelationship).name() == "author"
+    authorId.getAnnotation(JsonApiRelationship) != null
 
     and:
     RecordComponent comments = component(AnnotatedArticleRecord, "comments")
-    comments.getAnnotation(JsonApiRelationship).name() == ""
+    comments.getAnnotation(JsonApiRelationship) != null
   }
 
   def "POJO declares resource type and property annotations on fields, getters, and constructor parameters"() {
@@ -47,19 +47,19 @@ class AnnotationUsageFixtureSpec extends Specification {
 
     and:
     Field nameField = AnnotatedPersonPojo.getDeclaredField("name")
-    nameField.getAnnotation(JsonApiAttribute).name() == "full-name"
+    nameField.getAnnotation(JsonApiAttribute) != null
 
     and:
     Field emailField = AnnotatedPersonPojo.getDeclaredField("email")
-    emailField.getAnnotation(JsonApiAttribute).name() == ""
+    emailField.getAnnotation(JsonApiAttribute) != null
 
     and:
     Field articlesField = AnnotatedPersonPojo.getDeclaredField("articleIds")
-    articlesField.getAnnotation(JsonApiRelationship).name() == "articles"
+    articlesField.getAnnotation(JsonApiRelationship) != null
 
     and:
     Field managerField = AnnotatedPersonPojo.getDeclaredField("managerId")
-    managerField.getAnnotation(JsonApiRelationship).name() == ""
+    managerField.getAnnotation(JsonApiRelationship) != null
 
     and:
     Method getId = AnnotatedPersonPojo.getDeclaredMethod("getId")
@@ -67,27 +67,27 @@ class AnnotationUsageFixtureSpec extends Specification {
 
     and:
     Method getName = AnnotatedPersonPojo.getDeclaredMethod("getName")
-    getName.getAnnotation(JsonApiAttribute).name() == "full-name"
+    getName.getAnnotation(JsonApiAttribute) != null
 
     and:
     Method getEmail = AnnotatedPersonPojo.getDeclaredMethod("getEmail")
-    getEmail.getAnnotation(JsonApiAttribute).name() == ""
+    getEmail.getAnnotation(JsonApiAttribute) != null
 
     and:
     Method getArticleIds = AnnotatedPersonPojo.getDeclaredMethod("getArticleIds")
-    getArticleIds.getAnnotation(JsonApiRelationship).name() == "articles"
+    getArticleIds.getAnnotation(JsonApiRelationship) != null
 
     and:
     Method getManagerId = AnnotatedPersonPojo.getDeclaredMethod("getManagerId")
-    getManagerId.getAnnotation(JsonApiRelationship).name() == ""
+    getManagerId.getAnnotation(JsonApiRelationship) != null
 
     and:
     Constructor<?> ctor = AnnotatedPersonPojo.declaredConstructors[0]
     ctor.parameters[0].getAnnotation(JsonApiId) != null
-    ctor.parameters[1].getAnnotation(JsonApiAttribute).name() == "full-name"
-    ctor.parameters[2].getAnnotation(JsonApiAttribute).name() == ""
-    ctor.parameters[3].getAnnotation(JsonApiRelationship).name() == "articles"
-    ctor.parameters[4].getAnnotation(JsonApiRelationship).name() == ""
+    ctor.parameters[1].getAnnotation(JsonApiAttribute) != null
+    ctor.parameters[2].getAnnotation(JsonApiAttribute) != null
+    ctor.parameters[3].getAnnotation(JsonApiRelationship) != null
+    ctor.parameters[4].getAnnotation(JsonApiRelationship) != null
   }
 
   def "JsonApiResource is not inherited by subclasses"() {

@@ -103,7 +103,10 @@ List<FlatArticleDto> dtos = binder.fromResources(resources, FlatArticleDto.class
 ```
 
 Ordinary flat reads use Jackson's effective **deserialization** property model while retaining
-JSON:API role and wire-name metadata from the configured mapper. Normal readable/writable,
+JSON:API role and wire-name metadata from the configured mapper. JSON:API annotations assign
+semantic roles; configured Jackson owns discovery, visibility, and the external member name. A
+Jackson-visible property participates only through a JSON:API role, except the conventional
+identifier whose Jackson external name is `id`. Normal readable/writable,
 setter-only, creator-only/constructor-bound, and Jackson write-only properties are supported. A
 supplied member mapped to a getter-only, read-only, or otherwise non-deserializable property fails
 with `NON_DESERIALIZABLE_PROPERTY` at its JSON:API wire location instead of being silently
@@ -280,9 +283,11 @@ Diagnostic locations for nested failures are engine-accumulated wire-name locati
   maps the complete `ResourceObject.meta` / `Relationship.meta` object to one application-owned
   property per location, on read, write, and both PATCH paths:
 
-  - **Annotations:** `@JsonApiMeta` maps resource meta; `@JsonApiRelationshipMeta("author")` maps
-    the meta of the relationship whose resolved JSON:API member name is `author` (required; a
-    renamed relationship needs the wire name here). At most one meta property per location.
+  - **Annotations:** `@JsonApiMeta` maps resource meta; `@JsonApiRelationshipMeta(relationship =
+    "author")` maps the meta of the mapped relationship whose Jackson property identity is `author`
+    (required). Mapping then uses that relationship's configured-Jackson external name on the wire,
+    so renaming the relationship through Jackson carries its meta. At most one meta property per
+    location.
   - **Targets:** Bean / `Map` / `Object`, with at most one `Optional` wrapper (read/write
     and low-level PATCH); typed PATCH DTOs declare exactly `PatchPresence<T>` with at most one
     `Optional` inside. Scalars, containers, and nested wrapper chains are rejected with a stable
@@ -485,8 +490,8 @@ artifact; both majors share the neutral contracts of
   `PatchPresence<T>`. Both paths share `PatchMemberConverter` (per-member conversion against an
   explicit target `JavaType`); the DTO path converts through the unwrapped inner type and wraps in
   `Present`/`Omitted`. Declaration violations (`INVALID_PATCH_PROPERTY_TYPE`) and unknown supplied
-  members (`UNKNOWN_PATCH_MEMBER`) fail at bind time; the declaration check covers implicit-role
-  members too and rejects every wrapper-level Jackson customization path (custom `using`
+  members (`UNKNOWN_PATCH_MEMBER`) fail at bind time; the declaration check covers role-annotated
+  members and rejects every wrapper-level Jackson customization path (custom `using`
   serializers/deserializers, converters, key/content/null customizers, typing, type refinement,
   mix-ins). Construction uses the synthetic-map + `convertValue` strategy (ADR-004) with an
   internal `PresenceMarker` + `PatchPresenceModule`; the marker's serializer always emits the exact

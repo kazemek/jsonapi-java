@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -33,6 +34,7 @@ public class FlatMutableArticle {
     this.id = id;
   }
 
+  @JsonApiAttribute
   public @Nullable String getTitle() {
     return title;
   }

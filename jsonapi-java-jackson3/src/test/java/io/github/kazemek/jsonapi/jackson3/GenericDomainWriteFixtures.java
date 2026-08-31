@@ -221,6 +221,7 @@ public final class GenericDomainWriteFixtures {
       return id;
     }
 
+    @JsonApiAttribute
     public String getName() {
       return name;
     }
@@ -241,6 +242,7 @@ public final class GenericDomainWriteFixtures {
       return id;
     }
 
+    @JsonApiAttribute
     public String getName() {
       return name;
     }

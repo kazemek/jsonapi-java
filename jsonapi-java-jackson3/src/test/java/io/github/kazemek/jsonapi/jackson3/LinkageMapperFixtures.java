@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -23,7 +24,7 @@ public final class LinkageMapperFixtures {
   @JsonApiResource(type = "articles")
   public record FlatMappedArticle(
       @JsonApiId String id,
-      String title,
+      @JsonApiAttribute String title,
       @JsonApiRelationship FlatAuthor author,
       @JsonApiRelationship List<FlatAuthor> contributors) {}
 

@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadScenarios
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
@@ -688,7 +689,7 @@ class DomainDocumentReaderSpec extends Specification {
   @JsonApiResource(type = "loc-renamed")
   static class RenamedLocationArticle {
     @JsonApiId String id
-    @JsonApiAttribute(name = "headline") int title
+    @JsonApiAttribute @JsonProperty("headline") int title
   }
 
   static class NestedAddress {

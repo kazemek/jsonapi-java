@@ -124,7 +124,7 @@ public final class DomainResourceBinder {
     // Keep the parsed JSON:API intermediate in the synthetic property map. The final bean
     // construction then applies the target property's fully contextualized Jackson deserializer
     // exactly once, rather than converting the detached identifier as a root value first.
-    properties.put(identifierProperty.logicalName(), parsed);
+    properties.put(identifierProperty.jacksonName(), parsed);
   }
 
   private JsonApiMappingException identifierConversionFailed(
@@ -172,7 +172,7 @@ public final class DomainResourceBinder {
       }
       requireDeserializable(
           property, MappingLocation.of("attributes", property.jsonapiName()), rawType);
-      properties.put(property.logicalName(), members.get(property.jsonapiName()));
+      properties.put(property.jacksonName(), members.get(property.jsonapiName()));
     }
   }
 
@@ -200,8 +200,9 @@ public final class DomainResourceBinder {
   }
 
   /**
-   * Binds the resource-side {@code meta} members under the mapped resource-meta property's logical
-   * name when the resource carries meta. Absent meta leaves the property absent.
+   * Binds the resource-side {@code meta} members under the mapped resource-meta property's
+   * configured Jackson external name when the resource carries meta. Absent meta leaves the
+   * property absent.
    */
   private void bindResourceMeta(
       ResourceObject resource,
@@ -214,14 +215,15 @@ public final class DomainResourceBinder {
     }
     requireDeserializable(
         resourceMetaProperty, RelationshipMetaSupport.resourceMetaLocation(), rawType);
-    properties.put(resourceMetaProperty.logicalName(), resource.meta().members());
+    properties.put(resourceMetaProperty.jacksonName(), resource.meta().members());
   }
 
   /**
-   * Binds relationship {@code meta} members under each mapped relationship-meta property's logical
-   * name when the referenced relationship is present and carries meta. Absent relationship or
-   * absent meta leaves the property absent. A valid meta-only relationship representation binds its
-   * meta here (read side); PATCH additionally requires {@code data} (ADR-015).
+   * Binds relationship {@code meta} members under each mapped relationship-meta property's
+   * configured Jackson external name when the referenced relationship is present and carries meta.
+   * Absent relationship or absent meta leaves the property absent. A valid meta-only relationship
+   * representation binds its meta here (read side); PATCH additionally requires {@code data}
+   * (ADR-015).
    */
   private void bindRelationshipMeta(
       ResourceObject resource,
@@ -244,7 +246,7 @@ public final class DomainResourceBinder {
           property,
           RelationshipMetaSupport.relationshipMetaLocation(property.jsonapiName()),
           rawType);
-      properties.put(property.logicalName(), relationship.meta().members());
+      properties.put(property.jacksonName(), relationship.meta().members());
     }
   }
 
@@ -267,7 +269,7 @@ public final class DomainResourceBinder {
     RelationshipLinkageMapper linkageMapper =
         RelationshipLinkageSupport.selectLinkageMapper(propertyType, property, linkageMappers);
     properties.put(
-        property.logicalName(),
+        property.jacksonName(),
         RelationshipLinkageSupport.convertLinkage(
             property, data, linkageMapper, mappingType, mapper));
   }
@@ -295,8 +297,8 @@ public final class DomainResourceBinder {
       Class<?> rawType,
       ReadResourceMapping mapping,
       @Nullable MappingLocation identifierLocation) {
-    Map<String, StructuredValueBinder.ConstructionStart> startsByLogicalName =
-        mapping.constructionStartsByLogicalName(identifierLocation);
+    Map<String, StructuredValueBinder.ConstructionStart> startsByJacksonName =
+        mapping.constructionStartsByJacksonName(identifierLocation);
     try {
       return BeanConstruction.convertBean(
           mapper,
@@ -305,7 +307,7 @@ public final class DomainResourceBinder {
           rawType,
           (failure, ignored) ->
               structuredBinder.translateConstructionPath(
-                  BeanConstruction.pathNames(failure), startsByLogicalName, true));
+                  BeanConstruction.pathNames(failure), startsByJacksonName, true));
     } catch (JsonApiMappingException e) {
       ReadMappingProperty identifierProperty = mapping.identifierProperty();
       if (identifierProperty != null

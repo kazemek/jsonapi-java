@@ -48,7 +48,8 @@ public final class JacksonFeatureFixtures {
 
     @JsonCreator
     public CreatorBasedArticle(
-        @JsonProperty("id") @JsonApiId String id, @JsonProperty("title") String title) {
+        @JsonProperty("id") @JsonApiId String id,
+        @JsonProperty("title") @JsonApiAttribute String title) {
       this.id = id;
       this.title = title;
     }

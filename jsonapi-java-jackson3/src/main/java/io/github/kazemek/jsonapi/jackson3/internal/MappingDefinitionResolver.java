@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.BeanDescription;
 import tools.jackson.databind.JavaType;
@@ -83,16 +84,21 @@ final class MappingDefinitionResolver {
         mergeProperties(deserializationDescription, serializationDescription)) {
       BeanPropertyDefinition propertyDefinition = pair.primary();
       RoleAnnotations annotations = RoleAnnotations.from(pair.definitions());
-      String logicalName = propertyDefinition.getName();
-      PropertyRole role = resolveRole(annotations, logicalName, rawType);
-      String jsonapiName = resolveJsonapiName(annotations, logicalName, role);
+      String jacksonName = propertyDefinition.getName();
+      String logicalName = propertyDefinition.getInternalName();
+      rejectConflictingJacksonName(annotations, jacksonName, rawType);
+      PropertyRole role = resolveRole(annotations, jacksonName, logicalName, rawType);
+      if (role == null) {
+        continue;
+      }
+      String jsonapiName = resolveJsonapiName(annotations, jacksonName, role);
       validateJsonApiName(jsonapiName, role, logicalName, rawType);
       ReadMappingProperty mappingProperty =
           new ReadMappingProperty(
               propertyDefinition,
               pair.serialization() == null ? null : pair.serialization().getAccessor(),
               pair.deserialization() == null ? null : pair.deserialization().getMutator(),
-              deserializationTypes.get(logicalName),
+              deserializationTypes.get(jacksonName),
               logicalName,
               jsonapiName,
               role);
@@ -104,12 +110,14 @@ final class MappingDefinitionResolver {
         case RELATIONSHIP_META -> relationshipMetaProperties.add(mappingProperty);
       }
     }
+    List<ReadMappingProperty> boundRelationshipMeta =
+        bindReadRelationshipMeta(relationshipMetaProperties, relationshipProperties, rawType);
     validatePropertyRoles(
         identifierProperties,
         attributeProperties,
         relationshipProperties,
         resourceMetaProperties,
-        relationshipMetaProperties,
+        boundRelationshipMeta,
         rawType);
 
     ReadMappingProperty identifier =
@@ -122,7 +130,7 @@ final class MappingDefinitionResolver {
         List.copyOf(attributeProperties),
         List.copyOf(relationshipProperties),
         resourceMeta,
-        List.copyOf(relationshipMetaProperties),
+        List.copyOf(boundRelationshipMeta),
         deserializationDescription.getType());
   }
 
@@ -175,11 +183,18 @@ final class MappingDefinitionResolver {
     ClassifiedProperties classified = new ClassifiedProperties();
     for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
       RoleAnnotations annotations = RoleAnnotations.from(propertyDefinition);
-      String logicalName = propertyDefinition.getName();
-      // Role and wire name resolve from annotations alone so member-level declaration failures can
-      // report the member's resource-relative wire location even when the accessor is missing.
-      PropertyRole role = resolveRole(annotations, logicalName, rawType);
-      String jsonapiName = resolveJsonapiName(annotations, logicalName, role);
+      String jacksonName = propertyDefinition.getName();
+      String logicalName = propertyDefinition.getInternalName();
+      // Role and wire name resolve from annotations plus configured Jackson so member-level
+      // declaration failures can report the member's resource-relative wire location even when
+      // the accessor is missing. Unannotated properties do not participate. Merged Jackson
+      // names are rejected before that skip so role-bearing collisions cannot disappear.
+      rejectConflictingJacksonName(annotations, jacksonName, rawType);
+      PropertyRole role = resolveRole(annotations, jacksonName, logicalName, rawType);
+      if (role == null) {
+        continue;
+      }
+      String jsonapiName = resolveJsonapiName(annotations, jacksonName, role);
       validateJsonApiName(jsonapiName, role, logicalName, rawType);
       AnnotatedMember accessor =
           requireAccessorIfAnnotated(
@@ -195,6 +210,10 @@ final class MappingDefinitionResolver {
       classified.add(
           new MappingProperty(propertyDefinition, accessor, logicalName, jsonapiName, role));
     }
+    List<MappingProperty> boundMeta =
+        bindWriteRelationshipMeta(classified.relationshipMeta, classified.relationships, rawType);
+    classified.relationshipMeta.clear();
+    classified.relationshipMeta.addAll(boundMeta);
     return classified;
   }
 
@@ -251,8 +270,45 @@ final class MappingDefinitionResolver {
     return null;
   }
 
-  private static PropertyRole resolveRole(
-      RoleAnnotations annotations, String logicalName, Class<?> rawType) {
+  /**
+   * Configured Jackson may merge distinct Java members that share one external name into a single
+   * {@link BeanPropertyDefinition}. Accessing the merged field or getter then throws; treat that as
+   * a JSON:API member name collision rather than leaking Jackson's introspection exception.
+   *
+   * <p>This runs before unannotated properties are skipped. Field-only POJOs can leave no visible
+   * role on the merged definition; mixed roles recovered from constructor parameters must still be
+   * {@link MappingDiagnostic#NAME_COLLISION}, not {@link MappingDiagnostic#DUPLICATE_ROLE}. Jackson
+   * may also attach multiple constructor parameters to one external name without throwing from
+   * {@code getField}/{@code getGetter}; that is the same collision.
+   */
+  private static void rejectConflictingJacksonName(
+      RoleAnnotations annotations, String jacksonName, Class<?> rawType) {
+    if (!annotations.conflictingFields()) {
+      return;
+    }
+    PropertyRole role = annotations.count() == 1 ? annotations.explicitRole() : null;
+    if (role == PropertyRole.ATTRIBUTE) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.NAME_COLLISION,
+          rawType,
+          attributeLocation(jacksonName),
+          "Duplicate attribute name: " + jacksonName);
+    }
+    if (role == PropertyRole.RELATIONSHIP) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.NAME_COLLISION,
+          rawType,
+          relationshipLocation(jacksonName),
+          "Duplicate relationship name: " + jacksonName);
+    }
+    throw JsonApiMappingException.withoutLocation(
+        MappingDiagnostic.NAME_COLLISION,
+        rawType,
+        "Duplicate JSON:API member name: " + jacksonName);
+  }
+
+  private static @Nullable PropertyRole resolveRole(
+      RoleAnnotations annotations, String jacksonName, String logicalName, Class<?> rawType) {
     if (annotations.count() > 1) {
       // Conflicting role annotations leave no single wire member to point at; the property stays
       // identified in the message per the mapping-location contract.
@@ -265,39 +321,41 @@ final class MappingDefinitionResolver {
     if (explicitRole != null) {
       return explicitRole;
     }
-    if ("id".equals(logicalName)) {
+    if (JsonApiMembers.ID.equals(jacksonName)) {
       return PropertyRole.ID;
     }
-    return PropertyRole.ATTRIBUTE;
+    return null;
   }
 
   private static String resolveJsonapiName(
-      RoleAnnotations annotations, String logicalName, PropertyRole role) {
+      RoleAnnotations annotations, String jacksonName, PropertyRole role) {
     return switch (role) {
-      case ID -> logicalName;
-      case ATTRIBUTE -> {
-        JsonApiAttribute annotation = annotations.attribute();
-        yield annotation != null && !annotation.name().isEmpty() ? annotation.name() : logicalName;
-      }
-      case RELATIONSHIP -> {
-        JsonApiRelationship annotation = annotations.relationship();
-        yield annotation != null && !annotation.name().isEmpty() ? annotation.name() : logicalName;
-      }
+      case ID, ATTRIBUTE, RELATIONSHIP -> jacksonName;
       case RESOURCE_META -> JsonApiMembers.META;
       case RELATIONSHIP_META -> {
         JsonApiRelationshipMeta annotation = annotations.relationshipMeta();
-        yield Objects.requireNonNull(annotation).value();
+        yield Objects.requireNonNull(annotation).relationship();
       }
     };
   }
 
   private static void validateJsonApiName(
       String jsonapiName, PropertyRole role, String logicalName, Class<?> rawType) {
+    if (role == PropertyRole.RELATIONSHIP_META) {
+      if (jsonapiName.isEmpty()) {
+        throw JsonApiMappingException.withoutLocation(
+            MappingDiagnostic.INVALID_RELATIONSHIP_META_TARGET,
+            rawType,
+            "@JsonApiRelationshipMeta.relationship() must not be empty for property '"
+                + logicalName
+                + "'");
+      }
+      return;
+    }
     MappingDiagnostic diagnostic =
         switch (role) {
           case ATTRIBUTE -> MappingDiagnostic.INVALID_ATTRIBUTE_NAME;
           case RELATIONSHIP -> MappingDiagnostic.INVALID_RELATIONSHIP_NAME;
-          case RELATIONSHIP_META -> MappingDiagnostic.INVALID_RELATIONSHIP_META_TARGET;
           default -> null;
         };
     if (diagnostic == null) {
@@ -368,6 +426,96 @@ final class MappingDefinitionResolver {
     }
   }
 
+  private static List<MappingProperty> bindWriteRelationshipMeta(
+      List<MappingProperty> relationshipMetaProperties,
+      List<MappingProperty> relationshipProperties,
+      Class<?> rawType) {
+    if (relationshipMetaProperties.isEmpty()) {
+      return List.of();
+    }
+    Map<String, MappingProperty> byIdentity = relationshipByIdentity(relationshipProperties);
+    Set<String> seen = new HashSet<>();
+    List<MappingProperty> bound = new ArrayList<>();
+    for (MappingProperty property : relationshipMetaProperties) {
+      MappingProperty target = requireRelationshipMetaTarget(property, byIdentity, seen, rawType);
+      bound.add(
+          new MappingProperty(
+              property.definition(),
+              property.accessor(),
+              property.logicalName(),
+              target.jsonapiName(),
+              property.role()));
+    }
+    return bound;
+  }
+
+  private static List<ReadMappingProperty> bindReadRelationshipMeta(
+      List<ReadMappingProperty> relationshipMetaProperties,
+      List<ReadMappingProperty> relationshipProperties,
+      Class<?> rawType) {
+    if (relationshipMetaProperties.isEmpty()) {
+      return List.of();
+    }
+    Map<String, ReadMappingProperty> byIdentity = relationshipByIdentity(relationshipProperties);
+    Set<String> seen = new HashSet<>();
+    List<ReadMappingProperty> bound = new ArrayList<>();
+    for (ReadMappingProperty property : relationshipMetaProperties) {
+      ReadMappingProperty target =
+          requireRelationshipMetaTarget(property, byIdentity, seen, rawType);
+      bound.add(
+          new ReadMappingProperty(
+              property.definition(),
+              property.serializationMember(),
+              property.deserializationMember(),
+              property.deserializationType(),
+              property.logicalName(),
+              target.jsonapiName(),
+              property.role()));
+    }
+    return bound;
+  }
+
+  private static <P extends MappingPropertyView> Map<String, P> relationshipByIdentity(
+      List<P> relationshipProperties) {
+    Map<String, P> byIdentity = new java.util.LinkedHashMap<>();
+    for (P relationship : relationshipProperties) {
+      byIdentity.put(relationship.logicalName(), relationship);
+    }
+    return byIdentity;
+  }
+
+  private static <P extends MappingPropertyView> P requireRelationshipMetaTarget(
+      MappingPropertyView property,
+      Map<String, P> relationshipsByIdentity,
+      Set<String> seen,
+      Class<?> rawType) {
+    String identity = property.jsonapiName();
+    P target = relationshipsByIdentity.get(identity);
+    if (target == null) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.UNRESOLVED_RELATIONSHIP_META,
+          rawType,
+          "@JsonApiRelationshipMeta for property '"
+              + property.logicalName()
+              + "' references unknown relationship '"
+              + identity
+              + "' on "
+              + rawType.getName());
+    }
+    if (!seen.add(identity)) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.DUPLICATE_ROLE,
+          rawType,
+          RelationshipMetaSupport.relationshipMetaLocation(target.jsonapiName()),
+          "Multiple relationship meta properties target relationship '"
+              + identity
+              + "' on "
+              + rawType.getName()
+              + "; at most one is allowed");
+    }
+    return target;
+  }
+
   private static void validateRelationshipMetaTargets(
       List<? extends MappingPropertyView> relationshipMetaProperties,
       List<? extends MappingPropertyView> relationshipProperties,
@@ -383,10 +531,9 @@ final class MappingDefinitionResolver {
     for (MappingPropertyView property : relationshipMetaProperties) {
       String target = property.jsonapiName();
       if (!relationshipNames.contains(target)) {
-        throw new JsonApiMappingException(
+        throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.UNRESOLVED_RELATIONSHIP_META,
             rawType,
-            RelationshipMetaSupport.relationshipMetaLocation(target),
             "@JsonApiRelationshipMeta for property '"
                 + property.logicalName()
                 + "' references unknown relationship '"
@@ -525,7 +672,8 @@ final class MappingDefinitionResolver {
       @Nullable JsonApiAttribute attribute,
       @Nullable JsonApiRelationship relationship,
       @Nullable JsonApiMeta meta,
-      @Nullable JsonApiRelationshipMeta relationshipMeta) {
+      @Nullable JsonApiRelationshipMeta relationshipMeta,
+      boolean conflictingFields) {
 
     static RoleAnnotations from(BeanPropertyDefinition propertyDefinition) {
       return from(List.of(propertyDefinition));
@@ -533,18 +681,37 @@ final class MappingDefinitionResolver {
 
     static RoleAnnotations from(List<BeanPropertyDefinition> propertyDefinitions) {
       List<@Nullable AnnotatedMember> members = new ArrayList<>();
+      boolean conflictingMembers = false;
+      boolean multipleConstructorParameters = false;
       for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
-        members.add(propertyDefinition.getField());
-        members.add(propertyDefinition.getGetter());
-        members.add(propertyDefinition.getSetter());
-        members.add(propertyDefinition.getConstructorParameter());
+        conflictingMembers |= addMember(members, propertyDefinition::getField);
+        conflictingMembers |= addMember(members, propertyDefinition::getGetter);
+        conflictingMembers |= addMember(members, propertyDefinition::getSetter);
+        int constructorParameters = 0;
+        for (var parameters = propertyDefinition.getConstructorParameters();
+            parameters.hasNext(); ) {
+          members.add(parameters.next());
+          constructorParameters++;
+        }
+        multipleConstructorParameters |= constructorParameters > 1;
       }
       return new RoleAnnotations(
           findAnnotationAnywhere(members, JsonApiId.class),
           findAnnotationAnywhere(members, JsonApiAttribute.class),
           findAnnotationAnywhere(members, JsonApiRelationship.class),
           findAnnotationAnywhere(members, JsonApiMeta.class),
-          findAnnotationAnywhere(members, JsonApiRelationshipMeta.class));
+          findAnnotationAnywhere(members, JsonApiRelationshipMeta.class),
+          conflictingMembers || multipleConstructorParameters);
+    }
+
+    private static boolean addMember(
+        List<@Nullable AnnotatedMember> members, Supplier<AnnotatedMember> accessor) {
+      try {
+        members.add(accessor.get());
+        return false;
+      } catch (IllegalArgumentException ex) {
+        return true;
+      }
     }
 
     private static <A extends Annotation> @Nullable A findAnnotationAnywhere(

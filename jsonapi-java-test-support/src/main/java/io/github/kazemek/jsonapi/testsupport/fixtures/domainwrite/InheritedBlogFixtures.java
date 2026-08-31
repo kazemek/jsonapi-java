@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import org.jspecify.annotations.Nullable;
@@ -33,6 +34,7 @@ public final class InheritedBlogFixtures {
       this.id = id;
     }
 
+    @JsonApiAttribute
     public @Nullable String getName() {
       return name;
     }
@@ -54,6 +56,7 @@ public final class InheritedBlogFixtures {
       this.description = description;
     }
 
+    @JsonApiAttribute
     public @Nullable String getDescription() {
       return description;
     }

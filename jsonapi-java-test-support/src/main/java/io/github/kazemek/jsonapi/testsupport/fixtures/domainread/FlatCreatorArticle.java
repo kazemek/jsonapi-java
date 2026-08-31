@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
@@ -17,7 +18,7 @@ public final class FlatCreatorArticle {
   @JsonCreator
   public FlatCreatorArticle(
       @JsonProperty("id") @JsonApiId @Nullable String id,
-      @JsonProperty("title") @Nullable String title) {
+      @JsonProperty("title") @JsonApiAttribute @Nullable String title) {
     this.id = id;
     this.title = title;
   }

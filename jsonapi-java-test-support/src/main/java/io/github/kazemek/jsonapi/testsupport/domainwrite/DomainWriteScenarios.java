@@ -26,6 +26,7 @@ import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentsRelati
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithSet;
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ArticleWithUnannotatedExtra;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.BlogWithJsonProperty;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.ConventionalId;
@@ -132,6 +133,14 @@ public final class DomainWriteScenarios {
                       null,
                       null,
                       Map.of())),
+              DomainWriteComparisonPolicy.ordered()),
+          new DomainWriteScenario(
+              "unannotated extra property is not an attribute",
+              DomainWriteOperation.TO_RESOURCE,
+              new DomainWriteInput.SingleInput(
+                  () -> new ArticleWithUnannotatedExtra("1", TITLE_TEXT, "secret")),
+              null,
+              DomainWriteOutcome.resource(attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT))),
               DomainWriteComparisonPolicy.ordered()),
           new DomainWriteScenario(
               "maps @JsonProperty naming",

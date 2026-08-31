@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
@@ -13,6 +14,6 @@ import java.util.List;
 public record ArticlePatch(
     @JsonApiId String id,
     @JsonApiAttribute PatchPresence<String> title,
-    @JsonApiAttribute(name = "body-text") PatchPresence<String> body,
+    @JsonApiAttribute @JsonProperty("body-text") PatchPresence<String> body,
     @JsonApiRelationship PatchPresence<ResourceIdentifier> author,
     @JsonApiRelationship PatchPresence<List<ResourceIdentifier>> comments) {}

@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
@@ -27,6 +28,7 @@ public class FlatCountedThing {
     this.id = id;
   }
 
+  @JsonApiAttribute
   public int getCount() {
     return count;
   }

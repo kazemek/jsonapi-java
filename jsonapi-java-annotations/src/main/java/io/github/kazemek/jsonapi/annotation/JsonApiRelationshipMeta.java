@@ -11,20 +11,18 @@ import java.lang.annotation.Target;
  * relationship, without requiring a relationship-envelope property. This is relationship-level meta
  * ({@code Relationship.meta}), not per-linkage identifier meta ({@code RelationshipLinkage}).
  *
- * <p>{@link #value()} is required and has no default: it references the target relationship's
- * resolved JSON:API member (wire) name — the value of {@link JsonApiRelationship#name()} when set,
- * otherwise the relationship property's logical Java name. A renamed relationship therefore
- * requires the wire name here. The target relationship must be declared by an {@link
- * JsonApiRelationship} on the same domain mapping; mapping meta for an otherwise undeclared
- * relationship is not supported.
+ * <p>{@link #relationship()} is required and has no default: it identifies the target mapped
+ * relationship by its Jackson property identity (the internal Java/Jackson property name, such as a
+ * record component or JavaBean property), not the relationship's final JSON:API wire member name.
+ * Mapping resolves that identity to the {@link JsonApiRelationship} property on the same domain
+ * type, then reads and writes this meta under that relationship's configured-Jackson external name.
+ * Renaming the relationship through Jackson therefore carries its relationship meta automatically;
+ * callers must not repeat the wire name here.
  *
  * <p>At most one {@code @JsonApiRelationshipMeta} property may target a given relationship, and
  * each such property represents the complete {@code meta} object of that relationship's location.
- * Jackson mapping owns target-shape validation, conversion, and diagnostics.
- *
- * <p>The required {@code value()} element is an intentional deviation from the optional {@code
- * name()} convention of {@link JsonApiAttribute} and {@link JsonApiRelationship}: the relationship
- * target is mandatory and no implicit name derivation exists.
+ * Jackson mapping owns target-shape validation, conversion, and diagnostics. Mapping meta for an
+ * otherwise undeclared relationship is not supported.
  *
  * <p>This annotation is not {@link java.lang.annotation.Inherited}.
  */
@@ -39,10 +37,14 @@ import java.lang.annotation.Target;
 public @interface JsonApiRelationshipMeta {
 
   /**
-   * The target relationship's resolved JSON:API member (wire) name.
+   * Jackson property identity of the target mapped relationship.
    *
-   * @return non-empty relationship member name; emptiness and member-name grammar are validated
-   *     when a Jackson mapping definition is built
+   * <p>This is the relationship property's internal name ({@code comments} in {@code List<Comment>
+   * comments}), not a JSON:API member-name override. Emptiness is validated when a Jackson mapping
+   * definition is built; the target must resolve to a {@link JsonApiRelationship} on the same
+   * mapping.
+   *
+   * @return non-empty Jackson property identity of the target relationship
    */
-  String value();
+  String relationship();
 }

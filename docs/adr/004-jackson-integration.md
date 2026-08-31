@@ -1,7 +1,8 @@
 # ADR-004: Jackson Introspection Is Authoritative
 
 **Status:** Accepted  
-**Date:** 2026-07-26
+**Date:** 2026-07-26  
+**Amendment:** 2026-08-31 — JSON:API annotations are role-only; configured Jackson owns property names
 
 ## Context
 
@@ -11,7 +12,11 @@ Document envelopes such as links and metadata also do not have the default recor
 
 ## Decision
 
-Use Jackson's introspection and logical property model for domain mapping. Do not establish independent field-first or getter-first discovery.
+JSON:API annotations assign semantic roles. Configured Jackson owns property discovery, visibility, external naming, mix-ins, serializers/deserializers, creators, and other property mechanics.
+
+Use Jackson's introspection and logical property model for domain mapping. Do not establish independent field-first or getter-first discovery. Do not give JSON:API annotations a second member-name override; `@JsonApiAttribute` and `@JsonApiRelationship` are role markers only. A Jackson-visible property participates only when it has an appropriate JSON:API role, except for the conventional identifier: a Jackson-visible property whose configured Jackson external name is `id` is the sole intentional implicit JSON:API property-role convention. Otherwise-unclassified properties do not become attributes.
+
+`@JsonApiResource(type = ...)` remains explicit JSON:API semantic data (the resource `type` member), not a Jackson property name. `@JsonApiRelationshipMeta(relationship = ...)` associates meta with a mapped relationship by that relationship's Jackson property identity; mapping then emits and reads the meta under the relationship's configured-Jackson external name.
 
 Implement explicit codecs for JSON:API document structures, including:
 
@@ -22,11 +27,12 @@ Implement explicit codecs for JSON:API document structures, including:
 - additional members;
 - strict validation during reads.
 
-Jackson-visible properties become attributes by default after identifier and relationship roles are applied. Jackson ignores, names, mix-ins, serializers, and creator metadata remain authoritative unless a documented JSON:API annotation overrides the JSON:API role or field name.
+Jackson ignores, names, mix-ins, serializers, and creator metadata remain authoritative for participating properties.
 
 ## Consequences
 
-- Domain mapping follows familiar Jackson behavior.
+- Domain mapping follows familiar Jackson behavior for naming, visibility, mix-ins, and conversion.
+- There is exactly one authority for property names: configured Jackson.
 - Record annotation propagation is resolved as one logical property.
 - The Jackson module is more than a default record serializer.
 - Exact wire fixtures are required before the core API is considered stable.

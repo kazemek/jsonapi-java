@@ -21,5 +21,6 @@ public record ArticleWithRelationshipLinkage(
     @JsonApiRelationship @Nullable RelationshipLinkage<ResourceIdentifier, AuthorIdMeta> author,
     @JsonApiRelationship
         @Nullable List<RelationshipLinkage<ResourceIdentifier, CommentIdMeta>> comments,
-    @JsonApiRelationshipMeta("author") @Nullable AuthorMeta authorMeta,
-    @JsonApiRelationshipMeta("comments") @Nullable CommentsRelationshipMeta commentsMeta) {}
+    @JsonApiRelationshipMeta(relationship = "author") @Nullable AuthorMeta authorMeta,
+    @JsonApiRelationshipMeta(relationship = "comments")
+        @Nullable CommentsRelationshipMeta commentsMeta) {}

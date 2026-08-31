@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-27
+**Amendment:** 2026-08-31 — `@JsonApiRelationshipMeta` associates by Jackson property identity
 
 ## Context
 
@@ -53,7 +54,7 @@ The three locations stay distinct:
 
 ```text
 ResourceObject.meta          -> @JsonApiMeta
-Relationship.meta            -> @JsonApiRelationshipMeta("name")
+Relationship.meta            -> @JsonApiRelationshipMeta(relationship = "name")
 ResourceIdentifier.meta      -> RelationshipLinkage<T, M>
 ```
 

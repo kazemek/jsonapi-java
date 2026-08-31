@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.jackson.IdentifierConverter
@@ -44,7 +45,7 @@ class IdentifierConversionSpec extends Specification {
   @JsonApiResource(type = "intids")
   static class IntIdEntity {
     @JsonApiId Integer id
-    String name
+    @JsonApiAttribute String name
 
     IntIdEntity() {}
 

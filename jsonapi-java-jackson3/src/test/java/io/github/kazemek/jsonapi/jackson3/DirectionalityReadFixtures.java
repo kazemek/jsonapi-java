@@ -28,6 +28,7 @@ public final class DirectionalityReadFixtures {
 
     private String title;
 
+    @JsonApiAttribute
     public void setTitle(String title) {
       this.title = title;
     }
@@ -45,7 +46,8 @@ public final class DirectionalityReadFixtures {
 
     @JsonCreator
     public CreatorOnly(
-        @JsonProperty("id") @JsonApiId String id, @JsonProperty("title") String title) {
+        @JsonProperty("id") @JsonApiId String id,
+        @JsonProperty("title") @JsonApiAttribute String title) {
       this.id = id;
       this.title = title;
     }
@@ -68,7 +70,9 @@ public final class DirectionalityReadFixtures {
     @JsonCreator
     public InjectionOnly(
         @JsonProperty("id") @JsonApiId String id,
-        @JsonProperty("title") @JacksonInject(value = "injected-title", useInput = OptBoolean.FALSE)
+        @JsonProperty("title")
+            @JacksonInject(value = "injected-title", useInput = OptBoolean.FALSE)
+            @JsonApiAttribute
             String title) {
       this.id = id;
       this.title = title;

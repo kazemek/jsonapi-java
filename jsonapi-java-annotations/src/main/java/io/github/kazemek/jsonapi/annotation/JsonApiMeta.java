@@ -9,10 +9,12 @@ import java.lang.annotation.Target;
 /**
  * Marks a domain property as the complete JSON:API resource-side {@code meta} object.
  *
- * <p>The annotated property represents the whole {@code meta} object of the mapped resource as one
- * application-owned value (a record, POJO, {@code Map}, or {@code Object}); it is not a JSON:API
- * transport wrapper and carries no resource-envelope semantics. Jackson mapping owns target-shape
- * validation, conversion, and diagnostics.
+ * <p>This annotation assigns the resource-meta semantic role only. The annotated property
+ * represents the whole {@code meta} object of the mapped resource as one application-owned value (a
+ * record, POJO, {@code Map}, or {@code Object}); it is not a JSON:API transport wrapper and carries
+ * no resource-envelope semantics. Configured Jackson owns target-shape validation, conversion, and
+ * diagnostics. The JSON:API location is the resource {@code meta} member; Jackson property naming
+ * does not relocate it.
  *
  * <p>At most one {@code @JsonApiMeta} property is allowed per mapped resource. Resource-side meta
  * is distinct from document-level meta (owned by the document envelope), relationship meta (owned

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-19
-**Amendment:** 2026-08-22 — write-side Jackson authority; 2026-08-26 — identifier meta moved to ADR-017
+**Amendment:** 2026-08-22 — write-side Jackson authority; 2026-08-26 — identifier meta moved to ADR-017; 2026-08-31 — relationship meta associates by Jackson property identity
 
 ## Context
 
@@ -31,8 +31,8 @@ record Article(
     @JsonApiId ArticleId id,
     @JsonApiAttribute String title,
     @JsonApiMeta ArticleMeta meta,
-    @JsonApiRelationship(name = "author") AuthorId author,
-    @JsonApiRelationshipMeta("author") AuthorRelationshipMeta authorMeta) {}
+    @JsonApiRelationship AuthorId author,
+    @JsonApiRelationshipMeta(relationship = "author") AuthorRelationshipMeta authorMeta) {}
 ```
 
 `ResourceIdentifier.meta` is specified by [ADR-017](017-resource-identifier-meta-mapping.md); it is
@@ -42,11 +42,13 @@ a separate per-linkage-element mapping and must not be modeled as relationship m
 
 - `@JsonApiMeta` — marks one property per resource as the complete resource-side `meta` object.
   Parameterless; at most one per mapping.
-- `@JsonApiRelationshipMeta(value)` — marks one property per relationship as the complete `meta`
-  object of that relationship. The required `value()` references the target relationship's resolved
-  JSON:API member (wire) name. This is an intentional deviation from the optional `name()` convention
-  of `@JsonApiAttribute`/`@JsonApiRelationship`: the relationship target is mandatory and no implicit
-  name derivation exists. A renamed relationship therefore requires the wire name in `value()`.
+- `@JsonApiRelationshipMeta(relationship)` — marks one property per relationship as the complete
+  `meta` object of that relationship. The required `relationship()` element identifies the target
+  mapped relationship by its Jackson property identity (internal Java/Jackson name), not the
+  relationship's final JSON:API wire member name. Mapping resolves that identity and then reads and
+  writes the meta under the relationship's configured-Jackson external name, so renaming the
+  relationship through Jackson carries its meta automatically. Mapping meta for an otherwise
+  undeclared relationship is not supported.
 - `PatchChange` gains sealed variants `ResourceMetaChange` and `RelationshipMetaChange` so the
   low-level `PatchCommand` exposes explicit resource-meta and relationship-meta requested changes
   without collapsing them into attribute changes.
@@ -106,7 +108,7 @@ requirement); it can never become an outer `Present(null)`. Outer presence is th
 omitted or a supplied object.
 
 - **Typed path (strict):** `@JsonApiMeta PatchPresence<MetaPatchType>` and
-  `@JsonApiRelationshipMeta("author") PatchPresence<AuthorMetaPatch>` bind through the recursive
+  `@JsonApiRelationshipMeta(relationship = "author") PatchPresence<AuthorMetaPatch>` bind through the recursive
   structured-value engine defined by ADR-014. Recursive presence-aware nested shapes preserve nested omitted / explicit-null /
   supplied-value state. `{}` on a recursively patchable bean target binds a present shape with every
   member omitted; `{}` on an atomic map-like target is an atomic empty-map replacement. Supplied

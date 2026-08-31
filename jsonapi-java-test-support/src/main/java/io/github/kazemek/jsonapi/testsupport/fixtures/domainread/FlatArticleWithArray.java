@@ -1,5 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainread;
 
+import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
@@ -17,7 +18,7 @@ import org.jspecify.annotations.Nullable;
 @SuppressWarnings({"ArrayRecordComponent", "java:S6218"})
 public record FlatArticleWithArray(
     @JsonApiId String id,
-    @Nullable String title,
+    @JsonApiAttribute @Nullable String title,
     @JsonApiRelationship ResourceIdentifier @Nullable [] comments) {
 
   public FlatArticleWithArray {
