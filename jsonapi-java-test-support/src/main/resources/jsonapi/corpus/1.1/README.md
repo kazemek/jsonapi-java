@@ -72,9 +72,9 @@ capability instead of maintaining independent hard-coded id lists:
 5. If the document intentionally fails the pinned draft schema, record the disagreement in
    `schemaDisagreement` and keep the fixture failing.
 6. Run `./gradlew :jsonapi-java-test-support:test :jsonapi-java-jackson3:test`. Changes under
-   `src/main/` or `src/test/` must then pass the full completion gates (see `AGENTS.md`): `./gradlew
-   clean build`, Spotless (`spotlessApply` then `spotlessCheck`), and the Sonar Quality Gate with
-   zero new-code issues.
+   `src/main/` or `src/test/` must then pass the full local completion gates (see `AGENTS.md`):
+   Spotless (`spotlessApply` then `spotlessCheck`) and `./gradlew clean build`. CI remains the
+   authority for Sonar Quality Gate and zero new-code issues.
 
 PATCH scenarios follow the same resource-first rule: a new scenario in `PatchScenarios` /
 `PatchDtoScenarios` adds a named document under `patch/` (reusing an existing stem when the wire
