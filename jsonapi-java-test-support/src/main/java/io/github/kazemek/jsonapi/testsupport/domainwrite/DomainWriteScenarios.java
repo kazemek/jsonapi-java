@@ -734,7 +734,9 @@ public final class DomainWriteScenarios {
                   () ->
                       new RelationshipContainerFixtures.ArticleWithNullableIdentifierArray(
                           "1",
-                          new ResourceIdentifier[] {null, ResourceIdentifier.of(COMMENTS, "1")})),
+                          new @Nullable ResourceIdentifier[] {
+                            null, ResourceIdentifier.of(COMMENTS, "1")
+                          })),
               null,
               DomainWriteOutcome.resource(
                   itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1")))),
