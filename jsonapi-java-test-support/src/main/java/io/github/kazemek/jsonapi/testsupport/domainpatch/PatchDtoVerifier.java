@@ -4,6 +4,7 @@ import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
 import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.PatchPresence;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.RecordComponent;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -11,6 +12,11 @@ import org.jspecify.annotations.Nullable;
 /**
  * Adapter-neutral semantic comparison for {@link PatchDtoScenario} outcomes. Jackson-major suites
  * invoke their own PATCH DTO reader, then hand the bound DTO or caught exception here.
+ *
+ * <p>Member comparison is presence-aware: {@link PatchPresence.Omitted} is distinct from {@link
+ * PatchPresence.Present}, including {@code Present(null)}. Array payloads compare by contents, and
+ * nested presence-aware PATCH DTO records compare each component the same way, because generated
+ * record equality is identity-based for arrays.
  */
 public final class PatchDtoVerifier {
 
@@ -74,9 +80,57 @@ public final class PatchDtoVerifier {
     }
   }
 
+  static boolean membersEqual(@Nullable Object expected, @Nullable Object actual) {
+    if (expected == actual) {
+      return true;
+    }
+    if (expected == null || actual == null) {
+      return false;
+    }
+    if (expected instanceof PatchPresence<?> expectedPresence
+        && actual instanceof PatchPresence<?> actualPresence) {
+      return presenceEqual(expectedPresence, actualPresence);
+    }
+    if (expected.getClass().isArray() && actual.getClass().isArray()) {
+      return PatchVerifier.valuesEqual(expected, actual);
+    }
+    if (expected.getClass() == actual.getClass() && expected.getClass().isRecord()) {
+      return recordPayloadsEqual(expected, actual);
+    }
+    return Objects.equals(expected, actual);
+  }
+
+  private static boolean presenceEqual(PatchPresence<?> expected, PatchPresence<?> actual) {
+    if (expected instanceof PatchPresence.Omitted && actual instanceof PatchPresence.Omitted) {
+      return true;
+    }
+    if (expected instanceof PatchPresence.Present(var expectedValue)
+        && actual instanceof PatchPresence.Present(var actualValue)) {
+      return membersEqual(expectedValue, actualValue);
+    }
+    return false;
+  }
+
+  private static boolean recordPayloadsEqual(Object expected, Object actual) {
+    for (RecordComponent component : expected.getClass().getRecordComponents()) {
+      Object expectedValue;
+      Object actualValue;
+      try {
+        expectedValue = component.getAccessor().invoke(expected);
+        actualValue = component.getAccessor().invoke(actual);
+      } catch (IllegalAccessException | InvocationTargetException ex) {
+        throw fail("cannot read record component " + component.getName(), ex);
+      }
+      if (!membersEqual(expectedValue, actualValue)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private static void assertEqual(
       String label, @Nullable Object expected, @Nullable Object actual) {
-    if (!Objects.equals(expected, actual)) {
+    if (!membersEqual(expected, actual)) {
       throw fail(label + ":" + expectedButWas(expected, actual));
     }
   }

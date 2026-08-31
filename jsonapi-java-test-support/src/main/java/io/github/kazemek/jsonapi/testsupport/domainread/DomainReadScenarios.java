@@ -761,7 +761,7 @@ public final class DomainReadScenarios {
               "Optional-wrapped bean meta binds present Optional",
               DomainReadInput.single(
                   resourceWithMeta(
-                      attrs(TITLE, HELLO), null, Meta.of(Map.of("source", "cms", "note", "n")))),
+                      attrs(TITLE, HELLO), null, Meta.of(Map.of(SOURCE, "cms", "note", "n")))),
               ArticleWithOptionalMeta.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(

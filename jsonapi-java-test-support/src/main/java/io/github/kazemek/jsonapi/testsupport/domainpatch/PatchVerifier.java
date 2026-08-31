@@ -29,12 +29,17 @@ public final class PatchVerifier {
     PatchExpectation expectation = scenario.expectation();
     if (expectation
         instanceof PatchExpectation.Success(Object identity, List<PatchChange> changes)) {
-      if (!(result instanceof PatchCommand command)) {
+      if (!(result
+          instanceof
+          PatchCommand(
+              Class<?> resourceType,
+              Object actualIdentity,
+              List<PatchChange> actualChanges))) {
         throw fail("expected PatchCommand for " + scenario.id() + was(typeName(result)));
       }
-      assertEqual("resourceType", scenario.targetType(), command.resourceType());
-      assertEqual("identity", identity, command.identity());
-      assertChanges(changes, command.changes());
+      assertEqual("resourceType", scenario.targetType(), resourceType);
+      assertEqual("identity", identity, actualIdentity);
+      assertChanges(changes, actualChanges);
       return;
     }
     if (expectation instanceof PatchExpectation.ReaderFailure(var code, String jsonPointer)) {

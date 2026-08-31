@@ -129,9 +129,25 @@ public final class DomainWriteVerifier {
     assertEqual("document.meta", expected.meta(), actual.meta());
     assertEqual("document.jsonapi", expected.jsonapi(), actual.jsonapi());
     assertEqual("document.links", expected.links(), actual.links());
-    assertEqual("document.included", expected.included(), actual.included());
+    assertIncluded(expected.included(), actual.included(), policy);
     assertEqual(
         "document.additionalMembers", expected.additionalMembers(), actual.additionalMembers());
+  }
+
+  private static void assertIncluded(
+      @Nullable List<ResourceObject> expected,
+      @Nullable List<ResourceObject> actual,
+      DomainWriteComparisonPolicy policy) {
+    if (expected == null || actual == null) {
+      assertEqual("document.included", expected, actual);
+      return;
+    }
+    if (expected.size() != actual.size()) {
+      throw fail("included size" + expectedButWas(expected.size(), actual.size()));
+    }
+    for (int i = 0; i < expected.size(); i++) {
+      assertResource(expected.get(i), actual.get(i), policy);
+    }
   }
 
   private static void assertAttributes(@Nullable Attributes expected, @Nullable Attributes actual) {
@@ -179,7 +195,10 @@ public final class DomainWriteVerifier {
     }
     switch (expected) {
       case RelationshipData.NullLinkage ignored
-          when actual instanceof RelationshipData.NullLinkage -> {}
+          when actual instanceof RelationshipData.NullLinkage -> {
+        // Both sides are explicit JSON null linkage; there is no nested identifier state to
+        // compare.
+      }
       case RelationshipData.NullLinkage ignored ->
           throw fail(
               relationshipName

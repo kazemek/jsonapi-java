@@ -504,11 +504,12 @@ artifact; both majors share the neutral contracts of
   catalog directly (`catalog().all()`), so a new scenario is picked up without runner changes;
   catalog completeness and stable ids are owned by the test-support catalog integrity specs.
   Shared semantic comparison lives in test-support (`DomainWriteVerifier`, `DomainReadVerifier`,
-  `PatchVerifier`, `PatchDtoVerifier`, `FieldsetResourceState.assertMatches`). Identifier-meta, whole-meta, and
-  relationship-container mechanism probes stay in `IdentifierMetaMappingSpec`,
-  `FlatMetaMappingSpec`, and `ResourceMappingJacksonFeaturesSpec` (naming, mix-ins, `@JsonIgnore`,
-  `@JsonCreator`, custom serializers/deserializers, `JavaType`, TypeDeserializer, linkage
-  mappers, `IdentifierConverter` injection).
+  `PatchVerifier`, `PatchDtoVerifier`, `FieldsetResourceState.assertMatches`). Shared catalogs own
+  cross-major JSON:API / application-shaped semantics. Jackson 3 mechanism probes stay in
+  `IdentifierMetaMappingSpec`, `FlatMetaMappingSpec`, and `ResourceMappingJacksonFeaturesSpec`:
+  naming strategies, mix-ins, `@JsonIgnore`, `@JsonCreator`, custom serializers/deserializers,
+  `JavaType`, TypeDeserializer, linkage mappers, `IdentifierConverter` injection, `fromDocument`
+  data-less relationship meta, and wire-level codec rejection of `meta: null`.
   Flat binder contract cases come from `DomainReadScenarios` (`ResourceBinderSpec` uses
   `DomainReadVerifier` and keeps Jackson-API-specific cases local). Compound-inclusion contract cases come from
   `CompoundWriteScenarios` (`CompoundSerializationSpec`). Sparse-fieldset contract cases come from
@@ -525,8 +526,4 @@ artifact; both majors share the neutral contracts of
   `@JsonDeserialize`/`@JsonSerialize` rejection, inner-type customization, custom linkage mappers,
   naming strategy, `fromDocument`, and construction robustness under `NON_ABSENT`/`NON_EMPTY`
   local). Domain-write catalog cases come from `DomainWriteScenarios` (`ResourceMapperSpec` uses
-  `DomainWriteVerifier`). `IdentifierMetaMappingSpec`, `FlatMetaMappingSpec`, and
-  `ResourceMappingJacksonFeaturesSpec` keep only Jackson 3 mechanism probes (naming strategies,
-  custom serializers/deserializers, `JavaType`, TypeDeserializer, mix-ins, `@JsonIgnore`,
-  `@JsonCreator`, identifier converters, linkage mappers, `fromDocument` data-less relationship
-  meta, and wire-level codec rejection of `meta: null`).
+  `DomainWriteVerifier`).

@@ -506,6 +506,41 @@ class DomainWriteVerifierSpec extends Specification {
     thrown(AssertionError)
   }
 
+  def "included resources apply unordered identifier policy without reordering included itself"() {
+    given:
+    def first = ResourceIdentifier.of("tags", "java")
+    def second = ResourceIdentifier.of("tags", "groovy")
+    def primary = resource("articles", "1", null, null, null, null)
+    def expectedIncluded = taggedPerson(first, second)
+    def actualIncluded = taggedPerson(second, first)
+    def expected = documentWithIncluded(primary, expectedIncluded)
+    def actual = documentWithIncluded(primary, actualIncluded)
+    def scenario = includedScenario("included-unordered", expected)
+
+    when:
+    DomainWriteVerifier.verify(scenario, actual, null)
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "included resource mismatch still fails"() {
+    given:
+    def first = ResourceIdentifier.of("tags", "java")
+    def second = ResourceIdentifier.of("tags", "groovy")
+    def other = ResourceIdentifier.of("tags", "other")
+    def primary = resource("articles", "1", null, null, null, null)
+    def expected = documentWithIncluded(primary, taggedPerson(first, second))
+    def actual = documentWithIncluded(primary, taggedPerson(other, first))
+    def scenario = includedScenario("included-mismatch", expected)
+
+    when:
+    DomainWriteVerifier.verify(scenario, actual, null)
+
+    then:
+    thrown(AssertionError)
+  }
+
   private static DomainWriteInput.SingleInput ignoredInput() {
     return new DomainWriteInput.SingleInput({ "ignored" })
   }
@@ -531,6 +566,37 @@ class DomainWriteVerifierSpec extends Specification {
         null,
         DomainWriteOutcome.resource(expected),
         DomainWriteComparisonPolicy.ordered())
+  }
+
+  private static DomainWriteScenario includedScenario(String id, JsonApiDocument expected) {
+    return new DomainWriteScenario(
+        id,
+        DomainWriteOperation.TO_DOCUMENT,
+        ignoredInput(),
+        null,
+        DomainWriteOutcome.document(expected),
+        unorderedTags())
+  }
+
+  private static JsonApiDocument documentWithIncluded(
+      ResourceObject primary, ResourceObject included) {
+    return new JsonApiDocument(
+        new DocumentData.SingleResource(primary),
+        null, null, null, null, [included], [:])
+  }
+
+  private static ResourceObject taggedPerson(
+      ResourceIdentifier first, ResourceIdentifier second) {
+    return resource(
+        "people",
+        "p1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        [tags: new Relationship(
+          new RelationshipData.IdentifierCollectionLinkage([first, second]),
+          null, null, [:])]),
+        null)
   }
 
   private static ResourceObject resource(

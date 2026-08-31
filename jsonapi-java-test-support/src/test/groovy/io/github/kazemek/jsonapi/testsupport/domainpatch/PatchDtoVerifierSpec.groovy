@@ -8,7 +8,9 @@ import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.MappingLocation
 import io.github.kazemek.jsonapi.jackson.PatchPresence
 import io.github.kazemek.jsonapi.jackson.SourceLocation
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressWithContainersPatch
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch
+import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithContainerAddressPatch
 import spock.lang.Specification
 
 class PatchDtoVerifierSpec extends Specification {
@@ -154,5 +156,62 @@ class PatchDtoVerifierSpec extends Specification {
 
     then:
     thrown(AssertionError)
+  }
+
+  def "independently created array payloads inside PatchPresence compare by contents"() {
+    given:
+    def expectedAddress = containerAddress(["A", "B"] as String[])
+    def actualAddress = containerAddress(["A", "B"] as String[])
+    def scenario = containerScenario("array-contents", PatchPresence.present(expectedAddress))
+    def dto = new ArticleWithContainerAddressPatch("1", PatchPresence.present(actualAddress))
+
+    when:
+    PatchDtoVerifier.verify(scenario, dto)
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "different array contents inside PatchPresence fail"() {
+    given:
+    def scenario = containerScenario(
+        "array-mismatch", PatchPresence.present(containerAddress(["A", "B"] as String[])))
+    def dto = new ArticleWithContainerAddressPatch(
+        "1", PatchPresence.present(containerAddress(["A", "C"] as String[])))
+
+    when:
+    PatchDtoVerifier.verify(scenario, dto)
+
+    then:
+    thrown(AssertionError)
+  }
+
+  def "omitted PatchPresence stays distinct from present payloads including Present(null)"() {
+    expect:
+    PatchDtoVerifier.membersEqual(PatchPresence.omitted(), PatchPresence.omitted())
+    !PatchDtoVerifier.membersEqual(PatchPresence.omitted(), PatchPresence.present(["A"] as String[]))
+    !PatchDtoVerifier.membersEqual(PatchPresence.present(null), PatchPresence.omitted())
+    PatchDtoVerifier.membersEqual(PatchPresence.present(null), PatchPresence.present(null))
+    PatchDtoVerifier.membersEqual(
+        PatchPresence.present([1, 2] as int[]), PatchPresence.present([1, 2] as int[]))
+    !PatchDtoVerifier.membersEqual(
+        PatchPresence.present([1, 2] as int[]), PatchPresence.present([1, 3] as int[]))
+  }
+
+  private static AddressWithContainersPatch containerAddress(String[] initials) {
+    return new AddressWithContainersPatch(
+        PatchPresence.omitted(),
+        PatchPresence.omitted(),
+        PatchPresence.present(initials),
+        PatchPresence.omitted())
+  }
+
+  private static PatchDtoScenario containerScenario(String id, PatchPresence<?> address) {
+    return new PatchDtoScenario(
+        id,
+        "{}",
+        ArticleWithContainerAddressPatch,
+        null,
+        PatchDtoExpectation.success("1", [address: address]))
   }
 }
