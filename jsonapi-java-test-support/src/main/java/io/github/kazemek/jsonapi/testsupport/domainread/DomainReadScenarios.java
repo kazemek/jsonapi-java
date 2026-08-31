@@ -450,7 +450,7 @@ public final class DomainReadScenarios {
                   resourceWithMeta(
                       attrs(TITLE, HELLO),
                       relsWithMeta(toOne(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))),
-                      Meta.of(Map.of("source", "cms", "note", "n")))),
+                      Meta.of(Map.of(SOURCE, "cms", "note", "n")))),
               FlatMetaArticle.class,
               ConverterBehavior.DEFAULT_CONVERT_VALUE,
               DomainReadExpectation.bound(
