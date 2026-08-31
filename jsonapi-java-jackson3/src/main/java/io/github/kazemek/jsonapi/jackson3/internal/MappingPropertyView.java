@@ -28,7 +28,7 @@ interface MappingPropertyView {
 
   JavaType type();
 
-  /** Configured Jackson external/logical name used as the {@code convertValue} map key. */
+  /** Configured Jackson external name used as the {@code convertValue} map key. */
   default String jacksonName() {
     return definition().getName();
   }

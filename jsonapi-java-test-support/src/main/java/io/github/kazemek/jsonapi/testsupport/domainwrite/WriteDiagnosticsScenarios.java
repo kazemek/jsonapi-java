@@ -73,9 +73,15 @@ public final class WriteDiagnosticsScenarios {
               null),
           new WriteDiagnosticScenario(
               "attribute-relationship-name-collision",
-              "Attribute and relationship mapped to one Jackson name are DUPLICATE_ROLE",
+              "Attribute and relationship mapped to one Jackson name are NAME_COLLISION",
               () -> new WriteDiagnosticsFixtures.NameCollisionEntity("1", "a", "b"),
-              MappingDiagnostic.DUPLICATE_ROLE,
+              MappingDiagnostic.NAME_COLLISION,
+              null),
+          new WriteDiagnosticScenario(
+              "field-only-attribute-relationship-name-collision",
+              "Field-only attribute and relationship sharing a Jackson name are NAME_COLLISION",
+              () -> new WriteDiagnosticsFixtures.FieldOnlyNameCollisionEntity("1", "a", "b"),
+              MappingDiagnostic.NAME_COLLISION,
               null),
           new WriteDiagnosticScenario(
               "duplicate-attribute-names-at-container",
@@ -109,9 +115,9 @@ public final class WriteDiagnosticsScenarios {
               null),
           new WriteDiagnosticScenario(
               "reserved-relationship-name-id",
-              "Relationship mapped onto the identifier's Jackson name is DUPLICATE_ROLE",
+              "Relationship mapped onto the identifier's Jackson name is NAME_COLLISION",
               () -> new WriteDiagnosticsFixtures.ReservedRelNameEntity("1", "o"),
-              MappingDiagnostic.DUPLICATE_ROLE,
+              MappingDiagnostic.NAME_COLLISION,
               null),
           new WriteDiagnosticScenario(
               "failing-attribute-getter-at-wire-name",

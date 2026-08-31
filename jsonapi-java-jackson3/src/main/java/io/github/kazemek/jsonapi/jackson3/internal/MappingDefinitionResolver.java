@@ -86,13 +86,13 @@ final class MappingDefinitionResolver {
       RoleAnnotations annotations = RoleAnnotations.from(pair.definitions());
       String jacksonName = propertyDefinition.getName();
       String logicalName = propertyDefinition.getInternalName();
+      rejectConflictingJacksonName(annotations, jacksonName, rawType);
       PropertyRole role = resolveRole(annotations, jacksonName, logicalName, rawType);
       if (role == null) {
         continue;
       }
       String jsonapiName = resolveJsonapiName(annotations, jacksonName, role);
       validateJsonApiName(jsonapiName, role, logicalName, rawType);
-      rejectConflictingJacksonFields(annotations, role, jsonapiName, rawType);
       ReadMappingProperty mappingProperty =
           new ReadMappingProperty(
               propertyDefinition,
@@ -187,14 +187,15 @@ final class MappingDefinitionResolver {
       String logicalName = propertyDefinition.getInternalName();
       // Role and wire name resolve from annotations plus configured Jackson so member-level
       // declaration failures can report the member's resource-relative wire location even when
-      // the accessor is missing. Unannotated properties do not participate.
+      // the accessor is missing. Unannotated properties do not participate. Merged Jackson
+      // names are rejected before that skip so role-bearing collisions cannot disappear.
+      rejectConflictingJacksonName(annotations, jacksonName, rawType);
       PropertyRole role = resolveRole(annotations, jacksonName, logicalName, rawType);
       if (role == null) {
         continue;
       }
       String jsonapiName = resolveJsonapiName(annotations, jacksonName, role);
       validateJsonApiName(jsonapiName, role, logicalName, rawType);
-      rejectConflictingJacksonFields(annotations, role, jsonapiName, rawType);
       AnnotatedMember accessor =
           requireAccessorIfAnnotated(
               propertyDefinition,
@@ -273,29 +274,37 @@ final class MappingDefinitionResolver {
    * Configured Jackson may merge distinct Java members that share one external name into a single
    * {@link BeanPropertyDefinition}. Accessing the merged field or getter then throws; treat that as
    * a JSON:API member name collision rather than leaking Jackson's introspection exception.
+   *
+   * <p>This runs before unannotated properties are skipped. Field-only POJOs can leave no visible
+   * role on the merged definition; mixed roles recovered from constructor parameters must still be
+   * {@link MappingDiagnostic#NAME_COLLISION}, not {@link MappingDiagnostic#DUPLICATE_ROLE}. Jackson
+   * may also attach multiple constructor parameters to one external name without throwing from
+   * {@code getField}/{@code getGetter}; that is the same collision.
    */
-  private static void rejectConflictingJacksonFields(
-      RoleAnnotations annotations, PropertyRole role, String jsonapiName, Class<?> rawType) {
+  private static void rejectConflictingJacksonName(
+      RoleAnnotations annotations, String jacksonName, Class<?> rawType) {
     if (!annotations.conflictingFields()) {
       return;
     }
-    MappingLocation location =
-        switch (role) {
-          case ATTRIBUTE -> attributeLocation(jsonapiName);
-          case RELATIONSHIP -> relationshipLocation(jsonapiName);
-          default -> null;
-        };
-    if (location == null) {
-      throw JsonApiMappingException.withoutLocation(
+    PropertyRole role = annotations.count() == 1 ? annotations.explicitRole() : null;
+    if (role == PropertyRole.ATTRIBUTE) {
+      throw new JsonApiMappingException(
           MappingDiagnostic.NAME_COLLISION,
           rawType,
-          "Duplicate JSON:API member name: " + jsonapiName);
+          attributeLocation(jacksonName),
+          "Duplicate attribute name: " + jacksonName);
     }
-    throw new JsonApiMappingException(
+    if (role == PropertyRole.RELATIONSHIP) {
+      throw new JsonApiMappingException(
+          MappingDiagnostic.NAME_COLLISION,
+          rawType,
+          relationshipLocation(jacksonName),
+          "Duplicate relationship name: " + jacksonName);
+    }
+    throw JsonApiMappingException.withoutLocation(
         MappingDiagnostic.NAME_COLLISION,
         rawType,
-        location,
-        "Duplicate " + role.name().toLowerCase() + " name: " + jsonapiName);
+        "Duplicate JSON:API member name: " + jacksonName);
   }
 
   private static @Nullable PropertyRole resolveRole(
@@ -673,11 +682,18 @@ final class MappingDefinitionResolver {
     static RoleAnnotations from(List<BeanPropertyDefinition> propertyDefinitions) {
       List<@Nullable AnnotatedMember> members = new ArrayList<>();
       boolean conflictingMembers = false;
+      boolean multipleConstructorParameters = false;
       for (BeanPropertyDefinition propertyDefinition : propertyDefinitions) {
         conflictingMembers |= addMember(members, propertyDefinition::getField);
         conflictingMembers |= addMember(members, propertyDefinition::getGetter);
         conflictingMembers |= addMember(members, propertyDefinition::getSetter);
-        propertyDefinition.getConstructorParameters().forEachRemaining(members::add);
+        int constructorParameters = 0;
+        for (var parameters = propertyDefinition.getConstructorParameters();
+            parameters.hasNext(); ) {
+          members.add(parameters.next());
+          constructorParameters++;
+        }
+        multipleConstructorParameters |= constructorParameters > 1;
       }
       return new RoleAnnotations(
           findAnnotationAnywhere(members, JsonApiId.class),
@@ -685,7 +701,7 @@ final class MappingDefinitionResolver {
           findAnnotationAnywhere(members, JsonApiRelationship.class),
           findAnnotationAnywhere(members, JsonApiMeta.class),
           findAnnotationAnywhere(members, JsonApiRelationshipMeta.class),
-          conflictingMembers);
+          conflictingMembers || multipleConstructorParameters);
     }
 
     private static boolean addMember(

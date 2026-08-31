@@ -81,8 +81,8 @@ public final class DomainPatchDtoBinder {
     bindRelationships(resource, mapping, properties, rawType);
     bindResourceMeta(resource, mapping, properties, rawType);
     bindRelationshipMeta(resource, mapping, properties, rawType);
-    Map<String, StructuredValueBinder.ConstructionStart> startsByLogicalName =
-        mapping.constructionStartsByLogicalName(ID_LOCATION);
+    Map<String, StructuredValueBinder.ConstructionStart> startsByJacksonName =
+        mapping.constructionStartsByJacksonName(ID_LOCATION);
     try {
       return BeanConstruction.convertBean(
           mapper,
@@ -91,7 +91,7 @@ public final class DomainPatchDtoBinder {
           rawType,
           (failure, ignored) ->
               structuredBinder.translateConstructionPath(
-                  BeanConstruction.pathNames(failure), startsByLogicalName, false));
+                  BeanConstruction.pathNames(failure), startsByJacksonName, false));
     } catch (JsonApiMappingException e) {
       if (isIdentifierConstructionFailure(e, mapping.identifierProperty())) {
         Throwable cause = e.getCause() == null ? e : e.getCause();

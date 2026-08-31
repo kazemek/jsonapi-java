@@ -11,8 +11,8 @@ import tools.jackson.databind.JavaType;
  * JSON:API role and wire metadata for ordinary flat reads.
  *
  * <p>Unlike {@link ResourceMapping}, this mapping is resolved from Jackson's deserialization
- * introspection and records whether each mapped logical property has an effective deserialization
- * target. It intentionally does not replace or weaken the serialization-oriented write mapping.
+ * introspection and records whether each mapped property has an effective deserialization target.
+ * It intentionally does not replace or weaken the serialization-oriented write mapping.
  */
 record ReadResourceMapping(
     String resourceType,
@@ -24,12 +24,12 @@ record ReadResourceMapping(
     JavaType domainType) {
 
   /**
-   * Maps logical Jackson property names to resource-relative wire locations for
+   * Maps configured Jackson external names to resource-relative wire locations for
    * construction-failure translation. The declared type remains available for serialization-only
    * properties so a missing member never creates a synthetic input value merely by being present in
    * the mapping.
    */
-  Map<String, StructuredValueBinder.ConstructionStart> constructionStartsByLogicalName(
+  Map<String, StructuredValueBinder.ConstructionStart> constructionStartsByJacksonName(
       @Nullable MappingLocation identifierLocation) {
     Map<String, StructuredValueBinder.ConstructionStart> starts = new LinkedHashMap<>();
     if (identifierProperty != null && identifierLocation != null) {

@@ -47,12 +47,37 @@ public final class WriteDiagnosticsFixtures {
   @JsonApiResource(type = "dup")
   public record DuplicateRoleEntity(@JsonApiId @JsonApiAttribute String id) {}
 
-  /** Attribute and relationship mapped onto the same member name. */
+  /** Attribute and relationship mapped onto the same Jackson external name. */
   @JsonApiResource(type = "collision")
   public record NameCollisionEntity(
       @JsonApiId String id,
       @JsonApiAttribute @JsonProperty("same") String fieldA,
       @JsonApiRelationship @JsonProperty("same") String fieldB) {}
+
+  /**
+   * Field-only POJO whose attribute and relationship share one Jackson external name. Jackson
+   * merges the members and cannot expose either field; mapping must still report {@code
+   * NAME_COLLISION} rather than skipping both roles.
+   */
+  @SuppressWarnings("java:S1104")
+  @JsonApiResource(type = "field-collision")
+  public static final class FieldOnlyNameCollisionEntity {
+    @JsonApiId public final String id;
+
+    @JsonApiAttribute
+    @JsonProperty("same")
+    public final String fieldA;
+
+    @JsonApiRelationship
+    @JsonProperty("same")
+    public final String fieldB;
+
+    public FieldOnlyNameCollisionEntity(String id, String fieldA, String fieldB) {
+      this.id = id;
+      this.fieldA = fieldA;
+      this.fieldB = fieldB;
+    }
+  }
 
   /** Two attributes mapped onto the same wire name. */
   @JsonApiResource(type = "dup-attrs")
