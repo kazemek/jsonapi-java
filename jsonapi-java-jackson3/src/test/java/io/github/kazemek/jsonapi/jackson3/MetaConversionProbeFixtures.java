@@ -17,6 +17,7 @@ import java.util.Objects;
  * property null providers, property-level polymorphic TypeDeserializers, and reports construction
  * failures at the nested wire pointer (ADR-015).
  */
+@SuppressWarnings({"unused", "NullAway"})
 public final class MetaConversionProbeFixtures {
 
   private MetaConversionProbeFixtures() {}

@@ -75,7 +75,7 @@ public final class RelationshipContainerFixtures {
   @JsonApiResource(type = "articles")
   @SuppressWarnings({"ArrayRecordComponent", "java:S6218"})
   public record ArticleWithNullableIdentifierArray(
-      @JsonApiId String id, @JsonApiRelationship @Nullable ResourceIdentifier[] items) {
+      @JsonApiId String id, @JsonApiRelationship ResourceIdentifier @Nullable [] items) {
 
     @Override
     public boolean equals(Object obj) {
@@ -83,7 +83,7 @@ public final class RelationshipContainerFixtures {
               instanceof
               ArticleWithNullableIdentifierArray(
                   String otherId,
-                  @Nullable ResourceIdentifier[] otherItems)
+                  ResourceIdentifier @Nullable [] otherItems)
           && Objects.equals(id, otherId)
           && Arrays.equals(items, otherItems);
     }

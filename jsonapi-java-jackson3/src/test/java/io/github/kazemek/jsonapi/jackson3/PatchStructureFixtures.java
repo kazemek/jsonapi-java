@@ -18,6 +18,7 @@ import tools.jackson.databind.annotation.JsonSerialize;
  * deep construction-failure pointer translation (ADR-014). Each nested shape exists to isolate one
  * declaration-validation or diagnostic-translation mechanic.
  */
+@SuppressWarnings({"unused", "NullAway"})
 public final class PatchStructureFixtures {
 
   private PatchStructureFixtures() {}

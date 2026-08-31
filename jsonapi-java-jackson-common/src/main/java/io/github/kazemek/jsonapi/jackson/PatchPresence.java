@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
  */
 // The type parameter is the payload type of the public PATCH DTO contract; consumers declare
 // PatchPresence<T> even though the interface body itself does not reference T.
-@SuppressWarnings("java:S2326")
+@SuppressWarnings({"java:S2326", "unused"})
 public sealed interface PatchPresence<T> permits PatchPresence.Omitted, PatchPresence.Present {
 
   /** The member was omitted from the update document; no requested change. */
