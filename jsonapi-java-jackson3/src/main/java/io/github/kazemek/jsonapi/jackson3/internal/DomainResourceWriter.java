@@ -724,8 +724,9 @@ public final class DomainResourceWriter {
     checkDeclaredTargetHasResourceMetadata(contentType, relationshipLocation);
     List<ResourceIdentifier> identifiers = new ArrayList<>(items.size());
     for (Object item : items) {
-      JavaType effectiveContentType = effectiveType(item, contentType);
-      identifiers.add(extractIdentifier(item, effectiveContentType));
+      Object nonNullItem = Objects.requireNonNull(item);
+      JavaType effectiveContentType = effectiveType(nonNullItem, contentType);
+      identifiers.add(extractIdentifier(nonNullItem, effectiveContentType));
     }
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
   }
