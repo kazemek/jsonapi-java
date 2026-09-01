@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 

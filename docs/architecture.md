@@ -21,14 +21,14 @@ explains how those pieces fit together.
 ## Module responsibilities
 
 These are ownership boundaries, not a complete Gradle dependency graph. Jackson 2 is planned and
-consumes the same `jackson-common` contracts; it is not an implemented module today.
+consumes the same `jackson-api` contracts; it is not an implemented module today.
 
 ```mermaid
 flowchart TB
   subgraph published["Published library modules"]
     CORE["jsonapi-java-core<br/>JSON:API document model and validation"]
     ANN["jsonapi-java-annotations<br/>mapping role metadata only"]
-    COMMON["jsonapi-java-jackson-common<br/>Jackson-major-neutral contracts"]
+    COMMON["jsonapi-java-jackson-api<br/>Jackson-major-neutral API surface"]
     J3["jsonapi-java-jackson3<br/>Jackson 3 codec, introspection, and binding"]
   end
 
@@ -49,7 +49,7 @@ consume that module (`testImplementation`); it is not a production dependency of
 |--------|----------------|
 | [`jsonapi-java-core`](../jsonapi-java-core/README.md) | Immutable JSON:API document model and aggregate validation. No Jackson. |
 | [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
-| [`jsonapi-java-jackson-common`](../jsonapi-java-jackson-common/README.md) | Jackson-import-free policy, diagnostics, contexts, envelopes, and PATCH command contracts shared by Jackson majors. |
+| [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors. |
 | [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. |
 | [`jsonapi-java-test-support`](../jsonapi-java-test-support/README.md) | Unpublished shared semantic catalogs, corpus, pinned schemas, and adapter-neutral semantic verifiers. |
 | Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
@@ -209,7 +209,7 @@ README records the writer-boundary contract.
 
 ## Jackson-major boundary
 
-`jsonapi-java-jackson-common` stays free of `tools.jackson.*` and `com.fasterxml.jackson.*`.
+`jsonapi-java-jackson-api` stays free of `tools.jackson.*` and `com.fasterxml.jackson.*`.
 Jackson 3 (and later Jackson 2) own major-specific factories, parsers, serializers, introspection,
 and mapper derivation. There is no runtime major detection and no lowest-common-denominator
 Jackson abstraction.
@@ -270,7 +270,7 @@ These names are adjacent and easy to conflate. They are not synonyms.
 
 - [jsonapi-java-core](../jsonapi-java-core/README.md)
 - [jsonapi-java-annotations](../jsonapi-java-annotations/README.md)
-- [jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md)
+- [jsonapi-java-jackson-api](../jsonapi-java-jackson-api/README.md)
 - [jsonapi-java-jackson3](../jsonapi-java-jackson3/README.md)
 - [jsonapi-java-test-support](../jsonapi-java-test-support/README.md)
 - [ADR index](adr/README.md)

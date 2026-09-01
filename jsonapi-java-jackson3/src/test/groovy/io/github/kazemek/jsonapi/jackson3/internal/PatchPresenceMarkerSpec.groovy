@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal
 
-import io.github.kazemek.jsonapi.jackson.PatchPresence
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
 import spock.lang.Specification
 import tools.jackson.core.JsonGenerator
 import tools.jackson.databind.SerializationContext

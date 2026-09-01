@@ -27,10 +27,11 @@ import tools.jackson.databind.util.TokenBuffer;
  * (top-level attributes and identifiers), and {@link StructuredValueBinder} (low-level nested
  * atomic members) so the locations cannot silently drift on which configured Jackson authority
  * applies to a supplied member. It has no {@link ResourceMapping} / {@link MappingProperty} /
- * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.PatchChange} / location
- * dependency: callers supply the containing bean's {@link JavaType}, the member's Jackson-resolved
- * wire name, the conversion-target {@link JavaType}, and the raw wire value, so a later structured
- * JSON:API {@code meta} mapping can reuse the same machinery at its own location (ADR-014).
+ * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.patch.PatchChange} /
+ * location dependency: callers supply the containing bean's {@link JavaType}, the member's
+ * Jackson-resolved wire name, the conversion-target {@link JavaType}, and the raw wire value, so a
+ * later structured JSON:API {@code meta} mapping can reuse the same machinery at its own location
+ * (ADR-014).
  *
  * <p>The member's fully-contextualized property is resolved from the containing bean's {@link
  * BeanDeserializerBase} (the same {@link SettableBeanProperty} Jackson would use during normal

@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainwrite;
 
-import io.github.kazemek.jsonapi.jackson.DocumentEnvelope;
+import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope;
 import io.github.kazemek.jsonapi.testsupport.Scenario;
 import org.jspecify.annotations.Nullable;
 

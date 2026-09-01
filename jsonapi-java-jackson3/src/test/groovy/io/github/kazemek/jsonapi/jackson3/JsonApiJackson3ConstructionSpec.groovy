@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
-import io.github.kazemek.jsonapi.jackson.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import java.lang.reflect.Modifier
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper

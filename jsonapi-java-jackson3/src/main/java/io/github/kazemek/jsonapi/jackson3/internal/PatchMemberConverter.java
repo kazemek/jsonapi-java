@@ -1,12 +1,12 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
-import io.github.kazemek.jsonapi.jackson.PatchCommand;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.patch.PatchCommand;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.LinkedHashMap;
 import java.util.List;

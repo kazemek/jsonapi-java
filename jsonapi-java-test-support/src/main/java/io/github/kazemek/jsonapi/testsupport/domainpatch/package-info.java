@@ -7,7 +7,7 @@
  * <p>Payloads are Jackson-major-neutral JSON documents plus expected changes or diagnostics. Shared
  * flat DTOs live in {@code domainread} / {@code domainwrite}; this package adds PATCH-specific
  * types only when those cannot express a catalog entry (the direct PATCH DTOs carry {@link
- * io.github.kazemek.jsonapi.jackson.PatchPresence} members).
+ * io.github.kazemek.jsonapi.jackson.patch.PatchPresence} members).
  */
 @NullMarked
 package io.github.kazemek.jsonapi.testsupport.domainpatch;

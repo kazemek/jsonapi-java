@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.testsupport.domainwrite.WriteDiagnosticScenario
 import io.github.kazemek.jsonapi.testsupport.domainwrite.WriteDiagnosticsScenarios
 import spock.lang.Specification

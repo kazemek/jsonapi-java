@@ -14,7 +14,7 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
+import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import java.math.BigDecimal;
 import java.math.BigInteger;

@@ -1,12 +1,12 @@
 package io.github.kazemek.jsonapi.jackson3.internal
 
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson.MappingLocation
-import io.github.kazemek.jsonapi.jackson.PatchPresence
-import io.github.kazemek.jsonapi.jackson.StructuredMember
-import io.github.kazemek.jsonapi.jackson.StructuredMemberState
-import io.github.kazemek.jsonapi.jackson.StructuredPatch
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
+import io.github.kazemek.jsonapi.jackson.patch.StructuredMember
+import io.github.kazemek.jsonapi.jackson.patch.StructuredMemberState
+import io.github.kazemek.jsonapi.jackson.patch.StructuredPatch
 import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.AddressWithLoudNote
 import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.Details
 import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.EmailContact

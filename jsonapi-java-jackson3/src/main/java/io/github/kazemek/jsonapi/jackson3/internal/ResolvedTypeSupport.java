@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Member;

@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 
 /**
  * Invalid mixed nested shape: one member is not presence-aware, so the shape is neither an ordinary

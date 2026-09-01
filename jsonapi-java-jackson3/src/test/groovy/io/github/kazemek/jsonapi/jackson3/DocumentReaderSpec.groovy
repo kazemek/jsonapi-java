@@ -13,10 +13,10 @@ import io.github.kazemek.jsonapi.core.validation.DocumentUsage
 import io.github.kazemek.jsonapi.core.validation.LinksContext
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
-import io.github.kazemek.jsonapi.jackson.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
-import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
+import io.github.kazemek.jsonapi.jackson.diagnostic.CodecFailureCategory
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException
+import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources
 import io.github.kazemek.jsonapi.testsupport.codec.AmbiguousPrimaryDataScenarios
 import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios

@@ -4,7 +4,7 @@ import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import io.github.kazemek.jsonapi.core.validation.JsonApiDocumentValidator;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.jackson.MappedDocument;
+import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.util.HashSet;

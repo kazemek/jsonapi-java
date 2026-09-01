@@ -9,7 +9,7 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.jackson.DocumentEnvelope
+import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import spock.lang.Specification
 
 class DomainWriteVerifierSpec extends Specification {

@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 
 /**
  * Invalid nested shape: a member declared directly as {@link PatchPresence.Present} rather than

@@ -29,7 +29,7 @@ document and binds it **directly** into an application-owned annotated PATCH DTO
 - Patchable attributes and relationships are declared as `PatchPresence<T>`: a sealed tri-state
   with `Omitted` (member absent from the update), `Present(value)` (supplied non-null), and
   `Present(null)` (supplied explicit JSON `null` or null relationship linkage).
-- `PatchPresence<T>` is a Jackson-major-neutral contract in `jsonapi-java-jackson-common`. It
+- `PatchPresence<T>` is a Jackson-major-neutral contract in `jsonapi-java-jackson-api`. It
   models only presence and never owns mapping, validation, persistence, or business semantics;
   applications inspect the tri-state and decide how to apply each member.
 - Nullable `Optional<T>` is **not** the presence contract. It is a distinct inner-value concern, so

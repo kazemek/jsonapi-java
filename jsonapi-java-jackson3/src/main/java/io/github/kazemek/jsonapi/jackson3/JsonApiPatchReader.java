@@ -5,10 +5,10 @@ import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.jackson.DocumentReadContext;
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson.PatchCommand;
-import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext;
+import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind;
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.patch.PatchCommand;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainPatchBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import io.github.kazemek.jsonapi.jackson3.internal.MetaBindingModule;
@@ -26,10 +26,10 @@ import tools.jackson.databind.json.JsonMapper;
  * DocumentReadContext} ({@link PrimaryDataKind#RESOURCE} with {@link
  * DocumentUsage#UPDATE_REQUEST}), then binds only supplied mapped attributes and relationships.
  * {@link #fromDocument} binds without re-validation. Codec and aggregate failures stay {@link
- * io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException}; bind failures stay {@link
- * io.github.kazemek.jsonapi.jackson.JsonApiMappingException} with resource-relative pointers and
- * are never prefixed with {@code /data}. Built-in linkage conversion preserves {@code
- * ResourceIdentifier.meta} through a binder mapper that can round-trip core {@link
+ * io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException}; bind failures stay
+ * {@link io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException} with
+ * resource-relative pointers and are never prefixed with {@code /data}. Built-in linkage conversion
+ * preserves {@code ResourceIdentifier.meta} through a binder mapper that can round-trip core {@link
  * io.github.kazemek.jsonapi.core.model.Meta} (ADR-017).
  *
  * <p>Close/ownership rules match {@link JsonApiDocumentReader}: convenience overloads close parsers

@@ -2,7 +2,7 @@ package io.github.kazemek.jsonapi.testsupport.codec
 
 import groovy.json.JsonSlurper
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
+import io.github.kazemek.jsonapi.jackson.diagnostic.CodecFailureCategory
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources
 import spock.lang.Specification
 

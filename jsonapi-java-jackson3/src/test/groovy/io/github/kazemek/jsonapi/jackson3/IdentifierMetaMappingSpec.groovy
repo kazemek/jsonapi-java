@@ -6,10 +6,10 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson.RelationshipLinkage
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.EncodedIdMeta
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.GenericIdentifierMetaArticle
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.IdMetaBox

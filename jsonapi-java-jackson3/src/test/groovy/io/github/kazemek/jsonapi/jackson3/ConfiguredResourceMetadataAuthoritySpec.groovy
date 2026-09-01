@@ -8,12 +8,12 @@ import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.jackson.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.DomainData
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson.PatchChange
-import io.github.kazemek.jsonapi.jackson.PatchPresence
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.mapping.DomainData
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.patch.PatchChange
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 

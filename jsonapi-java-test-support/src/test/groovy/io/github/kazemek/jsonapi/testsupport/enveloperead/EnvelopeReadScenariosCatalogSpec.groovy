@@ -3,7 +3,7 @@ package io.github.kazemek.jsonapi.testsupport.enveloperead
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources
 import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle

@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The {@code present} boolean is a primitive, so no caller {@code JsonInclude} configuration can
  * drop it; the already-converted inner value rides in {@code value}. The {@link
- * PatchPresenceDeserializer} reconstructs {@link io.github.kazemek.jsonapi.jackson.PatchPresence}
- * from this marker.
+ * PatchPresenceDeserializer} reconstructs {@link
+ * io.github.kazemek.jsonapi.jackson.patch.PatchPresence} from this marker.
  */
 record PresenceMarker(boolean present, @Nullable Object value) {}

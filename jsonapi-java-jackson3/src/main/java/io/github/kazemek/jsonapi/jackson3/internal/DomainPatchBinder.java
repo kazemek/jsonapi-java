@@ -6,12 +6,12 @@ import io.github.kazemek.jsonapi.core.model.Relationship;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.Relationships;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
-import io.github.kazemek.jsonapi.jackson.PatchChange;
-import io.github.kazemek.jsonapi.jackson.PatchCommand;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.patch.PatchChange;
+import io.github.kazemek.jsonapi.jackson.patch.PatchCommand;
 import io.github.kazemek.jsonapi.jackson3.RelationshipLinkageMapper;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,9 +38,9 @@ import tools.jackson.databind.json.JsonMapper;
  * attribute whose declared type is an ordinary traversable structured domain value (or a single
  * {@code PatchPresence} wrapper / transparent {@code Optional} around one) and whose wire value is
  * an object binds to an {@link PatchChange.AttributeChange} carrying a {@link
- * io.github.kazemek.jsonapi.jackson.StructuredPatch} of supplied-only nested changes instead of a
- * fully materialized replacement bean. Presence-aware PATCH shapes remain a typed-path concept and
- * are rejected on this path.
+ * io.github.kazemek.jsonapi.jackson.patch.StructuredPatch} of supplied-only nested changes instead
+ * of a fully materialized replacement bean. Presence-aware PATCH shapes remain a typed-path concept
+ * and are rejected on this path.
  */
 public final class DomainPatchBinder {
 

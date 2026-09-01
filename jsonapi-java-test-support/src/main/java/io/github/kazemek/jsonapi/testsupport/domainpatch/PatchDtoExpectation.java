@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch;
 
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.util.Map;
 import java.util.Objects;
 

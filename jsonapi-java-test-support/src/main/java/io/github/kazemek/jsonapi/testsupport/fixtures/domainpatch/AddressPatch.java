@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 
 /**
  * Nested presence-aware PATCH shape for a structured address value (typed-path recursion).

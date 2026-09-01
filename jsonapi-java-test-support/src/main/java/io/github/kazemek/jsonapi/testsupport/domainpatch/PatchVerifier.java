@@ -1,9 +1,9 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch;
 
-import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.PatchChange;
-import io.github.kazemek.jsonapi.jackson.PatchCommand;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.patch.PatchChange;
+import io.github.kazemek.jsonapi.jackson.patch.PatchCommand;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.List;

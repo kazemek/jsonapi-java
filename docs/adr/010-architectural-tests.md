@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-21 (test-support module rename; package allowlist unchanged); 2026-08-24 (passive-fixture sub-allowlist enforcing the testsupport.fixtures coverage boundary)
+**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-21 (test-support module rename; package allowlist unchanged); 2026-08-24 (passive-fixture sub-allowlist enforcing the testsupport.fixtures coverage boundary); 2026-08-31 (renames `jsonapi-java-jackson-common` to `jsonapi-java-jackson-api` and reorganizes API contracts into concept packages)
 
 ## Context
 
@@ -17,7 +17,7 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Current allowlists:
   - `io.github.kazemek.jsonapi.core..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.core..` types.
   - `io.github.kazemek.jsonapi.annotation..` → `java..`, `org.jspecify.annotations..`, and other `io.github.kazemek.jsonapi.annotation..` types.
-  - `io.github.kazemek.jsonapi.jackson..` (jackson-common) → `java..`, `org.jspecify.annotations..`,
+  - `io.github.kazemek.jsonapi.jackson..` (jackson-api) → `java..`, `org.jspecify.annotations..`,
     `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`, and
     other `io.github.kazemek.jsonapi.jackson..` types. Production sources must not depend on
     `core.internal`, on either Jackson major (`tools.jackson..`, `com.fasterxml.jackson..`), or on
@@ -57,11 +57,11 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 - Gradle continues to own artifact selection and publication; ArchUnit owns package/type coupling that Gradle cannot express.
 - Changing an allowlist requires updating this ADR.
 - Sibling modules must not depend on `io.github.kazemek.jsonapi.core.internal..`. That ban is
-  enforced for `jsonapi-java-jackson3` and `jsonapi-java-jackson-common` and must be added when
+  enforced for `jsonapi-java-jackson3` and `jsonapi-java-jackson-api` and must be added when
   further sibling modules register.
 - Major-specific adapters must not re-declare public top-level contracts that live in
-  `jsonapi-java-jackson-common`; each adapter's architecture test derives the forbidden simple names
-  from the compiled common package boundary rather than a hand-maintained moved-type list. This
+  `jsonapi-java-jackson-api`; each adapter's architecture test derives the forbidden simple names
+  from the compiled API package boundary rather than a hand-maintained moved-type list. This
   automatically protects later neutral contracts and is the model for Jackson 2 when registered.
 
 ## Consequences

@@ -9,14 +9,15 @@ and for mapping annotated domain types to resource objects.
 |------------------------------------------------|-----------------------------------------------------------------------|
 | `io.github.kazemek.jsonapi.jackson3`           | Public writer/reader/mapper/binder/PATCH factories and validate-then-codec entry points |
 | `io.github.kazemek.jsonapi.jackson3.internal`  | Streaming serializers/decoders, mapping engine, module registration; not public API |
-| `io.github.kazemek.jsonapi.jackson`            | Jackson-major-neutral policy/context/diagnostic/envelope/PATCH command contracts (in `jsonapi-java-jackson-common`) |
+| `io.github.kazemek.jsonapi.jackson.*`          | Public Jackson-major-neutral API contracts (in `jsonapi-java-jackson-api`): `document`, `mapping`, `patch`, `representation`, `diagnostic` |
 
 Codec and mapping policy, contexts, diagnostics, domain envelope values, and presence-aware update
 commands (`DocumentReadContext`, `CompoundSerializationContext`, `IncludePath`, `IncludePolicy`,
 `FieldPolicy`, `MappedDocument`, `IdentifierConverter`, `DomainData`, `IncludedResources`,
-`PatchCommand`, `PatchChange`, and the failure types) live in the Jackson-major-neutral package
-`io.github.kazemek.jsonapi.jackson` and are imported from `jsonapi-java-jackson-common`; this module
-holds only Jackson 3-bound factories, readers, writers, and binders.
+`PatchCommand`, `PatchChange`, and the failure types) live in the Jackson-major-neutral API
+packages `io.github.kazemek.jsonapi.jackson.document`, `mapping`, `patch`, `representation`, and
+`diagnostic` and are imported from `jsonapi-java-jackson-api`; this module holds only Jackson
+3-bound factories, readers, writers, and binders.
 
 ## Minimal usage
 
@@ -361,7 +362,7 @@ remain application/adapter responsibilities. Domain graph hydration and
 persistence lookup remain out of scope. Command application (mutating domain or persistence
 objects from a `PatchCommand`) remains application-owned. Jackson 2 parity is a separate
 artifact; both majors share the neutral contracts of
-[jsonapi-java-jackson-common](../jsonapi-java-jackson-common/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
+[jsonapi-java-jackson-api](../jsonapi-java-jackson-api/README.md) per [ADR-007](../docs/adr/007-module-boundaries.md).
 
 ## Further reading
 
@@ -382,7 +383,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
 - [ADR-017 — Opt-in RelationshipLinkage for resource identifier meta](../docs/adr/017-resource-identifier-meta-mapping.md)
 - [Canonical fixtures](../jsonapi-java-test-support/src/main/resources/jsonapi/corpus/1.1/README.md)
-- [Jackson common contracts module](../jsonapi-java-jackson-common/README.md)
+- [Jackson API module](../jsonapi-java-jackson-api/README.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents

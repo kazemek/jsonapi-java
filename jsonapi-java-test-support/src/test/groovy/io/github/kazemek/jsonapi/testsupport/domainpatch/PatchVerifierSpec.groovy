@@ -2,14 +2,14 @@ package io.github.kazemek.jsonapi.testsupport.domainpatch
 
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import io.github.kazemek.jsonapi.jackson.CodecFailureCategory
-import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson.MappingLocation
-import io.github.kazemek.jsonapi.jackson.PatchChange
-import io.github.kazemek.jsonapi.jackson.PatchCommand
-import io.github.kazemek.jsonapi.jackson.SourceLocation
+import io.github.kazemek.jsonapi.jackson.diagnostic.CodecFailureCategory
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation
+import io.github.kazemek.jsonapi.jackson.patch.PatchChange
+import io.github.kazemek.jsonapi.jackson.patch.PatchCommand
+import io.github.kazemek.jsonapi.jackson.diagnostic.SourceLocation
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticleWithArray
 import spock.lang.Specification

@@ -2,11 +2,11 @@ package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.RelationshipData
-import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
-import io.github.kazemek.jsonapi.jackson.IncludePath
-import io.github.kazemek.jsonapi.jackson.IncludePolicy
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.representation.IncludePath
+import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ModeratedComment
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.PolymorphicArticle
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.GenericResource

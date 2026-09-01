@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-26  
-**Amended:** 2026-07-30 (registers `jsonapi-java-jackson3` write surface); 2026-08-10 (registers `jsonapi-java-jackson-common`); 2026-08-16 (presence-aware PATCH command contracts move to jackson-common)
+**Amended:** 2026-07-30 (registers `jsonapi-java-jackson3` write surface); 2026-08-10 (registers `jsonapi-java-jackson-common`); 2026-08-16 (presence-aware PATCH command contracts move to jackson-common); 2026-08-31 (renames `jsonapi-java-jackson-common` to `jsonapi-java-jackson-api` and reorganizes public contracts into concept packages)
 
 ## Context
 
@@ -14,16 +14,15 @@ Use these module boundaries:
 
 - `jsonapi-java-core`: dependency-free document model and validation;
 - `jsonapi-java-annotations`: dependency-free domain-mapping annotations;
-- `jsonapi-java-jackson-common`: Jackson-major-neutral public contracts for codec and
-  domain-mapping policy, diagnostics, contexts, domain envelope values, and
-  presence-aware update-command values, with no runtime dependency on either Jackson
-  major;
+- `jsonapi-java-jackson-api`: public Jackson-major-neutral API surface for codec and
+  domain-mapping policy, diagnostics, contexts, domain envelope values, and presence-aware
+  update-command values, with no runtime dependency on either Jackson major;
 - `jsonapi-java-jackson3`: Jackson 3 document codec (writer, reads, and mapping),
   flat DTO mapping, typed envelopes, and PATCH reader entry points that produce the
-  common presence-aware update commands; depends on `jsonapi-java-jackson-common` for
-  neutral contracts;
+  API presence-aware update commands; depends on `jsonapi-java-jackson-api` for neutral
+  contracts;
 - `jsonapi-java-jackson2`: separately compiled Jackson 2 artifact with parity contracts; consumes
-  the same common contracts;
+  the same API contracts;
 - `jsonapi-java-query`: optional query-parameter parser;
 - `jsonapi-java-spring-webmvc`: optional Spring Boot WebMVC integration;
 - `jsonapi-java-spring-webflux`: separately evaluated future integration.
@@ -38,7 +37,7 @@ Package and Maven coordinates use the verified namespace in ADR-008 (`io.github.
 - Core remains usable with no third-party runtime dependency.
 - Consumers select only the adapters they need.
 - Jackson 2 and Jackson 3 public APIs never share one runtime artifact or use runtime major
-  detection; both majors may share the neutral `jsonapi-java-jackson-common` contract artifact
+  detection; both majors may share the neutral `jsonapi-java-jackson-api` contract artifact
   without combining any major's implementation.
 - WebMVC can stabilize without coupling its release to WebFlux.
 - More artifacts and Gradle subprojects must be maintained.

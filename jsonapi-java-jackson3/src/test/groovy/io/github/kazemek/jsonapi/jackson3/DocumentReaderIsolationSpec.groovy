@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.jackson.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
 
 import java.lang.reflect.Modifier
 

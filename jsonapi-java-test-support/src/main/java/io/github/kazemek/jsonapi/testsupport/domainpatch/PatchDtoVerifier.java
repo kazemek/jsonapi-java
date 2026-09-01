@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch;
 
-import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.util.Map;

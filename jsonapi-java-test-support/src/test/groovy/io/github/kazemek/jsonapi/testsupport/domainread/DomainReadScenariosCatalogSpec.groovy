@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainread
 
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import spock.lang.Specification
 
 // Why this spec exists: DomainReadScenarios is the version-neutral flat binder catalog shared by

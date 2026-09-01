@@ -28,7 +28,7 @@ Define a reusable recursive presence-aware PATCH semantics for structured values
 first public use for structured JSON:API attributes on both the typed `PatchPresence<T>` DTO path
 and the low-level `PatchCommand<T>` path, with machinery independent of the JSON:API member location.
 
-### Neutral recursive contract (jsonapi-java-jackson-common)
+### Neutral recursive contract (jsonapi-java-jackson-api)
 
 A new Jackson-major-neutral payload, **not** a `PatchChange` variant:
 

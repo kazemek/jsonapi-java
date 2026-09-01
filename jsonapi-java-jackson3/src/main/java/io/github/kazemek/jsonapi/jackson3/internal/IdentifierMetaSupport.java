@@ -3,7 +3,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
 import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 

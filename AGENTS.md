@@ -104,7 +104,7 @@ those capabilities are unavailable.
   and query execution remain application policy; do not hide policy in mapping or adapter defaults.
 - `jsonapi-java-core` has no functional third-party runtime dependencies; compile-only JSpecify is
   allowed. Optional integrations belong in separate modules.
-- `jsonapi-java-jackson-common` must remain free of Jackson-major imports
+- `jsonapi-java-jackson-api` must remain free of Jackson-major imports
   (`tools.jackson.*` and `com.fasterxml.jackson.*`) despite its name.
 - Preserve wire-visible distinctions: absent, explicit JSON `null`, and present-empty are different
   states. Explicit null data/linkage uses sealed model variants, not bare Java null.
