@@ -3,6 +3,7 @@ package io.github.kazemek.jsonapi.jackson3;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext;
 import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecoratorRegistry;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
 import io.github.kazemek.jsonapi.jackson3.internal.JsonApiDocumentModule;
@@ -77,11 +78,40 @@ public final class JsonApiJackson3 {
    */
   public static JsonApiResourceMapper resourceMapper(
       JsonMapper base, IdentifierConverter identifierConverter) {
+    return resourceMapper(base, identifierConverter, ResourceDecoratorRegistry.empty());
+  }
+
+  /**
+   * Returns a resource mapper with default identifier conversion and the given decoration registry.
+   * Derives a new mapper via {@link JsonMapper#rebuild()} and never mutates the caller's mapper.
+   *
+   * <p>Relationship decoration is keyed by the mapped property <em>identity</em> (Jackson logical
+   * name), not the wire name; the mapper follows configured-Jackson renaming automatically.
+   */
+  public static JsonApiResourceMapper resourceMapper(
+      JsonMapper base, ResourceDecoratorRegistry decorators) {
+    return resourceMapper(base, IdentifierConverter.defaults(), decorators);
+  }
+
+  /**
+   * Returns a resource mapper with the given identifier converter and decoration registry. Derives
+   * a new mapper via {@link JsonMapper#rebuild()} and never mutates the caller's mapper.
+   *
+   * <p>Decorators add only {@code ResourceObject.links} and {@code Relationship.links} for existing
+   * mapped relationships. They never replace type/id/attributes/linkage/meta/inclusion or resurrect
+   * a fieldset-omitted relationship.
+   */
+  public static JsonApiResourceMapper resourceMapper(
+      JsonMapper base,
+      IdentifierConverter identifierConverter,
+      ResourceDecoratorRegistry decorators) {
     Objects.requireNonNull(base, "base");
     Objects.requireNonNull(identifierConverter, IDENTIFIER_CONVERTER);
+    Objects.requireNonNull(decorators, "decorators");
     JsonMapper derived = resourceMappingMapper(base);
     DomainResourceWriter writer =
-        new DomainResourceWriter(derived, identifierConverter, new MappingDefinitionCache(derived));
+        new DomainResourceWriter(
+            derived, identifierConverter, new MappingDefinitionCache(derived), decorators);
     return new JsonApiResourceMapper(writer);
   }
 

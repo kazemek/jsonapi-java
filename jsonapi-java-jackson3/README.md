@@ -44,11 +44,20 @@ cannot be derived safely. The canonical forms are:
 JsonApiJackson3.writer(mapper, validationContext);
 JsonApiJackson3.reader(mapper, readContext);
 JsonApiJackson3.resourceMapper(mapper, identifierConverter);
+JsonApiJackson3.resourceMapper(mapper, identifierConverter, decoratorRegistry);
 JsonApiJackson3.resourceBinder(mapper, identifierConverter, linkageMappers);
 JsonApiJackson3.domainDocumentReader(mapper, readContext, registry, identifierConverter, linkageMappers);
 JsonApiJackson3.patchReader(mapper, validationContext, identifierConverter, linkageMappers);
 JsonApiJackson3.patchDtoReader(mapper, validationContext, identifierConverter, linkageMappers);
 ```
+
+`ResourceDecoratorRegistry` is an immutable, application-owned registry of
+`ResourceDecorator<T>` instances keyed by domain raw class. Decoration adds only
+`ResourceObject.links` and `Relationship.links` for already-mapped relationships; it never replaces
+type, id, attributes, linkage, or meta, never affects inclusion, and never resurrects a
+fieldset-omitted relationship. Relationship decoration is keyed by the Jackson logical property name
+(e.g. `comments`), and the mapper follows the configured-Jackson external name (e.g.
+`@JsonProperty("article-comments")`) automatically.
 
 Shorter factory forms remain meaningful conveniences: they select the documented default validation
 policy, identifier converter, and empty linkage-mapper set, then delegate to these
@@ -68,6 +77,27 @@ JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(callerMapper);
 JsonApiDocument doc = mapper.toDocument(someAnnotatedPojo);
 String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 ```
+
+Resource-link decoration (advanced):
+
+```java
+Links articleLinks = Links.ofLinks(Map.of("self", new Link.StringLink("https://example.test/articles/1")));
+ResourceDecorator<Article> articleDecorator =
+    article ->
+        ResourceDecoration.builder()
+            .links(articleLinks)
+            .relationship("comments", RelationshipDecoration.links(commentLinks))
+            .build();
+
+ResourceDecoratorRegistry decorators =
+    ResourceDecoratorRegistry.builder().register(Article.class, articleDecorator).build();
+JsonApiResourceMapper decorated = JsonApiJackson3.resourceMapper(callerMapper, decorators);
+```
+
+Decoration is additive and keyed by the logical property name (`comments`), not the wire name;
+`@JsonProperty("article-comments")` renames the relationship on the wire automatically. Decoration
+applies to both primary and `included` resources and never resurrects a fieldset-omitted relationship.
+`DocumentEnvelope.links` remains the separate document-level link surface.
 
 The convenience route derives the root type from the concrete runtime class. When the declared
 root is parameterized directly, pass the complete Jackson type explicitly so generic attributes,

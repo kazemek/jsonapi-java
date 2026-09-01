@@ -65,9 +65,10 @@ contexts (`DocumentReadContext`, `DocumentEnvelope`,
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`, `MappingLocation`),
 identifier conversion (`IdentifierConverter`), representation values (`RepresentationSelection`,
 `RepresentationPolicy`), domain envelope values (`DomainData`,
-`IncludedResources`), and presence-aware update contracts (`PatchCommand`, `PatchChange`,
-`PatchPresence`, `RelationshipLinkage`, `StructuredPatch`, `StructuredMember`,
-`StructuredMemberState`). `PatchChange` sealed variants cover resource-meta and
+`IncludedResources`), decoration values (`ResourceDecorator`, `ResourceDecoration`,
+`RelationshipDecoration`, `ResourceDecoratorRegistry`), and presence-aware update contracts
+(`PatchCommand`, `PatchChange`, `PatchPresence`, `RelationshipLinkage`, `StructuredPatch`,
+`StructuredMember`, `StructuredMemberState`). `PatchChange` sealed variants cover resource-meta and
 relationship-meta changes per [ADR-015](../docs/adr/015-flat-whole-object-meta-mapping.md);
 identifier meta is not a variant. Applications that need `ResourceIdentifier.meta` opt into
 `RelationshipLinkage<T, M>`; identifier meta rides on whole-linkage `RelationshipChange` values
@@ -80,6 +81,17 @@ fieldsets only. `RepresentationPolicy` is application/configuration scoped: it d
 requested relationships and fields are permitted and bounds include traversal. Policy is not a
 complete authorization system. Applications may reuse a selection as an input to persistence
 projection planning, but jsonapi-java neither defines nor executes persistence projections.
+
+`ResourceDecorator`/`ResourceDecoration`/`RelationshipDecoration` are application/runtime
+decoration for domain writes: they add only `ResourceObject.links` and `Relationship.links` for
+existing mapped relationships. Decoration is keyed by the mapped property identity (Jackson logical
+name, e.g. `comments`), not the final wire name; the mapper follows configured-Jackson renaming
+(e.g. `@JsonProperty("article-comments")`) automatically. Decoration never replaces type, id, lid,
+attributes, linkage, meta, identifier meta, inclusion membership, or sparse-fieldset provenance, and
+it never resurrects a fieldset-omitted relationship or creates a synthetic relationship. Resource
+level links stay distinct from document-level `DocumentEnvelope.links` and from relationship links.
+Register decorators through the mapper's immutable `ResourceDecoratorRegistry`; no annotation carries
+decorator metadata.
 
 ## Non-goals
 
