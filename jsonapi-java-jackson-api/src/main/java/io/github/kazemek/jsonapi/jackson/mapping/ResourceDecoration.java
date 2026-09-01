@@ -80,9 +80,13 @@ public final class ResourceDecoration {
     return relationships;
   }
 
-  /** Returns {@code true} when this decoration carries neither resource nor relationship links. */
+  /**
+   * Returns {@code true} when this decoration carries neither resource nor relationship links. A
+   * present-empty {@link Links} ({@code Links.empty()} / {@code "links":{}}) is a wire-visible
+   * value and is not considered empty; only {@code null} means absence.
+   */
   public boolean isEmpty() {
-    if (links != null && !links.isEmpty()) {
+    if (links != null) {
       return false;
     }
     for (RelationshipDecoration decoration : relationships.values()) {

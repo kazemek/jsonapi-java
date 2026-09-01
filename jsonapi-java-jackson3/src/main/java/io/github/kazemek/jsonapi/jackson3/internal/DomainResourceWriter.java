@@ -212,7 +212,7 @@ public final class DomainResourceWriter {
         resolveRelationshipDecorations(
             domain, mapping, base, decorationRelationships, allowedFields);
     io.github.kazemek.jsonapi.core.model.Links resourceLinks = decoration.links();
-    boolean hasResourceLinks = resourceLinks != null && !resourceLinks.isEmpty();
+    boolean hasResourceLinks = resourceLinks != null;
     boolean hasRelationshipLinks = decoratedRelationships != null;
     if (!hasResourceLinks && !hasRelationshipLinks) {
       return base;
@@ -243,10 +243,12 @@ public final class DomainResourceWriter {
     try {
       decoration = decorator.decorate(domain);
     } catch (RuntimeException e) {
-      throw JsonApiMappingException.withoutLocation(
+      throw new JsonApiMappingException(
           MappingDiagnostic.INVALID_DECORATION_STATE,
           domain.getClass(),
-          "Decorator failed for " + resourceType + ": " + e.getMessage());
+          null,
+          "Decorator failed for " + resourceType + ": " + e.getMessage(),
+          e);
     }
     if (decoration == null) {
       throw JsonApiMappingException.withoutLocation(
@@ -308,8 +310,7 @@ public final class DomainResourceWriter {
       boolean shouldDecorate =
           (allowedFields == null || allowedFields.contains(wireName))
               && existing != null
-              && decorationLinks != null
-              && !decorationLinks.isEmpty();
+              && decorationLinks != null;
       if (shouldDecorate) {
         if (decoratedRelationships == null) {
           decoratedRelationships = new LinkedHashMap<>(baseRelationships);

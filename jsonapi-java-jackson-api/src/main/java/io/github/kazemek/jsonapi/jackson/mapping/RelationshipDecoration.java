@@ -31,8 +31,11 @@ public record RelationshipDecoration(@Nullable Links links) {
     return new RelationshipDecoration(null);
   }
 
-  /** Returns {@code true} when this decoration carries no links. */
+  /**
+   * Returns {@code true} when this decoration carries no links. A present-empty {@link Links}
+   * ({@code Links.empty()} / {@code "links":{}}) is a wire-visible value and is not empty.
+   */
   public boolean isEmpty() {
-    return links == null || links.isEmpty();
+    return links == null;
   }
 }

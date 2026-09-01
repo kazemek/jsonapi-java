@@ -190,10 +190,11 @@ class ResourceDecorationSpec extends Specification {
 
     expect:
     ResourceDecoration.empty().isEmpty()
-    ResourceDecoration.ofLinks(emptyLinks).isEmpty()
+    !ResourceDecoration.ofLinks(emptyLinks).isEmpty()
     !ResourceDecoration.ofLinks(links).isEmpty()
     ResourceDecoration.builder().relationship("a", RelationshipDecoration.empty()).build().isEmpty()
     !ResourceDecoration.builder().relationship("a", RelationshipDecoration.of(links)).build().isEmpty()
+    !ResourceDecoration.builder().relationship("a", new RelationshipDecoration(emptyLinks)).build().isEmpty()
   }
 
   def "relationship decoration factories and isEmpty"() {
@@ -208,7 +209,7 @@ class ResourceDecorationSpec extends Specification {
     RelationshipDecoration.links(links).links() == links
     RelationshipDecoration.of(links).isEmpty() == false
     RelationshipDecoration.empty().isEmpty() == true
-    new RelationshipDecoration(Links.empty()).isEmpty()
+    !new RelationshipDecoration(Links.empty()).isEmpty()
   }
 
   def "resource decoration equals hashCode toString"() {

@@ -13,6 +13,10 @@ import org.jspecify.annotations.Nullable;
  * registration. The registry is safe for concurrent use once created. It is not a global mutable
  * registry — supply it through mapper construction.
  *
+ * <p>Registered decorators are stored by reference and reused for every mapping call. When a mapper
+ * created from this registry is shared across threads, each decorator must be safe for concurrent
+ * invocation.
+ *
  * <p>Resolution is deterministic: at most one decorator per raw class, no prefix or type-string
  * indirection, and no dependence on JSON:API type strings.
  */

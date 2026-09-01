@@ -13,7 +13,10 @@ import io.github.kazemek.jsonapi.jackson.representation.IncludePath
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
+import io.github.kazemek.jsonapi.testsupport.decoration.DecorationScenarios
+import io.github.kazemek.jsonapi.testsupport.decoration.DecorationVerifier
 import spock.lang.Specification
+import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
 class ResourceDecorationSpec extends Specification {
@@ -21,6 +24,21 @@ class ResourceDecorationSpec extends Specification {
   Links resourceLinks = Links.ofLinks([self: new Link.StringLink("https://example.test/articles/1")])
   Links commentsLinks = Links.ofLinks([self: new Link.StringLink("https://example.test/articles/1/relationships/comments"), related: new Link.StringLink("https://example.test/articles/1/comments")])
   Links authorLinks = Links.ofLinks([self: new Link.StringLink("https://example.test/articles/1/relationships/author")])
+
+  @Unroll
+  def "shared catalog #scenario.id"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), scenario.decorators())
+
+    when:
+    def resource = mapper.toResource(scenario.domainSupplier().get())
+
+    then:
+    DecorationVerifier.verify(scenario, resource)
+
+    where:
+    scenario << DecorationScenarios.catalog().all()
+  }
 
   def "no decorator leaves resource unchanged"() {
     given:
@@ -320,5 +338,30 @@ class ResourceDecorationSpec extends Specification {
 
     then:
     thrown(UnsupportedOperationException)
+  }
+
+  def "present-empty resource and relationship links are preserved"() {
+    given:
+    Links empty = Links.empty()
+    ResourceDecorator<DecorationFixtures.ArticleWithMeta> decorator = { a ->
+      ResourceDecoration.builder().links(empty).relationship("comments", RelationshipDecoration.of(empty)).build()
+    }
+    def registry = ResourceDecoratorRegistry.builder().register(DecorationFixtures.ArticleWithMeta, decorator).build()
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), registry)
+    def article = new DecorationFixtures.ArticleWithMeta("1", "Title", null, [
+      new DecorationFixtures.Comment("c1", "B", null)
+    ], null)
+
+    when:
+    def resource = mapper.toResource(article)
+    def doc = mapper.toDocument(article)
+    def json = JsonApiJackson3.writer(JsonMapper.builder().build()).writeValueAsString(doc)
+
+    then:
+    resource.links() == empty
+    !resource.links().isEmpty() == false // empty links is present-empty, isEmpty true but links non-null
+    resource.links() != null
+    resource.relationships().relationships().comments.links() == empty
+    json.contains('"links"')
   }
 }

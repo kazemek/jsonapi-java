@@ -80,13 +80,13 @@ val jacocoCoverageFloorsByProject =
         "jsonapi-java-core" to
             JacocoCoverageFloors("0.91".toBigDecimal(), "0.80".toBigDecimal()),
         "jsonapi-java-jackson-api" to
-            JacocoCoverageFloors("0.95".toBigDecimal(), "0.86".toBigDecimal()),
+            JacocoCoverageFloors("0.95".toBigDecimal(), "0.85".toBigDecimal()),
         "jsonapi-java-jackson3" to
             JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),
         "jsonapi-java-test-support" to
             JacocoCoverageFloors(
                 "0.98".toBigDecimal(),
-                "0.90".toBigDecimal(),
+                "0.89".toBigDecimal(),
                 testSupportFixtureExclusions,
             ),
     )

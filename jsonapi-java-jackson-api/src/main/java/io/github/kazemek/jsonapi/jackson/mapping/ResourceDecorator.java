@@ -29,6 +29,11 @@ package io.github.kazemek.jsonapi.jackson.mapping;
  * fails with a stable mapping diagnostic. Unknown or non-relationship targets also fail
  * deterministically. An empty decoration ({@link ResourceDecoration#empty()}) means no decoration.
  *
+ * <p>Decorators are invoked during mapping and may be called concurrently when a {@code
+ * JsonApiResourceMapper} is shared. A decorator supplied to a shared mapper must be safe for
+ * concurrent invocation; the mapper and its {@link ResourceDecoratorRegistry} do not provide
+ * per-call isolation.
+ *
  * @param <T> the application domain type
  */
 @FunctionalInterface
