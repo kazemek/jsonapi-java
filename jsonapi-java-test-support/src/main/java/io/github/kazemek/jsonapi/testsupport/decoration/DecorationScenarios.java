@@ -24,6 +24,20 @@ import java.util.Map;
  */
 public final class DecorationScenarios {
 
+  private static final String ARTICLE_TYPE = "articles";
+  private static final String COMMENTS_TYPE = "comments";
+  private static final String PEOPLE_TYPE = "people";
+  private static final String TITLE_ATTR = "title";
+  private static final String BODY_ATTR = "body-text";
+  private static final String AUTHOR_REL = "author";
+  private static final String COMMENTS_REL = "comments";
+  private static final String TITLE_VALUE = "Title";
+  private static final String BODY_VALUE = "Body";
+  private static final String COMMENT_ID = "c1";
+  private static final String PERSON_ID = "p1";
+  private static final String PERSON_NAME = "Alice";
+  private static final String COMMENT_BODY = "Nice";
+
   private static final Links RESOURCE_LINKS =
       Links.ofLinks(Map.of("self", new Link.StringLink("https://example.test/articles/1")));
 
@@ -39,21 +53,21 @@ public final class DecorationScenarios {
       List.of(
           new DecorationScenario(
               "resource links preserve attributes and linkage",
-              () -> new Article("1", "Title", "Body", List.of(), null),
+              () -> new Article("1", TITLE_VALUE, BODY_VALUE, List.of(), null),
               ResourceDecoratorRegistry.builder()
                   .register(Article.class, article -> ResourceDecoration.ofLinks(RESOURCE_LINKS))
                   .build(),
               new ResourceObject(
-                  "articles",
+                  ARTICLE_TYPE,
                   "1",
                   null,
-                  Attributes.ofAttributes(Map.of("title", "Title", "body-text", "Body")),
+                  Attributes.ofAttributes(Map.of(TITLE_ATTR, TITLE_VALUE, BODY_ATTR, BODY_VALUE)),
                   Relationships.ofRelationships(
                       Map.of(
-                          "author",
+                          AUTHOR_REL,
                           new Relationship(
                               RelationshipData.NullLinkage.INSTANCE, null, null, Map.of()),
-                          "comments",
+                          COMMENTS_REL,
                           new Relationship(
                               new RelationshipData.IdentifierCollectionLinkage(List.of()),
                               null,
@@ -65,31 +79,36 @@ public final class DecorationScenarios {
           new DecorationScenario(
               "relationship links preserve linkage",
               () ->
-                  new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null),
+                  new Article(
+                      "1",
+                      TITLE_VALUE,
+                      BODY_VALUE,
+                      List.of(new Comment(COMMENT_ID, COMMENT_BODY, null)),
+                      null),
               ResourceDecoratorRegistry.builder()
                   .register(
                       Article.class,
                       article ->
                           ResourceDecoration.builder()
-                              .relationship("comments", RelationshipDecoration.of(COMMENTS_LINKS))
+                              .relationship(COMMENTS_REL, RelationshipDecoration.of(COMMENTS_LINKS))
                               .build())
                   .build(),
               new ResourceObject(
-                  "articles",
+                  ARTICLE_TYPE,
                   "1",
                   null,
-                  Attributes.ofAttributes(Map.of("title", "Title", "body-text", "Body")),
+                  Attributes.ofAttributes(Map.of(TITLE_ATTR, TITLE_VALUE, BODY_ATTR, BODY_VALUE)),
                   Relationships.ofRelationships(
                       Map.of(
-                          "author",
+                          AUTHOR_REL,
                           new Relationship(
                               RelationshipData.NullLinkage.INSTANCE, null, null, Map.of()),
-                          "comments",
+                          COMMENTS_REL,
                           new Relationship(
                               new RelationshipData.IdentifierCollectionLinkage(
                                   List.of(
                                       new ResourceIdentifier(
-                                          "comments", "c1", null, null, Map.of()))),
+                                          COMMENTS_TYPE, COMMENT_ID, null, null, Map.of()))),
                               COMMENTS_LINKS,
                               null,
                               Map.of()))),
@@ -101,39 +120,40 @@ public final class DecorationScenarios {
               () ->
                   new Article(
                       "1",
-                      "Title",
-                      "Body",
-                      List.of(new Comment("c1", "Nice", null)),
-                      new Person("p1", "Alice")),
+                      TITLE_VALUE,
+                      BODY_VALUE,
+                      List.of(new Comment(COMMENT_ID, COMMENT_BODY, null)),
+                      new Person(PERSON_ID, PERSON_NAME)),
               ResourceDecoratorRegistry.builder()
                   .register(
                       Article.class,
                       article ->
                           ResourceDecoration.builder()
                               .links(RESOURCE_LINKS)
-                              .relationship("comments", RelationshipDecoration.of(COMMENTS_LINKS))
+                              .relationship(COMMENTS_REL, RelationshipDecoration.of(COMMENTS_LINKS))
                               .build())
                   .build(),
               new ResourceObject(
-                  "articles",
+                  ARTICLE_TYPE,
                   "1",
                   null,
-                  Attributes.ofAttributes(Map.of("title", "Title", "body-text", "Body")),
+                  Attributes.ofAttributes(Map.of(TITLE_ATTR, TITLE_VALUE, BODY_ATTR, BODY_VALUE)),
                   Relationships.ofRelationships(
                       Map.of(
-                          "author",
+                          AUTHOR_REL,
                           new Relationship(
                               new RelationshipData.SingleLinkage(
-                                  new ResourceIdentifier("people", "p1", null, null, Map.of())),
+                                  new ResourceIdentifier(
+                                      PEOPLE_TYPE, PERSON_ID, null, null, Map.of())),
                               null,
                               null,
                               Map.of()),
-                          "comments",
+                          COMMENTS_REL,
                           new Relationship(
                               new RelationshipData.IdentifierCollectionLinkage(
                                   List.of(
                                       new ResourceIdentifier(
-                                          "comments", "c1", null, null, Map.of()))),
+                                          COMMENTS_TYPE, COMMENT_ID, null, null, Map.of()))),
                               COMMENTS_LINKS,
                               null,
                               Map.of()))),
@@ -142,21 +162,21 @@ public final class DecorationScenarios {
                   Map.of())),
           new DecorationScenario(
               "present-empty links are preserved",
-              () -> new Article("1", "Title", "Body", List.of(), null),
+              () -> new Article("1", TITLE_VALUE, BODY_VALUE, List.of(), null),
               ResourceDecoratorRegistry.builder()
                   .register(Article.class, article -> ResourceDecoration.ofLinks(EMPTY_LINKS))
                   .build(),
               new ResourceObject(
-                  "articles",
+                  ARTICLE_TYPE,
                   "1",
                   null,
-                  Attributes.ofAttributes(Map.of("title", "Title", "body-text", "Body")),
+                  Attributes.ofAttributes(Map.of(TITLE_ATTR, TITLE_VALUE, BODY_ATTR, BODY_VALUE)),
                   Relationships.ofRelationships(
                       Map.of(
-                          "author",
+                          AUTHOR_REL,
                           new Relationship(
                               RelationshipData.NullLinkage.INSTANCE, null, null, Map.of()),
-                          "comments",
+                          COMMENTS_REL,
                           new Relationship(
                               new RelationshipData.IdentifierCollectionLinkage(List.of()),
                               null,
