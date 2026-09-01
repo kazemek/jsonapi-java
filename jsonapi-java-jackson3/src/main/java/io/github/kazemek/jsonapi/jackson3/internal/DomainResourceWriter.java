@@ -205,6 +205,35 @@ public final class DomainResourceWriter {
     if (decorator == null) {
       return base;
     }
+    ResourceDecoration decoration = requireDecoration(domain, decorator, mapping.resourceType());
+    Map<String, RelationshipDecoration> decorationRelationships =
+        requireDecorationRelationships(domain, decoration, mapping.resourceType());
+    LinkedHashMap<String, Relationship> decoratedRelationships =
+        resolveRelationshipDecorations(
+            domain, mapping, base, decorationRelationships, allowedFields);
+    io.github.kazemek.jsonapi.core.model.Links resourceLinks = decoration.links();
+    boolean hasResourceLinks = resourceLinks != null && !resourceLinks.isEmpty();
+    boolean hasRelationshipLinks = decoratedRelationships != null;
+    if (!hasResourceLinks && !hasRelationshipLinks) {
+      return base;
+    }
+    Relationships finalRelationships =
+        hasRelationshipLinks
+            ? Relationships.ofRelationships(decoratedRelationships)
+            : base.relationships() == null ? Relationships.empty() : base.relationships();
+    return new ResourceObject(
+        base.type(),
+        base.id(),
+        base.lid(),
+        base.attributes(),
+        finalRelationships.isEmpty() ? null : finalRelationships,
+        hasResourceLinks ? resourceLinks : base.links(),
+        base.meta(),
+        base.additionalMembers());
+  }
+
+  private ResourceDecoration requireDecoration(
+      Object domain, ResourceDecorator<Object> decorator, String resourceType) {
     ResourceDecoration decoration;
     try {
       decoration = decorator.decorate(domain);
@@ -212,14 +241,19 @@ public final class DomainResourceWriter {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.INVALID_DECORATION_STATE,
           domain.getClass(),
-          "Decorator failed for " + mapping.resourceType() + ": " + e.getMessage());
+          "Decorator failed for " + resourceType + ": " + e.getMessage());
     }
     if (decoration == null) {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.INVALID_DECORATION_STATE,
           domain.getClass(),
-          "Decorator returned null for " + mapping.resourceType());
+          "Decorator returned null for " + resourceType);
     }
+    return decoration;
+  }
+
+  private Map<String, RelationshipDecoration> requireDecorationRelationships(
+      Object domain, ResourceDecoration decoration, String resourceType) {
     Map<String, RelationshipDecoration> decorationRelationships;
     try {
       decorationRelationships = decoration.relationships();
@@ -227,20 +261,75 @@ public final class DomainResourceWriter {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.INVALID_DECORATION_STATE,
           domain.getClass(),
-          "Invalid decoration relationships for " + mapping.resourceType());
+          "Invalid decoration relationships for " + resourceType);
     }
     if (decorationRelationships == null) {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.INVALID_DECORATION_STATE,
           domain.getClass(),
-          "Decoration relationships is null for " + mapping.resourceType());
+          "Decoration relationships is null for " + resourceType);
     }
-    // Validate and resolve relationship decorations.
+    return decorationRelationships;
+  }
+
+  @SuppressWarnings("NullAway")
+  private @Nullable LinkedHashMap<String, Relationship> resolveRelationshipDecorations(
+      Object domain,
+      ResourceMapping mapping,
+      ResourceObject base,
+      Map<String, RelationshipDecoration> decorationRelationships,
+      @Nullable Set<String> allowedFields) {
+    if (decorationRelationships.isEmpty()) {
+      return null;
+    }
+    Map<String, MappingProperty> byLogical = indexRelationships(mapping);
+    Map<String, String> nonRelationshipKind = indexNonRelationships(mapping);
+    Map<String, Relationship> baseRelationships =
+        base.relationships() == null ? Map.of() : base.relationships().relationships();
+    LinkedHashMap<String, Relationship> decoratedRelationships = null;
+    for (Map.Entry<String, RelationshipDecoration> entry : decorationRelationships.entrySet()) {
+      String logicalName = entry.getKey();
+      RelationshipDecoration relationshipDecoration = entry.getValue();
+      validateDecorationEntry(domain, mapping.resourceType(), logicalName, relationshipDecoration);
+      MappingProperty target = byLogical.get(logicalName);
+      if (target == null) {
+        throwInvalidTarget(domain, mapping.resourceType(), logicalName, nonRelationshipKind);
+        continue;
+      }
+      String wireName = Objects.requireNonNull(target, "target").jsonapiName();
+      Relationship existing = baseRelationships.get(wireName);
+      io.github.kazemek.jsonapi.core.model.Links decorationLinks = relationshipDecoration.links();
+      boolean shouldDecorate =
+          (allowedFields == null || allowedFields.contains(wireName))
+              && existing != null
+              && decorationLinks != null
+              && !decorationLinks.isEmpty();
+      if (shouldDecorate) {
+        if (decoratedRelationships == null) {
+          decoratedRelationships = new LinkedHashMap<>(baseRelationships);
+        }
+        Relationship nonNullExisting = Objects.requireNonNull(existing, "existing");
+        Relationship decorated =
+            new Relationship(
+                nonNullExisting.data(),
+                decorationLinks,
+                nonNullExisting.meta(),
+                nonNullExisting.additionalMembers());
+        decoratedRelationships.put(wireName, decorated);
+      }
+    }
+    return decoratedRelationships;
+  }
+
+  private Map<String, MappingProperty> indexRelationships(ResourceMapping mapping) {
     Map<String, MappingProperty> byLogical = new LinkedHashMap<>();
     for (MappingProperty property : mapping.relationships()) {
       byLogical.put(property.logicalName(), property);
     }
-    // Also collect non-relationship identities for precise diagnostics.
+    return byLogical;
+  }
+
+  private Map<String, String> indexNonRelationships(ResourceMapping mapping) {
     Map<String, String> nonRelationshipKind = new LinkedHashMap<>();
     MappingProperty identifierProperty = mapping.identifierProperty();
     if (identifierProperty != null) {
@@ -256,100 +345,55 @@ public final class DomainResourceWriter {
     for (MappingProperty property : mapping.relationshipMetaProperties()) {
       nonRelationshipKind.put(property.logicalName(), "relationship meta");
     }
+    return nonRelationshipKind;
+  }
 
-    LinkedHashMap<String, Relationship> decoratedRelationships = null;
-    if (!decorationRelationships.isEmpty()) {
-      // Lazily copy base relationships into mutable map when first decoration applies.
-      Map<String, Relationship> baseRelationships =
-          base.relationships() == null ? Map.of() : base.relationships().relationships();
-      for (Map.Entry<String, RelationshipDecoration> entry : decorationRelationships.entrySet()) {
-        String logicalName = entry.getKey();
-        if (logicalName == null) {
-          throw JsonApiMappingException.withoutLocation(
-              MappingDiagnostic.INVALID_DECORATION_STATE,
-              domain.getClass(),
-              "Decoration contains null relationship property");
-        }
-        if (logicalName.isEmpty()) {
-          throw JsonApiMappingException.withoutLocation(
-              MappingDiagnostic.INVALID_DECORATION_STATE,
-              domain.getClass(),
-              "Decoration contains empty relationship property");
-        }
-        RelationshipDecoration relationshipDecoration = entry.getValue();
-        if (relationshipDecoration == null) {
-          throw JsonApiMappingException.withoutLocation(
-              MappingDiagnostic.INVALID_DECORATION_STATE,
-              domain.getClass(),
-              "Decoration for relationship '" + logicalName + "' is null");
-        }
-        MappingProperty target = byLogical.get(logicalName);
-        if (target == null) {
-          String kind = nonRelationshipKind.get(logicalName);
-          if (kind != null) {
-            throw JsonApiMappingException.withoutLocation(
-                MappingDiagnostic.INVALID_DECORATION_TARGET,
-                domain.getClass(),
-                "Decoration target '"
-                    + logicalName
-                    + "' is a "
-                    + kind
-                    + ", not a relationship on "
-                    + mapping.resourceType());
-          }
-          throw JsonApiMappingException.withoutLocation(
-              MappingDiagnostic.INVALID_DECORATION_TARGET,
-              domain.getClass(),
-              "Unknown decoration target '" + logicalName + "' on " + mapping.resourceType());
-        }
-        String wireName = target.jsonapiName();
-        if (allowedFields != null && !allowedFields.contains(wireName)) {
-          continue;
-        }
-        Relationship existing = baseRelationships.get(wireName);
-        if (existing == null) {
-          continue;
-        }
-        io.github.kazemek.jsonapi.core.model.Links decorationLinks = relationshipDecoration.links();
-        if (decorationLinks == null || decorationLinks.isEmpty()) {
-          continue;
-        }
-        if (decoratedRelationships == null) {
-          decoratedRelationships = new LinkedHashMap<>(baseRelationships);
-        }
-        Relationship decorated =
-            new Relationship(
-                existing.data(), decorationLinks, existing.meta(), existing.additionalMembers());
-        decoratedRelationships.put(wireName, decorated);
-      }
+  private void validateDecorationEntry(
+      Object domain,
+      String resourceType,
+      @Nullable String logicalName,
+      @Nullable RelationshipDecoration relationshipDecoration) {
+    if (logicalName == null) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.INVALID_DECORATION_STATE,
+          domain.getClass(),
+          "Decoration contains null relationship property");
     }
-
-    io.github.kazemek.jsonapi.core.model.Links resourceLinks = decoration.links();
-    boolean hasResourceLinks = resourceLinks != null && !resourceLinks.isEmpty();
-    boolean hasRelationshipLinks = decoratedRelationships != null;
-
-    if (!hasResourceLinks && !hasRelationshipLinks) {
-      return base;
+    if (logicalName.isEmpty()) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.INVALID_DECORATION_STATE,
+          domain.getClass(),
+          "Decoration contains empty relationship property");
     }
-
-    Relationships finalRelationships;
-    if (hasRelationshipLinks) {
-      finalRelationships = Relationships.ofRelationships(decoratedRelationships);
-    } else {
-      finalRelationships =
-          base.relationships() == null ? Relationships.empty() : base.relationships();
+    if (relationshipDecoration == null) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.INVALID_DECORATION_STATE,
+          domain.getClass(),
+          "Decoration for relationship '" + logicalName + "' is null");
     }
+  }
 
-    // Preserve all base members while decorating links.
-    return new ResourceObject(
-        base.type(),
-        base.id(),
-        base.lid(),
-        base.attributes(),
-        finalRelationships.isEmpty() ? null : finalRelationships,
-        hasResourceLinks ? resourceLinks : base.links(),
-        base.meta(),
-        base.additionalMembers());
+  private void throwInvalidTarget(
+      Object domain,
+      String resourceType,
+      String logicalName,
+      Map<String, String> nonRelationshipKind) {
+    String kind = nonRelationshipKind.get(logicalName);
+    if (kind != null) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.INVALID_DECORATION_TARGET,
+          domain.getClass(),
+          "Decoration target '"
+              + logicalName
+              + "' is a "
+              + kind
+              + ", not a relationship on "
+              + resourceType);
+    }
+    throw JsonApiMappingException.withoutLocation(
+        MappingDiagnostic.INVALID_DECORATION_TARGET,
+        domain.getClass(),
+        "Unknown decoration target '" + logicalName + "' on " + resourceType);
   }
 
   /**
