@@ -25,7 +25,7 @@ class Jackson3DependencyRulesSpec extends Specification {
   @Shared
   JavaClasses commonClasses = new ClassFileImporter()
   .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-  .importPackages("io.github.kazemek.jsonapi.jackson")
+  .importPackages("io.github.kazemek.jsonapi.jackson..")
 
   def "jackson3 production types depend only on allowed packages"() {
     expect:
@@ -75,13 +75,13 @@ class Jackson3DependencyRulesSpec extends Specification {
     then:
     def error = thrown(AssertionError)
     error.message.contains("DocumentEnvelope")
-    error.message.contains("public Jackson-common contract")
+    error.message.contains("public Jackson API contract")
   }
 
   private static ArchRule noCommonContractRedeclarations(JavaClasses commonClasses) {
     def commonContractNames =
         commonClasses.findAll { JavaClass candidate ->
-          candidate.packageName == "io.github.kazemek.jsonapi.jackson" &&
+          candidate.packageName.startsWith("io.github.kazemek.jsonapi.jackson.") &&
               candidate.modifiers.contains(JavaModifier.PUBLIC) && candidate.topLevelClass
         }.collect { JavaClass candidate -> candidate.simpleName }.toSet()
 
@@ -92,14 +92,14 @@ class Jackson3DependencyRulesSpec extends Specification {
   }
 
   private static ArchCondition<JavaClass> notRedeclare(Set<String> commonContractNames) {
-    return new ArchCondition<JavaClass>("not redeclare a public Jackson-common contract") {
+    return new ArchCondition<JavaClass>("not redeclare a public Jackson API contract") {
           @Override
           void check(JavaClass item, ConditionEvents events) {
             if (item.topLevelClass && commonContractNames.contains(item.simpleName)) {
               events.add(
                   SimpleConditionEvent.violated(
                   item,
-                  "${item.name} redeclares the public Jackson-common contract ${item.simpleName}"))
+                  "${item.name} redeclares the public Jackson API contract ${item.simpleName}"))
             }
           }
         }

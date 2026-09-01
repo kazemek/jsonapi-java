@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":jsonapi-java-jackson-common"))
+    api(project(":jsonapi-java-jackson-api"))
     api(project(":jsonapi-java-core"))
     api(project(":jsonapi-java-annotations"))
     implementation(libs.jakarta.json.api)

@@ -2,9 +2,9 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.Link;
 import io.github.kazemek.jsonapi.core.model.Relationship;
-import io.github.kazemek.jsonapi.jackson.CodecFailureCategory;
-import io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException;
-import io.github.kazemek.jsonapi.jackson.SourceLocation;
+import io.github.kazemek.jsonapi.jackson.diagnostic.CodecFailureCategory;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.SourceLocation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;

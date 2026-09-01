@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.testsupport.domainwrite;
 
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMapMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;

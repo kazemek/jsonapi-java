@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainwrite;
 
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.testsupport.Scenario;
 import java.util.Objects;
 import java.util.function.Supplier;

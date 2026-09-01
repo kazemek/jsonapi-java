@@ -1,9 +1,9 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;

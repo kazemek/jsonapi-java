@@ -1,7 +1,7 @@
 package io.github.kazemek.jsonapi.testsupport.domainpatch
 
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import spock.lang.Specification
 
 class PatchScenariosCatalogSpec extends Specification {

@@ -7,7 +7,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 
 /** Shared typed PATCH DTO with recursive resource meta and relationship meta members. */
 @JsonApiResource(type = "articles")

@@ -1,7 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3;
 
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

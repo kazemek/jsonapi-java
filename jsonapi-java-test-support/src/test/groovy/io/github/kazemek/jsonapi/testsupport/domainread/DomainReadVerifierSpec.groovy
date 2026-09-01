@@ -1,9 +1,9 @@
 package io.github.kazemek.jsonapi.testsupport.domainread
 
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson.MappingLocation
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
 import spock.lang.Specification
 

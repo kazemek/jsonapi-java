@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.jackson.SourceLocation;
+import io.github.kazemek.jsonapi.jackson.diagnostic.SourceLocation;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;

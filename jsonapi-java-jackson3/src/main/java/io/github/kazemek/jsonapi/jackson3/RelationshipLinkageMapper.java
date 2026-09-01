@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JavaType;
 
@@ -14,10 +14,10 @@ import tools.jackson.databind.JavaType;
  * java.util.Map)} when a relationship property's target type is not one of the built-in {@link
  * io.github.kazemek.jsonapi.core.model.ResourceIdentifier} shapes. The binder invokes the mapper
  * only for {@link RelationshipData.SingleLinkage} (to-one properties, including each occurrence of
- * a to-many {@link io.github.kazemek.jsonapi.jackson.RelationshipLinkage} collection) and non-empty
- * {@link RelationshipData.IdentifierCollectionLinkage} (ordinary to-many properties); explicit null
- * and empty linkage short-circuit without a mapper call, and to-one versus to-many cardinality is
- * enforced before invocation.
+ * a to-many {@link io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage} collection) and
+ * non-empty {@link RelationshipData.IdentifierCollectionLinkage} (ordinary to-many properties);
+ * explicit null and empty linkage short-circuit without a mapper call, and to-one versus to-many
+ * cardinality is enforced before invocation.
  *
  * <p>{@code targetType} is {@code T} for to-one properties and for each wrapped to-many occurrence,
  * or the collection type of {@code T} for ordinary to-many properties ({@link java.util.Optional}
@@ -25,9 +25,9 @@ import tools.jackson.databind.JavaType;
  * must be coercible to {@code targetType}. A {@code null} return binds a to-one property to {@code
  * null}. For a wrapped to-many occurrence, {@code null} is {@link
  * MappingDiagnostic#LINKAGE_MAPPING_FAILED}: {@link
- * io.github.kazemek.jsonapi.jackson.RelationshipLinkage#target()} cannot be null, and omitting the
- * wire identifier would drop a linkage entry. Wrapped to-many properties never reassociate a
- * collection-level mapper result by index.
+ * io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage#target()} cannot be null, and
+ * omitting the wire identifier would drop a linkage entry. Wrapped to-many properties never
+ * reassociate a collection-level mapper result by index.
  */
 @FunctionalInterface
 public interface RelationshipLinkageMapper {

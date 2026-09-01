@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.jackson3;
 
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceBinder;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,8 +29,8 @@ import tools.jackson.databind.json.JsonMapper;
  * target class requires a registered {@link RelationshipLinkageMapper}. Built-in identifier linkage
  * preserves {@code ResourceIdentifier.meta} (ADR-017) and still drops additional members. Write
  * overlay of application-owned identifier meta uses opt-in {@link
- * io.github.kazemek.jsonapi.jackson.RelationshipLinkage}; it is not relationship-level {@code
- * meta}.
+ * io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage}; it is not relationship-level
+ * {@code meta}.
  *
  * <p>Binding failures throw {@link JsonApiMappingException} with a stable {@link MappingDiagnostic}
  * and a resource-relative JSON Pointer-like path.

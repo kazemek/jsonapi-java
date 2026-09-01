@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.jackson.SourceLocation;
+import io.github.kazemek.jsonapi.jackson.diagnostic.SourceLocation;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.TokenStreamLocation;

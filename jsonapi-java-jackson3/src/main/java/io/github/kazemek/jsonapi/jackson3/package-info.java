@@ -42,9 +42,9 @@
  * against the wrapper's meta {@code JavaType}. Flat reads plus supplied PATCH values use
  * contextualized property deserializers after JSON:API-specific conversion. JSON:API remains
  * authoritative for the identifier wire string, relationship linkage, and {@link
- * io.github.kazemek.jsonapi.jackson.PatchPresence} state; those adapter-owned wire states are not
- * replaced by property customization. Type/module conversion is retained as the fallback when no
- * mapped property can be resolved.
+ * io.github.kazemek.jsonapi.jackson.patch.PatchPresence} state; those adapter-owned wire states are
+ * not replaced by property customization. Type/module conversion is retained as the fallback when
+ * no mapped property can be resolved.
  *
  * <p>Typed domain envelopes use {@link JsonApiJackson3#domainDocumentReader} with an explicit
  * {@link ResourceTypeRegistry}: a dispatch-only registry keyed by each registered target's
@@ -58,11 +58,11 @@
  * <p>Presence-aware resource updates use {@link JsonApiJackson3#patchReader} to derive a {@link
  * JsonApiPatchReader} that applies validate-on-read with {@code DocumentUsage.UPDATE_REQUEST} and
  * binds only supplied mapped members into a common {@link
- * io.github.kazemek.jsonapi.jackson.PatchCommand} without constructing a DTO or reading {@code
- * included}. Direct typed PATCH DTO binding uses {@link JsonApiJackson3#patchDtoReader} to derive a
- * {@link JsonApiPatchDtoReader} that binds the validated update directly into an application-owned
- * annotated PATCH DTO whose patchable members are declared as {@link
- * io.github.kazemek.jsonapi.jackson.PatchPresence}.
+ * io.github.kazemek.jsonapi.jackson.patch.PatchCommand} without constructing a DTO or reading
+ * {@code included}. Direct typed PATCH DTO binding uses {@link JsonApiJackson3#patchDtoReader} to
+ * derive a {@link JsonApiPatchDtoReader} that binds the validated update directly into an
+ * application-owned annotated PATCH DTO whose patchable members are declared as {@link
+ * io.github.kazemek.jsonapi.jackson.patch.PatchPresence}.
  *
  * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
  * three-argument overloads. Relationship mapping produces linkage only; included resources require
@@ -79,11 +79,11 @@
  * resource or of a specific mapped relationship to one application-owned property per location via
  * {@link io.github.kazemek.jsonapi.annotation.JsonApiMeta} and {@link
  * io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta}, across domain read, domain write,
- * the low-level {@link io.github.kazemek.jsonapi.jackson.PatchCommand} path (new resource-meta and
- * relationship-meta {@link io.github.kazemek.jsonapi.jackson.PatchChange} variants), and the typed
- * PATCH DTO path. Per-linkage identifier meta is an opt-in {@link
- * io.github.kazemek.jsonapi.jackson.RelationshipLinkage} (ADR-017): {@code target} maps as the
- * ordinary relationship target and {@code meta} maps to {@code ResourceIdentifier.meta}. PATCH
+ * the low-level {@link io.github.kazemek.jsonapi.jackson.patch.PatchCommand} path (new
+ * resource-meta and relationship-meta {@link io.github.kazemek.jsonapi.jackson.patch.PatchChange}
+ * variants), and the typed PATCH DTO path. Per-linkage identifier meta is an opt-in {@link
+ * io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage} (ADR-017): {@code target} maps as
+ * the ordinary relationship target and {@code meta} maps to {@code ResourceIdentifier.meta}. PATCH
  * participates only through whole-linkage replacement — never as an independent {@code PatchChange}
  * or typed PATCH member. Document-level meta remains document-owned through the domain envelope; no
  * resource annotation means document meta.
@@ -96,10 +96,10 @@
 @NullMarked
 package io.github.kazemek.jsonapi.jackson3;
 
-import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
-import io.github.kazemek.jsonapi.jackson.FieldPolicy;
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson.IncludePolicy;
-import io.github.kazemek.jsonapi.jackson.MappedDocument;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
+import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument;
+import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy;
+import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
 import org.jspecify.annotations.NullMarked;

@@ -1,7 +1,7 @@
 package io.github.kazemek.jsonapi.testsupport.compoundwrite;
 
-import io.github.kazemek.jsonapi.jackson.IncludePath;
-import io.github.kazemek.jsonapi.jackson.IncludePolicy;
+import io.github.kazemek.jsonapi.jackson.representation.IncludePath;
+import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;

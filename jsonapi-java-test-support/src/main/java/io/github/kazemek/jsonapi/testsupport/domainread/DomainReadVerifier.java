@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainread;
 
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;

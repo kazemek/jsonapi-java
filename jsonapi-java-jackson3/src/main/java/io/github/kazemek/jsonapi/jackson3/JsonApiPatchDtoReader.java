@@ -5,9 +5,9 @@ import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.jackson.DocumentReadContext;
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter;
-import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext;
+import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind;
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainPatchDtoBinder;
 import io.github.kazemek.jsonapi.jackson3.internal.MappingDefinitionCache;
 import io.github.kazemek.jsonapi.jackson3.internal.MetaBindingModule;
@@ -26,13 +26,14 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>{@link #readValue} decodes and aggregate-validates through a factory-composed {@link
  * DocumentReadContext} ({@link PrimaryDataKind#RESOURCE} with {@link
  * DocumentUsage#UPDATE_REQUEST}), then binds the whole update into the PATCH DTO: patchable
- * attributes and relationships declared as {@link io.github.kazemek.jsonapi.jackson.PatchPresence}
- * receive {@code omitted()}, {@code present(value)}, or {@code present(null)} (explicit JSON {@code
- * null} / null relationship linkage), and the identifier binds through {@link IdentifierConverter}.
- * {@link #fromDocument} binds without re-validation. Codec and aggregate failures stay {@link
- * io.github.kazemek.jsonapi.jackson.JsonApiDocumentReadException}; bind failures stay {@link
- * io.github.kazemek.jsonapi.jackson.JsonApiMappingException} with resource-relative pointers and
- * are never prefixed with {@code /data}.
+ * attributes and relationships declared as {@link
+ * io.github.kazemek.jsonapi.jackson.patch.PatchPresence} receive {@code omitted()}, {@code
+ * present(value)}, or {@code present(null)} (explicit JSON {@code null} / null relationship
+ * linkage), and the identifier binds through {@link IdentifierConverter}. {@link #fromDocument}
+ * binds without re-validation. Codec and aggregate failures stay {@link
+ * io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException}; bind failures stay
+ * {@link io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException} with
+ * resource-relative pointers and are never prefixed with {@code /data}.
  *
  * <p>Close/ownership rules match {@link JsonApiDocumentReader}: convenience overloads close parsers
  * they create; caller-owned streams and parsers stay open. Construct via {@link

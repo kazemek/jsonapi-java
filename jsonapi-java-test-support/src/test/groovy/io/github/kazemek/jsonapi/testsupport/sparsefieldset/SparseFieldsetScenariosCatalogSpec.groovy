@@ -1,7 +1,7 @@
 package io.github.kazemek.jsonapi.testsupport.sparsefieldset
 
-import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article
 import java.util.EnumSet
 import spock.lang.Specification

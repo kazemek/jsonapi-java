@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.sparsefieldset;
 
-import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
 import java.util.Objects;
 import java.util.function.Supplier;
 

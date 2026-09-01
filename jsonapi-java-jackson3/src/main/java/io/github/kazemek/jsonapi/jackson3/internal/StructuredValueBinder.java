@@ -1,12 +1,12 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
-import io.github.kazemek.jsonapi.jackson.StructuredMember;
-import io.github.kazemek.jsonapi.jackson.StructuredMemberState;
-import io.github.kazemek.jsonapi.jackson.StructuredPatch;
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.StructuredMember;
+import io.github.kazemek.jsonapi.jackson.patch.StructuredMemberState;
+import io.github.kazemek.jsonapi.jackson.patch.StructuredPatch;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,10 +34,10 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>The engine owns member resolution (deserialization-side Jackson introspection), shape and
  * boundary classification, nested conversion, null policy, wire-pointer accumulation, and lazy
  * nested declaration validation. It has no {@link ResourceMapping} / {@link MappingProperty} /
- * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.PatchChange} dependency:
- * callers supply the declared {@link JavaType}, wire value, starting pointer, and (low-level)
- * accessor, so a later structured JSON:API {@code meta} mapping can reuse the same machinery at its
- * own location with a stricter outer-state policy (ADR-014).
+ * {@code @JsonApiAttribute} / {@link io.github.kazemek.jsonapi.jackson.patch.PatchChange}
+ * dependency: callers supply the declared {@link JavaType}, wire value, starting pointer, and
+ * (low-level) accessor, so a later structured JSON:API {@code meta} mapping can reuse the same
+ * machinery at its own location with a stricter outer-state policy (ADR-014).
  *
  * <p>Two modes (ADR-014): the typed mode recurses only through deliberately presence-aware nested
  * PATCH shapes (every visible member exactly {@code PatchPresence<T>}, no wrapper-level

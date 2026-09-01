@@ -7,7 +7,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.util.Map;
 
 /** Shared typed PATCH DTO with atomic map-like resource meta (PATCH stays atomic under ADR-015). */

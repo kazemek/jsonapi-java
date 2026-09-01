@@ -163,7 +163,7 @@ tests.
   property per location, without envelope wrappers and without a second recursion engine.
 - The Jackson 3 adapter honors the same Jackson authority, diagnostics, nullness, generic `JavaType`
   preservation, and container boundaries as existing mapping; the neutral contracts in
-  `jsonapi-java-jackson-common` stay Jackson-import-free so Jackson 2 parity can follow the same
+  `jsonapi-java-jackson-api` stay Jackson-import-free so Jackson 2 parity can follow the same
   semantics.
 - `PatchChange` gains two sealed variants; exhaustive consumer switches must add cases (or a default
   branch). Documented compatibility consideration.

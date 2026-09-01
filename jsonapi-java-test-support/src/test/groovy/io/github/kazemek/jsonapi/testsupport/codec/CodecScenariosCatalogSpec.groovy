@@ -2,7 +2,7 @@ package io.github.kazemek.jsonapi.testsupport.codec
 
 import groovy.json.JsonSlurper
 import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.jackson.PrimaryDataKind
+import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.testsupport.TestSupportResources
 import spock.lang.Specification
 

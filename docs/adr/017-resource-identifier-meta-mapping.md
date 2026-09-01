@@ -25,7 +25,7 @@ length can diverge, and the association is not structural. This ADR records the 
 not that discarded API.
 
 The wire codec already reads and writes `ResourceIdentifier.meta`. This ADR defines the
-application-owned mapping contract against the stabilized Jackson 3 / `jackson-common` surface so
+application-owned mapping contract against the stabilized Jackson 3 / `jackson-api` surface so
 Jackson 2 can later reproduce the same semantics.
 
 ## Decision
@@ -36,7 +36,7 @@ Introduce an opt-in, Jackson-major-neutral wrapper:
 public record RelationshipLinkage<T, M>(T target, @Nullable M meta) {}
 ```
 
-in `jsonapi-java-jackson-common` (`io.github.kazemek.jsonapi.jackson`). The wrapper represents one
+in `jsonapi-java-jackson-api` (`io.github.kazemek.jsonapi.jackson.mapping`). The wrapper represents one
 relationship linkage occurrence. Applications that do not need identifier meta keep ordinary
 relationship shapes unchanged.
 
@@ -167,7 +167,7 @@ Locations remain resource-relative `MappingLocation` pointers:
 
 `RelationshipLinkage`, diagnostic codes, and semantic catalogs live at Jackson-major-neutral
 boundaries. Jackson 3 owns introspection, unwrap/overlay, property-scoped conversion, and
-adapter-local mechanism tests. `jsonapi-java-jackson-common` remains free of Jackson-major imports.
+adapter-local mechanism tests. `jsonapi-java-jackson-api` remains free of Jackson-major imports.
 
 ## Consequences
 

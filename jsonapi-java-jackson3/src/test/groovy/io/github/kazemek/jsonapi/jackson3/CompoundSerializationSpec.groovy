@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
-import io.github.kazemek.jsonapi.jackson.CompoundSerializationContext
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle
 import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteExpectation
 import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteRequest

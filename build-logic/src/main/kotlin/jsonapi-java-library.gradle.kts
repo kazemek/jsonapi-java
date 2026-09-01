@@ -79,7 +79,7 @@ val jacocoCoverageFloorsByProject =
     mapOf(
         "jsonapi-java-core" to
             JacocoCoverageFloors("0.91".toBigDecimal(), "0.80".toBigDecimal()),
-        "jsonapi-java-jackson-common" to
+        "jsonapi-java-jackson-api" to
             JacocoCoverageFloors("0.95".toBigDecimal(), "0.86".toBigDecimal()),
         "jsonapi-java-jackson3" to
             JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),

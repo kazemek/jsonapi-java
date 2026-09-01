@@ -1,7 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiMembers;
-import io.github.kazemek.jsonapi.jackson.MappingLocation;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
 import java.util.List;
 import java.util.Map;
 

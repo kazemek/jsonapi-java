@@ -3,7 +3,7 @@ package io.github.kazemek.jsonapi.jackson3
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper

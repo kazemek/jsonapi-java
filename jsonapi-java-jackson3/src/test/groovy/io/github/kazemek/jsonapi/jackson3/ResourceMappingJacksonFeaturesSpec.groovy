@@ -5,9 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson3.JacksonFeatureFixtures.ArticleWithFormattedTitle
 import io.github.kazemek.jsonapi.jackson3.JacksonFeatureFixtures.CreatorBasedArticle
 import io.github.kazemek.jsonapi.jackson3.JacksonFeatureFixtures.FormattedTitle

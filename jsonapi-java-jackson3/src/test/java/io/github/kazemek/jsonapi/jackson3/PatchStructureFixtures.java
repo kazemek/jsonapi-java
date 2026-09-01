@@ -3,7 +3,7 @@ package io.github.kazemek.jsonapi.jackson3;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.util.Objects;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
@@ -27,7 +27,7 @@ public final class PatchStructureFixtures {
    * Ordinary non-record structured domain value type with a multi-word member, proving the naming
    * strategy applies to low-level structured traversal and that {@code wireName} / {@code
    * logicalName} divergence is preserved in the {@link
-   * io.github.kazemek.jsonapi.jackson.StructuredPatch} (ADR-014).
+   * io.github.kazemek.jsonapi.jackson.patch.StructuredPatch} (ADR-014).
    */
   public static final class SnakeAddress {
 

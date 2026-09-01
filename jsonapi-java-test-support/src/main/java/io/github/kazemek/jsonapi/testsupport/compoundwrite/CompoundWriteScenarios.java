@@ -1,10 +1,10 @@
 package io.github.kazemek.jsonapi.testsupport.compoundwrite;
 
-import io.github.kazemek.jsonapi.jackson.IncludePath;
-import io.github.kazemek.jsonapi.jackson.IncludePolicy;
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.RelationshipAllowance;
-import io.github.kazemek.jsonapi.jackson.RelationshipLinkage;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
+import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage;
+import io.github.kazemek.jsonapi.jackson.representation.IncludePath;
+import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RelationshipAllowance;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle;
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ConflictArticle;

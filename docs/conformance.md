@@ -7,7 +7,7 @@ shape, error `source.pointer` syntax, and reserved link names. `jsonapi-java-ann
 metadata-only domain-mapping annotations. `jsonapi-java-jackson3` owns the Jackson 3 document
 writer/reader, domain-to-resource mapping, compound inclusion, sparse fieldsets, flat DTO binding,
 typed domain envelopes, and presence-aware PATCH binding (low-level commands and direct typed PATCH
-DTOs). `jsonapi-java-jackson-common` owns
+DTOs). `jsonapi-java-jackson-api` owns
 Jackson-major-neutral policy, diagnostics, contexts, envelope values, and presence-aware update
 contracts. How those modules fit together is in [`docs/architecture.md`](architecture.md). Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
 evidence only. The capability-tagged document corpus, closed negative corpus, and dual-success

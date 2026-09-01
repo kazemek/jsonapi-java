@@ -1,6 +1,6 @@
 package io.github.kazemek.jsonapi.testsupport.domainwrite
 
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import spock.lang.Specification
 
 // Why this spec exists: WriteDiagnosticsScenarios is the version-neutral write-diagnostics

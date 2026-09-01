@@ -20,7 +20,7 @@ public record Article(
     @JsonApiRelationshipMeta(relationship = "writtenBy") AuthorMeta authorMeta) {}
 ```
 
-These annotations assign semantic roles only. Configured Jackson owns property discovery, visibility, external/wire naming, mix-ins, creators, and value conversion. Jackson mapping, member-name validation, identifier conversion, and inclusion policy belong in [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md). Per-linkage identifier meta is an opt-in `RelationshipLinkage` value in [`jsonapi-java-jackson-common`](../jsonapi-java-jackson-common/README.md), not an annotation.
+These annotations assign semantic roles only. Configured Jackson owns property discovery, visibility, external/wire naming, mix-ins, creators, and value conversion. Jackson mapping, member-name validation, identifier conversion, and inclusion policy belong in [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md). Per-linkage identifier meta is an opt-in `RelationshipLinkage` value in [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md), not an annotation.
 
 `@JsonApiResource(type = "articles")` is explicit JSON:API semantic data (the resource `type` member), not a Jackson property name.
 

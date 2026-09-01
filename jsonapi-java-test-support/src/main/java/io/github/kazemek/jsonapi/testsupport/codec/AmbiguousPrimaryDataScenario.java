@@ -2,7 +2,7 @@ package io.github.kazemek.jsonapi.testsupport.codec;
 
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
-import io.github.kazemek.jsonapi.jackson.PrimaryDataKind;
+import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind;
 import io.github.kazemek.jsonapi.testsupport.Scenario;
 import java.util.Objects;
 

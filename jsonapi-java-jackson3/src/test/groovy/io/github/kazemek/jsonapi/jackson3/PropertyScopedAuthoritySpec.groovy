@@ -9,10 +9,10 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.jackson.IdentifierConverter
-import io.github.kazemek.jsonapi.jackson.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.MappingDiagnostic
-import io.github.kazemek.jsonapi.jackson.PatchPresence
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import spock.lang.Specification
 import com.fasterxml.jackson.annotation.JsonInclude

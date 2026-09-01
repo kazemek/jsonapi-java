@@ -3,7 +3,7 @@ package io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
-import io.github.kazemek.jsonapi.jackson.PatchPresence;
+import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 
 /**
  * Shared low-level PATCH DTO whose {@code PatchPresence<T>}-declared member wraps an ordinary
