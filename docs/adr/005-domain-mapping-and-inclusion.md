@@ -2,19 +2,27 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-26  
-**Amendment:** 2026-08-31 — relationship annotation is role-only; Jackson owns the member name
+**Amendment:** 2026-08-31 — relationship annotation is role-only; Jackson owns the member name; representation selection is separated from application policy
 
 ## Context
 
 Serializing a relationship's resource linkage and placing the related resource in top-level `included` are separate JSON:API decisions. Automatically traversing every annotated relationship can disclose data, trigger lazy loading, create cycles, and violate requested include paths.
 
-Sparse fieldsets also affect full linkage and must share the same serialization context.
+Sparse fieldsets also affect full linkage. Requested include paths and fieldsets are operation scoped,
+while include/field permissions and traversal limits are application scoped; those lifetimes must not
+share one public context value.
 
 ## Decision
 
 `@JsonApiRelationship` identifies a relationship role only. Configured Jackson owns the external relationship member name. The annotation carries no fetch, cascade, inclusion, repository, or ORM behavior.
 
-Relationship values produce linkage. Related resources enter `included` only when selected by an explicit serialization context or application policy.
+Relationship values produce linkage. Related resources enter `included` only when an explicit
+`RepresentationSelection` requests the path and `RepresentationPolicy` permits traversal.
+
+`RepresentationSelection` contains only requested include paths and sparse fieldsets.
+`RepresentationPolicy` contains include/field permissions and traversal/resource limits. Jackson
+adapters compose them into one internal effective representation; neither policy nor selection
+replaces `MappedDocument` sparse-fieldset provenance at the writer boundary.
 
 Compound serialization:
 

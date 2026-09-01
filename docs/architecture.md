@@ -187,9 +187,17 @@ Mapping locations follow one coordinate contract:
 
 Sparse fieldsets are mapping provenance, not a caller-owned validation switch.
 
+`RepresentationSelection` is per-operation input containing only requested include paths and sparse
+fieldsets. `RepresentationPolicy` is application/configuration input containing include and field
+permissions plus traversal/resource limits; it is not complete authorization. Jackson adapters
+compose those values once into their internal effective representation. `MappedDocument` is the
+distinct result/provenance value produced by one mapping operation. Applications may inspect a
+selection when planning persistence projections, but this library defines and executes no projection
+or persistence behavior.
+
 ```mermaid
 flowchart LR
-  CTX["CompoundSerializationContext<br/>fieldsets plus FieldPolicy"] --> MAP["toMappedDocument / toMappedResourceCollection"]
+  CTX["RepresentationSelection plus<br/>RepresentationPolicy"] --> MAP["toMappedDocument / toMappedResourceCollection"]
   MAP --> MD["MappedDocument<br/>document plus exemption identities"]
   MD --> WRITER["JsonApiDocumentWriter"]
   WRITER --> COMPOSE["Compose exemptions into bound ValidationContext"]
@@ -261,6 +269,8 @@ These names are adjacent and easy to conflate. They are not synonyms.
 | `PatchCommand` | Low-level projection: identity plus a list of supplied `PatchChange`s. |
 | `PatchPresence<T>` | Typed DTO member projection of the same tri-state. |
 | `JsonApiDocument` | Validated core wire document. |
+| `RepresentationSelection` | Per-operation request for JSON:API wire-name include paths and sparse fieldsets. |
+| `RepresentationPolicy` | Application/configuration include and field permissions plus traversal/resource limits; not complete authorization. |
 | `MappedDocument` | Core document plus sparse-fieldset linkage-exemption provenance from one mapping call. |
 | `ResourceMapping` | Serialization-oriented write/PATCH metadata. |
 | `ReadResourceMapping` | Deserialization-oriented flat-read metadata. |

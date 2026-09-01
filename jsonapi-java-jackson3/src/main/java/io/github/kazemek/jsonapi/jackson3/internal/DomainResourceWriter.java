@@ -13,7 +13,6 @@ import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation;
 import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage;
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
 import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,20 +73,20 @@ public final class DomainResourceWriter {
   }
 
   /**
-   * Selective emission using fieldsets and {@link FieldPolicy} from {@code context}. Validates a
-   * present fieldset entry for the resource's mapped type before any selective attribute or
-   * relationship reads.
+   * Selective emission using fieldsets and {@link FieldPolicy} from {@code representation}.
+   * Validates a present fieldset entry for the resource's mapped type before any selective
+   * attribute or relationship reads.
    */
   public ResourceObject toResource(
-      Object resource, JavaType declaredType, CompoundSerializationContext context) {
+      Object resource, JavaType declaredType, EffectiveRepresentation representation) {
     Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(declaredType, DECLARED_TYPE);
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(representation, "representation");
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
-    List<String> fields = fieldsFor(context, mapping.resourceType());
+    List<String> fields = fieldsFor(representation, mapping.resourceType());
     if (fields != null) {
-      validateFieldset(resource.getClass(), mapping, fields, context.fieldPolicy());
+      validateFieldset(resource.getClass(), mapping, fields, representation.policy().fieldPolicy());
     }
     return toResourceSelective(resource, mapping, fields);
   }
@@ -110,10 +109,10 @@ public final class DomainResourceWriter {
    * attributes/relationships).
    */
   public static @Nullable List<String> fieldsFor(
-      CompoundSerializationContext context, String resourceType) {
-    Objects.requireNonNull(context, "context");
+      EffectiveRepresentation representation, String resourceType) {
+    Objects.requireNonNull(representation, "representation");
     Objects.requireNonNull(resourceType, "resourceType");
-    Map<String, List<String>> fieldsets = context.fieldsets();
+    Map<String, List<String>> fieldsets = representation.selection().fieldsets();
     if (!fieldsets.containsKey(resourceType)) {
       return null;
     }

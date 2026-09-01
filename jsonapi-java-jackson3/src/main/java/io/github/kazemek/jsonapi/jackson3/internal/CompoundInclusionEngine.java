@@ -7,7 +7,6 @@ import io.github.kazemek.jsonapi.core.model.ResourceObject;
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage;
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
 import java.util.ArrayDeque;
@@ -53,18 +52,18 @@ public final class CompoundInclusionEngine {
       List<JavaType> primaryTypes,
       List<ResourceObject> primaryResources,
       @Nullable JavaType emptyPrimaryType,
-      CompoundSerializationContext context) {
+      EffectiveRepresentation representation) {
     Objects.requireNonNull(primarySnapshot, "primarySnapshot");
     Objects.requireNonNull(primaryTypes, "primaryTypes");
     Objects.requireNonNull(primaryResources, "primaryResources");
-    Objects.requireNonNull(context, "context");
+    Objects.requireNonNull(representation, "representation");
     if (primarySnapshot.size() != primaryResources.size()
         || primarySnapshot.size() != primaryTypes.size()) {
       throw new IllegalArgumentException(
           "primary snapshot, type, and resource lists must match in size");
     }
 
-    List<IncludePath> paths = context.includePaths();
+    List<IncludePath> paths = representation.selection().includePaths();
     if (paths.isEmpty()) {
       return new IncludedResourcesResult(null, Set.of());
     }
@@ -74,9 +73,9 @@ public final class CompoundInclusionEngine {
             ? List.of(emptyPrimaryType)
             : primaryTypes;
     List<JavaType> distinctTypes = distinctTypesInOrder(validationTypes);
-    preValidate(distinctTypes, paths, context);
+    preValidate(distinctTypes, paths, representation);
 
-    return new Traversal(context, primarySnapshot, primaryTypes, primaryResources).run();
+    return new Traversal(representation, primarySnapshot, primaryTypes, primaryResources).run();
   }
 
   private static List<JavaType> distinctTypesInOrder(List<JavaType> primaryTypes) {
@@ -91,9 +90,11 @@ public final class CompoundInclusionEngine {
   }
 
   private void preValidate(
-      List<JavaType> distinctTypes, List<IncludePath> paths, CompoundSerializationContext context) {
+      List<JavaType> distinctTypes,
+      List<IncludePath> paths,
+      EffectiveRepresentation representation) {
     for (IncludePath path : paths) {
-      if (path.segments().size() > context.maxDepth()) {
+      if (path.segments().size() > representation.policy().maxIncludeDepth()) {
         Class<?> resourceClass =
             distinctTypes.isEmpty() ? null : distinctTypes.getFirst().getRawClass();
         // Include-path specification failures have no document member location; the dotted path
@@ -101,18 +102,21 @@ public final class CompoundInclusionEngine {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INCLUDE_DEPTH_EXCEEDED,
             resourceClass,
-            "Include path exceeds maxDepth " + context.maxDepth() + ": " + path.dotted());
+            "Include path exceeds maxIncludeDepth "
+                + representation.policy().maxIncludeDepth()
+                + ": "
+                + path.dotted());
       }
       for (JavaType resourceType : distinctTypes) {
-        validatePathAgainstType(path, resourceType, context);
+        validatePathAgainstType(path, resourceType, representation);
       }
     }
   }
 
   private void validatePathAgainstType(
-      IncludePath path, JavaType resourceType, CompoundSerializationContext context) {
+      IncludePath path, JavaType resourceType, EffectiveRepresentation representation) {
     JavaType currentType = resourceType;
-    IncludePolicy policy = context.includePolicy();
+    IncludePolicy policy = representation.policy().includePolicy();
     for (int i = 0; i < path.segments().size(); i++) {
       String segment = path.segments().get(i);
       String dottedThrough = path.dottedThrough(i);
@@ -187,7 +191,7 @@ public final class CompoundInclusionEngine {
   }
 
   private final class Traversal {
-    private final CompoundSerializationContext context;
+    private final EffectiveRepresentation representation;
     private final List<?> primarySnapshot;
     private final List<JavaType> primaryTypes;
     private final List<ResourceObject> primaryResources;
@@ -197,11 +201,11 @@ public final class CompoundInclusionEngine {
     private final Set<ResourceIdentity> linkageExemptions = new LinkedHashSet<>();
 
     Traversal(
-        CompoundSerializationContext context,
+        EffectiveRepresentation representation,
         List<?> primarySnapshot,
         List<JavaType> primaryTypes,
         List<ResourceObject> primaryResources) {
-      this.context = context;
+      this.representation = representation;
       this.primarySnapshot = primarySnapshot;
       this.primaryTypes = primaryTypes;
       this.primaryResources = primaryResources;
@@ -215,7 +219,7 @@ public final class CompoundInclusionEngine {
         }
       }
 
-      List<IncludePath> paths = context.includePaths();
+      List<IncludePath> paths = representation.selection().includePaths();
       for (int primaryIndex = 0; primaryIndex < primarySnapshot.size(); primaryIndex++) {
         Object primaryDomain = primarySnapshot.get(primaryIndex);
         JavaType primaryType = primaryTypes.get(primaryIndex);
@@ -268,7 +272,7 @@ public final class CompoundInclusionEngine {
                 + path.dottedThrough(current.segmentIndex())
                 + "'");
       }
-      if (!context.includePolicy().allows(mapping.resourceType(), segment)) {
+      if (!representation.policy().includePolicy().allows(mapping.resourceType(), segment)) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.DENIED_RELATIONSHIP_INCLUDE,
             domain.getClass(),
@@ -289,7 +293,8 @@ public final class CompoundInclusionEngine {
       // When the owning resource's fieldset omits this segment, the traversed relationship is
       // absent from its wire representation while inclusion still follows it; resources reached
       // through such an edge legitimately lack inbound linkage in the produced document.
-      List<String> ownerFields = DomainResourceWriter.fieldsFor(context, mapping.resourceType());
+      List<String> ownerFields =
+          DomainResourceWriter.fieldsFor(representation, mapping.resourceType());
       boolean edgeOmittedByFieldset = ownerFields != null && !ownerFields.contains(segment);
       for (Object relatedDomain : related) {
         processRelated(
@@ -322,7 +327,7 @@ public final class CompoundInclusionEngine {
         linkageExemptions.add(relatedIdentity);
       }
       ResourceObject relatedResource =
-          writer.toResource(relatedDomain, effectiveRelatedType, context);
+          writer.toResource(relatedDomain, effectiveRelatedType, representation);
       offerIncluded(relatedResource, propertyPath);
       enqueueNextSegment(relatedDomain, effectiveRelatedType, nextSegment, lastSegment, queue);
     }
@@ -371,12 +376,12 @@ public final class CompoundInclusionEngine {
         }
         return;
       }
-      if (includedByIdentity.size() >= context.maxIncluded()) {
+      if (includedByIdentity.size() >= representation.policy().maxIncludedResources()) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INCLUDE_COUNT_EXCEEDED,
             null,
-            "Included resource count exceeds maxIncluded "
-                + context.maxIncluded()
+            "Included resource count exceeds maxIncludedResources "
+                + representation.policy().maxIncludedResources()
                 + " via include path '"
                 + propertyPath
                 + "'");

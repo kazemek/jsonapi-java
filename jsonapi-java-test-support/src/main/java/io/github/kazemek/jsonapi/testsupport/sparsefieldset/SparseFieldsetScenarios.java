@@ -4,11 +4,12 @@ import io.github.kazemek.jsonapi.core.model.Meta;
 import io.github.kazemek.jsonapi.core.model.RelationshipData;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
 import io.github.kazemek.jsonapi.jackson.representation.FieldAllowance;
 import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection;
 import io.github.kazemek.jsonapi.testsupport.FixtureCatalog;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleMeta;
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMeta;
@@ -59,7 +60,14 @@ public final class SparseFieldsetScenarios {
           mappedDocument(
               "unrestricted MappedDocument matches Phase 2.2 attributes and relationships",
               SparseFieldsetScenarios::article,
-              CompoundSerializationContext.defaults(),
+              representation(Map.of()),
+              SparseFieldsetExpectation.mapped(unrestrictedArticle(), null, false)),
+          mappedDocument(
+              "field policy alone does not select fields",
+              SparseFieldsetScenarios::article,
+              new RepresentationInputs(
+                  RepresentationSelection.none(),
+                  RepresentationPolicy.defaults().withFieldPolicy(FieldPolicy.denyAll())),
               SparseFieldsetExpectation.mapped(unrestrictedArticle(), null, false)),
           unmappedDocument(
               "three-argument toDocument with empty fieldset map remains Phase 2.3 equivalent",
@@ -84,7 +92,7 @@ public final class SparseFieldsetScenarios {
           mappedDocument(
               "present empty list with denyAll succeeds without DENIED_FIELDSET_FIELD",
               SparseFieldsetScenarios::article,
-              fieldsets(Map.of(ARTICLES, List.of())).withFieldPolicy(FieldPolicy.denyAll()),
+              fieldsets(Map.of(ARTICLES, List.of())).withPolicy(FieldPolicy.denyAll()),
               SparseFieldsetExpectation.mapped(
                   FieldsetResourceState.identity(ARTICLES, "1"), null, false)),
           unmappedDocument(
@@ -196,22 +204,19 @@ public final class SparseFieldsetScenarios {
           mappedDocument(
               "denyAll rejects first present fieldset name",
               SparseFieldsetScenarios::article,
-              fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR)))
-                  .withFieldPolicy(FieldPolicy.denyAll()),
+              fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR))).withPolicy(FieldPolicy.denyAll()),
               SparseFieldsetExpectation.failure(
                   MappingDiagnostic.DENIED_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
               "missing FieldAllowance denies with DENIED_FIELDSET_FIELD",
               SparseFieldsetScenarios::article,
-              fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR)))
-                  .withFieldPolicy(TITLE_ONLY_ALLOWANCE),
+              fieldsets(Map.of(ARTICLES, List.of(TITLE, AUTHOR))).withPolicy(TITLE_ONLY_ALLOWANCE),
               SparseFieldsetExpectation.failure(
                   MappingDiagnostic.DENIED_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
               "unmapped name wins over policy denial",
               SparseFieldsetScenarios::article,
-              fieldsets(Map.of(ARTICLES, List.of("nope", TITLE)))
-                  .withFieldPolicy(FieldPolicy.denyAll()),
+              fieldsets(Map.of(ARTICLES, List.of("nope", TITLE))).withPolicy(FieldPolicy.denyAll()),
               SparseFieldsetExpectation.failure(
                   MappingDiagnostic.INVALID_FIELDSET_FIELD, null, Article.class)),
           mappedDocument(
@@ -227,12 +232,12 @@ public final class SparseFieldsetScenarios {
           mappedDocument(
               "FieldAllowance-satisfied fieldset succeeds",
               SparseFieldsetScenarios::article,
-              fieldsets(Map.of(ARTICLES, List.of(TITLE))).withFieldPolicy(TITLE_ONLY_ALLOWANCE),
+              fieldsets(Map.of(ARTICLES, List.of(TITLE))).withPolicy(TITLE_ONLY_ALLOWANCE),
               SparseFieldsetExpectation.mapped(titleOnlyArticle(), null, false)),
           mappedDocument(
               "FieldAllowance denies a present field not in the allowance set",
               SparseFieldsetScenarios::article,
-              fieldsets(Map.of(ARTICLES, List.of(AUTHOR))).withFieldPolicy(TITLE_ONLY_ALLOWANCE),
+              fieldsets(Map.of(ARTICLES, List.of(AUTHOR))).withPolicy(TITLE_ONLY_ALLOWANCE),
               SparseFieldsetExpectation.failure(
                   MappingDiagnostic.DENIED_FIELDSET_FIELD, null, Article.class)),
           new SparseFieldsetScenario(
@@ -240,7 +245,8 @@ public final class SparseFieldsetScenarios {
               SparseFieldsetOperation.TO_MAPPED_DOCUMENT,
               SparseFieldsetRequest.identityPreservation(
                   SparseFieldsetScenarios::article,
-                  List.of(
+                  sides(
+                      SparseFieldsetScenarios::article,
                       fieldsets(Map.of()),
                       fieldsets(Map.of(ARTICLES, List.of())),
                       fieldsets(Map.of(ARTICLES, List.of(TITLE))),
@@ -255,10 +261,10 @@ public final class SparseFieldsetScenarios {
               "concurrent fieldset mappings isolate documents and linkage exemptions",
               SparseFieldsetOperation.TO_MAPPED_DOCUMENT,
               SparseFieldsetRequest.concurrent(
-                  new SparseFieldsetSide(
+                  side(
                       SparseFieldsetScenarios::article,
                       includeAndFields(List.of(AUTHOR), Map.of(ARTICLES, List.of(TITLE)))),
-                  new SparseFieldsetSide(
+                  side(
                       SparseFieldsetScenarios::article,
                       includeAndFields(
                           List.of(AUTHOR), Map.of(ARTICLES, List.of(TITLE, AUTHOR, COMMENTS))))),
@@ -301,63 +307,92 @@ public final class SparseFieldsetScenarios {
   private static SparseFieldsetScenario mappedDocument(
       String id,
       Supplier<@Nullable Object> supplier,
-      CompoundSerializationContext context,
+      RepresentationInputs representation,
       SparseFieldsetExpectation expectation) {
     return new SparseFieldsetScenario(
         id,
         SparseFieldsetOperation.TO_MAPPED_DOCUMENT,
-        SparseFieldsetRequest.single(supplier, context),
+        SparseFieldsetRequest.single(supplier, representation.selection(), representation.policy()),
         expectation);
   }
 
   private static SparseFieldsetScenario mappedCollection(
       Supplier<Iterable<?>> supplier,
-      CompoundSerializationContext context,
+      RepresentationInputs representation,
       SparseFieldsetExpectation expectation) {
     return new SparseFieldsetScenario(
         "relationship-only fieldset via toMappedResourceCollection",
         SparseFieldsetOperation.TO_MAPPED_RESOURCE_COLLECTION,
-        SparseFieldsetRequest.collection(supplier, context),
+        SparseFieldsetRequest.collection(
+            supplier, representation.selection(), representation.policy()),
         expectation);
   }
 
   private static SparseFieldsetScenario unmappedDocument(
       String id,
       Supplier<@Nullable Object> supplier,
-      CompoundSerializationContext context,
+      RepresentationInputs representation,
       SparseFieldsetExpectation expectation) {
     return new SparseFieldsetScenario(
         id,
         SparseFieldsetOperation.TO_DOCUMENT,
-        SparseFieldsetRequest.single(supplier, context),
+        SparseFieldsetRequest.single(supplier, representation.selection(), representation.policy()),
         expectation);
   }
 
   private static SparseFieldsetScenario unmappedCollection(
       Supplier<Iterable<?>> supplier,
-      CompoundSerializationContext context,
+      RepresentationInputs representation,
       SparseFieldsetExpectation expectation) {
     return new SparseFieldsetScenario(
         "three-argument toResourceCollection rejects non-empty fieldsets",
         SparseFieldsetOperation.TO_RESOURCE_COLLECTION,
-        SparseFieldsetRequest.collection(supplier, context),
+        SparseFieldsetRequest.collection(
+            supplier, representation.selection(), representation.policy()),
         expectation);
   }
 
-  private static CompoundSerializationContext fieldsets(Map<String, List<String>> fields) {
-    return CompoundSerializationContext.defaults().withFieldsets(fields);
+  private static RepresentationInputs fieldsets(Map<String, List<String>> fields) {
+    return representation(fields);
   }
 
-  private static CompoundSerializationContext includeAndFields(
+  private static RepresentationInputs includeAndFields(
       List<String> paths, Map<String, List<String>> fields) {
-    List<IncludePath> includePaths = new ArrayList<>(paths.size());
+    RepresentationSelection.Builder builder = RepresentationSelection.builder();
     for (String path : paths) {
-      includePaths.add(IncludePath.of(path));
+      builder.include(IncludePath.of(path));
     }
-    return CompoundSerializationContext.defaults()
-        .withIncludePaths(includePaths)
-        .withIncludePolicy(IncludePolicy.allowAll())
-        .withFieldsets(fields);
+    fields.forEach(builder::fields);
+    return new RepresentationInputs(
+        builder.build(),
+        RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()));
+  }
+
+  private static RepresentationInputs representation(Map<String, List<String>> fields) {
+    RepresentationSelection.Builder builder = RepresentationSelection.builder();
+    fields.forEach(builder::fields);
+    return new RepresentationInputs(builder.build(), RepresentationPolicy.defaults());
+  }
+
+  private static SparseFieldsetSide side(
+      Supplier<Object> supplier, RepresentationInputs representation) {
+    return new SparseFieldsetSide(supplier, representation.selection(), representation.policy());
+  }
+
+  private static List<SparseFieldsetSide> sides(
+      Supplier<Object> supplier, RepresentationInputs... representations) {
+    List<SparseFieldsetSide> sides = new ArrayList<>(representations.length);
+    for (RepresentationInputs representation : representations) {
+      sides.add(side(supplier, representation));
+    }
+    return List.copyOf(sides);
+  }
+
+  private record RepresentationInputs(
+      RepresentationSelection selection, RepresentationPolicy policy) {
+    RepresentationInputs withPolicy(FieldPolicy fieldPolicy) {
+      return new RepresentationInputs(selection, policy.withFieldPolicy(fieldPolicy));
+    }
   }
 
   private static Person dan() {

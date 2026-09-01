@@ -12,8 +12,8 @@ and for mapping annotated domain types to resource objects.
 | `io.github.kazemek.jsonapi.jackson.*`          | Public Jackson-major-neutral API contracts (in `jsonapi-java-jackson-api`): `document`, `mapping`, `patch`, `representation`, `diagnostic` |
 
 Codec and mapping policy, contexts, diagnostics, domain envelope values, and presence-aware update
-commands (`DocumentReadContext`, `CompoundSerializationContext`, `IncludePath`, `IncludePolicy`,
-`FieldPolicy`, `MappedDocument`, `IdentifierConverter`, `DomainData`, `IncludedResources`,
+commands (`DocumentReadContext`, `RepresentationSelection`, `RepresentationPolicy`, `IncludePath`,
+`IncludePolicy`, `FieldPolicy`, `MappedDocument`, `IdentifierConverter`, `DomainData`, `IncludedResources`,
 `PatchCommand`, `PatchChange`, and the failure types) live in the Jackson-major-neutral API
 packages `io.github.kazemek.jsonapi.jackson.document`, `mapping`, `patch`, `representation`, and
 `diagnostic` and are imported from `jsonapi-java-jackson-api`; this module holds only Jackson
@@ -114,31 +114,34 @@ with `NON_DESERIALIZABLE_PROPERTY` at its JSON:API wire location instead of bein
 discarded. The same rule applies to primary and included resources bound through the typed domain
 envelope; the serialization-oriented `ResourceMapping` remains authoritative for writes.
 
-Compound inclusion (explicit context only; relationship mapping alone never includes):
+Compound inclusion (explicit selection and policy; relationship mapping alone never includes):
 
 ```java
-CompoundSerializationContext context =
-    CompoundSerializationContext.defaults()
-        .withIncludePaths(List.of(IncludePath.of("comments.author")))
-        .withIncludePolicy(IncludePolicy.allowAll());
+RepresentationSelection selection =
+    RepresentationSelection.builder().include(IncludePath.of("comments.author")).build();
+RepresentationPolicy policy =
+    RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll());
 
-JsonApiDocument compound = mapper.toDocument(article, null, context);
+JsonApiDocument compound = mapper.toDocument(article, null, selection, policy);
 
-// The same context is available on the declared-type overload:
-JsonApiDocument typedCompound = mapper.toDocument(container, containerType, null, context);
+// The same inputs are available on the declared-type overload:
+JsonApiDocument typedCompound = mapper.toDocument(container, containerType, null, selection, policy);
 ```
 
-Sparse fieldsets (same context; only via `MappedDocument` overloads):
+Sparse fieldsets (same selection/policy boundary; only via `MappedDocument` overloads):
 
 ```java
-CompoundSerializationContext fieldsets =
-    CompoundSerializationContext.defaults()
-        .withIncludePaths(List.of(IncludePath.of("author")))
+RepresentationSelection fieldsets =
+    RepresentationSelection.builder()
+        .include(IncludePath.of("author"))
+        .fields("articles", "title")
+        .build();
+RepresentationPolicy fieldsetPolicy =
+    RepresentationPolicy.defaults()
         .withIncludePolicy(IncludePolicy.allowAll())
-        .withFieldsets(Map.of("articles", List.of("title")))
         .withFieldPolicy(FieldPolicy.allowAll());
 
-MappedDocument mapped = mapper.toMappedDocument(article, null, fieldsets);
+MappedDocument mapped = mapper.toMappedDocument(article, null, fieldsets, fieldsetPolicy);
 
 // The writer composes its validation policy with the mapping's linkage exemptions;
 // callers never translate provenance into a ValidationContext themselves.
@@ -446,12 +449,12 @@ artifact; both majors share the neutral contracts of
   intermediate (normal flat reads and typed PATCH construction use the synthetic property map;
   low-level PATCH uses the shared property-scoped converter). Custom write converters must override
   `parse` to invert their wire form.
-- **Opt-in inclusion:** Compound `included` resources require a `CompoundSerializationContext` on
-  the three-argument mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
-  context). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
+- **Opt-in inclusion:** Compound `included` resources require `RepresentationSelection` and
+  `RepresentationPolicy` on mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
+  selection, policy). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
   full when fieldsets are empty. Empty include paths omit `included`; a non-empty request that
   resolves to nothing emits `included: []`. Defaults are deny-all with finite depth/count limits.
-- **Sparse fieldsets:** `fieldsets` + `FieldPolicy` on the same context select attributes and
+- **Sparse fieldsets:** `RepresentationSelection.fieldsets()` + `FieldPolicy` select attributes and
   relationships by final JSON:API names (absent type key = unrestricted; present empty list selects
   no attributes/relationships, while non-field resource members such as mapped resource meta remain
   independent). Applied only by `toMappedDocument` / `toMappedResourceCollection`; three-argument

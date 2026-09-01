@@ -14,12 +14,13 @@ import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.LinksContext
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.representation.FieldAllowance
 import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
@@ -83,30 +84,30 @@ class SparseFieldsetSpec extends Specification {
     scenario << SparseFieldsetScenarios.catalog().all()
   }
 
-  def "defensive copy isolates the caller's fieldset map after context construction"() {
+  def "defensive copy isolates the caller's fieldset map after selection construction"() {
     given:
     def mutableFields = new ArrayList<>(["title", "title", "author"])
     def mutableMap = new LinkedHashMap<String, List<String>>()
     mutableMap.put("articles", mutableFields)
-    def context = CompoundSerializationContext.defaults().withFieldsets(mutableMap)
+    def selection = RepresentationSelection.builder().fields("articles", mutableFields).build()
 
     when:
     mutableFields.add("body-text")
     mutableMap.put("people", ["name"])
 
     then:
-    context.fieldsets().get("articles") == ["title", "author"]
-    !context.fieldsets().containsKey("people")
+    selection.fieldsets().get("articles") == ["title", "author"]
+    !selection.fieldsets().containsKey("people")
   }
 
   def "duplicate fieldset names collapse to first-seen order"() {
     given:
     def scenario = SparseFieldsetScenarios.catalog().byId(
         "duplicate-free multi-field fieldset keeps title and author")
-    def context = ((SparseFieldsetRequest.Single) scenario.request()).context()
+    def selection = ((SparseFieldsetRequest.Single) scenario.request()).selection()
 
     expect:
-    context.fieldsets().get("articles") == ["title", "author"]
+    selection.fieldsets().get("articles") == ["title", "author"]
   }
 
   def "FieldAllowance caller set mutation does not enlarge the policy"() {
@@ -115,9 +116,8 @@ class SparseFieldsetSpec extends Specification {
       FieldAllowance.of("articles", "title")
     ])
     def policy = FieldPolicy.allowing(allowances)
-    def context = CompoundSerializationContext.defaults()
-        .withFieldsets([articles: ["title"]])
-        .withFieldPolicy(policy)
+    def selection = RepresentationSelection.builder().fields("articles", ["title"]).build()
+    def representationPolicy = RepresentationPolicy.defaults().withFieldPolicy(policy)
 
     when:
     allowances.add(FieldAllowance.of("articles", "author"))
@@ -125,7 +125,8 @@ class SparseFieldsetSpec extends Specification {
         ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.catalog().byId(
         "FieldAllowance-satisfied fieldset succeeds").request()).supplier().get(),
         null,
-        context)
+        selection,
+        representationPolicy)
 
     then:
     mapped.document() != null
@@ -135,9 +136,8 @@ class SparseFieldsetSpec extends Specification {
         ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.catalog().byId(
         "FieldAllowance denies a present field not in the allowance set").request()).supplier().get(),
         null,
-        CompoundSerializationContext.defaults()
-        .withFieldsets([articles: ["author"]])
-        .withFieldPolicy(policy))
+        RepresentationSelection.builder().fields("articles", ["author"]).build(),
+        RepresentationPolicy.defaults().withFieldPolicy(policy))
 
     then:
     def e = thrown(JsonApiMappingException)
@@ -151,7 +151,7 @@ class SparseFieldsetSpec extends Specification {
     def request = (SparseFieldsetRequest.Single) scenario.request()
 
     when:
-    mapper.toDocument(request.supplier().get(), null, request.context())
+    mapper.toDocument(request.supplier().get(), null, request.selection(), request.policy())
 
     then:
     def e = thrown(JsonApiMappingException)
@@ -167,7 +167,7 @@ class SparseFieldsetSpec extends Specification {
     def counting = (AccessCountingFieldsetArticle) request.supplier().get()
 
     when:
-    mapper.toMappedDocument(counting, null, request.context())
+    mapper.toMappedDocument(counting, null, request.selection(), request.policy())
 
     then:
     counting.titleReads == 1
@@ -181,7 +181,8 @@ class SparseFieldsetSpec extends Specification {
     def scenario = SparseFieldsetScenarios.catalog().byId(
         "include author with fields articles title omits linkage and sets exception")
     def request = (SparseFieldsetRequest.Single) scenario.request()
-    def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
+    def mapped = mapper.toMappedDocument(
+        request.supplier().get(), null, request.selection(), request.policy())
 
     when:
     JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
@@ -207,10 +208,11 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(
         article,
         envelope,
-        CompoundSerializationContext.defaults()
-        .withIncludePaths(List.of(IncludePath.of("author")))
-        .withIncludePolicy(IncludePolicy.allowAll())
-        .withFieldsets([articles: ["title"]]))
+        RepresentationSelection.builder()
+        .include(IncludePath.of("author"))
+        .fields("articles", ["title"])
+        .build(),
+        RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()))
     def base = new ValidationContext(
         DocumentUsage.RESPONSE_OR_OTHER,
         Set.of("myext"),
@@ -309,7 +311,8 @@ class SparseFieldsetSpec extends Specification {
     def scenario = SparseFieldsetScenarios.catalog().byId(
         "include author with fields articles title omits linkage and sets exception")
     def request = (SparseFieldsetRequest.Single) scenario.request()
-    def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
+    def mapped = mapper.toMappedDocument(
+        request.supplier().get(), null, request.selection(), request.policy())
     def writer = JsonApiJackson3.writer(jackson)
     def manualWriter = JsonApiJackson3.writer(
         jackson,
@@ -342,7 +345,8 @@ class SparseFieldsetSpec extends Specification {
     def scenario = SparseFieldsetScenarios.catalog().byId(
         "full field list keeps the unrestricted resource state")
     def request = (SparseFieldsetRequest.Single) scenario.request()
-    def mapped = mapper.toMappedDocument(request.supplier().get(), null, request.context())
+    def mapped = mapper.toMappedDocument(
+        request.supplier().get(), null, request.selection(), request.policy())
 
     expect:
     mapped.sparseFieldsetLinkageExemptions().isEmpty()
@@ -368,19 +372,32 @@ class SparseFieldsetSpec extends Specification {
     switch (operation) {
       case SparseFieldsetOperation.TO_DOCUMENT:
         def documentRequest = (SparseFieldsetRequest.Single) request
-        return mapper.toDocument(documentRequest.supplier().get(), null, documentRequest.context())
+        return mapper.toDocument(
+            documentRequest.supplier().get(),
+            null,
+            documentRequest.selection(),
+            documentRequest.policy())
       case SparseFieldsetOperation.TO_RESOURCE_COLLECTION:
         def collectionRequest = (SparseFieldsetRequest.Collection) request
         return mapper.toResourceCollection(
-            collectionRequest.supplier().get(), null, collectionRequest.context())
+            collectionRequest.supplier().get(),
+            null,
+            collectionRequest.selection(),
+            collectionRequest.policy())
       case SparseFieldsetOperation.TO_MAPPED_DOCUMENT:
         def mappedDocumentRequest = (SparseFieldsetRequest.Single) request
         return mapper.toMappedDocument(
-            mappedDocumentRequest.supplier().get(), null, mappedDocumentRequest.context())
+            mappedDocumentRequest.supplier().get(),
+            null,
+            mappedDocumentRequest.selection(),
+            mappedDocumentRequest.policy())
       case SparseFieldsetOperation.TO_MAPPED_RESOURCE_COLLECTION:
         def mappedCollectionRequest = (SparseFieldsetRequest.Collection) request
         return mapper.toMappedResourceCollection(
-            mappedCollectionRequest.supplier().get(), null, mappedCollectionRequest.context())
+            mappedCollectionRequest.supplier().get(),
+            null,
+            mappedCollectionRequest.selection(),
+            mappedCollectionRequest.policy())
       default:
         throw new IllegalArgumentException("Unknown operation: " + operation)
     }
@@ -389,8 +406,9 @@ class SparseFieldsetSpec extends Specification {
   private void executeIdentity(
       SparseFieldsetRequest.IdentityPreservation request,
       SparseFieldsetExpectation.IdentityPreservation expectation) {
-    request.contexts().each { context ->
-      def mapped = mapper.toMappedDocument(request.supplier().get(), null, context)
+    request.sides().each { side ->
+      def mapped = mapper.toMappedDocument(
+          request.supplier().get(), null, side.selection(), side.policy())
       def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
       assert resource.type() == expectation.type()
       assert resource.id() == expectation.id()
@@ -428,7 +446,8 @@ class SparseFieldsetSpec extends Specification {
     return {
       try {
         start.await()
-        result.set(mapper.toMappedDocument(side.supplier().get(), null, side.context()))
+        result.set(mapper.toMappedDocument(
+            side.supplier().get(), null, side.selection(), side.policy()))
       } catch (Throwable t) {
         error.compareAndSet(null, t)
       } finally {
@@ -473,7 +492,7 @@ class SparseFieldsetSpec extends Specification {
       assert supplied instanceof AccessCountingFieldsetArticle,
       "zeroReads expectations require AccessCountingFieldsetArticle: " + supplied?.class
       def counting = (AccessCountingFieldsetArticle) supplied
-      mapper.toMappedDocument(counting, null, request.context())
+      mapper.toMappedDocument(counting, null, request.selection(), request.policy())
       success.zeroReads().unreadAttributes().each { name ->
         assert readsFor(counting, name) == 0
       }

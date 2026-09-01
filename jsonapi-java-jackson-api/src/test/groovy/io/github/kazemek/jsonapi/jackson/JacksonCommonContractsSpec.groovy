@@ -29,11 +29,12 @@ import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
 import io.github.kazemek.jsonapi.jackson.patch.StructuredMember
 import io.github.kazemek.jsonapi.jackson.patch.StructuredMemberState
 import io.github.kazemek.jsonapi.jackson.patch.StructuredPatch
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.representation.FieldAllowance
 import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.jackson.representation.RelationshipAllowance
 import spock.lang.Specification
 
@@ -41,75 +42,97 @@ import java.util.Collections
 
 class JacksonCommonContractsSpec extends Specification {
 
-  // CompoundSerializationContext
+  // RepresentationSelection / RepresentationPolicy
 
-  def "defaults request no inclusion, deny-all policy, and empty fieldsets"() {
+  def "selection none and policy defaults preserve no inclusion and unrestricted fields"() {
     when:
-    def defaults = CompoundSerializationContext.defaults()
+    def selection = RepresentationSelection.none()
+    def policy = RepresentationPolicy.defaults()
 
     then:
-    defaults.includePaths().isEmpty()
-    defaults.includePolicy() == IncludePolicy.denyAll()
-    defaults.maxDepth() == 10
-    defaults.maxIncluded() == 100
-    defaults.fieldsets().isEmpty()
-    defaults.fieldPolicy() == FieldPolicy.allowAll()
+    selection.includePaths().isEmpty()
+    selection.fieldsets().isEmpty()
+    policy.includePolicy() == IncludePolicy.denyAll()
+    policy.maxIncludeDepth() == 10
+    policy.maxIncludedResources() == 100
+    policy.fieldPolicy() == FieldPolicy.allowAll()
   }
 
   def "negative limits are rejected"() {
     when:
-    CompoundSerializationContext.defaults().withMaxDepth(-1)
+    RepresentationPolicy.defaults().withMaxIncludeDepth(-1)
 
     then:
     thrown(IllegalArgumentException)
 
     when:
-    CompoundSerializationContext.defaults().withMaxIncluded(-1)
+    RepresentationPolicy.defaults().withMaxIncludedResources(-1)
 
     then:
     thrown(IllegalArgumentException)
   }
 
-  def "defensive copy isolates fieldset map and duplicate names collapse"() {
+  def "selection isolates fieldsets and preserves explicit empty fieldsets"() {
     given:
     def mutableFields = new ArrayList<>(["title", "title", "author"])
-    def mutableMap = new LinkedHashMap<String, List<String>>()
-    mutableMap.put("articles", mutableFields)
-    def context = CompoundSerializationContext.defaults().withFieldsets(mutableMap)
+    def selection = RepresentationSelection.builder().fields("articles", mutableFields).build()
 
     when:
     mutableFields.add("body-text")
-    mutableMap.put("comments", ["body"])
 
     then:
-    context.fieldsets() == [articles: ["title", "author"]]
-    context.fieldsets()["articles"] == ["title", "author"]
+    selection.fieldsets() == [articles: ["title", "author"]]
+    selection.fieldsets()["articles"] == ["title", "author"]
+    RepresentationSelection.builder().fields("articles", []).build().fieldsets() == [articles: []]
   }
 
-  def "context derivations preserve unrelated inclusion and fieldset policy"() {
+  def "selection and policy derivations preserve independent values"() {
     given:
-    def defaults = CompoundSerializationContext.defaults()
     def path = IncludePath.of("comments.author")
     def includePolicy = IncludePolicy.allowing(Set.of(RelationshipAllowance.of("articles", "author")))
     def fieldPolicy = FieldPolicy.allowing(Set.of(FieldAllowance.of("articles", "title")))
 
     when:
-    def derived =
-        defaults
-        .withIncludePaths([path])
+    def selection = RepresentationSelection.builder()
+        .include(path)
+        .fields("articles", ["title"])
+        .build()
+    def policy = RepresentationPolicy.defaults()
         .withIncludePolicy(includePolicy)
-        .withMaxDepth(2)
-        .withMaxIncluded(3)
-        .withFieldsets([articles: ["title"]])
+        .withMaxIncludeDepth(2)
+        .withMaxIncludedResources(3)
         .withFieldPolicy(fieldPolicy)
 
     then:
-    derived.includePaths() == [path]
-    derived.includePolicy().is(includePolicy)
-    derived.maxDepth() == 2
-    derived.maxIncluded() == 3
-    derived.fieldsets() == [articles: ["title"]]
-    derived.fieldPolicy().is(fieldPolicy)
+    selection.includePaths() == [path]
+    selection.fieldsets() == [articles: ["title"]]
+    policy.includePolicy().is(includePolicy)
+    policy.maxIncludeDepth() == 2
+    policy.maxIncludedResources() == 3
+    policy.fieldPolicy().is(fieldPolicy)
+  }
+
+  def "selection convenience methods merge fields deterministically and compare by value"() {
+    given:
+    def first = RepresentationSelection.builder()
+        .include("comments.author")
+        .fields("articles", "title", "comments")
+        .fields("articles", "title", "author")
+        .build()
+    def equal = RepresentationSelection.builder()
+        .include(IncludePath.of("comments.author"))
+        .fields("articles", ["title", "comments", "author"])
+        .build()
+
+    expect:
+    first.includePaths() == [
+      IncludePath.of("comments.author")
+    ]
+    first.fieldsets() == [articles: ["title", "comments", "author"]]
+    first == equal
+    first.hashCode() == equal.hashCode()
+    first != RepresentationSelection.none()
+    first != (Object) "selection"
   }
 
   // IncludePath
