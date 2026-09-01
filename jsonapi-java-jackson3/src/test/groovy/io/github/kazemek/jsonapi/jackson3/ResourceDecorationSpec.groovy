@@ -356,12 +356,15 @@ class ResourceDecorationSpec extends Specification {
     def resource = mapper.toResource(article)
     def doc = mapper.toDocument(article)
     def json = JsonApiJackson3.writer(JsonMapper.builder().build()).writeValueAsString(doc)
+    def tree = JsonMapper.builder().build().readTree(json)
 
     then:
     resource.links() == empty
-    !resource.links().isEmpty() == false // empty links is present-empty, isEmpty true but links non-null
     resource.links() != null
     resource.relationships().relationships().comments.links() == empty
-    json.contains('"links"')
+    tree.get("data").get("links").isObject()
+    tree.get("data").get("links").isEmpty()
+    tree.get("data").get("relationships").get("comments").get("links").isObject()
+    tree.get("data").get("relationships").get("comments").get("links").isEmpty()
   }
 }
