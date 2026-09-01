@@ -83,7 +83,7 @@ final class RelationshipLinkageSupport {
     }
     Class<?> raw = unwrapped.getRawClass();
     if (Set.class.isAssignableFrom(raw)) {
-      @SuppressWarnings("unchecked")
+      @SuppressWarnings({"unchecked", "rawtypes"})
       Class<? extends Collection> setType = (Class<? extends Collection>) raw;
       return typeFactory.constructCollectionType(setType, target);
     }

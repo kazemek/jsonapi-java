@@ -77,7 +77,7 @@ class NegativeCodecScenariosCatalogSpec extends Specification {
     }
     def i = 0
     while (i < pointer.length()) {
-      if (pointer.charAt(i) != '~') {
+      if (pointer.charAt(i) != ('~' as char)) {
         i++
         continue
       }
@@ -85,7 +85,7 @@ class NegativeCodecScenariosCatalogSpec extends Specification {
         return false
       }
       def escape = pointer.charAt(i + 1)
-      if (escape != '0' && escape != '1') {
+      if (escape != ('0' as char) && escape != ('1' as char)) {
         return false
       }
       i += 2

@@ -30,9 +30,4 @@ final class RelationshipMetaSupport {
   static MappingLocation relationshipMetaLocation(String relationshipName) {
     return MappingLocation.of(JsonApiMembers.RELATIONSHIPS, relationshipName, JsonApiMembers.META);
   }
-
-  /** Resource-relative diagnostic location for the {@code relationships} member. */
-  static MappingLocation relationshipsLocation() {
-    return MappingLocation.of(JsonApiMembers.RELATIONSHIPS);
-  }
 }

@@ -86,8 +86,11 @@ public final class JsonApiDomainDocument {
    */
   public <T> @Nullable T metaAs(Class<T> targetType) {
     Objects.requireNonNull(targetType, "targetType");
-    return targetType.cast(
-        convertMeta(targetType, meta -> metaConverter.convert(meta, targetType)));
+    Object converted = convertMeta(targetType, meta -> metaConverter.convert(meta, targetType));
+    if (converted == null) {
+      return null;
+    }
+    return targetType.cast(converted);
   }
 
   /**

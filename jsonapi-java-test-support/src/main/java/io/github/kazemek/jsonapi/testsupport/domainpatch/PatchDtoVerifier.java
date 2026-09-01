@@ -30,44 +30,46 @@ public final class PatchDtoVerifier {
   public static void verify(PatchDtoScenario scenario, @Nullable Object result) {
     Objects.requireNonNull(scenario, "scenario");
     PatchDtoExpectation expectation = scenario.expectation();
-    if (expectation instanceof PatchDtoExpectation.Success(Object identity, var members)) {
-      if (result == null || !scenario.targetType().isInstance(result)) {
-        throw fail(
-            "expected "
-                + scenario.targetType().getName()
-                + " for "
-                + scenario.id()
-                + expectedButWas(scenario.targetType().getName(), typeName(result)));
+    switch (expectation) {
+      case PatchDtoExpectation.Success(Object identity, var members) -> {
+        if (!scenario.targetType().isInstance(result)) {
+          throw fail(
+              "expected "
+                  + scenario.targetType().getName()
+                  + " for "
+                  + scenario.id()
+                  + expectedButWas(scenario.targetType().getName(), typeName(result)));
+        }
+        assertEqual("identity", identity, readMember(result, "id"));
+        for (Map.Entry<String, PatchPresence<?>> entry : members.entrySet()) {
+          assertEqual(
+              "member " + entry.getKey(), entry.getValue(), readMember(result, entry.getKey()));
+        }
+        return;
       }
-      assertEqual("identity", identity, readMember(result, "id"));
-      for (Map.Entry<String, PatchPresence<?>> entry : members.entrySet()) {
-        assertEqual(
-            "member " + entry.getKey(), entry.getValue(), readMember(result, entry.getKey()));
+      case PatchDtoExpectation.ReaderFailure(var code, String jsonPointer) -> {
+        if (!(result instanceof JsonApiDocumentReadException exception)) {
+          throw fail(
+              "expected JsonApiDocumentReadException for "
+                  + scenario.id()
+                  + expectedButWas("JsonApiDocumentReadException", typeName(result)));
+        }
+        assertEqual("ruleCode", code, exception.ruleCode());
+        assertEqual("jsonPointer", jsonPointer, exception.jsonPointer());
+        return;
       }
-      return;
-    }
-    if (expectation instanceof PatchDtoExpectation.ReaderFailure(var code, String jsonPointer)) {
-      if (!(result instanceof JsonApiDocumentReadException exception)) {
-        throw fail(
-            "expected JsonApiDocumentReadException for "
-                + scenario.id()
-                + expectedButWas("JsonApiDocumentReadException", typeName(result)));
+      case PatchDtoExpectation.BinderFailure(var diagnostic, String propertyPath) -> {
+        if (!(result instanceof JsonApiMappingException exception)) {
+          throw fail(
+              "expected JsonApiMappingException for "
+                  + scenario.id()
+                  + expectedButWas("JsonApiMappingException", typeName(result)));
+        }
+        assertEqual("diagnostic", diagnostic, exception.diagnostic());
+        assertEqual("propertyPath", propertyPath, exception.propertyPath());
+        return;
       }
-      assertEqual("ruleCode", code, exception.ruleCode());
-      assertEqual("jsonPointer", jsonPointer, exception.jsonPointer());
-      return;
-    }
-    if (expectation
-        instanceof PatchDtoExpectation.BinderFailure(var diagnostic, String propertyPath)) {
-      if (!(result instanceof JsonApiMappingException exception)) {
-        throw fail(
-            "expected JsonApiMappingException for "
-                + scenario.id()
-                + expectedButWas("JsonApiMappingException", typeName(result)));
-      }
-      assertEqual("diagnostic", diagnostic, exception.diagnostic());
-      assertEqual("propertyPath", propertyPath, exception.propertyPath());
-      return;
+      default -> {}
     }
     throw fail("unknown expectation " + typeName(expectation));
   }

@@ -1,5 +1,7 @@
 package io.github.kazemek.jsonapi.jackson.mapping;
 
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException;
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import org.jspecify.annotations.Nullable;
 
 /**

@@ -103,7 +103,6 @@ class DecorationScenariosCatalogSpec extends Specification {
         }
       }
       if (outcome instanceof DecorationOutcome.MappedDocumentSuccess) {
-        def success = (DecorationOutcome.MappedDocumentSuccess) outcome
         assert scenario.selection() != null
         assert scenario.policy() != null
       }

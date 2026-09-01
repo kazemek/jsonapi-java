@@ -188,7 +188,7 @@ public final class DomainResourceWriter {
         Map.of());
   }
 
-  @SuppressWarnings({"NullAway", "ConstantValue"})
+  @SuppressWarnings("NullAway")
   private ResourceObject decorateResource(
       Object domain,
       JavaType declaredType,
@@ -236,7 +236,7 @@ public final class DomainResourceWriter {
         base.additionalMembers());
   }
 
-  @SuppressWarnings("java:S2583")
+  @SuppressWarnings({"java:S2583", "ConstantValue"})
   private ResourceDecoration requireDecoration(
       Object domain, ResourceDecorator<Object> decorator, String resourceType) {
     ResourceDecoration decoration;
