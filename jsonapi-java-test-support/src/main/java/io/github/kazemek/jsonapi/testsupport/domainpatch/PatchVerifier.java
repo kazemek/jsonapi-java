@@ -60,7 +60,9 @@ public final class PatchVerifier {
         assertEqual("propertyPath", propertyPath, exception.propertyPath());
         return;
       }
-      default -> {}
+      default -> {
+        // Intentionally empty: unknown expectation falls through to failure below.
+      }
     }
     throw fail("unknown expectation " + typeName(expectation));
   }
