@@ -64,16 +64,19 @@
  * application-owned annotated PATCH DTO whose patchable members are declared as {@link
  * io.github.kazemek.jsonapi.jackson.patch.PatchPresence}.
  *
- * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the mapper's
- * three-argument overloads. Relationship mapping produces linkage only; included resources require
- * an explicit include request and {@link IncludePolicy}. Sparse fieldsets share that context
- * ({@code fieldsets} + {@link FieldPolicy}) and are applied only by the {@link MappedDocument}
- * overloads; write the returned {@link MappedDocument} through a {@link JsonApiDocumentWriter} and
- * the writer composes its bound validation policy with the mapped sparse-fieldset linkage
- * exemptions—callers never translate mapping provenance into a validation context themselves.
- * Exemptions name exactly the included resources whose linking relationship a fieldset removed, so
- * unrelated full-linkage defects still fail validation. Fieldsets select attributes and
- * relationships only; whole-object resource meta is emitted independently (ADR-015).
+ * <p>Compound inclusion is opt-in via {@link RepresentationSelection} and {@link
+ * RepresentationPolicy} on the mapper's explicit overloads. Relationship mapping produces linkage
+ * only; included resources require an explicit include request and {@link IncludePolicy}. Sparse
+ * fieldsets are selected by {@link RepresentationSelection}, governed by {@link FieldPolicy}, and
+ * applied only by the {@link MappedDocument} overloads; write the returned {@link MappedDocument}
+ * through a {@link JsonApiDocumentWriter} and the writer composes its bound validation policy with
+ * the mapped sparse-fieldset linkage exemptions—callers never translate mapping provenance into a
+ * validation context themselves. Exemptions name exactly the included resources whose linking
+ * relationship a fieldset removed, so unrelated full-linkage defects still fail validation.
+ * Fieldsets select attributes and relationships only; whole-object resource meta is emitted
+ * independently (ADR-015). Selection is operation scoped, while policy is application scoped and is
+ * not a complete authorization system. Applications may reuse selection as persistence-projection
+ * input, but this adapter defines and executes no persistence projections.
  *
  * <p>Whole-object resource-side meta mapping (ADR-015) maps the complete {@code meta} object of a
  * resource or of a specific mapped relationship to one application-owned property per location via
@@ -99,7 +102,8 @@ package io.github.kazemek.jsonapi.jackson3;
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument;
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
 import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection;
 import org.jspecify.annotations.NullMarked;

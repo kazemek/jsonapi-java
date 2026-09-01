@@ -82,6 +82,11 @@ public final class CompoundWriteScenarios {
               IncludePolicy.denyAll(),
               CompoundWriteExpectation.omitted()),
           document(
+              "include policy alone does not request included resources",
+              CompoundWriteScenarios::article,
+              IncludePolicy.allowAll(),
+              CompoundWriteExpectation.omitted()),
+          document(
               "includes nested intermediates for comments.author",
               CompoundWriteScenarios::article,
               CompoundWriteExpectation.included(

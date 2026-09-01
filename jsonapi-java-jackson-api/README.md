@@ -43,26 +43,28 @@ This module has no standalone entry points. Consumers use it through a Jackson a
 ```java
 // Jackson 3 (or, later, Jackson 2) consumes the same neutral contracts:
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext;
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath;
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection;
 import io.github.kazemek.jsonapi.jackson.patch.PatchCommand;
 import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 
 DocumentReadContext context = DocumentReadContext.resourceDefaults();
-CompoundSerializationContext inclusion =
-    CompoundSerializationContext.defaults()
-        .withIncludePaths(List.of(IncludePath.of("comments.author")))
-        .withIncludePolicy(IncludePolicy.allowAll());
+RepresentationSelection selection =
+    RepresentationSelection.builder().include(IncludePath.of("comments.author")).build();
+RepresentationPolicy policy =
+    RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll());
 PatchCommand<ArticleDto> command = /* from JsonApiJackson3.patchReader(...).readValue(...) */;
 PatchPresence<String> title = /* from an ArticlePatchDto member after patchDtoReader binding */;
 ```
 
 Types here are values only: policies (`IncludePolicy`, `FieldPolicy`, allowance keys), read/write
-contexts (`DocumentReadContext`, `CompoundSerializationContext`, `DocumentEnvelope`,
+contexts (`DocumentReadContext`, `DocumentEnvelope`,
 `MappedDocument`), diagnostics (`MappingDiagnostic`, `CodecFailureCategory`,
 `JsonApiMappingException`, `JsonApiDocumentReadException`, `SourceLocation`, `MappingLocation`),
-identifier conversion (`IdentifierConverter`), domain envelope values (`DomainData`,
+identifier conversion (`IdentifierConverter`), representation values (`RepresentationSelection`,
+`RepresentationPolicy`), domain envelope values (`DomainData`,
 `IncludedResources`), and presence-aware update contracts (`PatchCommand`, `PatchChange`,
 `PatchPresence`, `RelationshipLinkage`, `StructuredPatch`, `StructuredMember`,
 `StructuredMemberState`). `PatchChange` sealed variants cover resource-meta and
@@ -72,6 +74,12 @@ identifier meta is not a variant. Applications that need `ResourceIdentifier.met
 per [ADR-017](../docs/adr/017-resource-identifier-meta-mapping.md). No type in this API imports
 or exposes `tools.jackson.*` or `com.fasterxml.jackson.*`; Jackson-bound factories, readers,
 writers, binders, and mapping introspection stay in the major-specific adapter packages.
+
+`RepresentationSelection` is per operation: it requests JSON:API wire-name include paths and sparse
+fieldsets only. `RepresentationPolicy` is application/configuration scoped: it determines which
+requested relationships and fields are permitted and bounds include traversal. Policy is not a
+complete authorization system. Applications may reuse a selection as an input to persistence
+projection planning, but jsonapi-java neither defines nor executes persistence projections.
 
 ## Non-goals
 

@@ -3,8 +3,13 @@
  *
  * <p>Provides {@link io.github.kazemek.jsonapi.jackson.representation.IncludePath}, {@link
  * io.github.kazemek.jsonapi.jackson.representation.IncludePolicy}, {@link
- * io.github.kazemek.jsonapi.jackson.representation.FieldPolicy}, and {@link
- * io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext}.
+ * io.github.kazemek.jsonapi.jackson.representation.FieldPolicy}, {@link
+ * io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection}, and {@link
+ * io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy}. A {@link
+ * io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection} is per operation and
+ * requests only include paths and sparse fieldsets. A {@link
+ * io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy} is application-scoped and
+ * permits and bounds those requests; it is not a complete authorization system.
  */
 @NullMarked
 package io.github.kazemek.jsonapi.jackson.representation;

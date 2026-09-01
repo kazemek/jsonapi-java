@@ -8,9 +8,11 @@ import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic;
 import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope;
 import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter;
 import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument;
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy;
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection;
 import io.github.kazemek.jsonapi.jackson3.internal.CompoundInclusionEngine;
 import io.github.kazemek.jsonapi.jackson3.internal.DomainResourceWriter;
+import io.github.kazemek.jsonapi.jackson3.internal.EffectiveRepresentation;
 import io.github.kazemek.jsonapi.jackson3.internal.IncludedResourcesResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,26 +43,26 @@ import tools.jackson.databind.JavaType;
  * methods when Jackson resolves those bindings. An unparameterized generic root fails at the mapped
  * member that requires the missing declaration rather than inferring a type from runtime contents.
  *
- * <p>Compound inclusion is opt-in via {@link CompoundSerializationContext} on the three-argument
- * {@link #toDocument(Object, DocumentEnvelope, CompoundSerializationContext)} and {@link
- * #toResourceCollection(Iterable, DocumentEnvelope, CompoundSerializationContext)} overloads.
- * Relationship mapping alone never requests inclusion. Callers without an envelope pass {@code
- * null} for the envelope argument.
+ * <p>Compound inclusion is opt-in via {@link RepresentationSelection} and {@link
+ * RepresentationPolicy} on the mapper overloads that accept representation inputs. Relationship
+ * mapping alone never requests inclusion. Callers without an envelope pass {@code null} for the
+ * envelope argument.
  *
  * <p>Sparse fieldsets are applied only by {@link #toMappedDocument(Object, DocumentEnvelope,
- * CompoundSerializationContext)} and {@link #toMappedResourceCollection(Iterable, DocumentEnvelope,
- * CompoundSerializationContext)}. Those overloads return a {@link MappedDocument} carrying the
- * identities of included resources whose inbound linkage was removed by an applied fieldset; a
- * document writer composes that provenance into validation. The three-argument {@code toDocument} /
- * {@code toResourceCollection} overloads reject a non-empty fieldset map with {@link
- * MappingDiagnostic#FIELDSETS_REQUIRE_MAPPED_DOCUMENT}.
+ * RepresentationSelection, RepresentationPolicy)} and {@link #toMappedResourceCollection(Iterable,
+ * DocumentEnvelope, RepresentationSelection, RepresentationPolicy)}. Those overloads return a
+ * {@link MappedDocument} carrying the identities of included resources whose inbound linkage was
+ * removed by an applied fieldset; a document writer composes that provenance into validation. The
+ * non-mapped representation overloads (with or without a declared {@link JavaType}) reject a
+ * non-empty fieldset map with {@link MappingDiagnostic#FIELDSETS_REQUIRE_MAPPED_DOCUMENT}.
  *
  * <p>For custom identifier conversion, supply an {@link IdentifierConverter} at construction time.
  * The default converter delegates to {@link Object#toString()}.
  */
 public final class JsonApiResourceMapper {
 
-  private static final String CONTEXT = "context";
+  private static final String SELECTION = "selection";
+  private static final String POLICY = "policy";
   private static final String RESOURCES = "resources";
   private static final String RESOURCE_TYPE = "resourceType";
 
@@ -99,12 +101,15 @@ public final class JsonApiResourceMapper {
 
   /**
    * Maps a domain object to a document with optional envelope members and explicit compound
-   * inclusion from {@code context}. Rejects a non-empty fieldset map; use {@link #toMappedDocument}
-   * when applying sparse fieldsets.
+   * inclusion from {@code selection} governed by {@code policy}. Rejects a non-empty fieldset map;
+   * use {@link #toMappedDocument} when applying sparse fieldsets.
    */
   public JsonApiDocument toDocument(
-      Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
-    return toDocument(resource, writer.inferredType(resource), envelope, context);
+      Object resource,
+      @Nullable DocumentEnvelope envelope,
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
+    return toDocument(resource, writer.inferredType(resource), envelope, selection, policy);
   }
 
   /**
@@ -115,30 +120,34 @@ public final class JsonApiResourceMapper {
       Object resource,
       JavaType resourceType,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
     Objects.requireNonNull(resource, "resource");
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
-    Objects.requireNonNull(context, CONTEXT);
-    rejectNonEmptyFieldsets(context);
+    EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
+    rejectNonEmptyFieldsets(representation);
     List<Object> snapshot = List.of(resource);
-    ResourceObject resourceObject = writer.toResource(resource, resourceType, context);
+    ResourceObject resourceObject = writer.toResource(resource, resourceType, representation);
     List<ResourceObject> primary = List.of(resourceObject);
     List<ResourceObject> included =
         inclusionEngine
-            .collectIncluded(snapshot, List.of(resourceType), primary, null, context)
+            .collectIncluded(snapshot, List.of(resourceType), primary, null, representation)
             .included();
     return buildDocument(new DocumentData.SingleResource(resourceObject), envelope, included);
   }
 
   /**
    * Maps a domain object with optional envelope members, compound inclusion, and sparse fieldsets
-   * from {@code context}. Returns a {@link MappedDocument} whose linkage exemptions name included
-   * resources whose linking relationship was omitted by an applied fieldset while inclusion still
-   * traversed it.
+   * from {@code selection} governed by {@code policy}. Returns a {@link MappedDocument} whose
+   * linkage exemptions name included resources whose linking relationship was omitted by an applied
+   * fieldset while inclusion still traversed it.
    */
   public MappedDocument toMappedDocument(
-      Object resource, @Nullable DocumentEnvelope envelope, CompoundSerializationContext context) {
-    return toMappedDocument(resource, writer.inferredType(resource), envelope, context);
+      Object resource,
+      @Nullable DocumentEnvelope envelope,
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
+    return toMappedDocument(resource, writer.inferredType(resource), envelope, selection, policy);
   }
 
   /** Maps a domain object with inclusion and sparse fieldsets using a complete declared type. */
@@ -146,15 +155,17 @@ public final class JsonApiResourceMapper {
       Object resource,
       JavaType resourceType,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
     Objects.requireNonNull(resource, "resource");
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
-    Objects.requireNonNull(context, CONTEXT);
+    EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
     List<Object> snapshot = List.of(resource);
-    ResourceObject resourceObject = writer.toResource(resource, resourceType, context);
+    ResourceObject resourceObject = writer.toResource(resource, resourceType, representation);
     List<ResourceObject> primary = List.of(resourceObject);
     IncludedResourcesResult includedResult =
-        inclusionEngine.collectIncluded(snapshot, List.of(resourceType), primary, null, context);
+        inclusionEngine.collectIncluded(
+            snapshot, List.of(resourceType), primary, null, representation);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
@@ -195,18 +206,23 @@ public final class JsonApiResourceMapper {
 
   /**
    * Maps a primary collection to a document with optional envelope members and explicit compound
-   * inclusion from {@code context}. The iterable is materialized once and reused for type
-   * validation, primary mapping, and inclusion traversal. Rejects a non-empty fieldset map; use
-   * {@link #toMappedResourceCollection} when applying sparse fieldsets.
+   * inclusion from {@code selection} governed by {@code policy}. The iterable is materialized once
+   * and reused for type validation, primary mapping, and inclusion traversal. Rejects a non-empty
+   * fieldset map; use {@link #toMappedResourceCollection} when applying sparse fieldsets.
    */
   public JsonApiDocument toResourceCollection(
       Iterable<?> resources,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
     Objects.requireNonNull(resources, RESOURCES);
-    Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
-    return toResourceCollection(snapshot, inferredTypes(snapshot), envelope, context, null);
+    return toResourceCollection(
+        snapshot,
+        inferredTypes(snapshot),
+        envelope,
+        effectiveRepresentation(selection, policy),
+        null);
   }
 
   /**
@@ -217,16 +233,16 @@ public final class JsonApiResourceMapper {
       Iterable<?> resources,
       JavaType resourceType,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
     Objects.requireNonNull(resources, RESOURCES);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
-    Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
     return toResourceCollection(
         snapshot,
         effectiveTypes(snapshot, repeatedType(snapshot.size(), resourceType)),
         envelope,
-        context,
+        effectiveRepresentation(selection, policy),
         resourceType);
   }
 
@@ -234,36 +250,40 @@ public final class JsonApiResourceMapper {
       List<Object> snapshot,
       List<JavaType> resourceTypes,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context,
+      EffectiveRepresentation representation,
       @Nullable JavaType emptyCollectionType) {
-    Objects.requireNonNull(context, CONTEXT);
-    rejectNonEmptyFieldsets(context);
+    rejectNonEmptyFieldsets(representation);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
     for (int i = 0; i < snapshot.size(); i++) {
-      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i), context));
+      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i), representation));
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     List<ResourceObject> included =
         inclusionEngine
-            .collectIncluded(snapshot, resourceTypes, primary, emptyCollectionType, context)
+            .collectIncluded(snapshot, resourceTypes, primary, emptyCollectionType, representation)
             .included();
     return buildDocument(new DocumentData.ResourceCollection(primary), envelope, included);
   }
 
   /**
    * Maps a primary collection with optional envelope members, compound inclusion, and sparse
-   * fieldsets from {@code context}. The iterable is materialized once. Returns a {@link
-   * MappedDocument} whose linkage exemptions fold fieldset-removed linking relationships across
-   * primary and included selective writes.
+   * fieldsets from {@code selection} governed by {@code policy}. The iterable is materialized once.
+   * Returns a {@link MappedDocument} whose linkage exemptions fold fieldset-removed linking
+   * relationships across primary and included selective writes.
    */
   public MappedDocument toMappedResourceCollection(
       Iterable<?> resources,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
     Objects.requireNonNull(resources, RESOURCES);
-    Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
-    return toMappedResourceCollection(snapshot, inferredTypes(snapshot), envelope, context, null);
+    return toMappedResourceCollection(
+        snapshot,
+        inferredTypes(snapshot),
+        envelope,
+        effectiveRepresentation(selection, policy),
+        null);
   }
 
   /**
@@ -274,16 +294,16 @@ public final class JsonApiResourceMapper {
       Iterable<?> resources,
       JavaType resourceType,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context) {
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
     Objects.requireNonNull(resources, RESOURCES);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
-    Objects.requireNonNull(context, CONTEXT);
     List<Object> snapshot = materialize(resources);
     return toMappedResourceCollection(
         snapshot,
         effectiveTypes(snapshot, repeatedType(snapshot.size(), resourceType)),
         envelope,
-        context,
+        effectiveRepresentation(selection, policy),
         resourceType);
   }
 
@@ -291,30 +311,35 @@ public final class JsonApiResourceMapper {
       List<Object> snapshot,
       List<JavaType> resourceTypes,
       @Nullable DocumentEnvelope envelope,
-      CompoundSerializationContext context,
+      EffectiveRepresentation representation,
       @Nullable JavaType emptyCollectionType) {
-    Objects.requireNonNull(context, CONTEXT);
     List<ResourceObject> resourceObjects = new ArrayList<>(snapshot.size());
     for (int i = 0; i < snapshot.size(); i++) {
-      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i), context));
+      resourceObjects.add(writer.toResource(snapshot.get(i), resourceTypes.get(i), representation));
     }
     List<ResourceObject> primary = List.copyOf(resourceObjects);
     IncludedResourcesResult includedResult =
         inclusionEngine.collectIncluded(
-            snapshot, resourceTypes, primary, emptyCollectionType, context);
+            snapshot, resourceTypes, primary, emptyCollectionType, representation);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.ResourceCollection(primary), envelope, includedResult.included());
     return new MappedDocument(document, includedResult.sparseFieldsetLinkageExemptions());
   }
 
-  private static void rejectNonEmptyFieldsets(CompoundSerializationContext context) {
-    if (!context.fieldsets().isEmpty()) {
+  private static EffectiveRepresentation effectiveRepresentation(
+      RepresentationSelection selection, RepresentationPolicy policy) {
+    return new EffectiveRepresentation(
+        Objects.requireNonNull(selection, SELECTION), Objects.requireNonNull(policy, POLICY));
+  }
+
+  private static void rejectNonEmptyFieldsets(EffectiveRepresentation representation) {
+    if (!representation.selection().fieldsets().isEmpty()) {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT,
           null,
           "Non-empty fieldsets require toMappedDocument / toMappedResourceCollection; types: "
-              + context.fieldsets().keySet());
+              + representation.selection().fieldsets().keySet());
     }
   }
 

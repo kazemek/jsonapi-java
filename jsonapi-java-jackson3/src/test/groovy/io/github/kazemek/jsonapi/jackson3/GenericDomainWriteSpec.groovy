@@ -2,9 +2,10 @@ package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.RelationshipData
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ModeratedComment
@@ -67,14 +68,13 @@ class GenericDomainWriteSpec extends Specification {
     def rootType = parameterized(base, GenericResource, GenericThing)
     def related = new GenericThing("t1", "Thing")
     def root = new GenericResource<GenericThing>("r1", null, related, [], Optional.empty())
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([IncludePath.of("related")])
-        .withIncludePolicy(IncludePolicy.allowAll())
+    def selection = RepresentationSelection.builder().include(IncludePath.of("related")).build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
 
     when:
     def collection = mapper.toResourceCollection([root], rootType, null)
-    def compound = mapper.toResourceCollection([root], rootType, null, context)
-    def mapped = mapper.toMappedResourceCollection([root], rootType, null, context)
+    def compound = mapper.toResourceCollection([root], rootType, null, selection, policy)
+    def mapped = mapper.toMappedResourceCollection([root], rootType, null, selection, policy)
 
     then:
     ((DocumentData.ResourceCollection) collection.data()).resources()[0].id() == "r1"
@@ -108,12 +108,11 @@ class GenericDomainWriteSpec extends Specification {
     def base = JsonMapper.builder().build()
     def mapper = JsonApiJackson3.resourceMapper(base)
     def rootType = parameterized(base, GenericResource, GenericThing)
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([IncludePath.of("missing")])
-        .withIncludePolicy(IncludePolicy.allowAll())
+    def selection = RepresentationSelection.builder().include(IncludePath.of("missing")).build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
 
     when:
-    mapper.toResourceCollection([], rootType, null, context)
+    mapper.toResourceCollection([], rootType, null, selection, policy)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -125,12 +124,11 @@ class GenericDomainWriteSpec extends Specification {
     def base = JsonMapper.builder().build()
     def mapper = JsonApiJackson3.resourceMapper(base)
     def rootType = parameterized(base, GenericResource, GenericThing)
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([IncludePath.of("related")])
-        .withIncludePolicy(IncludePolicy.denyAll())
+    def selection = RepresentationSelection.builder().include(IncludePath.of("related")).build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.denyAll())
 
     when:
-    mapper.toResourceCollection([], rootType, null, context)
+    mapper.toResourceCollection([], rootType, null, selection, policy)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -139,16 +137,15 @@ class GenericDomainWriteSpec extends Specification {
 
   def "polymorphic relationship linkage matches the specialized included resource"() {
     given:
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([IncludePath.of("comments")])
-        .withIncludePolicy(IncludePolicy.allowAll())
+    def selection = RepresentationSelection.builder().include(IncludePath.of("comments")).build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
     def article = new PolymorphicArticle(
         "a1", "Article", [
           new ModeratedComment("c1", "Comment", null)
         ])
 
     when:
-    def document = mapper().toDocument(article, null, context)
+    def document = mapper().toDocument(article, null, selection, policy)
 
     then:
     document.data().resource().relationships().relationships().comments.data().identifiers()
@@ -228,15 +225,14 @@ class GenericDomainWriteSpec extends Specification {
     def mapper = JsonApiJackson3.resourceMapper(base)
     def rootType = parameterized(base, GenericResource, GenericThing)
     def root = new GenericResource<GenericThing>("r1", null, null, [], Optional.empty())
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([
-          IncludePath.of("many"),
-          IncludePath.of("optional")
-        ])
-        .withIncludePolicy(IncludePolicy.allowAll())
+    def selection = RepresentationSelection.builder()
+        .include(IncludePath.of("many"))
+        .include(IncludePath.of("optional"))
+        .build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
 
     when:
-    def document = mapper.toDocument(root, rootType, null, context)
+    def document = mapper.toDocument(root, rootType, null, selection, policy)
 
     then:
     document.included() != null
@@ -254,16 +250,15 @@ class GenericDomainWriteSpec extends Specification {
     def rootType = parameterized(base, GenericResource, GenericThing)
     def thing = new GenericThing("t1", "Thing")
     def root = new GenericResource<GenericThing>("r1", thing, thing, [thing], Optional.of(thing))
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([
-          IncludePath.of("related"),
-          IncludePath.of("many"),
-          IncludePath.of("optional")
-        ])
-        .withIncludePolicy(IncludePolicy.allowAll())
+    def selection = RepresentationSelection.builder()
+        .include(IncludePath.of("related"))
+        .include(IncludePath.of("many"))
+        .include(IncludePath.of("optional"))
+        .build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
 
     when:
-    def document = mapper.toDocument(root, rootType, null, context)
+    def document = mapper.toDocument(root, rootType, null, selection, policy)
 
     then:
     document.included()*.type() == ["things"]
@@ -368,13 +363,14 @@ class GenericDomainWriteSpec extends Specification {
     def rootType = parameterized(base, GenericResource, GenericThing)
     def thing = new GenericThing("t1", "Thing")
     def root = new GenericResource<GenericThing>("r1", null, thing, [], Optional.empty())
-    def context = CompoundSerializationContext.defaults()
-        .withIncludePaths([IncludePath.of("related")])
-        .withIncludePolicy(IncludePolicy.allowAll())
-        .withFieldsets(["generic-resources": ["value"]])
+    def selection = RepresentationSelection.builder()
+        .include(IncludePath.of("related"))
+        .fields("generic-resources", ["value"])
+        .build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
 
     when:
-    def mapped = mapper.toMappedDocument(root, rootType, null, context)
+    def mapped = mapper.toMappedDocument(root, rootType, null, selection, policy)
 
     then:
     mapped.document().included()*.id() == ["t1"]

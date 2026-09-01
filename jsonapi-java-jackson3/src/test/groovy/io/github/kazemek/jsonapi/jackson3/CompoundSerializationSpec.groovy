@@ -1,8 +1,8 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.AccessCountingArticle
 import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteExpectation
 import io.github.kazemek.jsonapi.testsupport.compoundwrite.CompoundWriteRequest
@@ -77,10 +77,10 @@ class CompoundSerializationSpec extends Specification {
       return mapper.toDocument(request.supplier().get())
     }
     if (request instanceof CompoundWriteRequest.Document) {
-      return mapper.toDocument(request.supplier().get(), null, context(request))
+      return mapper.toDocument(request.supplier().get(), null, request.selection(), request.policy())
     }
     if (request instanceof CompoundWriteRequest.Collection) {
-      return mapper.toResourceCollection(request.supplier().get(), null, context(request))
+      return mapper.toResourceCollection(request.supplier().get(), null, request.selection(), request.policy())
     }
     throw new IllegalArgumentException("Unsupported request: " + request)
   }
@@ -89,9 +89,14 @@ class CompoundSerializationSpec extends Specification {
       CompoundWriteRequest request, CompoundWriteExpectation.Success expectation) {
     def documentRequest = (CompoundWriteRequest.Document) request
     def withInclude = documentRequest.supplier().get()
-    def document = mapper.toDocument(withInclude, null, context(documentRequest))
+    def document = mapper.toDocument(
+        withInclude, null, documentRequest.selection(), documentRequest.policy())
     def baseline = documentRequest.supplier().get()
-    mapper.toDocument(baseline, null, context(documentRequest).withIncludePaths(List.of()))
+    mapper.toDocument(
+        baseline,
+        null,
+        RepresentationSelection.none(),
+        documentRequest.policy())
     def delta =
         readsFor(withInclude, expectation.offPathRelationship()) -
         readsFor(baseline, expectation.offPathRelationship())
@@ -134,7 +139,7 @@ class CompoundSerializationSpec extends Specification {
       try {
         start.await()
         200.times {
-          def doc = shared.toDocument(side.supplier().get(), null, context(side))
+          def doc = shared.toDocument(side.supplier().get(), null, side.selection(), side.policy())
           assertIncluded(doc, expectedIncluded)
         }
       } catch (Throwable t) {
@@ -185,30 +190,6 @@ class CompoundSerializationSpec extends Specification {
       assert document.included()[i].type() == ref.type()
       assert document.included()[i].id() == ref.id()
     }
-  }
-
-  private static CompoundSerializationContext context(CompoundWriteRequest.Document request) {
-    return CompoundSerializationContext.defaults()
-        .withIncludePaths(request.includePaths())
-        .withIncludePolicy(request.includePolicy())
-        .withMaxDepth(request.maxDepth())
-        .withMaxIncluded(request.maxIncluded())
-  }
-
-  private static CompoundSerializationContext context(CompoundWriteRequest.Collection request) {
-    return CompoundSerializationContext.defaults()
-        .withIncludePaths(request.includePaths())
-        .withIncludePolicy(request.includePolicy())
-        .withMaxDepth(request.maxDepth())
-        .withMaxIncluded(request.maxIncluded())
-  }
-
-  private static CompoundSerializationContext context(CompoundWriteSide side) {
-    return CompoundSerializationContext.defaults()
-        .withIncludePaths(side.includePaths())
-        .withIncludePolicy(side.includePolicy())
-        .withMaxDepth(side.maxDepth())
-        .withMaxIncluded(side.maxIncluded())
   }
 
   private static int readsFor(Object domain, String relationship) {

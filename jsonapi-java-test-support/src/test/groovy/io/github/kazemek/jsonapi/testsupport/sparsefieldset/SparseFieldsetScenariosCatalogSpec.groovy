@@ -1,7 +1,8 @@
 package io.github.kazemek.jsonapi.testsupport.sparsefieldset
 
-import io.github.kazemek.jsonapi.jackson.representation.CompoundSerializationContext
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article
 import java.util.EnumSet
 import spock.lang.Specification
@@ -86,7 +87,7 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
       def identityExpectation = scenario.expectation() instanceof SparseFieldsetExpectation.IdentityPreservation
       assert identityRequest == identityExpectation
       if (identityRequest) {
-        assert ((SparseFieldsetRequest.IdentityPreservation) scenario.request()).contexts().size() ==
+        assert ((SparseFieldsetRequest.IdentityPreservation) scenario.request()).sides().size() ==
         SparseFieldsetRequest.IdentityPreservation.SHAPE_COUNT
       }
     }
@@ -107,11 +108,11 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
     given:
     def scenario = SparseFieldsetScenarios.catalog().byId(
         "duplicate-free multi-field fieldset keeps title and author")
-    def context = ((SparseFieldsetRequest.Single) scenario.request()).context()
+    def selection = ((SparseFieldsetRequest.Single) scenario.request()).selection()
 
     expect:
-    context.fieldsets().get("articles") == ["title", "author"]
-    context.fieldsets().get("articles").size() == context.fieldsets().get("articles").toSet().size()
+    selection.fieldsets().get("articles") == ["title", "author"]
+    selection.fieldsets().get("articles").size() == selection.fieldsets().get("articles").toSet().size()
   }
 
   def "scenario inputs are freshly constructed on each invocation"() {
@@ -138,7 +139,8 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
         SparseFieldsetOperation.TO_MAPPED_DOCUMENT,
         SparseFieldsetRequest.single(
         { new Article("1", "T", "B", List.of(), null) },
-        CompoundSerializationContext.defaults()),
+        RepresentationSelection.none(),
+        RepresentationPolicy.defaults()),
         SparseFieldsetExpectation.concurrentIsolation(
         SparseFieldsetExpectation.mapped(
         FieldsetResourceState.identity("articles", "1"), null, false),
@@ -167,7 +169,10 @@ class SparseFieldsetScenariosCatalogSpec extends Specification {
     when:
     new SparseFieldsetRequest.IdentityPreservation(
         { new Article("1", "T", "B", List.of(), null) },
-        List.of(CompoundSerializationContext.defaults()))
+        List.of(new SparseFieldsetSide(
+        { new Article("1", "T", "B", List.of(), null) },
+        RepresentationSelection.none(),
+        RepresentationPolicy.defaults())))
 
     then:
     thrown(IllegalArgumentException)
