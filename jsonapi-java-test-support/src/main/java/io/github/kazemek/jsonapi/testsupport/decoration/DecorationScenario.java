@@ -23,6 +23,7 @@ public record DecorationScenario(
     DecorationOutcome outcome)
     implements Scenario {
 
+  @SuppressWarnings("ConstantValue")
   public DecorationScenario {
     if (id == null || id.isEmpty()) {
       throw new IllegalArgumentException("id must not be null or empty");

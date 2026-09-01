@@ -207,8 +207,8 @@ class ResourceDecorationSpec extends Specification {
     RelationshipDecoration.of(links).links() == links
     !RelationshipDecoration.of(links).isEmpty()
     RelationshipDecoration.links(links).links() == links
-    RelationshipDecoration.of(links).isEmpty() == false
-    RelationshipDecoration.empty().isEmpty() == true
+    !RelationshipDecoration.of(links).isEmpty()
+    RelationshipDecoration.empty().isEmpty()
     !new RelationshipDecoration(Links.empty()).isEmpty()
   }
 
