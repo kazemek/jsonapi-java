@@ -131,5 +131,73 @@ class DecorationVerifierSpec extends Specification {
 
     then:
     thrown(IllegalArgumentException)
+
+    when:
+    new DecorationOutcome.DocumentSuccess(null, null)
+
+    then:
+    thrown(IllegalArgumentException)
+
+    when:
+    new DecorationOutcome.MappedDocumentSuccess(null, null)
+
+    then:
+    thrown(IllegalArgumentException)
+  }
+
+  def "verifies document success with wrong included"() {
+    given:
+    def scenario = DecorationScenarios.catalog().byId("included resource receives decoration")
+    def outcome = (DecorationOutcome.DocumentSuccess) scenario.outcome()
+    def doc = new JsonApiDocument(new DocumentData.SingleResource(outcome.expectedPrimary()), null, null, null, null, null, Map.of())
+
+    when:
+    DecorationVerifier.verify(scenario, doc, null)
+
+    then:
+    thrown(AssertionError)
+  }
+
+  def "verifies mapped document with wrong type"() {
+    given:
+    def scenario = DecorationScenarios.catalog().byId("sparse fieldset does not resurrect decorated relationship")
+    def wrong = new ResourceObject("a", "1", null, null, null, null, null, Map.of())
+
+    when:
+    DecorationVerifier.verify(scenario, wrong, null)
+
+    then:
+    thrown(AssertionError)
+  }
+
+  def "verifies failure with wrong exception type"() {
+    given:
+    def scenario = DecorationScenarios.catalog().byId("unknown relationship target is invalid")
+
+    when:
+    DecorationVerifier.verify(scenario, null, new IllegalArgumentException("boom"))
+
+    then:
+    thrown(AssertionError)
+  }
+
+  def "DecorationScenario validation for nulls"() {
+    when:
+    new DecorationScenario("id", null, ResourceDecoratorRegistry.empty(), null, null, new DecorationOutcome.ResourceSuccess(new ResourceObject("a", "1", null, null, null, null, null, Map.of())))
+
+    then:
+    thrown(IllegalArgumentException)
+
+    when:
+    new DecorationScenario("id", { new Object() }, null, null, null, new DecorationOutcome.ResourceSuccess(new ResourceObject("a", "1", null, null, null, null, null, Map.of())))
+
+    then:
+    thrown(IllegalArgumentException)
+
+    when:
+    new DecorationScenario("id", { new Object() }, ResourceDecoratorRegistry.empty(), null, null, null)
+
+    then:
+    thrown(IllegalArgumentException)
   }
 }
