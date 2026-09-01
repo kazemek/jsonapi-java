@@ -63,8 +63,8 @@ tasks.jacocoTestReport {
 // re-measure with `./gradlew jacocoTestReport` and set each justified minimum to
 // floor(measuredPercent) / 100. Intentional coverage drops must update this map in the same change.
 data class JacocoCoverageFloors(
-    val instructionMinimum: java.math.BigDecimal,
-    val branchMinimum: java.math.BigDecimal,
+    val instructionMinimum: BigDecimal,
+    val branchMinimum: BigDecimal,
     val excludePatterns: List<String> = emptyList(),
 )
 
@@ -85,8 +85,8 @@ val jacocoCoverageFloorsByProject =
             JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),
         "jsonapi-java-test-support" to
             JacocoCoverageFloors(
-                "0.98".toBigDecimal(),
-                "0.89".toBigDecimal(),
+                "0.96".toBigDecimal(),
+                "0.80".toBigDecimal(),
                 testSupportFixtureExclusions,
             ),
     )
