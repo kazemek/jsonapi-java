@@ -217,10 +217,14 @@ public final class DomainResourceWriter {
     if (!hasResourceLinks && !hasRelationshipLinks) {
       return base;
     }
-    Relationships finalRelationships =
-        hasRelationshipLinks
-            ? Relationships.ofRelationships(decoratedRelationships)
-            : base.relationships() == null ? Relationships.empty() : base.relationships();
+    Relationships finalRelationships;
+    if (hasRelationshipLinks) {
+      finalRelationships = Relationships.ofRelationships(decoratedRelationships);
+    } else if (base.relationships() == null) {
+      finalRelationships = Relationships.empty();
+    } else {
+      finalRelationships = base.relationships();
+    }
     return new ResourceObject(
         base.type(),
         base.id(),
@@ -232,6 +236,7 @@ public final class DomainResourceWriter {
         base.additionalMembers());
   }
 
+  @SuppressWarnings("java:S2583")
   private ResourceDecoration requireDecoration(
       Object domain, ResourceDecorator<Object> decorator, String resourceType) {
     ResourceDecoration decoration;
@@ -252,6 +257,7 @@ public final class DomainResourceWriter {
     return decoration;
   }
 
+  @SuppressWarnings("java:S2583")
   private Map<String, RelationshipDecoration> requireDecorationRelationships(
       Object domain, ResourceDecoration decoration, String resourceType) {
     Map<String, RelationshipDecoration> decorationRelationships;
@@ -290,7 +296,7 @@ public final class DomainResourceWriter {
     for (Map.Entry<String, RelationshipDecoration> entry : decorationRelationships.entrySet()) {
       String logicalName = entry.getKey();
       RelationshipDecoration relationshipDecoration = entry.getValue();
-      validateDecorationEntry(domain, mapping.resourceType(), logicalName, relationshipDecoration);
+      validateDecorationEntry(domain, logicalName, relationshipDecoration);
       MappingProperty target = byLogical.get(logicalName);
       if (target == null) {
         throwInvalidTarget(domain, mapping.resourceType(), logicalName, nonRelationshipKind);
@@ -348,9 +354,9 @@ public final class DomainResourceWriter {
     return nonRelationshipKind;
   }
 
+  @SuppressWarnings("java:S2583")
   private void validateDecorationEntry(
       Object domain,
-      String resourceType,
       @Nullable String logicalName,
       @Nullable RelationshipDecoration relationshipDecoration) {
     if (logicalName == null) {
