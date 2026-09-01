@@ -54,11 +54,6 @@ public final class DecorationScenarios {
               "self", new Link.StringLink("https://example.test/articles/1/relationships/comments"),
               "related", new Link.StringLink("https://example.test/articles/1/comments")));
 
-  private static final Links AUTHOR_LINKS =
-      Links.ofLinks(
-          Map.of(
-              "self", new Link.StringLink("https://example.test/articles/1/relationships/author")));
-
   private static final Links PERSON_LINKS =
       Links.ofLinks(Map.of("self", new Link.StringLink("https://example.test/people/p1")));
 
