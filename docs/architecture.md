@@ -81,13 +81,19 @@ flowchart LR
 ```mermaid
 flowchart LR
   APP["Application values"] --> MAP["JsonApiResourceMapper<br/>configured-Jackson write mapping"]
-  MAP --> COREDOC["JsonApiDocument"]
-  MAP --> MAPPED["MappedDocument<br/>plus sparse provenance"]
+  MAP --> DECOR["ResourceDecorator<br/>adds Resource/Relationship links"]
+  DECOR --> COREDOC["JsonApiDocument"]
+  DECOR --> MAPPED["MappedDocument<br/>plus sparse provenance"]
   COREDOC --> WRITER["JsonApiDocumentWriter"]
   MAPPED --> WRITER
   WRITER --> VAL["Core validation"]
   VAL --> JSON["Wire JSON"]
 ```
+
+Decoration is additive: mapped resources (primary and compound `included`) are enriched with
+`ResourceObject.links` and `Relationship.links` after normal mapping but before validation. It never
+creates relationships, never affects inclusion traversal, and never resurrects fieldset-omitted
+relationships.
 
 Public Jackson 3 entry points are created from `JsonApiJackson3`. Codec paths are
 `JsonApiDocumentReader` / `JsonApiDocumentWriter`. Mapping paths are `JsonApiResourceMapper`
@@ -115,6 +121,7 @@ JSON:API representation and configured Jackson are both authoritative, in differ
 | Ordinary attribute and resource/relationship-meta property serialization and deserialization; `RelationshipLinkage` identifier-meta conversion | Configured Jackson at the mapped property / wrapper meta `JavaType` |
 | Bean construction, creators, naming, visibility, modules | Configured Jackson |
 | `ResourceTypeRegistry` | Explicit wire-type → Java-target dispatch. It does not interpret annotations; registration keys come from the same configured-Jackson metadata authority. |
+| `ResourceDecorator` / `ResourceDecoration` / `RelationshipDecoration` | Application/runtime decoration that adds only `ResourceObject.links` and mapped `Relationship.links`. Keys are the mapped logical property name; configured Jackson still owns the final wire name. Decoration never replaces mapping semantics and never resurrects fieldset-omitted relationships. |
 
 `MappingDefinitionCache` is the Jackson 3 source of class-level resource metadata and of the two
 direction-specific mapping views:
