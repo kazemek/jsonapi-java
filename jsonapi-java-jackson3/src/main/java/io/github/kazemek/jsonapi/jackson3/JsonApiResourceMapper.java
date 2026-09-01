@@ -53,8 +53,8 @@ import tools.jackson.databind.JavaType;
  * DocumentEnvelope, RepresentationSelection, RepresentationPolicy)}. Those overloads return a
  * {@link MappedDocument} carrying the identities of included resources whose inbound linkage was
  * removed by an applied fieldset; a document writer composes that provenance into validation. The
- * three-argument {@code toDocument} / {@code toResourceCollection} overloads reject a non-empty
- * fieldset map with {@link MappingDiagnostic#FIELDSETS_REQUIRE_MAPPED_DOCUMENT}.
+ * non-mapped representation overloads (with or without a declared {@link JavaType}) reject a
+ * non-empty fieldset map with {@link MappingDiagnostic#FIELDSETS_REQUIRE_MAPPED_DOCUMENT}.
  *
  * <p>For custom identifier conversion, supply an {@link IdentifierConverter} at construction time.
  * The default converter delegates to {@link Object#toString()}.

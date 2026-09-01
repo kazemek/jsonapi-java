@@ -457,8 +457,8 @@ artifact; both majors share the neutral contracts of
 - **Sparse fieldsets:** `RepresentationSelection.fieldsets()` + `FieldPolicy` select attributes and
   relationships by final JSON:API names (absent type key = unrestricted; present empty list selects
   no attributes/relationships, while non-field resource members such as mapped resource meta remain
-  independent). Applied only by `toMappedDocument` / `toMappedResourceCollection`; three-argument
-  `toDocument` / `toResourceCollection` reject a non-empty fieldset map with
+  independent). Applied only by `toMappedDocument` / `toMappedResourceCollection`; non-mapped
+  `toDocument` / `toResourceCollection` overloads reject a non-empty fieldset map with
   `FIELDSETS_REQUIRE_MAPPED_DOCUMENT`. Inclusion traversal may still follow fieldset-excluded
   relationships on validated include paths; the resulting `MappedDocument` carries sparse-fieldset
   linkage-exemption provenance — the identities of included resources whose linking relationship an
