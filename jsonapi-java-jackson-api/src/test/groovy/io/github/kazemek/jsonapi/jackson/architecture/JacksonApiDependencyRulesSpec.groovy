@@ -9,7 +9,7 @@ import com.tngtech.archunit.core.importer.ImportOption
 import spock.lang.Shared
 import spock.lang.Specification
 
-class JacksonCommonDependencyRulesSpec extends Specification {
+class JacksonApiDependencyRulesSpec extends Specification {
 
   @Shared
   JavaClasses commonClasses = new ClassFileImporter()
