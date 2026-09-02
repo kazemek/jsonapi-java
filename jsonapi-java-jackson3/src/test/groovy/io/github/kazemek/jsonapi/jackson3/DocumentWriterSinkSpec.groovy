@@ -99,6 +99,7 @@ class DocumentWriterSinkSpec extends Specification {
         List.of(unlinkedAuthor),
         Map.of())
     def mapped = new MappedDocument(document, Set.of(ResourceIdentity.ofId('people', '9')))
+    def unexempted = new MappedDocument(document, Set.of())
     def writer = JsonApiJackson3.writer(mapper, ValidationContext.defaults())
     def bytesOut = new ByteArrayOutputStream()
     def charsOut = new StringWriter()
@@ -128,6 +129,46 @@ class DocumentWriterSinkSpec extends Specification {
     mapper.readTree(stringValue) == mapper.readTree(bytesOut.toByteArray())
     mapper.readTree(stringValue) == mapper.readTree(charsOut.toString())
     mapper.readTree(stringValue) == mapper.readTree(generatorOut.toByteArray())
+
+    when: 'every mapped sink validates before output (unexempted document)'
+    writer.writeValueAsString(unexempted)
+
+    then:
+    def stringMappedFailure = thrown(JsonApiValidationException)
+    stringMappedFailure.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when:
+    writer.writeValueAsBytes(unexempted)
+
+    then:
+    def bytesMappedFailure = thrown(JsonApiValidationException)
+    bytesMappedFailure.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when:
+    writer.writeValue(new ByteArrayOutputStream(), unexempted)
+
+    then:
+    def streamMappedFailure = thrown(JsonApiValidationException)
+    streamMappedFailure.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when:
+    writer.writeValue(new StringWriter(), unexempted)
+
+    then:
+    def charsMappedFailure = thrown(JsonApiValidationException)
+    charsMappedFailure.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when:
+    def failingGenerator = writer.mapper().createGenerator(new ByteArrayOutputStream())
+    try {
+      writer.writeValue(failingGenerator, unexempted)
+    } finally {
+      failingGenerator.close()
+    }
+
+    then:
+    def generatorMappedFailure = thrown(JsonApiValidationException)
+    generatorMappedFailure.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
   }
 
   def "output is fully visible in caller OutputStream and Writer immediately after writing without an explicit flush"() {
