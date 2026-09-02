@@ -15,10 +15,10 @@ import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.OuterWithN
 import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.OuterWithSetterAsProfile
 import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.OuterWithSetterCustomDetails
 import io.github.kazemek.jsonapi.jackson3.StructuredRecursionFixtures.OuterWithTypedContact
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.Address
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AddressPatch
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.Dimensions
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.MixedAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.Address
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.Dimensions
+import io.github.kazemek.jsonapi.fixtures.domainpatch.MixedAddressPatch
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 

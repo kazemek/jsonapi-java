@@ -10,10 +10,11 @@ typed domain envelopes, and presence-aware PATCH binding (low-level commands and
 DTOs). `jsonapi-java-jackson-api` owns
 Jackson-major-neutral policy, diagnostics, contexts, envelope values, and presence-aware update
 contracts. How those modules fit together is in [`docs/architecture.md`](architecture.md). Writer output is cross-checked against pinned JSON:API 1.1 draft schemas as supplemental
-evidence only. The capability-tagged document corpus, closed negative corpus, and dual-success
-ambiguous primary-data cases in `jsonapi-java-test-support` (`jsonapi/corpus/1.1/`) are the shared codec contract for every
-Jackson major. Jackson 2 presence-aware PATCH binding, query parsing, and Spring adapters remain
-deferred.
+evidence only. The version-neutral document corpus, closed negative corpus, and dual-success
+ambiguous primary-data cases in the Jackson API test-fixtures corpus (`jsonapi/corpus/1.1/`) are
+shared wire resources for every Jackson major. Capability, schema, and context selections belong
+to each adapter's local specifications. Jackson 2 presence-aware PATCH binding, query parsing, and
+Spring adapters remain deferred.
 
 ## Document structure (supported)
 
@@ -97,7 +98,7 @@ deferred.
 |--------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------|
 | JSON serialization                               | supported | `jsonapi-java-jackson3` validate-then-write                                                           |
 | Canonical member ordering                        | supported | Standard members in model accessor order; additional members insertion order; `hreflang` always array |
-| Golden fixture write comparisons                 | supported | `jsonapi-java-test-support` corpus catalog (`CodecScenario` metadata); stable ids and paths |
+| Golden fixture write comparisons                 | supported | Jackson 3 adapter-owned writer checks cover direct core models, canonical corpus round trips, sink parity, and exact UTF-8; paths and resources remain in Jackson API test fixtures |
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind`                          |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location                              |
 | Shared read-only negative corpus                 | supported | `negative-manifest.json`: closed reader-failure inventory with version-neutral expectations          |
@@ -105,13 +106,14 @@ deferred.
 
 ## Draft-schema cross-check (supplemental)
 
-Writer-generated fixture bytes are cross-checked against the JSON:API 1.1 **draft-PR schemas**
-pinned under `jsonapi-java-test-support` (`jsonapi/schema/vendor/1.1-pr1603/`, PR
+Adapter-owned writer output is cross-checked against the JSON:API 1.1 **draft-PR schemas** for
+direct core-model cases, while canonical corpus resource bytes are checked against the same schemas.
+The schemas are pinned under the Jackson API test-fixtures source set (`jsonapi/schema/vendor/1.1-pr1603/`, PR
 [json-api/json-api#1603](https://github.com/json-api/json-api/pull/1603), fork `VGirol/json-api`
 commit `4ee1c644fcc273044ecec39a6b8c0f0485abdc0e`). These are unreleased draft schemas, not an
 official conformance oracle; the cross-check is **supplemental evidence only**. A schema result
 never changes a feature status on this page: disagreements are resolved in favor of the textual
-specification, and `JsonApiDraftSchemaSpec` keeps allow-listed fixtures failing so a schema fix
+specification, and `JsonApiDraftSchemaSpec` keeps explicit expected-gap rows failing so a schema fix
 forces an intentional re-review.
 
 | Fixture                    | Draft-schema gap                                                                                         | Governing rule                                                                                                                                                                  |
@@ -121,12 +123,12 @@ forces an intentional re-review.
 | `string-and-object-links`  | Draft `linkObject.hreflang` accepts only a string                                                        | [v1.1 links](https://jsonapi.org/format/1.1/#document-links): `hreflang` is a canonical list representation; the writer always emits the array form                             |
 
 `JsonApiDraftSchemaSpec` runs fully offline: the draft URI referenced by the request schemas is
-mapped to the vendored response schema, all four schema files are SHA-256-pinned, every applicable
-fixture is classified for a schema kind through its `CodecScenario` capability metadata (response or
-create-resource; update kinds reserved for later usage-specific cases) and validated against the
-matching usage-specific schema, and one malformed control per schema kind (response,
-create-resource, update-resource, update-relationship) proves the harness rejects invalid
-documents.
+mapped to the vendored response schema, all four schema files are SHA-256-pinned, an explicit local
+table assigns the applicable corpus paths to schema kinds (response or create-resource; update kinds
+are reserved for later usage-specific cases) and validates their resource bytes, and one malformed
+control per schema kind (response, create-resource, update-resource, update-relationship) proves the
+harness rejects invalid documents. The same spec keeps explicit expected failures for the three
+documented draft-schema gaps above, so a schema change forces an intentional review.
 
 ## Domain mapping (supported; Jackson 2 parity — deferred)
 

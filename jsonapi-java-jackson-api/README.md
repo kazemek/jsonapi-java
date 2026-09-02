@@ -93,6 +93,14 @@ level links stay distinct from document-level `DocumentEnvelope.links` and from 
 Register decorators through the mapper's immutable `ResourceDecoratorRegistry`; no annotation carries
 decorator metadata.
 
+## Test Fixtures
+
+The `java-test-fixtures` variant contains passive, Jackson-major-neutral DTO carriers and the
+canonical JSON:API corpus and pinned draft-schema resources used by adapter tests. The small
+`io.github.kazemek.jsonapi.fixtures.TestFixtureResources` type only loads those classpath resources.
+Behavioral cases, policy tables, diagnostics, and assertions remain owned by each adapter's local
+specifications; this module does not provide shared test orchestration or scenario catalogs.
+
 ## Non-goals
 
 This module does not share Jackson-bound readers, writers, mapping introspection, serializers,

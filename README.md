@@ -39,8 +39,7 @@ counters).
 | `jsonapi-java-core/`           | Zero-dependency JSON:API document model and validation                                           |
 | `jsonapi-java-annotations/`    | Dependency-free domain-mapping annotations                                                       |
 | `jsonapi-java-jackson3/`       | Jackson 3 document codec, domain-to-resource mapping, flat DTO reads, typed domain envelopes, and presence-aware PATCH |
-| `jsonapi-java-jackson-api/`    | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts |
-| [`jsonapi-java-test-support/`](jsonapi-java-test-support/README.md) | Internal shared test-support: scenario catalogs, classpath JSON:API corpus, and pinned schema resources (not a published module) |
+| `jsonapi-java-jackson-api/`    | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts; shared passive carriers and JSON/schema test fixtures via `testFixtures` |
 | `build-logic/`                 | Shared Gradle convention plugins                                                                 |
 | `docs/`                        | Vision, architecture overview, conformance, and architecture decision records |
 

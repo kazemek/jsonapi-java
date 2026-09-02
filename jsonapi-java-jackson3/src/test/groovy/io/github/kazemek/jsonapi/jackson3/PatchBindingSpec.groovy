@@ -12,29 +12,63 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage
+import io.github.kazemek.jsonapi.core.validation.EndpointIdentity
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage
 import io.github.kazemek.jsonapi.jackson.patch.PatchChange
 import io.github.kazemek.jsonapi.jackson.patch.PatchCommand
+import io.github.kazemek.jsonapi.jackson.patch.StructuredMember
+import io.github.kazemek.jsonapi.jackson.patch.StructuredMemberState
+import io.github.kazemek.jsonapi.jackson.patch.StructuredPatch
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericValue
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedOptionalArticle
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenario
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchScenarios
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchVerifier
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatCountedThing
+import io.github.kazemek.jsonapi.fixtures.domainpatch.Article
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithBox
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithBoxList
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithContainerAddress
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithDimensions
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithGeoAddress
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMapMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalAddress
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalCity
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithRelationshipLinkage
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithTags
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorIdMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.MutableArticle
+import io.github.kazemek.jsonapi.fixtures.domainpatch.PatchPresenceAddressArticle
+import io.github.kazemek.jsonapi.fixtures.domainpatch.PatchPresenceAddressPatchArticle
+import io.github.kazemek.jsonapi.fixtures.domainpatch.PatchPresenceTitleArticle
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticleWithArray
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticleWithOptional
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticleWithSet
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatCountedThing
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatIntIdArticle
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatThingWithIgnored
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatUnregisteredRelationshipsArticle
+import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.lang.reflect.Array
+import java.util.Arrays
+import java.util.List
+import java.util.Map
 import java.util.Optional
+import java.util.Set
 import spock.lang.Specification
+import spock.lang.Unroll
 import tools.jackson.core.JsonParser
 import tools.jackson.databind.DeserializationContext
 import tools.jackson.databind.DeserializationFeature
@@ -45,23 +79,122 @@ import tools.jackson.databind.json.JsonMapper
 
 class PatchBindingSpec extends Specification {
 
-  private static final Set<String> FROM_DOCUMENT_IDS = [
-    "patch-omitted-and-supplied-attributes",
-    "patch-resource-type-mismatch"
-  ] as Set
-
-  def "shared patch catalog scenario: #scenario.id"() {
+  @Unroll
+  def "binds patch #id into an explicit command"() {
     given:
-    def reader = patchReaderFor(scenario)
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
 
     when:
-    def result = execute(scenario, reader)
+    def actual = reader.readValue(json, targetType)
 
     then:
-    PatchVerifier.verify(scenario, result)
+    assertPatchCommand(expected, actual)
 
     where:
-    scenario << PatchScenarios.catalog().all()
+    id | resource | targetType | expected
+    "patch-omitted-and-supplied-attributes" | "omitted-and-supplied-attributes" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.AttributeChange("title", "title", "Hello"))
+    "patch-explicit-null-attribute" | "explicit-null-attribute" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.AttributeChange("title", "title", null))
+    "patch-attribute-rename" | "attribute-rename" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.AttributeChange("body-text", "body", "Content"))
+    "patch-ignored-unmapped-omitted-from-changes" | "ignored-unmapped-attributes" | FlatThingWithIgnored.class | patch(FlatThingWithIgnored.class, "1", new PatchChange.AttributeChange("name", "name", "visible"))
+    "patch-relationship-null-linkage" | "relationship-null-linkage" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.RelationshipChange("author", "author", null))
+    "patch-relationship-single-linkage" | "relationship-single-linkage" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.RelationshipChange("author", "author", ResourceIdentifier.of("people", "p1")))
+    "patch-relationship-empty-collection" | "relationship-empty-collection" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.RelationshipChange("comments", "comments", []))
+    "patch-relationship-non-empty-collection" | "relationship-non-empty-collection" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.RelationshipChange("comments", "comments", [
+      ResourceIdentifier.of("comments", "c1"),
+      ResourceIdentifier.of("comments", "c2")
+    ]))
+    "patch-compound-included-ignored" | "compound-included-ignored" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.AttributeChange("title", "title", "T"), new PatchChange.RelationshipChange("author", "author", ResourceIdentifier.of("people", "p1")))
+    "patch-ordinary-domain-nested-partial" | "address-street-new-street" | Article.class | patch(Article.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "New Street"))))
+    "patch-ordinary-domain-nested-multi-level" | "address-street-and-geo-lat" | ArticleWithGeoAddress.class | patch(ArticleWithGeoAddress.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"), nested("geo", atomic("lat", "1")))))
+    "patch-ordinary-domain-optional-object" | "address-street-new-street" | ArticleWithOptionalAddress.class | patch(ArticleWithOptionalAddress.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "New Street"))))
+    "patch-ordinary-domain-optional-empty-object" | "address-empty-object" | ArticleWithOptionalAddress.class | patch(ArticleWithOptionalAddress.class, "1", new PatchChange.AttributeChange("address", "address", structured()))
+    "patch-ordinary-domain-optional-null" | "address-explicit-null" | ArticleWithOptionalAddress.class | patch(ArticleWithOptionalAddress.class, "1", new PatchChange.AttributeChange("address", "address", null))
+    "patch-ordinary-domain-nested-optional-member" | "address-street-city-null" | ArticleWithOptionalCity.class | patch(ArticleWithOptionalCity.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"), atomic("city", Optional.empty()))))
+    "patch-ordinary-domain-unknown-nested-skip" | "address-bogus-and-street" | Article.class | patch(Article.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"))))
+    "patch-ordinary-domain-container-atomic" | "tags-top-level" | ArticleWithTags.class | patch(ArticleWithTags.class, "1", new PatchChange.AttributeChange("tags", "tags", ["a", "b"]))
+    "patch-ordinary-domain-generic-nested-javatype" | "box-numbers" | ArticleWithBox.class | patch(ArticleWithBox.class, "1", new PatchChange.AttributeChange("box", "box", structured(atomic("numbers", [1, 2]))))
+    "patch-ordinary-domain-generic-nested-multilevel-javatype" | "box-numbers-nested-lists" | ArticleWithBoxList.class | patch(ArticleWithBoxList.class, "1", new PatchChange.AttributeChange("box", "box", structured(atomic("numbers", [[1, 2], [3]]))))
+    "patch-ordinary-domain-container-atomic-set" | "address-street-aliases" | ArticleWithContainerAddress.class | patch(ArticleWithContainerAddress.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"), atomic("aliases", ["a", "b"] as Set))))
+    "patch-ordinary-domain-container-atomic-map" | "address-street-scores" | ArticleWithContainerAddress.class | patch(ArticleWithContainerAddress.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"), atomic("scores", [x: 1, y: 2]))))
+    "patch-lowlevel-presence-scalar" | "title-only" | PatchPresenceTitleArticle.class | patch(PatchPresenceTitleArticle.class, "1", new PatchChange.AttributeChange("title", "title", "T"))
+    "patch-lowlevel-presence-ordinary-domain" | "address-street" | PatchPresenceAddressArticle.class | patch(PatchPresenceAddressArticle.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"))))
+    "patch-ordinary-domain-javabean-nested-partial" | "address-street" | MutableArticle.class | patch(MutableArticle.class, "1", new PatchChange.AttributeChange("address", "address", structured(atomic("street", "S"))))
+    "patch-resource-meta-structured-ordering" | "meta-source-note-author-meta" | ArticleWithMeta.class | patch(ArticleWithMeta.class, "1", new PatchChange.ResourceMetaChange("meta", "meta", structured(atomic("source", "cms"), atomic("note", "n"))), new PatchChange.AttributeChange("title", "title", "T"), new PatchChange.RelationshipChange("author", "author", ResourceIdentifier.of("people", "p1")), new PatchChange.RelationshipMetaChange("author", "authorMeta", structured(atomic("displayName", "Alice"))))
+    "patch-resource-meta-atomic-map" | "title-with-meta-source" | ArticleWithMapMeta.class | patch(ArticleWithMapMeta.class, "1", new PatchChange.ResourceMetaChange("meta", "meta", [source: "cms"]), new PatchChange.AttributeChange("title", "title", "T"))
+    "patch-relationship-meta-with-data" | "author-meta-with-data" | ArticleWithMeta.class | patch(ArticleWithMeta.class, "1", new PatchChange.RelationshipChange("author", "author", ResourceIdentifier.of("people", "p1")), new PatchChange.RelationshipMetaChange("author", "authorMeta", structured(atomic("displayName", "Alice"))))
+    "patch-resource-meta-supplied-unmapped-skipped" | "title-with-meta-source" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.AttributeChange("title", "title", "T"))
+    "patch-whole-linkage-to-one-identifier-meta" | "author-identifier-meta" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.RelationshipChange("author", "author", identifier("people", "p1", [role: "editor"])))
+    "patch-whole-linkage-to-many-identifier-meta" | "comments-identifier-meta" | FlatArticle.class | patch(FlatArticle.class, "1", new PatchChange.RelationshipChange("comments", "comments", [
+      identifier("comments", "c1", [pinned: true]),
+      ResourceIdentifier.of("comments", "c2")
+    ]))
+    "patch-wrapper-whole-linkage-is-not-an-independent-change" | "author-identifier-meta" | ArticleWithRelationshipLinkage.class | patch(ArticleWithRelationshipLinkage.class, "1", new PatchChange.RelationshipChange("author", "author", new RelationshipLinkage(identifier("people", "p1", [role: "editor"]), new AuthorIdMeta("editor"))))
+    "patch-array-to-many-identifier-meta" | "comments-identifier-meta" | FlatArticleWithArray.class | patch(FlatArticleWithArray.class, "1", new PatchChange.RelationshipChange("comments", "comments", ([
+      identifier("comments", "c1", [pinned: true]),
+      ResourceIdentifier.of("comments", "c2")
+    ] as ResourceIdentifier[])))
+    "patch-empty-array-relationship" | "relationship-empty-collection" | FlatArticleWithArray.class | patch(FlatArticleWithArray.class, "1", new PatchChange.RelationshipChange("comments", "comments", new ResourceIdentifier[0]))
+    "patch-set-to-many-identifier-meta" | "tags-identifier-meta" | FlatArticleWithSet.class | patch(FlatArticleWithSet.class, "1", new PatchChange.RelationshipChange("tags", "tags", [
+      identifier("tags", "t1", [pinned: true])
+    ] as Set))
+    "patch-empty-set-relationship" | "tags-empty" | FlatArticleWithSet.class | patch(FlatArticleWithSet.class, "1", new PatchChange.RelationshipChange("tags", "tags", [] as Set))
+    "patch-optional-to-one-identifier-meta" | "author-identifier-meta" | FlatArticleWithOptional.class | patch(FlatArticleWithOptional.class, "1", new PatchChange.RelationshipChange("author", "author", Optional.of(identifier("people", "p1", [role: "editor"]))))
+    "patch-optional-wrapped-meta-structured" | "title-with-meta-source-note" | ArticleWithOptionalMeta.class | patch(ArticleWithOptionalMeta.class, "1", new PatchChange.ResourceMetaChange("meta", "meta", structured(atomic("source", "cms"), atomic("note", "n"))), new PatchChange.AttributeChange("title", "title", "T"))
+  }
+
+  @Unroll
+  def "rejects patch #id with a mapping diagnostic"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
+
+    when:
+    reader.readValue(json, targetType)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == expectedDiagnostic
+    ex.propertyPath() == expectedPath
+
+    where:
+    id | resource | targetType | expectedDiagnostic | expectedPath
+    "patch-relationship-cardinality-mismatch" | "relationship-cardinality-mismatch" | FlatArticle.class | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data"
+    "patch-resource-type-mismatch" | "resource-type-mismatch" | FlatArticle.class | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type"
+    "patch-identifier-conversion-failure" | "identifier-not-an-integer" | FlatIntIdArticle.class | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id"
+    "patch-attribute-conversion-failure" | "attribute-conversion-failure" | FlatCountedThing.class | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/count"
+    "patch-unsupported-relationship-target" | "relationship-single-linkage" | FlatUnregisteredRelationshipsArticle.class | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/author/data"
+    "patch-ordinary-domain-nested-primitive-null" | "dimensions-width-null" | ArticleWithDimensions.class | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/dimensions/width"
+    "patch-lowlevel-presence-shape-rejected" | "address-street" | PatchPresenceAddressPatchArticle.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/address"
+    "patch-meta-conversion-failure" | "meta-source-object" | ArticleWithMeta.class | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/meta/source"
+    "patch-scalar-meta-target" | "identity-only" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.ScalarMetaArticle.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+    "patch-uuid-meta-target" | "identity-only" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.UuidMetaArticle.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+    "patch-instant-meta-target" | "identity-only" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.InstantMetaArticle.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+    "patch-uri-meta-target" | "identity-only" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.UriMetaArticle.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+  }
+
+  @Unroll
+  def "rejects patch #id during document validation"() {
+    given:
+    def context = endpointIdentity == null
+        ? ValidationContext.defaults()
+        : ValidationContext.defaults().withExpectedEndpointIdentity(endpointIdentity)
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build(), context)
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
+
+    when:
+    reader.readValue(json, targetType)
+
+    then:
+    def ex = thrown(JsonApiDocumentReadException)
+    ex.ruleCode() == expectedRule
+    ex.jsonPointer() == expectedPointer
+
+    where:
+    id | resource | targetType | endpointIdentity | expectedRule | expectedPointer
+    "patch-endpoint-identity-mismatch" | "title-only" | FlatArticle.class | new EndpointIdentity("articles", "99") | ValidationRuleCode.ENDPOINT_IDENTITY_MISMATCH | "/data/id"
+    "patch-missing-relationship-data" | "missing-relationship-data" | FlatArticle.class | null | ValidationRuleCode.RELATIONSHIP_DATA_REQUIRED | "/data/relationships/author/data"
+    "patch-wrong-primary-shape" | "wrong-primary-shape" | FlatArticle.class | null | ValidationRuleCode.UPDATE_REQUIRES_SINGLE_RESOURCE | "/data"
   }
 
   def "custom deserializer applies to attribute change"() {
@@ -532,24 +665,64 @@ class PatchBindingSpec extends Specification {
     command.identity() == "b-9"
   }
 
-  private static JsonApiPatchReader patchReaderFor(PatchScenario scenario) {
-    def context = ValidationContext.defaults()
-    if (scenario.expectedEndpointIdentity() != null) {
-      context = context.withExpectedEndpointIdentity(scenario.expectedEndpointIdentity())
-    }
-    return JsonApiJackson3.patchReader(JsonMapper.builder().build(), context)
+  private static PatchCommand patch(Class targetType, Object identity, PatchChange... changes) {
+    return new PatchCommand(targetType, identity, Arrays.asList(changes))
   }
 
-  private static Object execute(PatchScenario scenario, JsonApiPatchReader reader) {
-    try {
-      if (FROM_DOCUMENT_IDS.contains(scenario.id())) {
-        def document = decodeUpdateDocument(scenario.documentJson())
-        return reader.fromDocument(document, scenario.targetType())
-      }
-      return reader.readValue(scenario.documentJson(), scenario.targetType())
-    } catch (JsonApiDocumentReadException | JsonApiMappingException ex) {
-      return ex
+  private static StructuredPatch structured(StructuredMember... members) {
+    return new StructuredPatch(Arrays.asList(members))
+  }
+
+  private static StructuredMember atomic(String name, Object value) {
+    return new StructuredMember(name, name, new StructuredMemberState.Atomic(value))
+  }
+
+  private static StructuredMember nested(String name, StructuredMember... members) {
+    return new StructuredMember(name, name, new StructuredMemberState.Structured(Arrays.asList(members)))
+  }
+
+  private static ResourceIdentifier identifier(String type, String id, Map<String, Object> meta) {
+    return new ResourceIdentifier(type, id, null, Meta.of(meta), Map.of())
+  }
+
+  private static void assertPatchCommand(PatchCommand expected, Object actual) {
+    assert actual instanceof PatchCommand
+    def command = (PatchCommand) actual
+    assert command.resourceType() == expected.resourceType()
+    assert command.identity() == expected.identity()
+    assert command.changes().size() == expected.changes().size()
+    expected.changes().eachWithIndex { expectedChange, index ->
+      def actualChange = command.changes()[index]
+      assert actualChange.class == expectedChange.class
+      assert actualChange.jsonapiName() == expectedChange.jsonapiName()
+      assert actualChange.logicalName() == expectedChange.logicalName()
+      assert valuesEqual(expectedChange.value(), actualChange.value())
     }
+  }
+
+  private static boolean valuesEqual(Object expected, Object actual) {
+    if (expected == actual) {
+      return true
+    }
+    if (expected == null || actual == null) {
+      return false
+    }
+    if (expected.class.isArray() && actual.class.isArray()) {
+      if (expected instanceof Object[] && actual instanceof Object[]) {
+        return Arrays.deepEquals((Object[]) expected, (Object[]) actual)
+      }
+      int expectedLength = Array.getLength(expected)
+      if (expectedLength != Array.getLength(actual)) {
+        return false
+      }
+      for (int i = 0; i < expectedLength; i++) {
+        if (!valuesEqual(Array.get(expected, i), Array.get(actual, i))) {
+          return false
+        }
+      }
+      return true
+    }
+    return expected == actual
   }
 
   private static JsonApiDocument decodeUpdateDocument(String json) {

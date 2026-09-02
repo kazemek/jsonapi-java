@@ -68,12 +68,10 @@ data class JacocoCoverageFloors(
     val excludePatterns: List<String> = emptyList(),
 )
 
-// Coverage is on by default: floor verification and Sonar cover every test-support production
-// class except passive application-shaped carriers under testsupport.fixtures.., which are
-// exempt by package placement alone. New executable support code outside that hierarchy is
-// therefore coverage-gated automatically, with no per-class list to maintain. Production-module
-// floors do not use excludePatterns and remain unchanged.
-val testSupportFixtureExclusions = listOf("io/github/kazemek/jsonapi/testsupport/fixtures/**")
+// Coverage is on by default: floor verification and Sonar cover every production class.
+// Passive application-shaped carriers live in the Jackson API test-fixtures source set and
+// are not part of production coverage. Production-module floors do not use
+// excludePatterns and remain unchanged.
 
 val jacocoCoverageFloorsByProject =
     mapOf(
@@ -83,12 +81,6 @@ val jacocoCoverageFloorsByProject =
             JacocoCoverageFloors("0.95".toBigDecimal(), "0.85".toBigDecimal()),
         "jsonapi-java-jackson3" to
             JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),
-        "jsonapi-java-test-support" to
-            JacocoCoverageFloors(
-                "0.96".toBigDecimal(),
-                "0.80".toBigDecimal(),
-                testSupportFixtureExclusions,
-            ),
     )
 
 // Annotation-only classfiles produce no instruction/branch counters; do not attach minima.

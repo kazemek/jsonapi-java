@@ -27,11 +27,11 @@
   test fixtures under `src/test/java/`.
 - `build-logic/` owns shared Java/test/nullness/coverage and Spotless configuration. Dependency
   versions are in `gradle/libs.versions.toml`; there is no code-generation step.
-- `jsonapi-java-test-support` is an internal, unpublished module. The version-neutral wire corpus
-  is on its classpath under `src/main/resources/jsonapi/corpus/1.1/`; pinned draft schemas are
-  vendored under `src/main/resources/jsonapi/schema/vendor/1.1-pr1603/`.
-- Before changing shared fixtures, catalogs, or corpora, read `jsonapi-java-test-support/README.md`
-  and the affected corpus/schema resource READMEs; those files own fixture-specific invariants.
+- Shared test fixtures contain passive DTOs, canonical JSON/schema resources, and the neutral
+  `TestFixtureResources` loader under `jsonapi-java-jackson-api/src/testFixtures`. Behavioral
+  assertions belong in each adapter's own tests.
+  Do not introduce shared test orchestration, scenario registries, or assertion frameworks.
+- Before changing shared fixtures or corpora, read the affected corpus/schema resource READMEs; those files own fixture-specific invariants.
 
 # Task Routing
 

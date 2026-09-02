@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-29  
-**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-21 (test-support module rename; package allowlist unchanged); 2026-08-24 (passive-fixture sub-allowlist enforcing the testsupport.fixtures coverage boundary); 2026-08-31 (renames `jsonapi-java-jackson-common` to `jsonapi-java-jackson-api` and reorganizes API contracts into concept packages)
+**Amended:** 2026-07-30 (jackson3 allowlist and `core.internal` ban); 2026-08-10 (jackson-common allowlist and the jackson3 common-contract dependency); 2026-08-11 (test-fixtures allowlist for the shared domain-write fixtures); 2026-08-12 (replaces Groovy codec fixtures with Java and JSON-P); 2026-08-31 (renames `jsonapi-java-jackson-common` to `jsonapi-java-jackson-api` and reorganizes API contracts into concept packages); 2026-09-02 (moves passive shared fixtures to the Jackson API test-fixtures source set and adds the neutral loader exception)
 
 ## Context
 
@@ -28,25 +28,16 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
     `io.github.kazemek.jsonapi.jackson3..`, and
     `tools.jackson..`. Production sources must not depend on
     `io.github.kazemek.jsonapi.core.internal..` or `com.fasterxml.jackson..`.
-  - `io.github.kazemek.jsonapi.testsupport..` → `java..`, `org.jspecify.annotations..`,
-    `jakarta.json..`, `org.eclipse.parsson..`, `io.github.kazemek.jsonapi.annotation..`,
-    `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`,
-    `io.github.kazemek.jsonapi.jackson..`, other `io.github.kazemek.jsonapi.testsupport..`
-    types, and `com.fasterxml.jackson.annotation..`. The `jakarta.json..` /
-    `org.eclipse.parsson..` entries cover the JSON-P loader for `negative-manifest.json`.
-    Production sources must not depend on `tools.jackson..`,
-    `com.fasterxml.jackson.databind..`, a major-specific adapter package (`jackson2..`,
-    `jackson3..`), `core.internal..`, `groovy..`, or `org.codehaus.groovy..`; this keeps the
-    shared fixtures major-neutral and confines Groovy to test sources.
-  - `io.github.kazemek.jsonapi.testsupport.fixtures..` (passive carriers) → `java..`,
+  - `io.github.kazemek.jsonapi.fixtures..` (passive carriers and the one neutral resource loader in
+    the Jackson API test-fixtures source set) → `java..`,
     `org.jspecify.annotations..`, `io.github.kazemek.jsonapi.annotation..`,
     `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.jackson..`, other
-    `io.github.kazemek.jsonapi.testsupport.fixtures..` types, and
-    `com.fasterxml.jackson.annotation..`. This stricter sub-allowlist is the structural boundary
-    behind coverage-by-default: only passive application-shaped carriers live under
-    `fixtures`, so scenario catalogs, resource loaders, descriptors, and invariant services —
-    whose dependencies fall outside this list — cannot be moved there to escape JaCoCo/Sonar
-    coverage.
+    `io.github.kazemek.jsonapi.fixtures..` types, and `com.fasterxml.jackson.annotation..`. This
+    stricter sub-allowlist is the structural boundary for shared fixtures. `TestFixtureResources`
+    is the sole explicitly authorized executable exception: it may provide neutral classpath access
+    to the corpus and schemas using only the JDK and JSpecify. Scenario catalogs, descriptors,
+    invariant services, and other executable support remain outside this package. The Jackson 3
+    architecture suite imports the test-fixtures variant and enforces this allowlist.
 - Major-specific Jackson 2 allowlist (when registered):
   - `io.github.kazemek.jsonapi.jackson2..` → JDK, JSpecify, core public packages, annotations,
     module-owned types, and `com.fasterxml.jackson..`; never Jackson 3 or another module's

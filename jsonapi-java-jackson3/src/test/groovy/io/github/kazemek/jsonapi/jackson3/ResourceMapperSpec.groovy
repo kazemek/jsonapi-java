@@ -1,59 +1,560 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteInput
-import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteOperation
-import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteScenario
-import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteScenarios
-import io.github.kazemek.jsonapi.testsupport.domainwrite.DomainWriteVerifier
+import io.github.kazemek.jsonapi.core.model.Attributes
+import io.github.kazemek.jsonapi.core.model.DocumentData
+import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.JsonApiObject
+import io.github.kazemek.jsonapi.core.model.Links
+import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.Relationship
+import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
+import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMapMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithRelationshipLinkage
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorIdMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.CommentIdMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.CommentsRelationshipMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.fixtures.domainwrite.ArticleWithSet
+import io.github.kazemek.jsonapi.fixtures.domainwrite.ArticleWithUnannotatedExtra
+import io.github.kazemek.jsonapi.fixtures.domainwrite.BlogWithJsonProperty
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.fixtures.domainwrite.ConventionalId
+import io.github.kazemek.jsonapi.fixtures.domainwrite.InheritedBlogFixtures
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipContainerFixtures
+import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures
+import io.github.kazemek.jsonapi.fixtures.domainwrite.SamplePojo
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Tag
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
-// Runs every entry of the shared domain-write catalog directly through this adapter's mapper.
-// Catalog completeness and stable ids are owned by the test-support catalog integrity specs;
-// Jackson-API-specific behavior stays in adapter-local specs. Semantic comparison lives in
-// DomainWriteVerifier so Jackson 2 does not copy resource/document comparison.
+import java.util.ArrayList
+import java.util.Collections
+import java.util.HashSet
+import java.util.LinkedHashMap
+import java.util.LinkedHashSet
+import java.util.List
+import java.util.Map
+import java.util.Optional
+import java.util.Set
+
 class ResourceMapperSpec extends Specification {
 
   @Shared
   JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
+  private static final String COMMENTS = "comments"
+  private static final String PEOPLE = "people"
+  private static final String ARTICLES = "articles"
+  private static final String TITLE = "title"
+  private static final String ALICE = "Alice"
+  private static final String EDITOR = "editor"
+  private static final String ROLE = "role"
+  private static final String DISPLAY_NAME = "displayName"
+  private static final String TAGS = "tags"
+  private static final String AUTHOR = "author"
+  private static final String TITLE_TEXT = "Title"
+  private static final String MY_BLOG = "My Blog"
+  private static final String GREAT = "Great"
+  private static final String PINNED = "pinned"
+  private static final String EXT_HREF = "ext:href"
+  private static final String EXAMPLE_HREF = "https://example.test/p1"
+  private static final String SOURCE = "source"
+
+  private static final Set<Tag> TAGS_SET =
+  Collections.unmodifiableSet(new LinkedHashSet<>(List.of(new Tag("java"), new Tag("groovy"))))
+
+  private static final Links ENVELOPE_LINKS = Links.ofLinks(Collections.singletonMap("self", null))
+  private static final Meta ENVELOPE_META = Meta.of(Map.of("key", "value"))
+  private static final JsonApiObject ENVELOPE_JSONAPI = JsonApiObject.ofVersion("1.1")
+
   @Unroll
-  def "derives #scenario.id from the shared catalog"() {
+  def "maps #id to resource"() {
     when:
-    def result = null
-    def thrownException = null
-    try {
-      result = invoke(scenario)
-    } catch (Throwable t) {
-      thrownException = t
-    }
+    def actual = mapper.toResource(input)
 
     then:
-    DomainWriteVerifier.verify(scenario, result, thrownException)
+    assertResourceEquals(expected, actual, unordered)
 
     where:
-    scenario << DomainWriteScenarios.catalog().all()
+    id | input | expected | unordered
+    "explicit @JsonApiId and @JsonApiAttribute" | new Article("1", "Hello", "Body text", List.of(), null) | articleResource("1", "Hello", "Body text", List.of(), null) | [] as Set
+    "attribute name override" | new Article("1", TITLE_TEXT, "Content", List.of(), null) | articleResource("1", TITLE_TEXT, "Content", List.of(), null) | [] as Set
+    "conventional id property" | new ConventionalId("42", "name value") | new ResourceObject("conventionals", "42", null, Attributes.ofAttributes(singleAttribute("name", "name value")), null, null, null, Map.of()) | [] as Set
+    "unannotated extra property is not an attribute" | new ArticleWithUnannotatedExtra("1", TITLE_TEXT, "secret") | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT)) | [] as Set
+    "maps @JsonProperty naming" | new BlogWithJsonProperty("b1", MY_BLOG) | new ResourceObject("blogs", "b1", null, Attributes.ofAttributes(singleAttribute("blog_title", MY_BLOG)), null, null, null, Map.of()) | [] as Set
+    "nullable to-one relationship to null linkage" | new Article("1", "T", "B", List.of(), null) | articleResource("1", "T", "B", List.of(), null) | [] as Set
+    "to-one relationship to single linkage" | new Article("1", "T", "B", List.of(), new Person("p1", ALICE)) | articleResource("1", "T", "B", List.of(), new Person("p1", ALICE)) | [] as Set
+    "empty to-many relationship to empty linkage" | new Article("1", "T", "B", List.of(), null) | articleResource("1", "T", "B", List.of(), null) | [] as Set
+    "populated to-many relationship" | new Article("1", "T", "B", List.of(new Comment("c1", "Nice", null), new Comment("c2", GREAT, null)), null) | articleResource("1", "T", "B", List.of(new Comment("c1", "Nice", null), new Comment("c2", GREAT, null)), null) | [] as Set
+    "Set-based to-many relationship" | new ArticleWithSet("1", "T", TAGS_SET) | articleWithSetResource() | [TAGS] as Set
+    "mutable POJO" | new SamplePojo("p1", "Example", List.of()) | new ResourceObject("pojos", "p1", null, Attributes.ofAttributes(singleAttribute("display-name", "Example")), Relationships.ofRelationships(Map.of(COMMENTS, relationship(RelationshipData.IdentifierCollectionLinkage.empty()))), null, null, Map.of()) | [] as Set
+    "to-one identifier meta onto linkage" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of(), null) | [] as Set
+    "to-many identifier meta with each wrapper element" | new ArticleWithRelationshipLinkage("1", "T", null, List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)), new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)), null, null) | identifierMetaArticle(null, null, List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))), ResourceIdentifier.of(COMMENTS, "c2")), null) | [] as Set
+    "null wrapper meta leaves ResourceIdentifier meta in place" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null, List.of(), null) | [] as Set
+    "relationship meta and identifier meta independently" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)), List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true))), new AuthorMeta(ALICE), new CommentsRelationshipMeta("open")) | identifierMetaArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), Meta.of(Map.of(DISPLAY_NAME, ALICE)), List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true)))), Meta.of(Map.of("status", "open"))) | [] as Set
+    "empty to-many RelationshipLinkage collection" | new ArticleWithRelationshipLinkage("1", "T", null, List.of(), null, null) | identifierMetaArticle(null, null, List.of(), null) | [] as Set
+    "array to-many RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle("1", [
+      new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)),
+      new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
+    ] as RelationshipLinkage[]) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))), ResourceIdentifier.of(COMMENTS, "c2"))) | [] as Set
+    "Set of RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.SetRelationshipLinkageArticle("1", Set.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)))) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))))) | [COMMENTS] as Set
+    "Optional RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle("1", Optional.of(new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)))) | authorOnlyArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))) | [] as Set
+    "Map identifier meta on to-many RelationshipLinkage" | new RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle("1", List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), Map.of(PINNED, true)))) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))))) | [] as Set
+    "renamed RelationshipLinkage identifier meta onto the wire name" | new RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle("1", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR))) | authorOnlyArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))) | [] as Set
+    "identifier-meta overlay preserves ResourceIdentifier lid" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, null, "lid-1", null, Map.of()), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, null, "lid-1", Meta.of(Map.of(ROLE, EDITOR)), Map.of()), null, List.of(), null) | [] as Set
+    "identifier-meta overlay preserves additional members" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, "old")), Map.of(EXT_HREF, EXAMPLE_HREF)), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null, List.of(), null) | [] as Set
+    "resource meta and relationship meta" | new ArticleWithMeta("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta(ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
+    "null meta properties omit meta members" | new ArticleWithMeta("1", "T", null, null, null) | articleWithMetaResource(null, null, null) | [] as Set
+    "empty map meta emits empty members" | new ArticleWithMapMeta("1", "T", null, Map.of(), null) | articleWithMetaResource(Meta.empty(), null, null) | [] as Set
+    "populated map meta writes resource and relationship members" | new ArticleWithMapMeta("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), Map.of(SOURCE, "cms"), Map.of(DISPLAY_NAME, ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
+    "renamed relationship meta onto the wire name" | new WholeMetaTargetFixtures.RenamedRelationshipMetaArticle("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta(ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
+    "Object whole-meta target writes a map value" | new WholeMetaTargetFixtures.ObjectMetaArticle("1", Map.of(SOURCE, "cms")) | objectMetaArticle(Meta.of(Map.of(SOURCE, "cms"))) | [] as Set
+    "Optional-wrapped bean meta writes unwrapped members" | new ArticleWithOptionalMeta("1", "T", null, Optional.of(new ArticleMeta("cms", "n")), Optional.of(new AuthorMeta(ALICE))) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), null, Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
+    "present Optional attribute is unwrapped" | new RelationshipContainerFixtures.ArticleWithOptionalAttribute("1", TITLE_TEXT, Optional.of("Sub")) | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT, "subtitle", "Sub")) | [] as Set
+    "empty Optional attribute is omitted" | new RelationshipContainerFixtures.ArticleWithOptionalAttribute("1", TITLE_TEXT, Optional.empty()) | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT)) | [] as Set
+    "array to-many relationship produces collection linkage" | new RelationshipContainerFixtures.ArticleWithCommentArray("1", "T", [
+      new Comment("c1", "Nice", null),
+      new Comment("c2", GREAT, null)
+    ] as Comment[]) | titledCommentsArticle("T", List.of(ResourceIdentifier.of(COMMENTS, "c1"), ResourceIdentifier.of(COMMENTS, "c2"))) | [] as Set
+    "present Optional to-one relationship produces single linkage" | new RelationshipContainerFixtures.ArticleWithOptionalRelationship("1", Optional.of(new Comment("c1", "Nice", null))) | commentRelationshipArticle(new RelationshipData.SingleLinkage(ResourceIdentifier.of(COMMENTS, "c1"))) | [] as Set
+    "empty Optional to-one relationship produces null linkage" | new RelationshipContainerFixtures.ArticleWithOptionalRelationship("1", Optional.empty()) | commentRelationshipArticle(RelationshipData.NullLinkage.INSTANCE) | [] as Set
+    "present Optional id is unwrapped to the identifier string" | new RelationshipContainerFixtures.ArticleWithOptionalId(Optional.of("99"), TITLE_TEXT) | attributesOnlyArticle("99", Map.of(TITLE, TITLE_TEXT)) | [] as Set
+    "inherited properties from a base class are mapped" | new InheritedBlogFixtures.ExtendedBlog("b1", MY_BLOG, "A description") | new ResourceObject("blogs", "b1", null, Attributes.ofAttributes(Map.of("name", MY_BLOG, "description", "A description")), null, null, null, Map.of()) | [] as Set
+    "leading null in a to-many ResourceIdentifier collection is skipped" | new RelationshipContainerFixtures.ArticleWithNullableIdentifierList("1", nullableList((ResourceIdentifier) null, ResourceIdentifier.of(COMMENTS, "1"))) | itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1"))) | [] as Set
+    "leading null in a to-many ResourceIdentifier array is skipped" | new RelationshipContainerFixtures.ArticleWithNullableIdentifierArray("1", [
+      null,
+      ResourceIdentifier.of(COMMENTS, "1")
+    ] as ResourceIdentifier[]) | itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1"))) | [] as Set
   }
 
-  private Object invoke(DomainWriteScenario scenario) {
-    switch (scenario.operation()) {
-      case DomainWriteOperation.TO_RESOURCE:
-        return mapper.toResource(singleValue(scenario))
-      case DomainWriteOperation.TO_DOCUMENT:
-        return mapper.toDocument(singleValue(scenario))
-      case DomainWriteOperation.TO_DOCUMENT_WITH_ENVELOPE:
-        return mapper.toDocument(singleValue(scenario), scenario.envelope())
-      case DomainWriteOperation.TO_RESOURCE_COLLECTION:
-        def input = (DomainWriteInput.CollectionInput) scenario.input()
-        return mapper.toResourceCollection(input.supplier().get())
-      default:
-        throw new IllegalArgumentException("Unknown operation: " + scenario.operation())
+  @Unroll
+  def "maps #id to document"() {
+    when:
+    def actual = mapper.toDocument(input)
+
+    then:
+    assertDocumentEquals(expected, actual)
+
+    where:
+    id | input | expected
+    "toDocument wraps resource in single-resource document" | new Article("1", "T", "B", List.of(), null) | new JsonApiDocument(new DocumentData.SingleResource(articleResource("1", "T", "B", List.of(), null)), null, null, null, null, null, Map.of())
+  }
+
+  @Unroll
+  def "maps #id to resource collection"() {
+    when:
+    def actual = mapper.toResourceCollection(input)
+
+    then:
+    assertDocumentEquals(expected, actual)
+
+    where:
+    id | input | expected
+    "toResourceCollection wraps in resource-collection document" | List.of(new Article("1", "One", "B1", List.of(), null), new Article("2", "Two", "B2", List.of(), null)) | new JsonApiDocument(new DocumentData.ResourceCollection(List.of(articleResource("1", "One", "B1", List.of(), null), articleResource("2", "Two", "B2", List.of(), null))), null, null, null, null, null, Map.of())
+  }
+
+  @Unroll
+  def "maps #id to document with envelope"() {
+    when:
+    def actual = mapper.toDocument(input, envelope)
+
+    then:
+    assertDocumentEquals(expected, actual)
+
+    where:
+    id | input | envelope | expected
+    "toDocument with envelope passes links, meta, and jsonapi" | new Article("1", "T", "B", List.of(), null) | new DocumentEnvelope(ENVELOPE_LINKS, ENVELOPE_META, ENVELOPE_JSONAPI) | new JsonApiDocument(new DocumentData.SingleResource(articleResource("1", "T", "B", List.of(), null)), null, ENVELOPE_META, ENVELOPE_JSONAPI, ENVELOPE_LINKS, null, Map.of())
+  }
+
+  def "rejects null input"() {
+    when:
+    mapper.toResource((Object) null)
+
+    then:
+    thrown(NullPointerException)
+  }
+
+  private static Map<String, Object> singleAttribute(String name, Object value) {
+    Map<String, Object> attributes = new LinkedHashMap<>()
+    attributes.put(name, value)
+    return attributes
+  }
+
+  private static Map<String, Object> articleAttributes(String title, String body) {
+    Map<String, Object> attributes = new LinkedHashMap<>()
+    attributes.put(TITLE, title)
+    attributes.put("body-text", body)
+    return attributes
+  }
+
+  private static ResourceObject articleResource(
+      String id, String title, String body, List<Comment> comments, Person author) {
+    return new ResourceObject(
+        ARTICLES,
+        id,
+        null,
+        Attributes.ofAttributes(articleAttributes(title, body)),
+        Relationships.ofRelationships(
+        articleRelationships(personLinkage(author), commentsLinkage(comments))),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static ResourceObject articleWithSetResource() {
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        Attributes.ofAttributes(singleAttribute(TITLE, "T")),
+        Relationships.ofRelationships(Map.of(TAGS, relationship(tagsLinkage()))),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static Map<String, Relationship> articleRelationships(
+      RelationshipData authorLinkage, RelationshipData commentsLinkage) {
+    Map<String, Relationship> relationships = new LinkedHashMap<>()
+    relationships.put(AUTHOR, relationship(authorLinkage))
+    relationships.put(COMMENTS, relationship(commentsLinkage))
+    return relationships
+  }
+
+  private static Relationship relationship(RelationshipData data) {
+    return new Relationship(data, null, null, Map.of())
+  }
+
+  private static RelationshipData personLinkage(Person author) {
+    if (author == null) {
+      return RelationshipData.NullLinkage.INSTANCE
+    }
+    return new RelationshipData.SingleLinkage(
+        new ResourceIdentifier(PEOPLE, author.id(), null, null, Map.of()))
+  }
+
+  private static RelationshipData commentsLinkage(List<Comment> comments) {
+    List<ResourceIdentifier> identifiers = new ArrayList<>(comments.size())
+    for (Comment comment : comments) {
+      identifiers.add(new ResourceIdentifier(COMMENTS, comment.id(), null, null, Map.of()))
+    }
+    return new RelationshipData.IdentifierCollectionLinkage(identifiers)
+  }
+
+  private static RelationshipData tagsLinkage() {
+    List<ResourceIdentifier> identifiers = new ArrayList<>(TAGS_SET.size())
+    for (Tag tag : TAGS_SET) {
+      identifiers.add(new ResourceIdentifier(TAGS, tag.name(), null, null, Map.of()))
+    }
+    return new RelationshipData.IdentifierCollectionLinkage(identifiers)
+  }
+
+  private static ResourceObject identifierMetaArticle(
+      ResourceIdentifier author, Meta authorRelationshipMeta,
+      List<ResourceIdentifier> comments, Meta commentsRelationshipMeta) {
+    Map<String, Relationship> relationships = new LinkedHashMap<>()
+    relationships.put(
+        AUTHOR,
+        new Relationship(
+        author == null
+        ? RelationshipData.NullLinkage.INSTANCE
+        : new RelationshipData.SingleLinkage(author),
+        null,
+        authorRelationshipMeta,
+        Map.of()))
+    relationships.put(
+        COMMENTS,
+        new Relationship(
+        new RelationshipData.IdentifierCollectionLinkage(comments),
+        null,
+        commentsRelationshipMeta,
+        Map.of()))
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        Attributes.ofAttributes(singleAttribute(TITLE, "T")),
+        Relationships.ofRelationships(relationships),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static ResourceIdentifier identifier(String type, String id, Meta meta) {
+    return identifier(type, id, null, meta, Map.of())
+  }
+
+  private static ResourceIdentifier identifier(
+      String type, String id, String lid, Meta meta, Map<String, Object> additionalMembers) {
+    return new ResourceIdentifier(type, id, lid, meta, additionalMembers)
+  }
+
+  private static ResourceObject commentsOnlyArticle(List<ResourceIdentifier> comments) {
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        Map.of(
+        COMMENTS,
+        new Relationship(
+        new RelationshipData.IdentifierCollectionLinkage(comments),
+        null,
+        null,
+        Map.of()))),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static ResourceObject authorOnlyArticle(ResourceIdentifier author) {
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        Map.of(
+        AUTHOR,
+        new Relationship(
+        new RelationshipData.SingleLinkage(author), null, null, Map.of()))),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static ResourceObject articleWithMetaResource(
+      Meta resourceMeta, ResourceIdentifier author, Meta authorRelationshipMeta) {
+    Map<String, Relationship> relationships = new LinkedHashMap<>()
+    relationships.put(
+        AUTHOR,
+        new Relationship(
+        author == null
+        ? RelationshipData.NullLinkage.INSTANCE
+        : new RelationshipData.SingleLinkage(author),
+        null,
+        authorRelationshipMeta,
+        Map.of()))
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        Attributes.ofAttributes(singleAttribute(TITLE, "T")),
+        Relationships.ofRelationships(relationships),
+        null,
+        resourceMeta,
+        Map.of())
+  }
+
+  private static ResourceObject objectMetaArticle(Meta resourceMeta) {
+    return new ResourceObject(ARTICLES, "1", null, null, null, null, resourceMeta, Map.of())
+  }
+
+  private static ResourceObject attributesOnlyArticle(String id, Map<String, Object> attributes) {
+    return new ResourceObject(
+        ARTICLES, id, null, Attributes.ofAttributes(attributes), null, null, null, Map.of())
+  }
+
+  private static ResourceObject titledCommentsArticle(
+      String title, List<ResourceIdentifier> comments) {
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        Attributes.ofAttributes(singleAttribute(TITLE, title)),
+        Relationships.ofRelationships(
+        Map.of(
+        COMMENTS,
+        new Relationship(
+        new RelationshipData.IdentifierCollectionLinkage(comments),
+        null,
+        null,
+        Map.of()))),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static ResourceObject commentRelationshipArticle(RelationshipData data) {
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        Map.of("comment", new Relationship(data, null, null, Map.of()))),
+        null,
+        null,
+        Map.of())
+  }
+
+  private static ResourceObject itemsRelationshipArticle(List<ResourceIdentifier> items) {
+    return new ResourceObject(
+        ARTICLES,
+        "1",
+        null,
+        null,
+        Relationships.ofRelationships(
+        Map.of(
+        "items",
+        new Relationship(
+        new RelationshipData.IdentifierCollectionLinkage(items),
+        null,
+        null,
+        Map.of()))),
+        null,
+        null,
+        Map.of())
+  }
+
+  @SafeVarargs
+  private static <T> List<T> nullableList(T... values) {
+    List<T> list = new ArrayList<>(values.length)
+    Collections.addAll(list, values)
+    return list
+  }
+
+  private static void assertResourceEquals(
+      ResourceObject expected, ResourceObject actual, Set<String> unorderedRelationships) {
+    assert expected.type() == actual.type()
+    assert expected.id() == actual.id()
+    assert expected.lid() == actual.lid()
+    assertAttributesEquals(expected.attributes(), actual.attributes())
+    assertRelationshipsEquals(expected.relationships(), actual.relationships(), unorderedRelationships)
+    assert expected.links() == actual.links()
+    assert expected.meta() == actual.meta()
+    assert expected.additionalMembers() == actual.additionalMembers()
+  }
+
+  private static void assertDocumentEquals(JsonApiDocument expected, JsonApiDocument actual) {
+    assertDocumentEquals(expected, actual, Collections.emptySet())
+  }
+
+  private static void assertDocumentEquals(
+      JsonApiDocument expected, JsonApiDocument actual, Set<String> unorderedRelationships) {
+    def expectedData = expected.data()
+    def actualData = actual.data()
+    assert expectedData != null
+    assert actualData != null
+    if (expectedData instanceof DocumentData.SingleResource) {
+      assert actualData instanceof DocumentData.SingleResource :
+      "expected SingleResource but was ${actualData?.class?.simpleName}"
+      assertResourceEquals(
+          ((DocumentData.SingleResource) expectedData).resource(),
+          ((DocumentData.SingleResource) actualData).resource(),
+          unorderedRelationships)
+    } else if (expectedData instanceof DocumentData.ResourceCollection) {
+      assert actualData instanceof DocumentData.ResourceCollection :
+      "expected ResourceCollection but was ${actualData?.class?.simpleName}"
+      List<ResourceObject> expectedResources = ((DocumentData.ResourceCollection) expectedData).resources()
+      List<ResourceObject> actualResources = ((DocumentData.ResourceCollection) actualData).resources()
+      assert expectedResources.size() == actualResources.size()
+      for (int i = 0; i < expectedResources.size(); i++) {
+        assertResourceEquals(expectedResources.get(i), actualResources.get(i), unorderedRelationships)
+      }
+    } else {
+      throw new AssertionError("unsupported expected primary data: ${expectedData.class.name}")
+    }
+    assert expected.meta() == actual.meta()
+    assert expected.jsonapi() == actual.jsonapi()
+    assert expected.links() == actual.links()
+    if (expected.included() == null || actual.included() == null) {
+      assert expected.included() == actual.included()
+    } else {
+      assert expected.included().size() == actual.included().size()
+      for (int i = 0; i < expected.included().size(); i++) {
+        assertResourceEquals(expected.included().get(i), actual.included().get(i), unorderedRelationships)
+      }
+    }
+    assert expected.additionalMembers() == actual.additionalMembers()
+  }
+
+  private static void assertAttributesEquals(Attributes expected, Attributes actual) {
+    if (expected == null || actual == null) {
+      assert expected == actual
+      return
+    }
+    assert expected.attributes() == actual.attributes()
+  }
+
+  private static void assertRelationshipsEquals(
+      Relationships expected, Relationships actual, Set<String> unorderedRelationships) {
+    if (expected == null || actual == null) {
+      assert expected == actual
+      return
+    }
+    assert expected.relationships().keySet() == actual.relationships().keySet()
+    for (Map.Entry<String, Relationship> entry : expected.relationships().entrySet()) {
+      String name = entry.getKey()
+      Relationship expectedRelationship = entry.getValue()
+      Relationship actualRelationship = actual.relationships().get(name)
+      assert actualRelationship != null
+      assert expectedRelationship.links() == actualRelationship.links()
+      assert expectedRelationship.meta() == actualRelationship.meta()
+      assert expectedRelationship.additionalMembers() == actualRelationship.additionalMembers()
+      assertLinkageEquals(
+          name, expectedRelationship.data(), actualRelationship.data(), unorderedRelationships.contains(name))
     }
   }
 
-  private static Object singleValue(DomainWriteScenario scenario) {
-    return ((DomainWriteInput.SingleInput) scenario.input()).supplier().get()
+  private static void assertLinkageEquals(
+      String relationshipName, RelationshipData expected, RelationshipData actual, boolean unordered) {
+    if (expected == null || actual == null) {
+      assert expected == actual
+      return
+    }
+    if (expected instanceof RelationshipData.NullLinkage) {
+      assert actual instanceof RelationshipData.NullLinkage :
+      "${relationshipName} expected NullLinkage but was ${actual?.class?.simpleName}"
+      return
+    }
+    if (expected instanceof RelationshipData.SingleLinkage) {
+      assert actual instanceof RelationshipData.SingleLinkage :
+      "${relationshipName} expected SingleLinkage but was ${actual?.class?.simpleName}"
+      assert ((RelationshipData.SingleLinkage) expected).identifier() ==
+      ((RelationshipData.SingleLinkage) actual).identifier()
+      return
+    }
+    if (expected instanceof RelationshipData.IdentifierCollectionLinkage) {
+      assert actual instanceof RelationshipData.IdentifierCollectionLinkage :
+      "${relationshipName} expected IdentifierCollectionLinkage but was ${actual?.class?.simpleName}"
+      assertIdentifierCollection(
+          relationshipName,
+          ((RelationshipData.IdentifierCollectionLinkage) expected).identifiers(),
+          ((RelationshipData.IdentifierCollectionLinkage) actual).identifiers(),
+          unordered)
+      return
+    }
+    throw new AssertionError("${relationshipName} unsupported linkage ${expected.class.name}")
+  }
+
+  private static void assertIdentifierCollection(
+      String relationshipName,
+      List<ResourceIdentifier> expected,
+      List<ResourceIdentifier> actual,
+      boolean unordered) {
+    assert expected.size() == actual.size() :
+    "${relationshipName} linkage size expected ${expected.size()} but was ${actual.size()}"
+    if (unordered) {
+      assert new HashSet<>(expected) == new HashSet<>(actual) :
+      "${relationshipName} unordered identifiers expected ${expected} but was ${actual}"
+    } else {
+      assert expected == actual :
+      "${relationshipName} identifiers expected ${expected} but was ${actual}"
+    }
   }
 }

@@ -165,7 +165,7 @@ Locations remain resource-relative `MappingLocation` pointers:
 
 ### Ownership
 
-`RelationshipLinkage`, diagnostic codes, and semantic catalogs live at Jackson-major-neutral
+`RelationshipLinkage`, diagnostic codes, and other contracts live at Jackson-major-neutral
 boundaries. Jackson 3 owns introspection, unwrap/overlay, property-scoped conversion, and
 adapter-local mechanism tests. `jsonapi-java-jackson-api` remains free of Jackson-major imports.
 

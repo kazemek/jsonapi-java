@@ -11,14 +11,14 @@ import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson3.JacksonFeatureFixtures.ArticleWithFormattedTitle
 import io.github.kazemek.jsonapi.jackson3.JacksonFeatureFixtures.CreatorBasedArticle
 import io.github.kazemek.jsonapi.jackson3.JacksonFeatureFixtures.FormattedTitle
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
 import spock.lang.Specification
 import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.json.JsonMapper
 
 // Jackson 3 mechanism probes: mix-ins, @JsonIgnore, naming strategies, @JsonCreator, custom
 // serializers, and identifier-converter wiring. Major-neutral Optional/array/inheritance/
-// mixed-relationship semantics live in the shared test-support catalogs.
+// mixed-relationship semantics are exercised by direct adapter-owned cases.
 class ResourceMappingJacksonFeaturesSpec extends Specification {
 
   @JsonApiResource(type = "things")

@@ -1,122 +1,221 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import java.security.MessageDigest
+import java.util.LinkedHashMap
+import java.util.List
+import java.util.Map
+import java.util.Set
+
+import groovy.json.JsonSlurper
+
 import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.dialect.Dialects
 
-import io.github.kazemek.jsonapi.testsupport.TestSupportResources
-import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios
-import io.github.kazemek.jsonapi.testsupport.codec.SchemaKind
+import io.github.kazemek.jsonapi.core.model.Attributes
+import io.github.kazemek.jsonapi.core.model.DocumentData
+import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.JsonApiObject
+import io.github.kazemek.jsonapi.core.model.Link
+import io.github.kazemek.jsonapi.core.model.Links
+import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.Relationship
+import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.core.validation.DocumentUsage
+import io.github.kazemek.jsonapi.core.validation.LinksContext
+import io.github.kazemek.jsonapi.core.validation.ValidationContext
+import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * Adapter-local cross-check of writer-generated documents against the pinned JSON:API 1.1 draft
- * schemas owned by {@code jsonapi-java-test-support}. Pin/integrity of those resources lives in
- * the test-support module; this spec only executes output-versus-schema checks.
+ * Adapter-local cross-check of direct writer output and corpus documents against the pinned JSON:API
+ * 1.1 draft schemas owned by the Jackson API test fixtures. Pin/integrity of those resources lives
+ * in the test-fixture resources; this spec owns the adapter-specific schema checks.
  *
  * The draft schemas are unreleased and not an official conformance oracle: a schema result never
- * changes a conformance status in docs/conformance.md. Fixtures that fail the draft only because
- * of a known draft gap carry {@link io.github.kazemek.jsonapi.testsupport.codec.SchemaDisagreement}
- * metadata and must keep failing, so a schema fix forces an intentional re-review.
+ * changes a conformance status in docs/conformance.md.
  */
 class JsonApiDraftSchemaSpec extends Specification {
 
   private static final String DRAFT_URI = "https://jsonapi.org/schemas/spec/v1.1/draft"
-  private static final String META_SCHEMA_ORIGIN = "https://json-schema.org/"
+  private static final String META_SCHEMA_URI = "https://json-schema.org/draft/2020-12/schema"
+  private static final String PINNED_COMMIT = "4ee1c644fcc273044ecec39a6b8c0f0485abdc0e"
 
-  private static final Map<SchemaKind, String> SCHEMA_FILE_BY_KIND = [
-    (SchemaKind.RESPONSE): "schema.json",
-    (SchemaKind.CREATE): "schema_create_resource.json",
-    (SchemaKind.UPDATE): "schema_update_resource.json",
-    (SchemaKind.UPDATE_RELATIONSHIP): "schema_update_relationship.json",
+  private static final List<String> SCHEMA_FILES = [
+    "schema.json",
+    "schema_create_resource.json",
+    "schema_update_resource.json",
+    "schema_update_relationship.json",
   ]
 
-  private static final List<Map<String, String>> INVALID_CONTROLS = [
-    [file: "response-missing-primary.json", kind: "response", keyword: "required", path: ""],
-    [file: "create-invalid-lid-type.json", kind: "create", keyword: "type", path: "/data/lid"],
-    [file: "update-invalid-missing-id.json", kind: "update", keyword: "required", path: "/data"],
-    [file: "update-relationship-invalid-linkage.json", kind: "updateRelationship", keyword: "oneOf", path: "/data"],
+  private static final List<String> INVALID_CONTROLS = [
+    "invalid-controls/response-missing-primary.json",
+    "invalid-controls/create-invalid-lid-type.json",
+    "invalid-controls/update-invalid-missing-id.json",
+    "invalid-controls/update-relationship-invalid-linkage.json",
+  ]
+
+  private static final String META_SCHEMA_ORIGIN = "https://json-schema.org/"
+
+  private static final Map<String, String> SCHEMA_FILE_BY_KIND = [
+    response: "schema.json",
+    create: "schema_create_resource.json",
+    update: "schema_update_resource.json",
+    updateRelationship: "schema_update_relationship.json",
   ]
 
   @Shared
   JsonMapper mapper = JsonMapper.builder().build()
 
   @Shared
-  SchemaRegistry registry = SchemaRegistry.withDialect(Dialects.getDraft202012(), this.&configureRegistry)
+  SchemaRegistry registry = SchemaRegistry.withDialect(Dialects.getDraft202012(), JsonApiDraftSchemaSpec.&configureRegistry)
 
   @Shared
-  Map<SchemaKind, Schema> schemas = SCHEMA_FILE_BY_KIND.collectEntries { kind, file ->
+  Map<String, Schema> schemas = SCHEMA_FILE_BY_KIND.collectEntries { kind, file ->
     [(kind): loadSchema(file)]
   }
 
-  def "every schema-checked fixture declares a known schema kind"() {
+  def "draft schema #file for #kind exists and is valid JSON"() {
     expect:
-    CodecScenarios.catalog().where { it.schemaKind() != null }.every { it.schemaKind in SCHEMA_FILE_BY_KIND }
+    TestFixtureResources.schemaExists(file)
+    mapper.readTree(TestFixtureResources.readSchemaUtf8(file)) != null
+
+    where:
+    kind               | file
+    "response"         | "schema.json"
+    "create"           | "schema_create_resource.json"
+    "update"           | "schema_update_resource.json"
+    "updateRelationship" | "schema_update_relationship.json"
   }
 
-  def "fixture #fixture.id passes the #kind draft schema"() {
+  def "fixture streams expose the same bytes as direct resource reads"() {
+    expect:
+    TestFixtureResources.corpusExists(corpus)
+    TestFixtureResources.openCorpus(corpus).withCloseable { it.readAllBytes().toList() } ==
+    TestFixtureResources.readCorpusBytes(corpus).toList()
+    TestFixtureResources.schemaExists(schema)
+    TestFixtureResources.openSchema(schema).withCloseable { it.readAllBytes().toList() } ==
+    TestFixtureResources.readSchemaBytes(schema).toList()
+
+    where:
+    corpus                         | schema
+    "documents/single-resource.json" | "schema.json"
+  }
+
+  def "vendored draft schemas match the recorded sha256 pin"() {
     given:
-    def errors = errorsFor(fixture)
+    def checksums = sha256sums()
+
+    expect:
+    checksums.keySet() == SCHEMA_FILES.toSet()
+    SCHEMA_FILES.every { file -> digest(TestFixtureResources.readSchemaBytes(file)) == checksums[file] }
+  }
+
+  def "vendored schemas declare the Draft 2020-12 dialect and draft URI"() {
+    given:
+    def slurper = new JsonSlurper()
+
+    expect:
+    SCHEMA_FILES.every { file ->
+      slurper.parseText(TestFixtureResources.readSchemaUtf8(file)).'$schema' == META_SCHEMA_URI
+    }
+    slurper.parseText(TestFixtureResources.readSchemaUtf8("schema.json")).'$id' == DRAFT_URI
+  }
+
+  def "schema pin metadata and invalid controls remain present"() {
+    given:
+    def readme = TestFixtureResources.readSchemaUtf8("README.md")
+
+    expect:
+    readme.contains(PINNED_COMMIT)
+    INVALID_CONTROLS.every { TestFixtureResources.schemaExists(it) }
+  }
+
+  def "writable corpus document #corpusPath validates against #schemaKind draft schema"() {
+    given:
+    def json = mapper.readTree(TestFixtureResources.readCorpusBytes(corpusPath))
+    def errors = schemas[schemaKind].validate(json)
 
     expect:
     errors.isEmpty()
 
     where:
-    fixture << CodecScenarios.catalog().where { it.schemaKind() != null }.findAll { it.schemaDisagreement == null }
-    kind = fixture.schemaKind
+    corpusPath                                    | schemaKind
+    "documents/single-resource.json"              | "response"
+    "documents/resource-collection.json"          | "response"
+    "documents/single-identifier.json"            | "response"
+    "documents/identifier-collection.json"        | "response"
+    "documents/null-data.json"                    | "response"
+    "documents/meta-only.json"                    | "response"
+    "documents/empty-identifier-collection.json"  | "response"
+    "documents/empty-wrappers.json"               | "response"
+    "documents/empty-errors.json"                 | "response"
+    "documents/empty-included.json"               | "response"
+    "documents/open-values.json"                  | "response"
+    "documents/relationship-null-linkage.json"    | "response"
+    "documents/relationship-empty-to-many.json"   | "response"
+    "documents/relationship-link-only.json"       | "response"
+    "documents/relationship-meta-only.json"       | "response"
+    "documents/errors-document.json"              | "response"
+    "documents/jsonapi-object.json"               | "response"
+    "documents/compound-document.json"            | "response"
+    "documents/compound-nested-intermediate.json" | "response"
+    "documents/compound-shared-identity.json"     | "response"
+    "documents/local-identifier.json"             | "create"
   }
 
-  def "allow-listed fixture #fixture.id fails for the documented draft-schema gap"() {
+  @Unroll
+  def "writer output retains the documented draft-schema gap for #description"() {
     given:
-    def disagreement = fixture.schemaDisagreement
-    def errors = errorsFor(fixture)
+    def json = JsonApiJackson3.writer(mapper, context).writeValueAsString(document)
+    def errors = schemas[schemaKind].validate(mapper.readTree(json))
     def observed = errors.collect { [keyword: it.keyword, path: it.instanceLocation.toString()] }
 
     expect:
-    disagreement.expected.every { expected ->
-      observed.any { it.keyword == expected.keyword && it.path == expected.path }
+    expected.every { expectedError ->
+      observed.any { actual ->
+        actual.keyword == expectedError.keyword && actual.path == expectedError.path
+      }
     }
 
     where:
-    fixture << CodecScenarios.catalog().where { it.schemaKind() != null }.findAll { it.schemaDisagreement != null }
+    description | document | context | schemaKind | expected
+    "canonical array-form hreflang" | stringAndObjectLinksDocument() | ValidationContext.defaults() | "response" | [
+      [keyword: "type", path: "/links/related/hreflang"]
+    ]
+    "top-level extension member" | extensionAndAtMembersDocument() | extContext() | "response" | [
+      [keyword: "unevaluatedProperties", path: ""]
+    ]
+    "response lid and extension members" | memberOrderDocument() | extContext() | "response" | [
+      [keyword: "not", path: "/data"],
+      [keyword: "unevaluatedProperties", path: ""]
+    ]
   }
 
-  def "invalid control #control.file fails the #control.kind schema at #control.path with #control.keyword"() {
+  def "invalid control #file fails the #kind schema at #path with #keyword"() {
     given:
-    def json = mapper.readTree(TestSupportResources.readSchemaBytes("invalid-controls/" + control.file))
-    def errors = schemas[schemaKindFor(control.kind)].validate(json)
+    def json = mapper.readTree(TestFixtureResources.readSchemaBytes("invalid-controls/" + file))
+    def errors = schemas[kind].validate(json)
 
     expect:
-    errors.any { it.keyword == control.keyword && it.instanceLocation.toString() == control.path }
+    errors.any { it.keyword == keyword && it.instanceLocation.toString() == path }
 
     where:
-    control << INVALID_CONTROLS
+    file                                       | kind               | keyword  | path
+    "response-missing-primary.json"            | "response"         | "required" | ""
+    "create-invalid-lid-type.json"             | "create"           | "type"     | "/data/lid"
+    "update-invalid-missing-id.json"           | "update"           | "required" | "/data"
+    "update-relationship-invalid-linkage.json" | "updateRelationship" | "oneOf"    | "/data"
   }
 
-  private List<?> errorsFor(fixture) {
-    def json = JsonApiJackson3.writer(mapper, fixture.context).writeValueAsString(fixture.document)
-    return schemas[fixture.schemaKind].validate(mapper.readTree(json))
-  }
-
-  private static final Map<String, SchemaKind> SCHEMA_KIND_BY_NAME = [
-    'response': SchemaKind.RESPONSE,
-    'create': SchemaKind.CREATE,
-    'update': SchemaKind.UPDATE,
-    'updateRelationship': SchemaKind.UPDATE_RELATIONSHIP,
-  ]
-
-  private static SchemaKind schemaKindFor(String name) {
-    def kind = SCHEMA_KIND_BY_NAME[name]
-    if (kind == null) {
-      throw new IllegalArgumentException('Unknown schema kind name: ' + name)
-    }
-    return kind
-  }
-
-  private void configureRegistry(SchemaRegistry.Builder builder) {
+  private static void configureRegistry(SchemaRegistry.Builder builder) {
     builder
         .schemaLoader { loader ->
           loader.allow { iri ->
@@ -124,10 +223,119 @@ class JsonApiDraftSchemaSpec extends Specification {
             value == DRAFT_URI || value.startsWith(META_SCHEMA_ORIGIN)
           }
         }
-        .schemas([(DRAFT_URI): TestSupportResources.readSchemaUtf8("schema.json")])
+        .schemas([(DRAFT_URI): TestFixtureResources.readSchemaUtf8("schema.json")])
   }
 
   private Schema loadSchema(String file) {
-    return registry.getSchema(TestSupportResources.readSchemaUtf8(file))
+    return registry.getSchema(TestFixtureResources.readSchemaUtf8(file))
+  }
+
+  private static Map<String, String> sha256sums() {
+    Map<String, String> checksums = [:]
+    TestFixtureResources.readSchemaUtf8("sha256.sum").readLines()
+        .findAll { line -> !line.trim().isEmpty() }
+        .each { line ->
+          def parts = line.tokenize()
+          checksums.put(parts[1], parts[0])
+        }
+    checksums
+  }
+
+  private static String digest(byte[] bytes) {
+    MessageDigest.getInstance("SHA-256").digest(bytes).collect { String.format("%02x", it) }.join()
+  }
+
+  private static ValidationContext extContext() {
+    return new ValidationContext(
+        DocumentUsage.RESPONSE_OR_OTHER,
+        Set.of("ext"),
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        LinksContext.TOP_LEVEL,
+        Map.of(),
+        null)
+  }
+
+  private static JsonApiDocument stringAndObjectLinksDocument() {
+    String selfHref = "https://example.com/articles/1"
+    def resourceLinks = new LinkedHashMap<String, Link>()
+    resourceLinks.put("self", new Link.StringLink(selfHref))
+    def article = new ResourceObject(
+        "articles", "1", null, null, null, Links.ofLinks(resourceLinks), null, Map.of())
+
+    def related = new Link.ObjectLink(
+        "https://example.com/articles/1/related",
+        "related",
+        null,
+        "Related",
+        "application/vnd.api+json",
+        ["en"],
+        Meta.of(["count": 1]),
+        Map.of())
+    def topLinks = new LinkedHashMap<String, Link>()
+    topLinks.put("self", new Link.StringLink(selfHref))
+    topLinks.put("related", related)
+    topLinks.put("next", null)
+
+    return new JsonApiDocument(
+        new DocumentData.ResourceCollection(List.of(article)),
+        null,
+        null,
+        null,
+        Links.ofLinks(topLinks),
+        null,
+        Map.of())
+  }
+
+  private static JsonApiDocument extensionAndAtMembersDocument() {
+    def article = new ResourceObject(
+        "articles",
+        "1",
+        null,
+        Attributes.ofAttributes(["title": "Hello"]),
+        null,
+        null,
+        null,
+        ["@copyright": "Copyright 2026", "ext:version": 1])
+    return new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null,
+        null,
+        null,
+        null,
+        null,
+        ["ext:request-id": "abc-123"])
+  }
+
+  private static JsonApiDocument memberOrderDocument() {
+    def self = new Link.StringLink("https://example.com/articles/1")
+    def relationships = new LinkedHashMap<String, Relationship>()
+    relationships.put(
+        "author",
+        Relationship.withData(
+        new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "9"))))
+    def resourceLinks = new LinkedHashMap<String, Link>()
+    resourceLinks.put("self", self)
+    def article = new ResourceObject(
+        "articles",
+        "1",
+        "temp-1",
+        Attributes.ofAttributes(["title": "Ordered"]),
+        Relationships.ofRelationships(relationships),
+        Links.ofLinks(resourceLinks),
+        Meta.of(["created": "2026-01-01"]),
+        ["ext:flag": true])
+    def documentLinks = new LinkedHashMap<String, Link>()
+    documentLinks.put("self", self)
+
+    return new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null,
+        Meta.of(["copyright": "Copyright 2026"]),
+        JsonApiObject.ofVersion("1.1"),
+        Links.ofLinks(documentLinks),
+        List.of(ResourceObject.of("people", "9")),
+        ["ext:trace": "t-1"])
   }
 }

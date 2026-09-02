@@ -31,15 +31,15 @@ import io.github.kazemek.jsonapi.jackson3.WholeMetaTargetFixtures.ConcreteTypedM
 import io.github.kazemek.jsonapi.jackson3.WholeMetaTargetFixtures.PolyMetaArticle
 import io.github.kazemek.jsonapi.jackson3.WholeMetaTargetFixtures.PolyMetaArticlePatch
 import io.github.kazemek.jsonapi.jackson3.WholeMetaTargetFixtures.SourceMeta
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMeta
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticleWithMetaPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMetaPatch
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
 // Jackson 3 mechanism probes for whole-meta: TypeDeserializer / polymorphic conversion, JavaType
 // MetaBox preservation, property null providers, renamed-wire construction pointers, codec
 // rejection of wire-level meta null, and fromDocument data-less relationship meta. Major-neutral
-// whole-meta write/read/PATCH/fieldset semantics live in the shared test-support catalogs.
+// whole-meta write/read/PATCH/fieldset semantics are exercised by direct adapter-owned cases.
 class FlatMetaMappingSpec extends Specification {
 
   static def mapper() {

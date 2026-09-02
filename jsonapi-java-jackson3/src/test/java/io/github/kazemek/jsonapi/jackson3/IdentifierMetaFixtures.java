@@ -4,9 +4,9 @@ import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorIdMeta;
+import io.github.kazemek.jsonapi.fixtures.domainpatch.CommentIdMeta;
 import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta;
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.CommentIdMeta;
 import java.util.Set;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.databind.SerializationContext;
@@ -16,7 +16,8 @@ import tools.jackson.databind.annotation.JsonSerialize;
 /**
  * Identifier-meta conversion fixtures owned by {@code IdentifierMetaMappingSpec} (ADR-017): generic
  * {@code JavaType} preservation, configured naming, custom serializers, and custom linkage-mapper
- * targets. Shared wrapper/container/lid/additional-member carriers live in test-support.
+ * targets. Shared wrapper/container/lid/additional-member carriers live in the Jackson API test
+ * fixtures.
  */
 public final class IdentifierMetaFixtures {
 

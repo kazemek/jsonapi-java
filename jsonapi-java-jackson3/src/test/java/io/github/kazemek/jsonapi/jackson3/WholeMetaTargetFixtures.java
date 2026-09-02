@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * Jackson 3 polymorphic whole-meta targets owned by {@code FlatMetaMappingSpec}: root {@code
  * TypeDeserializer} decoration for concrete and abstract {@code @JsonTypeInfo} meta types.
- * Major-neutral whole-meta declaration and bind semantics live in shared catalogs.
+ * Major-neutral whole-meta declaration and bind semantics live in direct adapter-owned cases.
  */
 @SuppressWarnings({"unused", "NullAway"})
 public final class WholeMetaTargetFixtures {

@@ -41,17 +41,14 @@ flowchart TB
   APP --> J3
 ```
 
-Shared semantic catalogs live in unpublished `jsonapi-java-test-support`. Adapter test suites
-consume that module (`testImplementation`); it is not a production dependency of Jackson 3. The
-[Test support](#test-support) diagram shows catalog consumption.
+Shared test fixtures live in the Jackson API `java-test-fixtures` source set as passive DTOs and canonical JSON/schema resources. The sole executable fixture type, `TestFixtureResources`, only provides neutral classpath access to those resources.
 
 | Module | Responsibility |
 |--------|----------------|
 | [`jsonapi-java-core`](../jsonapi-java-core/README.md) | Immutable JSON:API document model and aggregate validation. No Jackson. |
 | [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
-| [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors. |
+| [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors; passive carriers and shared JSON/schema test fixtures. |
 | [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. |
-| [`jsonapi-java-test-support`](../jsonapi-java-test-support/README.md) | Unpublished shared semantic catalogs, corpus, pinned schemas, and adapter-neutral semantic verifiers. |
 | Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
 
 [ADR-007](adr/007-module-boundaries.md) records why these modules exist.
@@ -246,24 +243,20 @@ Mapper *use* vs *derivation* is capability-specific:
 
 [ADR-016](adr/016-jackson-adapter-construction.md) is the construction policy.
 
-## Test support
+## Test fixtures
 
-Shared cross-adapter semantics live in `jsonapi-java-test-support`. Jackson-major mechanism tests
-stay local to the adapter.
+Shared test fixtures contain passive DTOs and canonical JSON/schema resources, plus the neutral
+`TestFixtureResources` classpath loader. Behavioral assertions belong in each adapter's own tests.
+
+Do not introduce shared test orchestration, scenario registries, or assertion frameworks.
 
 ```mermaid
 flowchart LR
-  TS["jsonapi-java-test-support<br/>canonical models, catalogs, corpus, schemas"] --> J3["Jackson 3 shared-catalog suites"]
-  TS --> J2["Future Jackson 2 shared-catalog suites"]
+  FX["jsonapi-java-jackson-api test fixtures<br/>passive DTOs, loader, corpus, schemas"] --> J3["Jackson 3 tests"]
+  FX --> J2["Future Jackson 2 tests"]
   J3L["Jackson 3 local *Fixtures.java"] --> J3
   J2L["Jackson 2 local *Fixtures.java"] --> J2
 ```
-
-The test-support README is the placement contract: reuse shared catalogs first; keep mix-ins,
-naming strategies, custom serializers, `JavaType` mechanics, and mapper isolation local; do not
-reintroduce a global adapter `testmodel` package. Shared semantic verifiers live next to their
-catalogs so a second Jackson major executes the same comparison without copying adapter-local
-assert helpers.
 
 ## Terminology
 
@@ -289,7 +282,6 @@ These names are adjacent and easy to conflate. They are not synonyms.
 - [jsonapi-java-annotations](../jsonapi-java-annotations/README.md)
 - [jsonapi-java-jackson-api](../jsonapi-java-jackson-api/README.md)
 - [jsonapi-java-jackson3](../jsonapi-java-jackson3/README.md)
-- [jsonapi-java-test-support](../jsonapi-java-test-support/README.md)
 - [ADR index](adr/README.md)
 - [Conformance](conformance.md)
 - [Vision](vision.md)
