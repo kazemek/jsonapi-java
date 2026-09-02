@@ -48,6 +48,9 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.ConventionalId
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle
+import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle
+import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle
+import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle
 import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
@@ -115,6 +118,12 @@ class ResourceBinderSpec extends Specification {
       new RelationshipLinkage<>(identifier(COMMENTS, "c1", Meta.of([pinned: true])), new CommentIdMeta(true)),
       new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
     ], null, null) | null
+    "array RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1", "c2"], [Meta.of([pinned: true]), null])))) | ArrayRelationshipLinkageArticle | new ArrayRelationshipLinkageArticle("1", [
+      new RelationshipLinkage<>(identifier(COMMENTS, "c1", Meta.of([pinned: true])), new CommentIdMeta(true)),
+      new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
+    ] as RelationshipLinkage[]) | null
+    "Optional RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) ) | OptionalRelationshipLinkageArticle | new OptionalRelationshipLinkageArticle("1", Optional.of(new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor")))) | null
+    "renamed RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) ) | RenamedRelationshipLinkageArticle | new RenamedRelationshipLinkageArticle("1", new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor"))) | null
     "inherited properties" | one(resource("blogs", "b1", attrs("name", "My Blog", "description", "A description"), null)) | FlatInheritedBlog | new FlatInheritedBlog("b1", "My Blog", "A description") | null
     "ignored property" | one(resource(THINGS, "1", attrs("name", "visible", "secret", "hidden"), null)) | FlatThingWithIgnored | new FlatThingWithIgnored("1", "visible", null) | null
     "explicit null preserves default semantics" | one(resource(ARTICLES, "1", nullableAttr("title"), null)) | FlatDefaultedArticle | new FlatDefaultedArticle("1", null, "default") | null
@@ -155,6 +164,10 @@ class ResourceBinderSpec extends Specification {
     where:
     id | input | targetType | diagnostic | propertyPath | resourceClass | converter
     "resource type mismatch" | one(resource(PEOPLE, "p1", null, null)) | FlatArticle | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type" | FlatArticle | null
+    "resource collection validates every element type" | many([
+      resource(ARTICLES, "1", null, null),
+      resource(PEOPLE, "p1", null, null)
+    ]) | FlatArticle | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type" | FlatArticle | null
     "unregistered to-one relationship target" | one(resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1")))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/author/data" | Person | null
     "unregistered to-many relationship target" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1"])))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/comments/data" | List | null
     "identifier converter throws" | one(resource(ARTICLES, "42", null, null)) | FlatIntIdArticle | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id" | Integer | throwingConverter()
