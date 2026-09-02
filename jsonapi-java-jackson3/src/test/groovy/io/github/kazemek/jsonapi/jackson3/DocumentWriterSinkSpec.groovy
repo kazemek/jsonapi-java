@@ -18,7 +18,9 @@ import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument
 
 import spock.lang.Specification
@@ -83,27 +85,33 @@ class DocumentWriterSinkSpec extends Specification {
     new String(bytesOut.toByteArray(), StandardCharsets.UTF_8) == charsOut.toString()
   }
 
-  def "mapped documents use every write sink"() {
+  def "mapped documents use every write sink and compose provenance before validation"() {
     given:
     def mapper = JsonMapper.builder().build()
-    def resource = new ResourceObject(
-        'articles',
-        '1',
-        null,
-        Attributes.ofAttributes(['title': 'JSON:API paints my bikeshed!']),
-        null,
+    def article = ResourceObject.of('articles', '1')
+    def unlinkedAuthor = ResourceObject.of('people', '9')
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(article),
         null,
         null,
-        [:])
-    def document = JsonApiDocument.withData(new DocumentData.SingleResource(resource))
-    def mapped = new MappedDocument(document, Set.of(ResourceIdentity.ofId('people', 'p1')))
-    def plainMapped = new MappedDocument(document, Set.of())
+        null,
+        null,
+        List.of(unlinkedAuthor),
+        Map.of())
+    def mapped = new MappedDocument(document, Set.of(ResourceIdentity.ofId('people', '9')))
     def writer = JsonApiJackson3.writer(mapper, ValidationContext.defaults())
     def bytesOut = new ByteArrayOutputStream()
     def charsOut = new StringWriter()
     def generatorOut = new ByteArrayOutputStream()
 
-    when:
+    when: 'the mapped exemptions are genuinely required for the document to validate'
+    writer.writeValueAsString(mapped.document())
+
+    then:
+    def exception = thrown(JsonApiValidationException)
+    exception.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when: 'every mapped sink composes the provenance exemptions before validation'
     def stringValue = writer.writeValueAsString(mapped)
     def byteValue = writer.writeValueAsBytes(mapped)
     writer.writeValue(bytesOut, mapped)
@@ -120,7 +128,6 @@ class DocumentWriterSinkSpec extends Specification {
     mapper.readTree(stringValue) == mapper.readTree(bytesOut.toByteArray())
     mapper.readTree(stringValue) == mapper.readTree(charsOut.toString())
     mapper.readTree(stringValue) == mapper.readTree(generatorOut.toByteArray())
-    writer.writeValueAsString(plainMapped) == stringValue
   }
 
   def "output is fully visible in caller OutputStream and Writer immediately after writing without an explicit flush"() {
