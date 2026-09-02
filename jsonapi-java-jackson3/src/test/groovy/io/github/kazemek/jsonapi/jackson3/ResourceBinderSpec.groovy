@@ -3,7 +3,6 @@ package io.github.kazemek.jsonapi.jackson3
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
-import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
@@ -43,8 +42,6 @@ import io.github.kazemek.jsonapi.fixtures.domainread.FlatThingWithIgnored
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatThrowingCreatorThing
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatUnregisteredRelationshipsArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.ArticleWithUnannotatedExtra
-import io.github.kazemek.jsonapi.fixtures.domainwrite.BlogWithJsonProperty
-import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.ConventionalId
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle
@@ -87,61 +84,80 @@ class ResourceBinderSpec extends Specification {
 
   @Unroll
   def "binds resource #id successfully"() {
-    given:
-    def localBinder = converter == null
-        ? binder
-        : JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
-
     when:
-    def actual = localBinder.fromResource(input as ResourceObject, targetType)
+    def actual = binder.fromResource(input as ResourceObject, targetType)
 
     then:
     actual == expected
 
     where:
-    id | input | targetType | expected | converter
-    "record attributes and built-in relationships" | one(resource(ARTICLES, "1", attrs("title", "Hello", "body-text", "Content"), rels(AUTHOR, single(PEOPLE, "p1"), COMMENTS, collection(COMMENTS, ["c1", "c2"])))) | FlatArticle | new FlatArticle("1", "Hello", "Content", ResourceIdentifier.of(PEOPLE, "p1"), [
+    id | input | targetType | expected
+    "record attributes and built-in relationships" | resource(ARTICLES, "1", attrs("title", "Hello", "body-text", "Content"), rels(AUTHOR, single(PEOPLE, "p1"), COMMENTS, collection(COMMENTS, ["c1", "c2"]))) | FlatArticle | new FlatArticle("1", "Hello", "Content", ResourceIdentifier.of(PEOPLE, "p1"), [
       ResourceIdentifier.of(COMMENTS, "c1"),
       ResourceIdentifier.of(COMMENTS, "c2")
-    ]) | null
-    "mutable DTO" | one(resource(ARTICLES, "1", attrs("title", "Hello"), rels(AUTHOR, single(PEOPLE, "p1")))) | FlatMutableArticle | new FlatMutableArticle("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1")) | null
-    "immutable creator DTO" | one(resource(ARTICLES, "42", attrs("title", "Creator"), null)) | FlatCreatorArticle | new FlatCreatorArticle("42", "Creator") | null
-    "lid-only resource" | one(resourceWithLid(ARTICLES, "lid-1", attrs("title", "T"))) | FlatLidArticle | new FlatLidArticle("lid-1", "T") | null
-    "resource without id or lid" | one(resourceWithLid(ARTICLES, null, attrs("title", "T"))) | FlatLidArticle | new FlatLidArticle(null, "T") | null
-    "present Optional relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1")))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.of(ResourceIdentifier.of(PEOPLE, "p1"))) | null
-    "explicit null Optional relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE)))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.empty()) | null
-    "array relationship" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1", "c2"])))) | FlatArticleWithArray | new FlatArticleWithArray("1", null, identifierArray(COMMENTS, "c1", "c2")) | null
-    "Set relationship" | one(resource(ARTICLES, "1", null, rels("tags", collection("tags", ["t1", "t2"])))) | FlatArticleWithSet | new FlatArticleWithSet("1", null, Set.of(ResourceIdentifier.of("tags", "t1"), ResourceIdentifier.of("tags", "t2"))) | null
-    "Map RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1"], [Meta.of([pinned: true])] )))) | MapRelationshipLinkageArticle | new MapRelationshipLinkageArticle("1", [
+    ])
+    "mutable DTO" | resource(ARTICLES, "1", attrs("title", "Hello"), rels(AUTHOR, single(PEOPLE, "p1"))) | FlatMutableArticle | new FlatMutableArticle("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1"))
+    "immutable creator DTO" | resource(ARTICLES, "42", attrs("title", "Creator"), null) | FlatCreatorArticle | new FlatCreatorArticle("42", "Creator")
+    "lid-only resource" | resourceWithLid(ARTICLES, "lid-1", attrs("title", "T")) | FlatLidArticle | new FlatLidArticle("lid-1", "T")
+    "resource without id or lid" | resourceWithLid(ARTICLES, null, attrs("title", "T")) | FlatLidArticle | new FlatLidArticle(null, "T")
+    "present Optional relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1"))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.of(ResourceIdentifier.of(PEOPLE, "p1")))
+    "explicit null Optional relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.empty())
+    "array relationship" | resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1", "c2"]))) | FlatArticleWithArray | new FlatArticleWithArray("1", null, [
+      ResourceIdentifier.of(COMMENTS, "c1"),
+      ResourceIdentifier.of(COMMENTS, "c2")
+    ] as ResourceIdentifier[])
+    "Set relationship" | resource(ARTICLES, "1", null, rels("tags", collection("tags", ["t1", "t2"]))) | FlatArticleWithSet | new FlatArticleWithSet("1", null, Set.of(ResourceIdentifier.of("tags", "t1"), ResourceIdentifier.of("tags", "t2")))
+    "Map RelationshipLinkage relationship" | resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1"], [Meta.of([pinned: true])]))) | MapRelationshipLinkageArticle | new MapRelationshipLinkageArticle("1", [
       new RelationshipLinkage<>(identifier(COMMENTS, "c1", Meta.of([pinned: true])), [pinned: true])
-    ]) | null
-    "whole resource and relationship meta" | one(resourceWithMeta(attrs("title", "Hello"), relsWithMeta(single(PEOPLE, "p1"), Meta.of([displayName: "Alice"])), Meta.of([source: "cms", note: "n"]))) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta("Alice")) | null
-    "Map whole resource and relationship meta" | one(resourceWithMeta(attrs("title", "Hello"), relsWithMeta(single(PEOPLE, "p1"), Meta.of([displayName: "Alice"])), Meta.of([source: "cms"]))) | ArticleWithMapMeta | new ArticleWithMapMeta("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1"), [source: "cms"], [displayName: "Alice"]) | null
-    "Optional whole resource meta" | one(resourceWithMeta(attrs("title", "Hello"), null, Meta.of([source: "cms", note: "n"]))) | ArticleWithOptionalMeta | new ArticleWithOptionalMeta("1", "Hello", null, Optional.of(new ArticleMeta("cms", "n")), Optional.empty()) | null
-    "to-one identifier meta" | one(resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) ) | FlatRelationshipLinkageArticle | new FlatRelationshipLinkageArticle("1", null, new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor")), null, null, null) | null
-    "to-many identifier meta" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1", "c2"], [Meta.of([pinned: true]), null])))) | FlatRelationshipLinkageArticle | new FlatRelationshipLinkageArticle("1", null, null, [
+    ])
+    "whole resource and relationship meta" | resourceWithMeta(attrs("title", "Hello"), relsWithMeta(single(PEOPLE, "p1"), Meta.of([displayName: "Alice"])), Meta.of([source: "cms", note: "n"])) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta("Alice"))
+    "Map whole resource and relationship meta" | resourceWithMeta(attrs("title", "Hello"), relsWithMeta(single(PEOPLE, "p1"), Meta.of([displayName: "Alice"])), Meta.of([source: "cms"])) | ArticleWithMapMeta | new ArticleWithMapMeta("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1"), [source: "cms"], [displayName: "Alice"])
+    "Optional whole resource meta" | resourceWithMeta(attrs("title", "Hello"), null, Meta.of([source: "cms", note: "n"])) | ArticleWithOptionalMeta | new ArticleWithOptionalMeta("1", "Hello", null, Optional.of(new ArticleMeta("cms", "n")), Optional.empty())
+    "to-one identifier meta" | resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) | FlatRelationshipLinkageArticle | new FlatRelationshipLinkageArticle("1", null, new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor")), null, null, null)
+    "to-many identifier meta" | resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1", "c2"], [Meta.of([pinned: true]), null]))) | FlatRelationshipLinkageArticle | new FlatRelationshipLinkageArticle("1", null, null, [
       new RelationshipLinkage<>(identifier(COMMENTS, "c1", Meta.of([pinned: true])), new CommentIdMeta(true)),
       new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
-    ], null, null) | null
-    "array RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1", "c2"], [Meta.of([pinned: true]), null])))) | ArrayRelationshipLinkageArticle | new ArrayRelationshipLinkageArticle("1", [
+    ], null, null)
+    "array RelationshipLinkage relationship" | resource(ARTICLES, "1", null, rels(COMMENTS, collectionWithIdentifierMeta(COMMENTS, ["c1", "c2"], [Meta.of([pinned: true]), null]))) | ArrayRelationshipLinkageArticle | new ArrayRelationshipLinkageArticle("1", [
       new RelationshipLinkage<>(identifier(COMMENTS, "c1", Meta.of([pinned: true])), new CommentIdMeta(true)),
       new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
-    ] as RelationshipLinkage[]) | null
-    "Optional RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) ) | OptionalRelationshipLinkageArticle | new OptionalRelationshipLinkageArticle("1", Optional.of(new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor")))) | null
-    "renamed RelationshipLinkage relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) ) | RenamedRelationshipLinkageArticle | new RenamedRelationshipLinkageArticle("1", new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor"))) | null
-    "inherited properties" | one(resource("blogs", "b1", attrs("name", "My Blog", "description", "A description"), null)) | FlatInheritedBlog | new FlatInheritedBlog("b1", "My Blog", "A description") | null
-    "ignored property" | one(resource(THINGS, "1", attrs("name", "visible", "secret", "hidden"), null)) | FlatThingWithIgnored | new FlatThingWithIgnored("1", "visible", null) | null
-    "explicit null preserves default semantics" | one(resource(ARTICLES, "1", nullableAttr("title"), null)) | FlatDefaultedArticle | new FlatDefaultedArticle("1", null, "default") | null
-    "unannotated property is ignored" | one(resource(ARTICLES, "1", attrs("title", "Hello", "ignoredExtra", "secret"), null)) | ArticleWithUnannotatedExtra | new ArticleWithUnannotatedExtra("1", "Hello", null) | null
-    "conventional identifier" | one(resource("conventionals", "42", attrs("name", "name value"), null)) | ConventionalId | new ConventionalId("42", "name value") | null
-    "default numeric identifier conversion" | one(resource(ARTICLES, "42", attrs("title", "T"), null)) | FlatIntIdArticle | new FlatIntIdArticle(42, "T") | null
-    "custom IdentifierConverter" | one(resource(ARTICLES, "prefix-42", attrs("title", "T"), null)) | FlatIntIdArticle | new FlatIntIdArticle(42, "T") | invertingConverter()
-    "empty List relationship" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, [])))) | FlatArticle | new FlatArticle("1", null, null, null, []) | null
-    "explicit null to-one relationship" | one(resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE)))) | FlatArticle | new FlatArticle("1", null, null, null, null) | null
-    "omitted relationship does not bind" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1"])))) | FlatArticle | new FlatArticle("1", null, null, null, [
+    ] as RelationshipLinkage[])
+    "Optional RelationshipLinkage relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) | OptionalRelationshipLinkageArticle | new OptionalRelationshipLinkageArticle("1", Optional.of(new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor"))))
+    "renamed RelationshipLinkage relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, toOneWithIdentifierMeta(PEOPLE, "p1", Meta.of([role: "editor"])))) | RenamedRelationshipLinkageArticle | new RenamedRelationshipLinkageArticle("1", new RelationshipLinkage<>(identifier(PEOPLE, "p1", Meta.of([role: "editor"])), new AuthorIdMeta("editor")))
+    "inherited properties" | resource("blogs", "b1", attrs("name", "My Blog", "description", "A description"), null) | FlatInheritedBlog | new FlatInheritedBlog("b1", "My Blog", "A description")
+    "ignored property" | resource(THINGS, "1", attrs("name", "visible", "secret", "hidden"), null) | FlatThingWithIgnored | new FlatThingWithIgnored("1", "visible", null)
+    "explicit null preserves default semantics" | resource(ARTICLES, "1", nullableAttr("title"), null) | FlatDefaultedArticle | new FlatDefaultedArticle("1", null, "default")
+    "unannotated property is ignored" | resource(ARTICLES, "1", attrs("title", "Hello", "ignoredExtra", "secret"), null) | ArticleWithUnannotatedExtra | new ArticleWithUnannotatedExtra("1", "Hello", null)
+    "conventional identifier" | resource("conventionals", "42", attrs("name", "name value"), null) | ConventionalId | new ConventionalId("42", "name value")
+    "default numeric identifier conversion" | resource(ARTICLES, "42", attrs("title", "T"), null) | FlatIntIdArticle | new FlatIntIdArticle(42, "T")
+    "empty List relationship" | resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, []))) | FlatArticle | new FlatArticle("1", null, null, null, [])
+    "explicit null to-one relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE))) | FlatArticle | new FlatArticle("1", null, null, null, null)
+    "omitted relationship does not bind" | resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1"]))) | FlatArticle | new FlatArticle("1", null, null, null, [
       ResourceIdentifier.of(COMMENTS, "c1")
-    ]) | null
-    "relationship meta without linkage" | one(resourceWithMeta(attrs("title", "Hello"), rels(AUTHOR, Relationship.metaOnly(Meta.of([displayName: "Alice"]))), null)) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", null, null, new AuthorMeta("Alice")) | null
+    ])
+    "relationship meta without linkage" | resourceWithMeta(attrs("title", "Hello"), rels(AUTHOR, Relationship.metaOnly(Meta.of([displayName: "Alice"]))), null) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", null, null, new AuthorMeta("Alice"))
+  }
+
+  def "custom identifier converter converts ids"() {
+    given:
+    def converter = new IdentifierConverter() {
+          @Override
+          String convert(Object idValue) {
+            "prefix-" + idValue.toString()
+          }
+
+          @Override
+          Object parse(String wireIdentifier) {
+            wireIdentifier - "prefix-"
+          }
+        }
+    def localBinder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
+
+    when:
+    def actual = localBinder.fromResource(resource(ARTICLES, "prefix-42", attrs("title", "T"), null), FlatIntIdArticle)
+
+    then:
+    actual == new FlatIntIdArticle(42, "T")
   }
 
   def "binds a resource collection directly"() {
@@ -186,13 +202,8 @@ class ResourceBinderSpec extends Specification {
 
   @Unroll
   def "fails to bind resource #id due to mapping diagnostic"() {
-    given:
-    def localBinder = converter == null
-        ? binder
-        : JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
-
     when:
-    localBinder.fromResource(input as ResourceObject, targetType)
+    binder.fromResource(input as ResourceObject, targetType)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -201,29 +212,77 @@ class ResourceBinderSpec extends Specification {
     ex.resourceClass() == resourceClass
 
     where:
-    id | input | targetType | diagnostic | propertyPath | resourceClass | converter
-    "resource type mismatch" | one(resource(PEOPLE, "p1", null, null)) | FlatArticle | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type" | FlatArticle | null
-    "unregistered to-one relationship target" | one(resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1")))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/author/data" | Person | null
-    "unregistered to-many relationship target" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1"])))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/comments/data" | List | null
-    "identifier converter throws" | one(resource(ARTICLES, "42", null, null)) | FlatIntIdArticle | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id" | Integer | throwingConverter()
-    "identifier converter returns null" | one(resource(ARTICLES, "42", null, null)) | FlatIntIdArticle | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id" | Integer | nullParseConverter()
-    "identifier cannot be coerced" | one(resource(ARTICLES, "not-a-number", null, null)) | FlatIntIdArticle | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id" | FlatIntIdArticle | null
-    "required creator input is absent" | one(resource(THINGS, "1", attrs("title", "present"), null)) | FlatRequiredThing | MappingDiagnostic.MISSING_CREATOR_INPUT | "/attributes/required" | FlatRequiredThing | null
-    "creator rejects supplied value" | one(resource(THINGS, "1", attrs("title", "boom"), null)) | FlatThrowingCreatorThing | MappingDiagnostic.MISSING_CREATOR_INPUT | null | FlatThrowingCreatorThing | null
-    "attribute value cannot be coerced" | one(resource(THINGS, "1", nestedCountAttrs(), null)) | FlatCountedThing | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/count" | FlatCountedThing | null
-    "explicit null cannot bind to primitive" | one(resource(THINGS, "1", nullableAttr("count"), null)) | FlatCountedThing | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/count" | FlatCountedThing | null
-    "scalar whole-meta target" | one(resource(ARTICLES, "1", null, null)) | WholeMetaTargetFixtures.ScalarMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.ScalarMetaArticle | null
-    "list whole-meta target" | one(resource(ARTICLES, "1", null, null)) | WholeMetaTargetFixtures.ListMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.ListMetaArticle | null
-    "UUID whole-meta target" | one(resource(ARTICLES, "1", null, null)) | WholeMetaTargetFixtures.UuidMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.UuidMetaArticle | null
-    "java.time whole-meta target" | one(resource(ARTICLES, "1", null, null)) | WholeMetaTargetFixtures.InstantMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.InstantMetaArticle | null
-    "URI whole-meta target" | one(resource(ARTICLES, "1", null, null)) | WholeMetaTargetFixtures.UriMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.UriMetaArticle | null
-    "collection linkage on to-one" | one(resource(ARTICLES, "1", null, rels(AUTHOR, collection(PEOPLE, ["p1", "p2"])))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data" | ResourceIdentifier | null
-    "null linkage on to-many" | one(resource(ARTICLES, "1", null, rels(COMMENTS, Relationship.withData(RelationshipData.NullLinkage.INSTANCE)))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/comments/data" | List | null
-    "single linkage on to-many" | one(resource(ARTICLES, "1", null, rels(COMMENTS, single(COMMENTS, "c1")))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/comments/data" | List | null
-    "empty collection linkage on to-one" | one(resource(ARTICLES, "1", null, rels(AUTHOR, collection(PEOPLE, [])))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data" | ResourceIdentifier | null
-    "getter-only attribute" | one(resource("getter-only", "1", attrs("title", "supplied"), null)) | DirectionalityReadFixtures.GetterOnly | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/attributes/title" | DirectionalityReadFixtures.GetterOnly | null
-    "getter-only identifier from id" | one(resource("getter-only-id", "supplied", null, null)) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/id" | DirectionalityReadFixtures.GetterOnlyIdentifier | null
-    "getter-only identifier from lid" | one(resourceWithLid("getter-only-id", "client-lid", null)) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/lid" | DirectionalityReadFixtures.GetterOnlyIdentifier | null
+    id | input | targetType | diagnostic | propertyPath | resourceClass
+    "resource type mismatch" | resource(PEOPLE, "p1", null, null) | FlatArticle | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type" | FlatArticle
+    "unregistered to-one relationship target" | resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1"))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/author/data" | Person
+    "unregistered to-many relationship target" | resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1"]))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/comments/data" | List
+    "identifier cannot be coerced" | resource(ARTICLES, "not-a-number", null, null) | FlatIntIdArticle | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id" | FlatIntIdArticle
+    "required creator input is absent" | resource(THINGS, "1", attrs("title", "present"), null) | FlatRequiredThing | MappingDiagnostic.MISSING_CREATOR_INPUT | "/attributes/required" | FlatRequiredThing
+    "creator rejects supplied value" | resource(THINGS, "1", attrs("title", "boom"), null) | FlatThrowingCreatorThing | MappingDiagnostic.MISSING_CREATOR_INPUT | null | FlatThrowingCreatorThing
+    "attribute value cannot be coerced" | resource(THINGS, "1", [count: [nested: 1]], null) | FlatCountedThing | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/count" | FlatCountedThing
+    "explicit null cannot bind to primitive" | resource(THINGS, "1", nullableAttr("count"), null) | FlatCountedThing | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/count" | FlatCountedThing
+    "scalar whole-meta target" | resource(ARTICLES, "1", null, null) | WholeMetaTargetFixtures.ScalarMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.ScalarMetaArticle
+    "list whole-meta target" | resource(ARTICLES, "1", null, null) | WholeMetaTargetFixtures.ListMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.ListMetaArticle
+    "UUID whole-meta target" | resource(ARTICLES, "1", null, null) | WholeMetaTargetFixtures.UuidMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.UuidMetaArticle
+    "java.time whole-meta target" | resource(ARTICLES, "1", null, null) | WholeMetaTargetFixtures.InstantMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.InstantMetaArticle
+    "URI whole-meta target" | resource(ARTICLES, "1", null, null) | WholeMetaTargetFixtures.UriMetaArticle | MappingDiagnostic.INVALID_META_TARGET | "/meta" | WholeMetaTargetFixtures.UriMetaArticle
+    "collection linkage on to-one" | resource(ARTICLES, "1", null, rels(AUTHOR, collection(PEOPLE, ["p1", "p2"]))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data" | ResourceIdentifier
+    "null linkage on to-many" | resource(ARTICLES, "1", null, rels(COMMENTS, Relationship.withData(RelationshipData.NullLinkage.INSTANCE))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/comments/data" | List
+    "single linkage on to-many" | resource(ARTICLES, "1", null, rels(COMMENTS, single(COMMENTS, "c1"))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/comments/data" | List
+    "empty collection linkage on to-one" | resource(ARTICLES, "1", null, rels(AUTHOR, collection(PEOPLE, []))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data" | ResourceIdentifier
+    "getter-only attribute" | resource("getter-only", "1", attrs("title", "supplied"), null) | DirectionalityReadFixtures.GetterOnly | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/attributes/title" | DirectionalityReadFixtures.GetterOnly
+    "getter-only identifier from id" | resource("getter-only-id", "supplied", null, null) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/id" | DirectionalityReadFixtures.GetterOnlyIdentifier
+    "getter-only identifier from lid" | resourceWithLid("getter-only-id", "client-lid", null) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/lid" | DirectionalityReadFixtures.GetterOnlyIdentifier
+  }
+
+  def "throwing converter produces the expected diagnostic"() {
+    given:
+    def converter = new IdentifierConverter() {
+          @Override
+          String convert(Object idValue) {
+            idValue.toString()
+          }
+
+          @Override
+          Object parse(String wireIdentifier) {
+            throw new IllegalArgumentException("bad id")
+          }
+        }
+    def localBinder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
+
+    when:
+    localBinder.fromResource(resource(ARTICLES, "42", null, null), FlatIntIdArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
+    ex.propertyPath() == "/id"
+    ex.resourceClass() == Integer
+  }
+
+  def "null-returning converter produces the expected diagnostic"() {
+    given:
+    def converter = new IdentifierConverter() {
+          @Override
+          String convert(Object idValue) {
+            idValue.toString()
+          }
+
+          @Override
+          Object parse(String wireIdentifier) {
+            null
+          }
+        }
+    def localBinder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
+
+    when:
+    localBinder.fromResource(resource(ARTICLES, "42", null, null), FlatIntIdArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED
+    ex.propertyPath() == "/id"
+    ex.resourceClass() == Integer
   }
 
   def "resource collection validates every element type"() {
@@ -615,11 +674,6 @@ class ResourceBinderSpec extends Specification {
     article.author() == null
   }
 
-
-  private static ResourceObject one(ResourceObject resource) {
-    return resource
-  }
-
   private static ResourceObject resource(String type, String id, Map attrs, Map rels) {
     new ResourceObject(
         type,
@@ -667,18 +721,6 @@ class ResourceBinderSpec extends Specification {
         Map.of())
   }
 
-  private static Map includedInput() {
-    def firstPrimary = resource(ARTICLES, "1", attrs("title", "T"), rels(AUTHOR, single(PEOPLE, "p1")))
-    def secondPrimary = resource(ARTICLES, "1", attrs("title", "T"), rels(AUTHOR, single(PEOPLE, "p1")))
-    dual(
-        document(firstPrimary, [
-          resource(PEOPLE, "p1", attrs("name", "Alice"), null)
-        ]),
-        document(secondPrimary, [
-          resource(PEOPLE, "p1", attrs("name", "AliceChanged"), null)
-        ]))
-  }
-
   private static Relationship single(String type, String id) {
     Relationship.withData(new RelationshipData.SingleLinkage(ResourceIdentifier.of(type, id)))
   }
@@ -714,10 +756,6 @@ class ResourceBinderSpec extends Specification {
     new ResourceIdentifier(type, id, null, meta, Map.of())
   }
 
-  private static ResourceIdentifier[] identifierArray(String type, String... ids) {
-    ids.collect { ResourceIdentifier.of(type, it) } as ResourceIdentifier[]
-  }
-
   private static Map attrs(Object... keyValues) {
     Map attributes = new LinkedHashMap()
     for (int i = 0; i < keyValues.length; i += 2) {
@@ -736,52 +774,6 @@ class ResourceBinderSpec extends Specification {
       relationships.put(keyValues[i], keyValues[i + 1])
     }
     relationships
-  }
-
-  private static Map nestedCountAttrs() {
-    [count: [nested: 1]]
-  }
-
-  private static IdentifierConverter invertingConverter() {
-    new IdentifierConverter() {
-          @Override
-          String convert(Object idValue) {
-            "prefix-" + idValue.toString()
-          }
-
-          @Override
-          Object parse(String wireIdentifier) {
-            wireIdentifier - "prefix-"
-          }
-        }
-  }
-
-  private static IdentifierConverter throwingConverter() {
-    new IdentifierConverter() {
-          @Override
-          String convert(Object idValue) {
-            idValue.toString()
-          }
-
-          @Override
-          Object parse(String wireIdentifier) {
-            throw new IllegalArgumentException("bad id")
-          }
-        }
-  }
-
-  private static IdentifierConverter nullParseConverter() {
-    new IdentifierConverter() {
-          @Override
-          String convert(Object idValue) {
-            idValue.toString()
-          }
-
-          @Override
-          Object parse(String wireIdentifier) {
-            null
-          }
-        }
   }
 
   private static ResourceObject primaryResource(JsonApiDocument document) {

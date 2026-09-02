@@ -244,7 +244,7 @@ class UpdateRequestValidationSpec extends Specification {
     ex.jsonPointer() == "/data/relationships/tags/data/1/id"
   }
 
-  def "update request preserves '#attribute' attribute state"(String attribute, ResourceObject resource) {
+  def "update request preserves '#attribute' attribute state"(String attribute, ResourceObject resource, Attributes expectedAttributes) {
     given:
     def doc = JsonApiDocument.withData(new DocumentData.SingleResource(resource))
 
@@ -253,31 +253,16 @@ class UpdateRequestValidationSpec extends Specification {
 
     then:
     noExceptionThrown()
-    assertPreservedAttributes(resource, attribute)
+    resource.attributes() == expectedAttributes
 
     where:
-    attribute      | resource
-    "absent"       | ResourceObject.of("articles", "1")
-    "empty"        | new ResourceObject("articles", "1", null, Attributes.empty(), null, null, null, [:])
-    "value"        | new ResourceObject(
-        "articles", "1", null, Attributes.ofAttributes([title: "value"]), null, null, null, [:])
+    attribute       | resource                                                                             | expectedAttributes
+    "absent"        | ResourceObject.of("articles", "1")                                                   | null
+    "empty"         | new ResourceObject("articles", "1", null, Attributes.empty(), null, null, null, [:]) | Attributes.empty()
+    "value"         | new ResourceObject(
+        "articles", "1", null, Attributes.ofAttributes([title: "value"]), null, null, null, [:])         | Attributes.ofAttributes([title: "value"])
     "explicit null" | new ResourceObject(
-        "articles", "1", null, Attributes.ofAttributes([title: null]), null, null, null, [:])
-  }
-
-  static def assertPreservedAttributes(ResourceObject resource, String attribute) {
-    if (attribute == "absent") {
-      assert resource.attributes() == null
-    } else if (attribute == "empty") {
-      assert resource.attributes() != null
-      assert resource.attributes().isEmpty()
-    } else if (attribute == "value") {
-      assert resource.attributes().attributes().get("title") == "value"
-    } else {
-      assert resource.attributes().attributes().containsKey("title")
-      assert resource.attributes().attributes().get("title") == null
-    }
-    return true
+        "articles", "1", null, Attributes.ofAttributes([title: null]), null, null, null, [:])            | Attributes.ofAttributes([title: null])
   }
 
   def "update request accepts matching expected endpoint identity"() {

@@ -1,6 +1,5 @@
 package io.github.kazemek.jsonapi.fixtures;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -20,24 +19,9 @@ public final class TestFixtureResources {
 
   private TestFixtureResources() {}
 
-  /** Returns the exact bytes of a corpus resource. */
-  public static byte[] readCorpusBytes(String relativePath) {
-    return readResource(CORPUS_ROOT + requireRelative(relativePath));
-  }
-
   /** Returns a corpus resource decoded as UTF-8. */
   public static String readCorpusUtf8(String relativePath) {
-    return utf8(readCorpusBytes(relativePath));
-  }
-
-  /** Opens a stream over the exact bytes of a corpus resource. */
-  public static InputStream openCorpus(String relativePath) {
-    return new ByteArrayInputStream(readCorpusBytes(relativePath));
-  }
-
-  /** Returns whether a corpus resource exists. */
-  public static boolean corpusExists(String relativePath) {
-    return resourceUrl(CORPUS_ROOT + requireRelative(relativePath)) != null;
+    return utf8(readResource(CORPUS_ROOT + requireRelative(relativePath)));
   }
 
   /** Returns the exact bytes of a pinned schema resource. */
@@ -48,11 +32,6 @@ public final class TestFixtureResources {
   /** Returns a pinned schema resource decoded as UTF-8. */
   public static String readSchemaUtf8(String relativePath) {
     return utf8(readSchemaBytes(relativePath));
-  }
-
-  /** Opens a stream over the exact bytes of a pinned schema resource. */
-  public static InputStream openSchema(String relativePath) {
-    return new ByteArrayInputStream(readSchemaBytes(relativePath));
   }
 
   /** Returns whether a pinned schema resource exists. */
