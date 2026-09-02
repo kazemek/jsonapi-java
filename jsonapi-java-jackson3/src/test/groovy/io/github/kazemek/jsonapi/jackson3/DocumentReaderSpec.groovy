@@ -37,6 +37,7 @@ import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class DocumentReaderSpec extends Specification {
 
@@ -179,25 +180,11 @@ class DocumentReaderSpec extends Specification {
     ex.category() == CodecFailureCategory.valueOf(category as String)
 
     and:
-    if (pointer != null) {
-      assert ex.jsonPointer() == pointer
-    }
-
-    and:
-    if (ruleCode != null) {
-      assert ex.ruleCode() == ValidationRuleCode.valueOf(ruleCode as String)
-    } else {
-      assert ex.ruleCode() == null
-    }
-
-    and:
-    if (sourceLocation) {
-      assert ex.sourceLocation().isKnown()
-    }
+    pointer == null || ex.jsonPointer() == pointer
+    ex.ruleCode() == (ruleCode == null ? null : ValidationRuleCode.valueOf(ruleCode as String))
+    !sourceLocation || ex.sourceLocation().isKnown()
     ex.cause == null
-    if (!json.isEmpty()) {
-      assert !ex.message.contains(json)
-    }
+    json.isEmpty() || !ex.message.contains(json)
 
     where:
     [
@@ -219,9 +206,10 @@ class DocumentReaderSpec extends Specification {
     }
   }
 
-  def "empty input and whitespace-only variants report MALFORMED_JSON for #source"() {
+  @Unroll
+  def "empty String input #description reports MALFORMED_JSON"() {
     when:
-    readWhole(source, input)
+    JsonApiJackson3.reader(mapper, resourceContext).readValue(input)
 
     then:
     def ex = thrown(JsonApiDocumentReadException)
@@ -230,11 +218,26 @@ class DocumentReaderSpec extends Specification {
     ex.message == 'Expected a JSON:API document object'
 
     where:
-    source   | input
-    'string' | ''
-    'string' | '   '
-    'bytes'  | ''.getBytes(StandardCharsets.UTF_8)
-    'bytes'  | '  '.getBytes(StandardCharsets.UTF_8)
+    description       | input
+    'empty'           | ''
+    'whitespace-only' | '   '
+  }
+
+  @Unroll
+  def "empty byte input #description reports MALFORMED_JSON"() {
+    when:
+    JsonApiJackson3.reader(mapper, resourceContext).readValue(input)
+
+    then:
+    def ex = thrown(JsonApiDocumentReadException)
+    ex.category() == CodecFailureCategory.MALFORMED_JSON
+    ex.jsonPointer() == ''
+    ex.message == 'Expected a JSON:API document object'
+
+    where:
+    description       | input
+    'empty'           | ''.getBytes(StandardCharsets.UTF_8)
+    'whitespace-only' | '  '.getBytes(StandardCharsets.UTF_8)
   }
 
   def "aggregate validation resource location is precise on Jackson 3"() {
@@ -330,14 +333,6 @@ class DocumentReaderSpec extends Specification {
     reader.context().primaryDataKind() == PrimaryDataKind.RESOURCE_IDENTIFIER
   }
 
-  private void readWhole(String source, Object input) {
-    def reader = JsonApiJackson3.reader(mapper, resourceContext)
-    if (source == 'string') {
-      reader.readValue((String) input)
-    } else {
-      reader.readValue((byte[]) input)
-    }
-  }
 
   private static boolean wireEqual(
       JsonApiDocumentWriter writer,
@@ -1160,32 +1155,18 @@ class DocumentReaderSpec extends Specification {
   private static boolean assertNegativeManifestEntries(
       List<Map<String, Object>> entries, List<NegativeCase> expectedCases) {
     assert entries.collect { entry ->
-      [
-        id: entry.id,
-        path: entry.path,
-        category: entry.category,
-        pointer: entry.pointer,
-        ruleCode: entry.ruleCode,
-        sourceLocation: entry.sourceLocation,
-        notes: entry.notes
-      ]
+      [id: entry.id, path: entry.path]
     } == expectedCases.collect { testCase ->
-      [
-        id: testCase.id,
-        path: testCase.path,
-        category: testCase.category,
-        pointer: testCase.pointer,
-        ruleCode: testCase.ruleCode,
-        sourceLocation: testCase.sourceLocation,
-        notes: testCase.notes
-      ]
+      [id: testCase.id, path: testCase.path]
     }
     assert entries*.id.toSet().size() == entries.size()
     assert entries*.path.toSet().size() == entries.size()
     assert entries.every { entry ->
+      entry.keySet() == ["id", "path", "notes"] as Set &&
       entry.id instanceof String && !entry.id.isBlank() &&
-          entry.path instanceof String && !entry.path.isBlank() &&
-          TestFixtureResources.corpusExists(entry.path as String)
+      entry.path instanceof String && !entry.path.isBlank() &&
+      entry.notes instanceof String && !entry.notes.isBlank() &&
+      TestFixtureResources.corpusExists(entry.path as String)
     }
     true
   }

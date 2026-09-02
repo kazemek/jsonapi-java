@@ -51,12 +51,12 @@ import tools.jackson.databind.module.SimpleModule
 class DomainDocumentReaderSpec extends Specification {
 
   @Unroll
-  def "binds #path into DomainData and IncludedResources"() {
+  def "readValue binds #path into DomainData and IncludedResources"() {
     given:
     def reader = domainReader(resourceTypes, context)
 
     when:
-    def envelope = readEnvelope(reader, path, sourceDocument)
+    def envelope = reader.readValue(corpusText(path))
 
     then:
     envelope.data() == expectedData
@@ -64,44 +64,64 @@ class DomainDocumentReaderSpec extends Specification {
     envelope.additionalMembers() == expectedAdditionalMembers
 
     where:
-    path                                                     | resourceTypes                         | context                                   | sourceDocument                                    | expectedData                                                                                                                                                                                                                       | expectedIncludedResources                  | expectedAdditionalMembers
-    'envelope-binding/single-resource.json'                  | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', 'JSON:API paints my bikeshed!', 'Content', ResourceIdentifier.of('people', 'p1'), [
+    path                                                     | resourceTypes                         | context                                   | expectedData                                                                                                                                                                                                                       | expectedIncludedResources                  | expectedAdditionalMembers
+    'envelope-binding/single-resource.json'                  | [FlatArticle]                          | DocumentReadContext.resourceDefaults() | new DomainData.SingleResource(new FlatArticle('1', 'JSON:API paints my bikeshed!', 'Content', ResourceIdentifier.of('people', 'p1'), [
       ResourceIdentifier.of('comments', 'c1')
     ]))                         | null                                       | Map.of()
-    'envelope-binding/heterogeneous-collection.json'         | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+    'envelope-binding/heterogeneous-collection.json'         | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults() | new DomainData.ResourceCollection([
       new FlatArticle('1', 'First', null, null, null),
       new Person('9', 'Dan')
     ])                                                                                            | null                                       | Map.of()
-    'envelope-binding/at-member-document.json'               | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', 'Hello', null, null, null))                                                                                                                               | null                                       | Map.of('@request-id', 'req-1')
-    'envelope-binding/cyclic-linkage.json'                   | [FlatNode]                             | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatNode('1', ResourceIdentifier.of('nodes', '2')))                                                                                                                         | [
+    'envelope-binding/at-member-document.json'               | [FlatArticle]                          | DocumentReadContext.resourceDefaults() | new DomainData.SingleResource(new FlatArticle('1', 'Hello', null, null, null))                                                                                                                               | null                                       | Map.of('@request-id', 'req-1')
+    'envelope-binding/cyclic-linkage.json'                   | [FlatNode]                             | DocumentReadContext.resourceDefaults() | new DomainData.SingleResource(new FlatNode('1', ResourceIdentifier.of('nodes', '2')))                                                                                                                         | [
       new FlatNode('2', ResourceIdentifier.of('nodes', '1'))
     ] | Map.of()
-    'envelope-binding/shared-identity-id-and-lid.json'       | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | readCoreDocument('envelope-binding/shared-identity-id-and-lid.json', 'people', '9') | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | [new Person('9', 'Dan')]                    | Map.of()
-    'envelope-binding/independent-envelopes-matching.json'   | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | readCoreDocument('envelope-binding/independent-envelopes-matching.json', 'people', '9') | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('9', 'Dan')]                    | Map.of()
-    'envelope-binding/independent-envelopes-unrelated.json'  | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | readCoreDocument('envelope-binding/independent-envelopes-unrelated.json', 'people', '99') | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('99', 'Other')]                 | Map.of()
-    'documents/resource-collection.json'                     | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+    'documents/resource-collection.json'                     | [FlatArticle]                          | DocumentReadContext.resourceDefaults() | new DomainData.ResourceCollection([
       new FlatArticle('1', 'First', null, null, null),
       new FlatArticle('2', 'Second', null, null, null)
     ])                                                                      | null                                       | Map.of()
-    'documents/empty-included.json'                          | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | []                                         | Map.of()
-    'documents/null-data.json'                               | []                                    | DocumentReadContext.resourceDefaults()   | null                                              | DomainData.NullData.INSTANCE                                                                                                                                                                                        | null                                       | Map.of()
-    'documents/meta-only.json'                               | []                                    | DocumentReadContext.resourceDefaults()   | null                                              | null                                                                                                                                                                                                                         | null                                       | Map.of()
-    'documents/single-identifier.json'                       | []                                    | DocumentReadContext.identifierDefaults() | null                                              | new DomainData.SingleIdentifier(ResourceIdentifier.of('articles', '1'))                                                                                                                                       | null                                       | Map.of()
-    'documents/identifier-collection.json'                   | []                                    | DocumentReadContext.identifierDefaults() | null                                              | new DomainData.IdentifierCollection([
+    'documents/empty-included.json'                          | [FlatArticle]                          | DocumentReadContext.resourceDefaults() | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | []                                         | Map.of()
+    'documents/null-data.json'                               | []                                    | DocumentReadContext.resourceDefaults() | DomainData.NullData.INSTANCE                                                                                                                                                                                        | null                                       | Map.of()
+    'documents/meta-only.json'                               | []                                    | DocumentReadContext.resourceDefaults() | null                                                                                                                                                                                                                         | null                                       | Map.of()
+    'documents/single-identifier.json'                       | []                                    | DocumentReadContext.identifierDefaults() | new DomainData.SingleIdentifier(ResourceIdentifier.of('articles', '1'))                                                                                                                                       | null                                       | Map.of()
+    'documents/identifier-collection.json'                   | []                                    | DocumentReadContext.identifierDefaults() | new DomainData.IdentifierCollection([
       ResourceIdentifier.of('articles', '1'),
       ResourceIdentifier.of('articles', '2')
     ])                                                                                       | null                                       | Map.of()
-    'documents/empty-identifier-collection.json'             | []                                    | DocumentReadContext.identifierDefaults() | null                                              | new DomainData.IdentifierCollection([])                                                                                                                                                                             | null                                       | Map.of()
-    'documents/errors-document.json'                         | []                                    | DocumentReadContext.resourceDefaults()   | null                                              | null                                                                                                                                                                                                                         | null                                       | Map.of()
-    'documents/compound-document.json'                       | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('9', 'Dan')]                    | Map.of()
-    'documents/compound-shared-identity.json'                | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+    'documents/empty-identifier-collection.json'             | []                                    | DocumentReadContext.identifierDefaults() | new DomainData.IdentifierCollection([])                                                                                                                                                                             | null                                       | Map.of()
+    'documents/errors-document.json'                         | []                                    | DocumentReadContext.resourceDefaults() | null                                                                                                                                                                                                                         | null                                       | Map.of()
+    'documents/compound-document.json'                       | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults() | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('9', 'Dan')]                    | Map.of()
+    'documents/compound-shared-identity.json'                | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults() | new DomainData.ResourceCollection([
       new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null),
       new FlatArticle('2', null, null, ResourceIdentifier.of('people', '9'), null)
     ]) | [new Person('9', 'Dan')] | Map.of()
-    'documents/string-and-object-links.json'                 | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+    'documents/string-and-object-links.json'                 | [FlatArticle]                          | DocumentReadContext.resourceDefaults() | new DomainData.ResourceCollection([
       new FlatArticle('1', null, null, null, null)
     ])                                                                                                                               | null                                       | Map.of()
-    'documents/empty-wrappers.json'                           | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | null                                       | Map.of()
+    'documents/empty-wrappers.json'                           | [FlatArticle]                          | DocumentReadContext.resourceDefaults() | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | null                                       | Map.of()
+  }
+
+
+  @Unroll
+  def "fromDocument binds #path without reparsing"() {
+    given:
+    def reader = domainReader(
+        [FlatArticle, Person], DocumentReadContext.resourceDefaults())
+    def document = readCoreDocument(path, "people", includedId)
+
+    when:
+    def envelope = reader.fromDocument(document)
+
+    then:
+    envelope.data() == expectedData
+    includedResources(envelope) == expectedIncludedResources
+    envelope.additionalMembers() == Map.of()
+
+    where:
+    path                                                   | includedId | expectedData                                                                                                  | expectedIncludedResources
+    'envelope-binding/shared-identity-id-and-lid.json'      | '9'        | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                  | [new Person('9', 'Dan')]
+    'envelope-binding/independent-envelopes-matching.json'  | '9'        | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null)) | [new Person('9', 'Dan')]
+    'envelope-binding/independent-envelopes-unrelated.json' | '99'       | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null)) | [new Person('99', 'Other')]
   }
 
   def "exposes decoded document-level members"() {
@@ -761,12 +781,6 @@ class DomainDocumentReaderSpec extends Specification {
     TestFixtureResources.readCorpusUtf8(path)
   }
 
-  private static JsonApiDomainDocument readEnvelope(
-      JsonApiDomainDocumentReader reader, String path, JsonApiDocument sourceDocument) {
-    sourceDocument == null
-        ? reader.readValue(corpusText(path))
-        : reader.fromDocument(sourceDocument)
-  }
 
   private static List<Object> includedResources(JsonApiDomainDocument envelope) {
     envelope.included() == null ? null : envelope.included().resources()

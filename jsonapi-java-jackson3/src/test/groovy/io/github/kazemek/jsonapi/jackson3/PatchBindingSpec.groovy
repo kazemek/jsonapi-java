@@ -61,7 +61,6 @@ import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
-import java.lang.reflect.Array
 import java.util.Arrays
 import java.util.List
 import java.util.Map
@@ -89,7 +88,7 @@ class PatchBindingSpec extends Specification {
     def actual = reader.readValue(json, targetType)
 
     then:
-    assertPatchCommand(expected, actual)
+    actual == expected
 
     where:
     id | resource | targetType | expected
@@ -130,17 +129,41 @@ class PatchBindingSpec extends Specification {
       ResourceIdentifier.of("comments", "c2")
     ]))
     "patch-wrapper-whole-linkage-is-not-an-independent-change" | "author-identifier-meta" | ArticleWithRelationshipLinkage.class | patch(ArticleWithRelationshipLinkage.class, "1", new PatchChange.RelationshipChange("author", "author", new RelationshipLinkage(identifier("people", "p1", [role: "editor"]), new AuthorIdMeta("editor"))))
-    "patch-array-to-many-identifier-meta" | "comments-identifier-meta" | FlatArticleWithArray.class | patch(FlatArticleWithArray.class, "1", new PatchChange.RelationshipChange("comments", "comments", ([
-      identifier("comments", "c1", [pinned: true]),
-      ResourceIdentifier.of("comments", "c2")
-    ] as ResourceIdentifier[])))
-    "patch-empty-array-relationship" | "relationship-empty-collection" | FlatArticleWithArray.class | patch(FlatArticleWithArray.class, "1", new PatchChange.RelationshipChange("comments", "comments", new ResourceIdentifier[0]))
     "patch-set-to-many-identifier-meta" | "tags-identifier-meta" | FlatArticleWithSet.class | patch(FlatArticleWithSet.class, "1", new PatchChange.RelationshipChange("tags", "tags", [
       identifier("tags", "t1", [pinned: true])
     ] as Set))
     "patch-empty-set-relationship" | "tags-empty" | FlatArticleWithSet.class | patch(FlatArticleWithSet.class, "1", new PatchChange.RelationshipChange("tags", "tags", [] as Set))
     "patch-optional-to-one-identifier-meta" | "author-identifier-meta" | FlatArticleWithOptional.class | patch(FlatArticleWithOptional.class, "1", new PatchChange.RelationshipChange("author", "author", Optional.of(identifier("people", "p1", [role: "editor"]))))
     "patch-optional-wrapped-meta-structured" | "title-with-meta-source-note" | ArticleWithOptionalMeta.class | patch(ArticleWithOptionalMeta.class, "1", new PatchChange.ResourceMetaChange("meta", "meta", structured(atomic("source", "cms"), atomic("note", "n"))), new PatchChange.AttributeChange("title", "title", "T"))
+  }
+
+
+  @Unroll
+  def "binds array-valued relationship patch #id explicitly"() {
+    given:
+    def reader = JsonApiJackson3.patchReader(JsonMapper.builder().build())
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
+
+    when:
+    def command = reader.readValue(json, FlatArticleWithArray)
+
+    then:
+    command.resourceType() == FlatArticleWithArray
+    command.identity() == "1"
+    command.changes().size() == 1
+    def change = command.changes()[0]
+    change instanceof PatchChange.RelationshipChange
+    change.jsonapiName() == "comments"
+    change.logicalName() == "comments"
+    Arrays.equals(change.value() as ResourceIdentifier[], expected)
+
+    where:
+    id                      | resource                         | expected
+    "with identifier meta" | "comments-identifier-meta"      | ([
+      identifier("comments", "c1", [pinned: true]),
+      ResourceIdentifier.of("comments", "c2")
+    ] as ResourceIdentifier[])
+    "when empty"            | "relationship-empty-collection" | new ResourceIdentifier[0]
   }
 
   @Unroll
@@ -685,45 +708,6 @@ class PatchBindingSpec extends Specification {
     return new ResourceIdentifier(type, id, null, Meta.of(meta), Map.of())
   }
 
-  private static void assertPatchCommand(PatchCommand expected, Object actual) {
-    assert actual instanceof PatchCommand
-    def command = (PatchCommand) actual
-    assert command.resourceType() == expected.resourceType()
-    assert command.identity() == expected.identity()
-    assert command.changes().size() == expected.changes().size()
-    expected.changes().eachWithIndex { expectedChange, index ->
-      def actualChange = command.changes()[index]
-      assert actualChange.class == expectedChange.class
-      assert actualChange.jsonapiName() == expectedChange.jsonapiName()
-      assert actualChange.logicalName() == expectedChange.logicalName()
-      assert valuesEqual(expectedChange.value(), actualChange.value())
-    }
-  }
-
-  private static boolean valuesEqual(Object expected, Object actual) {
-    if (expected == actual) {
-      return true
-    }
-    if (expected == null || actual == null) {
-      return false
-    }
-    if (expected.class.isArray() && actual.class.isArray()) {
-      if (expected instanceof Object[] && actual instanceof Object[]) {
-        return Arrays.deepEquals((Object[]) expected, (Object[]) actual)
-      }
-      int expectedLength = Array.getLength(expected)
-      if (expectedLength != Array.getLength(actual)) {
-        return false
-      }
-      for (int i = 0; i < expectedLength; i++) {
-        if (!valuesEqual(Array.get(expected, i), Array.get(actual, i))) {
-          return false
-        }
-      }
-      return true
-    }
-    return expected == actual
-  }
 
   private static JsonApiDocument decodeUpdateDocument(String json) {
     return JsonApiJackson3.reader(

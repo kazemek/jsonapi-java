@@ -86,9 +86,14 @@ class ResourceBinderSpec extends Specification {
   JsonApiResourceBinder binder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
 
   @Unroll
-  def "binds #id successfully"() {
+  def "binds resource #id successfully"() {
+    given:
+    def localBinder = converter == null
+        ? binder
+        : JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
+
     when:
-    def actual = bind(input, targetType, converter)
+    def actual = localBinder.fromResource(input as ResourceObject, targetType)
 
     then:
     actual == expected
@@ -137,23 +142,57 @@ class ResourceBinderSpec extends Specification {
       ResourceIdentifier.of(COMMENTS, "c1")
     ]) | null
     "relationship meta without linkage" | one(resourceWithMeta(attrs("title", "Hello"), rels(AUTHOR, Relationship.metaOnly(Meta.of([displayName: "Alice"]))), null)) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", null, null, new AuthorMeta("Alice")) | null
-    "resource collection" | many([
+  }
+
+  def "binds a resource collection directly"() {
+    given:
+    def resources = [
       resource(ARTICLES, "1", attrs("title", "One"), null),
       resource(ARTICLES, "2", attrs("title", "Two"), null)
-    ]) | FlatArticle | [
+    ]
+
+    when:
+    def actual = binder.fromResources(resources, FlatArticle)
+
+    then:
+    actual == [
       new FlatArticle("1", "One", null, null, null),
       new FlatArticle("2", "Two", null, null, null)
-    ] | null
-    "included resources are isolated" | includedInput() | FlatArticle | [
-      new FlatArticle("1", "T", null, ResourceIdentifier.of(PEOPLE, "p1"), null),
-      new FlatArticle("1", "T", null, ResourceIdentifier.of(PEOPLE, "p1"), null)
-    ] | null
+    ]
+  }
+
+  def "included resources do not affect direct flat resource binding"() {
+    given:
+    def firstPrimary = resource(
+        ARTICLES, "1", attrs("title", "T"), rels(AUTHOR, single(PEOPLE, "p1")))
+    def secondPrimary = resource(
+        ARTICLES, "1", attrs("title", "T"), rels(AUTHOR, single(PEOPLE, "p1")))
+    def firstDocument = document(firstPrimary, [
+      resource(PEOPLE, "p1", attrs("name", "Alice"), null)
+    ])
+    def secondDocument = document(secondPrimary, [
+      resource(PEOPLE, "p1", attrs("name", "AliceChanged"), null)
+    ])
+
+    when:
+    def first = binder.fromResource(primaryResource(firstDocument), FlatArticle)
+    def second = binder.fromResource(primaryResource(secondDocument), FlatArticle)
+
+    then:
+    first == new FlatArticle(
+        "1", "T", null, ResourceIdentifier.of(PEOPLE, "p1"), null)
+    second == first
   }
 
   @Unroll
-  def "fails with #id due to mapping diagnostic"() {
+  def "fails to bind resource #id due to mapping diagnostic"() {
+    given:
+    def localBinder = converter == null
+        ? binder
+        : JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
+
     when:
-    bind(input, targetType, converter)
+    localBinder.fromResource(input as ResourceObject, targetType)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -164,10 +203,6 @@ class ResourceBinderSpec extends Specification {
     where:
     id | input | targetType | diagnostic | propertyPath | resourceClass | converter
     "resource type mismatch" | one(resource(PEOPLE, "p1", null, null)) | FlatArticle | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type" | FlatArticle | null
-    "resource collection validates every element type" | many([
-      resource(ARTICLES, "1", null, null),
-      resource(PEOPLE, "p1", null, null)
-    ]) | FlatArticle | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type" | FlatArticle | null
     "unregistered to-one relationship target" | one(resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1")))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/author/data" | Person | null
     "unregistered to-many relationship target" | one(resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1"])))) | FlatUnregisteredRelationshipsArticle | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_TARGET | "/relationships/comments/data" | List | null
     "identifier converter throws" | one(resource(ARTICLES, "42", null, null)) | FlatIntIdArticle | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id" | Integer | throwingConverter()
@@ -189,6 +224,23 @@ class ResourceBinderSpec extends Specification {
     "getter-only attribute" | one(resource("getter-only", "1", attrs("title", "supplied"), null)) | DirectionalityReadFixtures.GetterOnly | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/attributes/title" | DirectionalityReadFixtures.GetterOnly | null
     "getter-only identifier from id" | one(resource("getter-only-id", "supplied", null, null)) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/id" | DirectionalityReadFixtures.GetterOnlyIdentifier | null
     "getter-only identifier from lid" | one(resourceWithLid("getter-only-id", "client-lid", null)) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/lid" | DirectionalityReadFixtures.GetterOnlyIdentifier | null
+  }
+
+  def "resource collection validates every element type"() {
+    given:
+    def resources = [
+      resource(ARTICLES, "1", null, null),
+      resource(PEOPLE, "p1", null, null)
+    ]
+
+    when:
+    binder.fromResources(resources, FlatArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.RESOURCE_TYPE_MISMATCH
+    ex.propertyPath() == "/type"
+    ex.resourceClass() == FlatArticle
   }
 
   def "naming strategy renames bound attribute keys"() {
@@ -563,37 +615,9 @@ class ResourceBinderSpec extends Specification {
     article.author() == null
   }
 
-  private Object bind(Map input, Class targetType, IdentifierConverter converter) {
-    def localBinder = converter == null
-        ? binder
-        : JsonApiJackson3.resourceBinder(JsonMapper.builder().build(), converter)
-    def kind = input["kind"]
-    def value = input["value"]
-    switch (kind) {
-      case "single":
-        return localBinder.fromResource(value as ResourceObject, targetType)
-      case "collection":
-        return localBinder.fromResources(value as List, targetType)
-      case "dual":
-        List<JsonApiDocument> documents = value as List<JsonApiDocument>
-        return documents.collect { JsonApiDocument document ->
-          localBinder.fromResource(primaryResource(document), targetType)
-        }
-      default:
-        throw new IllegalArgumentException("Unknown binder input: " + kind)
-    }
-  }
 
-  private static Map one(ResourceObject resource) {
-    [kind: "single", value: resource]
-  }
-
-  private static Map many(List<ResourceObject> resources) {
-    [kind: "collection", value: resources]
-  }
-
-  private static Map dual(JsonApiDocument first, JsonApiDocument second) {
-    [kind: "dual", value: [first, second]]
+  private static ResourceObject one(ResourceObject resource) {
+    return resource
   }
 
   private static ResourceObject resource(String type, String id, Map attrs, Map rels) {
