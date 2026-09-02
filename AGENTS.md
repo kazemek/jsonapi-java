@@ -27,10 +27,12 @@
   test fixtures under `src/test/java/`.
 - `build-logic/` owns shared Java/test/nullness/coverage and Spotless configuration. Dependency
   versions are in `gradle/libs.versions.toml`; there is no code-generation step.
-- Shared test fixtures contain passive DTOs, canonical JSON/schema resources, and the neutral
-  `TestFixtureResources` loader under `jsonapi-java-jackson-api/src/testFixtures`. Behavioral
-  assertions belong in each adapter's own tests.
-  Do not introduce shared test orchestration, scenario registries, or assertion frameworks.
+- Shared test fixtures contain major-neutral application-shaped DTOs, canonical JSON/schema
+  resources, and the neutral `TestFixtureResources` loader under
+  `jsonapi-java-jackson-api/src/testFixtures`. Fixture behavior is limited to the minimum needed to
+  represent or observe the application shape under test; behavioral expectations and assertions
+  belong in each adapter's own tests. Do not introduce shared test orchestration, expected-outcome
+  descriptors, scenario registries, or assertion frameworks.
 - Before changing shared fixtures or corpora, read the affected corpus/schema resource READMEs; those files own fixture-specific invariants.
 
 # Task Routing
@@ -111,6 +113,32 @@ those capabilities are unavailable.
 - Production Java packages are JSpecify `@NullMarked`; NullAway checks `compileJava` only. ArchUnit
   enforces module dependency allowlists. Do not weaken those rules without updating
   `docs/adr/010-architectural-tests.md`.
+
+# Test Design
+
+Adapter tests optimize for locality and independent behavioral proof rather than production-style
+DRYness. Small duplication is preferable to indirection that hides which API is exercised or what
+behavior is expected.
+
+- A parameterized test should normally exercise one production entry point and one assertion shape.
+  Do not route rows through `kind`, `operation`, `source`, or expected-outcome tags that choose the
+  production call or verification strategy. Split those cases into separate tests instead.
+- Prefer direct value equality and explicit assertions. Do not build generic recursive comparators,
+  semantic verifiers, or assertion DSLs to accommodate exceptional cases; isolate exceptional
+  ordering, array, or representation semantics in focused tests with focused assertions.
+- Small spec-local helpers are appropriate when they only construct repeated input or express one
+  narrow assertion. If understanding a test requires following a registry, dispatcher, verifier, or
+  several helper layers, simplify the test.
+- Shared `testFixtures` may provide major-neutral input data and application-shaped types, including
+  minimal observable behavior such as access counters when the behavior under test requires it.
+  They must not invoke adapter APIs, select scenarios, encode expected behavioral outcomes, or
+  contain assertions. Jackson-major-specific mechanism fixtures remain adapter-local.
+- Shared JSON/schema corpora are test input and inventory, not a behavioral oracle. Adapter-specific
+  diagnostics, locations, policies, and expected decoded/mapped values belong in adapter-owned
+  specifications.
+- Branches inside test doubles, custom serializers/deserializers, concurrency probes, or other code
+  that models a genuinely branching production collaborator are fine. The smell is control flow
+  whose purpose is deciding which test operation or assertion semantics a row represents.
 
 # Knowledge And Plans
 

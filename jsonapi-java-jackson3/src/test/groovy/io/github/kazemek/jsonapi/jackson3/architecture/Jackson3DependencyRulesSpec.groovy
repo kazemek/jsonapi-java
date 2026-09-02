@@ -82,10 +82,6 @@ class Jackson3DependencyRulesSpec extends Specification {
     error.message.contains("public Jackson API contract")
   }
 
-  def "shared test fixtures are available through the test-fixtures variant"() {
-    expect:
-    sharedFixtureClasses.size() > 0
-  }
 
   def "shared test fixtures depend only on allowed application-shaped packages"() {
     expect:

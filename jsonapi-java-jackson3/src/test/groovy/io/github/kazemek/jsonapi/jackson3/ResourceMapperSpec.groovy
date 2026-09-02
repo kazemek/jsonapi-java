@@ -86,58 +86,94 @@ class ResourceMapperSpec extends Specification {
     def actual = mapper.toResource(input)
 
     then:
-    assertResourceEquals(expected, actual, unordered)
+    actual == expected
 
     where:
-    id | input | expected | unordered
-    "explicit @JsonApiId and @JsonApiAttribute" | new Article("1", "Hello", "Body text", List.of(), null) | articleResource("1", "Hello", "Body text", List.of(), null) | [] as Set
-    "attribute name override" | new Article("1", TITLE_TEXT, "Content", List.of(), null) | articleResource("1", TITLE_TEXT, "Content", List.of(), null) | [] as Set
-    "conventional id property" | new ConventionalId("42", "name value") | new ResourceObject("conventionals", "42", null, Attributes.ofAttributes(singleAttribute("name", "name value")), null, null, null, Map.of()) | [] as Set
-    "unannotated extra property is not an attribute" | new ArticleWithUnannotatedExtra("1", TITLE_TEXT, "secret") | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT)) | [] as Set
-    "maps @JsonProperty naming" | new BlogWithJsonProperty("b1", MY_BLOG) | new ResourceObject("blogs", "b1", null, Attributes.ofAttributes(singleAttribute("blog_title", MY_BLOG)), null, null, null, Map.of()) | [] as Set
-    "nullable to-one relationship to null linkage" | new Article("1", "T", "B", List.of(), null) | articleResource("1", "T", "B", List.of(), null) | [] as Set
-    "to-one relationship to single linkage" | new Article("1", "T", "B", List.of(), new Person("p1", ALICE)) | articleResource("1", "T", "B", List.of(), new Person("p1", ALICE)) | [] as Set
-    "empty to-many relationship to empty linkage" | new Article("1", "T", "B", List.of(), null) | articleResource("1", "T", "B", List.of(), null) | [] as Set
-    "populated to-many relationship" | new Article("1", "T", "B", List.of(new Comment("c1", "Nice", null), new Comment("c2", GREAT, null)), null) | articleResource("1", "T", "B", List.of(new Comment("c1", "Nice", null), new Comment("c2", GREAT, null)), null) | [] as Set
-    "Set-based to-many relationship" | new ArticleWithSet("1", "T", TAGS_SET) | articleWithSetResource() | [TAGS] as Set
-    "mutable POJO" | new SamplePojo("p1", "Example", List.of()) | new ResourceObject("pojos", "p1", null, Attributes.ofAttributes(singleAttribute("display-name", "Example")), Relationships.ofRelationships(Map.of(COMMENTS, relationship(RelationshipData.IdentifierCollectionLinkage.empty()))), null, null, Map.of()) | [] as Set
-    "to-one identifier meta onto linkage" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of(), null) | [] as Set
-    "to-many identifier meta with each wrapper element" | new ArticleWithRelationshipLinkage("1", "T", null, List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)), new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)), null, null) | identifierMetaArticle(null, null, List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))), ResourceIdentifier.of(COMMENTS, "c2")), null) | [] as Set
-    "null wrapper meta leaves ResourceIdentifier meta in place" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null, List.of(), null) | [] as Set
-    "relationship meta and identifier meta independently" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)), List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true))), new AuthorMeta(ALICE), new CommentsRelationshipMeta("open")) | identifierMetaArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), Meta.of(Map.of(DISPLAY_NAME, ALICE)), List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true)))), Meta.of(Map.of("status", "open"))) | [] as Set
-    "empty to-many RelationshipLinkage collection" | new ArticleWithRelationshipLinkage("1", "T", null, List.of(), null, null) | identifierMetaArticle(null, null, List.of(), null) | [] as Set
+    id | input | expected
+    "explicit @JsonApiId and @JsonApiAttribute" | new Article("1", "Hello", "Body text", List.of(), null) | articleResource("1", "Hello", "Body text", List.of(), null)
+    "attribute name override" | new Article("1", TITLE_TEXT, "Content", List.of(), null) | articleResource("1", TITLE_TEXT, "Content", List.of(), null)
+    "conventional id property" | new ConventionalId("42", "name value") | new ResourceObject("conventionals", "42", null, Attributes.ofAttributes(singleAttribute("name", "name value")), null, null, null, Map.of())
+    "unannotated extra property is not an attribute" | new ArticleWithUnannotatedExtra("1", TITLE_TEXT, "secret") | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT))
+    "maps @JsonProperty naming" | new BlogWithJsonProperty("b1", MY_BLOG) | new ResourceObject("blogs", "b1", null, Attributes.ofAttributes(singleAttribute("blog_title", MY_BLOG)), null, null, null, Map.of())
+    "nullable to-one relationship to null linkage" | new Article("1", "T", "B", List.of(), null) | articleResource("1", "T", "B", List.of(), null)
+    "to-one relationship to single linkage" | new Article("1", "T", "B", List.of(), new Person("p1", ALICE)) | articleResource("1", "T", "B", List.of(), new Person("p1", ALICE))
+    "empty to-many relationship to empty linkage" | new Article("1", "T", "B", List.of(), null) | articleResource("1", "T", "B", List.of(), null)
+    "populated to-many relationship" | new Article("1", "T", "B", List.of(new Comment("c1", "Nice", null), new Comment("c2", GREAT, null)), null) | articleResource("1", "T", "B", List.of(new Comment("c1", "Nice", null), new Comment("c2", GREAT, null)), null)
+    "mutable POJO" | new SamplePojo("p1", "Example", List.of()) | new ResourceObject("pojos", "p1", null, Attributes.ofAttributes(singleAttribute("display-name", "Example")), Relationships.ofRelationships(Map.of(COMMENTS, relationship(RelationshipData.IdentifierCollectionLinkage.empty()))), null, null, Map.of())
+    "to-one identifier meta onto linkage" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), null, List.of(), null)
+    "to-many identifier meta with each wrapper element" | new ArticleWithRelationshipLinkage("1", "T", null, List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)), new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)), null, null) | identifierMetaArticle(null, null, List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))), ResourceIdentifier.of(COMMENTS, "c2")), null)
+    "null wrapper meta leaves ResourceIdentifier meta in place" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null, List.of(), null)
+    "relationship meta and identifier meta independently" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)), List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true))), new AuthorMeta(ALICE), new CommentsRelationshipMeta("open")) | identifierMetaArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))), Meta.of(Map.of(DISPLAY_NAME, ALICE)), List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true)))), Meta.of(Map.of("status", "open")))
+    "empty to-many RelationshipLinkage collection" | new ArticleWithRelationshipLinkage("1", "T", null, List.of(), null, null) | identifierMetaArticle(null, null, List.of(), null)
     "array to-many RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle("1", [
       new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)),
       new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c2"), null)
-    ] as RelationshipLinkage[]) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))), ResourceIdentifier.of(COMMENTS, "c2"))) | [] as Set
-    "Set of RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.SetRelationshipLinkageArticle("1", Set.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true)))) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))))) | [COMMENTS] as Set
-    "Optional RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle("1", Optional.of(new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)))) | authorOnlyArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))) | [] as Set
-    "Map identifier meta on to-many RelationshipLinkage" | new RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle("1", List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), Map.of(PINNED, true)))) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))))) | [] as Set
-    "renamed RelationshipLinkage identifier meta onto the wire name" | new RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle("1", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR))) | authorOnlyArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR)))) | [] as Set
-    "identifier-meta overlay preserves ResourceIdentifier lid" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, null, "lid-1", null, Map.of()), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, null, "lid-1", Meta.of(Map.of(ROLE, EDITOR)), Map.of()), null, List.of(), null) | [] as Set
-    "identifier-meta overlay preserves additional members" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, "old")), Map.of(EXT_HREF, EXAMPLE_HREF)), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null, List.of(), null) | [] as Set
-    "resource meta and relationship meta" | new ArticleWithMeta("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta(ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
-    "null meta properties omit meta members" | new ArticleWithMeta("1", "T", null, null, null) | articleWithMetaResource(null, null, null) | [] as Set
-    "empty map meta emits empty members" | new ArticleWithMapMeta("1", "T", null, Map.of(), null) | articleWithMetaResource(Meta.empty(), null, null) | [] as Set
-    "populated map meta writes resource and relationship members" | new ArticleWithMapMeta("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), Map.of(SOURCE, "cms"), Map.of(DISPLAY_NAME, ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
-    "renamed relationship meta onto the wire name" | new WholeMetaTargetFixtures.RenamedRelationshipMetaArticle("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta(ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
-    "Object whole-meta target writes a map value" | new WholeMetaTargetFixtures.ObjectMetaArticle("1", Map.of(SOURCE, "cms")) | objectMetaArticle(Meta.of(Map.of(SOURCE, "cms"))) | [] as Set
-    "Optional-wrapped bean meta writes unwrapped members" | new ArticleWithOptionalMeta("1", "T", null, Optional.of(new ArticleMeta("cms", "n")), Optional.of(new AuthorMeta(ALICE))) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), null, Meta.of(Map.of(DISPLAY_NAME, ALICE))) | [] as Set
-    "present Optional attribute is unwrapped" | new RelationshipContainerFixtures.ArticleWithOptionalAttribute("1", TITLE_TEXT, Optional.of("Sub")) | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT, "subtitle", "Sub")) | [] as Set
-    "empty Optional attribute is omitted" | new RelationshipContainerFixtures.ArticleWithOptionalAttribute("1", TITLE_TEXT, Optional.empty()) | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT)) | [] as Set
+    ] as RelationshipLinkage[]) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))), ResourceIdentifier.of(COMMENTS, "c2")))
+    "Optional RelationshipLinkage identifier meta" | new RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle("1", Optional.of(new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR)))) | authorOnlyArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))))
+    "Map identifier meta on to-many RelationshipLinkage" | new RelationshipLinkageContainerFixtures.MapRelationshipLinkageArticle("1", List.of(new RelationshipLinkage<>(ResourceIdentifier.of(COMMENTS, "c1"), Map.of(PINNED, true)))) | commentsOnlyArticle(List.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true)))))
+    "renamed RelationshipLinkage identifier meta onto the wire name" | new RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle("1", new RelationshipLinkage<>(ResourceIdentifier.of(PEOPLE, "p1"), new AuthorIdMeta(EDITOR))) | authorOnlyArticle(identifier(PEOPLE, "p1", Meta.of(Map.of(ROLE, EDITOR))))
+    "identifier-meta overlay preserves ResourceIdentifier lid" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, null, "lid-1", null, Map.of()), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, null, "lid-1", Meta.of(Map.of(ROLE, EDITOR)), Map.of()), null, List.of(), null)
+    "identifier-meta overlay preserves additional members" | new ArticleWithRelationshipLinkage("1", "T", new RelationshipLinkage<>(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, "old")), Map.of(EXT_HREF, EXAMPLE_HREF)), new AuthorIdMeta(EDITOR)), List.of(), null, null) | identifierMetaArticle(identifier(PEOPLE, "p1", null, Meta.of(Map.of(ROLE, EDITOR)), Map.of(EXT_HREF, EXAMPLE_HREF)), null, List.of(), null)
+    "resource meta and relationship meta" | new ArticleWithMeta("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta(ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE)))
+    "null meta properties omit meta members" | new ArticleWithMeta("1", "T", null, null, null) | articleWithMetaResource(null, null, null)
+    "empty map meta emits empty members" | new ArticleWithMapMeta("1", "T", null, Map.of(), null) | articleWithMetaResource(Meta.empty(), null, null)
+    "populated map meta writes resource and relationship members" | new ArticleWithMapMeta("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), Map.of(SOURCE, "cms"), Map.of(DISPLAY_NAME, ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE)))
+    "renamed relationship meta onto the wire name" | new WholeMetaTargetFixtures.RenamedRelationshipMetaArticle("1", "T", ResourceIdentifier.of(PEOPLE, "p1"), new ArticleMeta("cms", "n"), new AuthorMeta(ALICE)) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), ResourceIdentifier.of(PEOPLE, "p1"), Meta.of(Map.of(DISPLAY_NAME, ALICE)))
+    "Object whole-meta target writes a map value" | new WholeMetaTargetFixtures.ObjectMetaArticle("1", Map.of(SOURCE, "cms")) | objectMetaArticle(Meta.of(Map.of(SOURCE, "cms")))
+    "Optional-wrapped bean meta writes unwrapped members" | new ArticleWithOptionalMeta("1", "T", null, Optional.of(new ArticleMeta("cms", "n")), Optional.of(new AuthorMeta(ALICE))) | articleWithMetaResource(Meta.of(Map.of(SOURCE, "cms", "note", "n")), null, Meta.of(Map.of(DISPLAY_NAME, ALICE)))
+    "present Optional attribute is unwrapped" | new RelationshipContainerFixtures.ArticleWithOptionalAttribute("1", TITLE_TEXT, Optional.of("Sub")) | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT, "subtitle", "Sub"))
+    "empty Optional attribute is omitted" | new RelationshipContainerFixtures.ArticleWithOptionalAttribute("1", TITLE_TEXT, Optional.empty()) | attributesOnlyArticle("1", Map.of(TITLE, TITLE_TEXT))
     "array to-many relationship produces collection linkage" | new RelationshipContainerFixtures.ArticleWithCommentArray("1", "T", [
       new Comment("c1", "Nice", null),
       new Comment("c2", GREAT, null)
-    ] as Comment[]) | titledCommentsArticle("T", List.of(ResourceIdentifier.of(COMMENTS, "c1"), ResourceIdentifier.of(COMMENTS, "c2"))) | [] as Set
-    "present Optional to-one relationship produces single linkage" | new RelationshipContainerFixtures.ArticleWithOptionalRelationship("1", Optional.of(new Comment("c1", "Nice", null))) | commentRelationshipArticle(new RelationshipData.SingleLinkage(ResourceIdentifier.of(COMMENTS, "c1"))) | [] as Set
-    "empty Optional to-one relationship produces null linkage" | new RelationshipContainerFixtures.ArticleWithOptionalRelationship("1", Optional.empty()) | commentRelationshipArticle(RelationshipData.NullLinkage.INSTANCE) | [] as Set
-    "present Optional id is unwrapped to the identifier string" | new RelationshipContainerFixtures.ArticleWithOptionalId(Optional.of("99"), TITLE_TEXT) | attributesOnlyArticle("99", Map.of(TITLE, TITLE_TEXT)) | [] as Set
-    "inherited properties from a base class are mapped" | new InheritedBlogFixtures.ExtendedBlog("b1", MY_BLOG, "A description") | new ResourceObject("blogs", "b1", null, Attributes.ofAttributes(Map.of("name", MY_BLOG, "description", "A description")), null, null, null, Map.of()) | [] as Set
-    "leading null in a to-many ResourceIdentifier collection is skipped" | new RelationshipContainerFixtures.ArticleWithNullableIdentifierList("1", nullableList((ResourceIdentifier) null, ResourceIdentifier.of(COMMENTS, "1"))) | itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1"))) | [] as Set
+    ] as Comment[]) | titledCommentsArticle("T", List.of(ResourceIdentifier.of(COMMENTS, "c1"), ResourceIdentifier.of(COMMENTS, "c2")))
+    "present Optional to-one relationship produces single linkage" | new RelationshipContainerFixtures.ArticleWithOptionalRelationship("1", Optional.of(new Comment("c1", "Nice", null))) | commentRelationshipArticle(new RelationshipData.SingleLinkage(ResourceIdentifier.of(COMMENTS, "c1")))
+    "empty Optional to-one relationship produces null linkage" | new RelationshipContainerFixtures.ArticleWithOptionalRelationship("1", Optional.empty()) | commentRelationshipArticle(RelationshipData.NullLinkage.INSTANCE)
+    "present Optional id is unwrapped to the identifier string" | new RelationshipContainerFixtures.ArticleWithOptionalId(Optional.of("99"), TITLE_TEXT) | attributesOnlyArticle("99", Map.of(TITLE, TITLE_TEXT))
+    "inherited properties from a base class are mapped" | new InheritedBlogFixtures.ExtendedBlog("b1", MY_BLOG, "A description") | new ResourceObject("blogs", "b1", null, Attributes.ofAttributes(Map.of("name", MY_BLOG, "description", "A description")), null, null, null, Map.of())
+    "leading null in a to-many ResourceIdentifier collection is skipped" | new RelationshipContainerFixtures.ArticleWithNullableIdentifierList("1", nullableList((ResourceIdentifier) null, ResourceIdentifier.of(COMMENTS, "1"))) | itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1")))
     "leading null in a to-many ResourceIdentifier array is skipped" | new RelationshipContainerFixtures.ArticleWithNullableIdentifierArray("1", [
       null,
       ResourceIdentifier.of(COMMENTS, "1")
-    ] as ResourceIdentifier[]) | itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1"))) | [] as Set
+    ] as ResourceIdentifier[]) | itemsRelationshipArticle(List.of(ResourceIdentifier.of(COMMENTS, "1")))
+  }
+
+
+  def "maps Set-based relationships without depending on Set iteration order"() {
+    when:
+    def actual = mapper.toResource(new ArticleWithSet("1", "T", TAGS_SET))
+
+    then:
+    actual.type() == ARTICLES
+    actual.id() == "1"
+    actual.attributes().attributes() == [title: "T"]
+    def linkage = actual.relationships().relationships().tags.data()
+    linkage instanceof RelationshipData.IdentifierCollectionLinkage
+    linkage.identifiers().size() == 2
+    new HashSet<>(linkage.identifiers()) ==
+        new HashSet<>(List.of(
+        ResourceIdentifier.of(TAGS, "java"),
+        ResourceIdentifier.of(TAGS, "groovy")))
+  }
+
+  def "maps Set RelationshipLinkage meta without depending on Set iteration order"() {
+    given:
+    def input = new RelationshipLinkageContainerFixtures.SetRelationshipLinkageArticle(
+        "1",
+        Set.of(new RelationshipLinkage<>(
+        ResourceIdentifier.of(COMMENTS, "c1"), new CommentIdMeta(true))))
+
+    when:
+    def actual = mapper.toResource(input)
+
+    then:
+    actual.type() == ARTICLES
+    actual.id() == "1"
+    def linkage = actual.relationships().relationships().comments.data()
+    linkage instanceof RelationshipData.IdentifierCollectionLinkage
+    linkage.identifiers().size() == 1
+    new HashSet<>(linkage.identifiers()) ==
+        Set.of(identifier(COMMENTS, "c1", Meta.of(Map.of(PINNED, true))))
   }
 
   @Unroll
@@ -146,7 +182,7 @@ class ResourceMapperSpec extends Specification {
     def actual = mapper.toDocument(input)
 
     then:
-    assertDocumentEquals(expected, actual)
+    actual == expected
 
     where:
     id | input | expected
@@ -159,7 +195,7 @@ class ResourceMapperSpec extends Specification {
     def actual = mapper.toResourceCollection(input)
 
     then:
-    assertDocumentEquals(expected, actual)
+    actual == expected
 
     where:
     id | input | expected
@@ -172,7 +208,7 @@ class ResourceMapperSpec extends Specification {
     def actual = mapper.toDocument(input, envelope)
 
     then:
-    assertDocumentEquals(expected, actual)
+    actual == expected
 
     where:
     id | input | envelope | expected
@@ -426,135 +462,5 @@ class ResourceMapperSpec extends Specification {
     List<T> list = new ArrayList<>(values.length)
     Collections.addAll(list, values)
     return list
-  }
-
-  private static void assertResourceEquals(
-      ResourceObject expected, ResourceObject actual, Set<String> unorderedRelationships) {
-    assert expected.type() == actual.type()
-    assert expected.id() == actual.id()
-    assert expected.lid() == actual.lid()
-    assertAttributesEquals(expected.attributes(), actual.attributes())
-    assertRelationshipsEquals(expected.relationships(), actual.relationships(), unorderedRelationships)
-    assert expected.links() == actual.links()
-    assert expected.meta() == actual.meta()
-    assert expected.additionalMembers() == actual.additionalMembers()
-  }
-
-  private static void assertDocumentEquals(JsonApiDocument expected, JsonApiDocument actual) {
-    assertDocumentEquals(expected, actual, Collections.emptySet())
-  }
-
-  private static void assertDocumentEquals(
-      JsonApiDocument expected, JsonApiDocument actual, Set<String> unorderedRelationships) {
-    def expectedData = expected.data()
-    def actualData = actual.data()
-    assert expectedData != null
-    assert actualData != null
-    if (expectedData instanceof DocumentData.SingleResource) {
-      assert actualData instanceof DocumentData.SingleResource :
-      "expected SingleResource but was ${actualData?.class?.simpleName}"
-      assertResourceEquals(
-          ((DocumentData.SingleResource) expectedData).resource(),
-          ((DocumentData.SingleResource) actualData).resource(),
-          unorderedRelationships)
-    } else if (expectedData instanceof DocumentData.ResourceCollection) {
-      assert actualData instanceof DocumentData.ResourceCollection :
-      "expected ResourceCollection but was ${actualData?.class?.simpleName}"
-      List<ResourceObject> expectedResources = ((DocumentData.ResourceCollection) expectedData).resources()
-      List<ResourceObject> actualResources = ((DocumentData.ResourceCollection) actualData).resources()
-      assert expectedResources.size() == actualResources.size()
-      for (int i = 0; i < expectedResources.size(); i++) {
-        assertResourceEquals(expectedResources.get(i), actualResources.get(i), unorderedRelationships)
-      }
-    } else {
-      throw new AssertionError("unsupported expected primary data: ${expectedData.class.name}")
-    }
-    assert expected.meta() == actual.meta()
-    assert expected.jsonapi() == actual.jsonapi()
-    assert expected.links() == actual.links()
-    if (expected.included() == null || actual.included() == null) {
-      assert expected.included() == actual.included()
-    } else {
-      assert expected.included().size() == actual.included().size()
-      for (int i = 0; i < expected.included().size(); i++) {
-        assertResourceEquals(expected.included().get(i), actual.included().get(i), unorderedRelationships)
-      }
-    }
-    assert expected.additionalMembers() == actual.additionalMembers()
-  }
-
-  private static void assertAttributesEquals(Attributes expected, Attributes actual) {
-    if (expected == null || actual == null) {
-      assert expected == actual
-      return
-    }
-    assert expected.attributes() == actual.attributes()
-  }
-
-  private static void assertRelationshipsEquals(
-      Relationships expected, Relationships actual, Set<String> unorderedRelationships) {
-    if (expected == null || actual == null) {
-      assert expected == actual
-      return
-    }
-    assert expected.relationships().keySet() == actual.relationships().keySet()
-    for (Map.Entry<String, Relationship> entry : expected.relationships().entrySet()) {
-      String name = entry.getKey()
-      Relationship expectedRelationship = entry.getValue()
-      Relationship actualRelationship = actual.relationships().get(name)
-      assert actualRelationship != null
-      assert expectedRelationship.links() == actualRelationship.links()
-      assert expectedRelationship.meta() == actualRelationship.meta()
-      assert expectedRelationship.additionalMembers() == actualRelationship.additionalMembers()
-      assertLinkageEquals(
-          name, expectedRelationship.data(), actualRelationship.data(), unorderedRelationships.contains(name))
-    }
-  }
-
-  private static void assertLinkageEquals(
-      String relationshipName, RelationshipData expected, RelationshipData actual, boolean unordered) {
-    if (expected == null || actual == null) {
-      assert expected == actual
-      return
-    }
-    if (expected instanceof RelationshipData.NullLinkage) {
-      assert actual instanceof RelationshipData.NullLinkage :
-      "${relationshipName} expected NullLinkage but was ${actual?.class?.simpleName}"
-      return
-    }
-    if (expected instanceof RelationshipData.SingleLinkage) {
-      assert actual instanceof RelationshipData.SingleLinkage :
-      "${relationshipName} expected SingleLinkage but was ${actual?.class?.simpleName}"
-      assert ((RelationshipData.SingleLinkage) expected).identifier() ==
-      ((RelationshipData.SingleLinkage) actual).identifier()
-      return
-    }
-    if (expected instanceof RelationshipData.IdentifierCollectionLinkage) {
-      assert actual instanceof RelationshipData.IdentifierCollectionLinkage :
-      "${relationshipName} expected IdentifierCollectionLinkage but was ${actual?.class?.simpleName}"
-      assertIdentifierCollection(
-          relationshipName,
-          ((RelationshipData.IdentifierCollectionLinkage) expected).identifiers(),
-          ((RelationshipData.IdentifierCollectionLinkage) actual).identifiers(),
-          unordered)
-      return
-    }
-    throw new AssertionError("${relationshipName} unsupported linkage ${expected.class.name}")
-  }
-
-  private static void assertIdentifierCollection(
-      String relationshipName,
-      List<ResourceIdentifier> expected,
-      List<ResourceIdentifier> actual,
-      boolean unordered) {
-    assert expected.size() == actual.size() :
-    "${relationshipName} linkage size expected ${expected.size()} but was ${actual.size()}"
-    if (unordered) {
-      assert new HashSet<>(expected) == new HashSet<>(actual) :
-      "${relationshipName} unordered identifiers expected ${expected} but was ${actual}"
-    } else {
-      assert expected == actual :
-      "${relationshipName} identifiers expected ${expected} but was ${actual}"
-    }
   }
 }
