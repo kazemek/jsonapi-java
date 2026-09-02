@@ -1,8 +1,14 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
+import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.Link
 import io.github.kazemek.jsonapi.core.model.Links
+import io.github.kazemek.jsonapi.core.model.Relationship
+import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.mapping.RelationshipDecoration
@@ -42,28 +48,15 @@ class ResourceDecorationSpec extends Specification {
     def resource = mapper.toResource(input)
 
     then:
-    resource.type() == "articles"
-    resource.id() == "1"
-    resource.links() == expectedResourceLinks
-    def relationships = resource.relationships()?.relationships()
-    if (expectedCommentsLinks == null) {
-      if (relationships?.containsKey("comments")) {
-        assert relationships.get("comments").links() == null
-      }
-    } else {
-      assert relationships != null
-      assert relationships.containsKey("comments")
-      assert relationships.get("comments").links() == expectedCommentsLinks
-      assert relationships.get("comments").data() != null
-    }
+    resource == expectedResource
 
     where:
-    id | input | registry | expectedResourceLinks | expectedCommentsLinks
-    "resource links preserve attributes and linkage" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.ofLinks(resourceLinks) } as ResourceDecorator).build() | resourceLinks | null
-    "relationship links preserve linkage" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | null | commentsLinks
-    "resource and relationship links together preserve author linkage" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), new Person("p1", "Alice")) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().links(resourceLinks).relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | resourceLinks | commentsLinks
-    "present-empty resource links are preserved" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.ofLinks(Links.empty()) } as ResourceDecorator).build() | Links.empty() | null
-    "present-empty relationship links are preserved" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(Links.empty())).build() } as ResourceDecorator).build() | null | Links.empty()
+    id | input | registry | expectedResource
+    "resource links preserve attributes and linkage" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.ofLinks(resourceLinks) } as ResourceDecorator).build() | expectedArticle(resourceLinks, null, nullLinkage(), emptyCommentsLinkage())
+    "relationship links preserve linkage" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | expectedArticle(null, commentsLinks, nullLinkage(), commentsLinkage())
+    "resource and relationship links together preserve author linkage" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), new Person("p1", "Alice")) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().links(resourceLinks).relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | expectedArticle(resourceLinks, commentsLinks, authorLinkage(), commentsLinkage())
+    "present-empty resource links are preserved" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.ofLinks(Links.empty()) } as ResourceDecorator).build() | expectedArticle(Links.empty(), null, nullLinkage(), emptyCommentsLinkage())
+    "present-empty relationship links are preserved" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(Links.empty())).build() } as ResourceDecorator).build() | expectedArticle(null, Links.empty(), nullLinkage(), commentsLinkage())
   }
 
   @Unroll
@@ -95,30 +88,13 @@ class ResourceDecorationSpec extends Specification {
     def primary = (document.data() as DocumentData.SingleResource).resource()
 
     then:
-    primary.type() == "articles"
-    primary.links() == expectedPrimaryLinks
-    if (expectedCommentsLinks == null) {
-      if (primary.relationships()?.relationships()?.containsKey("comments")) {
-        assert primary.relationships().relationships().get("comments").links() == null
-      }
-    } else {
-      assert primary.relationships() != null
-      assert primary.relationships().relationships().containsKey("comments")
-      assert primary.relationships().relationships().get("comments").links() == expectedCommentsLinks
-    }
-    if (expectedIncludedLinks != null) {
-      assert document.included() != null
-      assert document.included().size() == 1
-      assert document.included().get(0).links() == expectedIncludedLinks
-      assert document.included().get(0).type() == "people"
-    } else {
-      assert document.included() == null || document.included().isEmpty()
-    }
+    primary == expectedPrimary
+    document.included() == expectedIncluded
 
     where:
-    id | input | registry | selection | policy | expectedPrimaryLinks | expectedCommentsLinks | expectedIncludedLinks
-    "included resource receives decoration" | new Article("1", "Title", "Body", List.of(), new Person("p1", "Alice")) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.empty() } as ResourceDecorator).register(Person, { Person p -> ResourceDecoration.ofLinks(personLinks) } as ResourceDecorator).build() | RepresentationSelection.builder().include(IncludePath.of("author")).build() | RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll()) | null | null | personLinks
-    "decorated relationship survives without inclusion" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | RepresentationSelection.none() | RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll()) | null | commentsLinks | null
+    id | input | registry | selection | policy | expectedPrimary | expectedIncluded
+    "included resource receives decoration" | new Article("1", "Title", "Body", List.of(), new Person("p1", "Alice")) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.empty() } as ResourceDecorator).register(Person, { Person p -> ResourceDecoration.ofLinks(personLinks) } as ResourceDecorator).build() | RepresentationSelection.builder().include(IncludePath.of("author")).build() | RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll()) | expectedArticle(null, null, authorLinkage(), emptyCommentsLinkage()) | [expectedPerson(personLinks)]
+    "decorated relationship survives without inclusion" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | RepresentationSelection.none() | RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll()) | expectedArticle(null, commentsLinks, nullLinkage(), commentsLinkage()) | null
   }
 
   def "decorated relationship does not resurrect fieldset-omitted relationship"() {
@@ -240,5 +216,55 @@ class ResourceDecorationSpec extends Specification {
     tree.get("data").get("links").isEmpty()
     tree.get("data").get("relationships").get("comments").get("links").isObject()
     tree.get("data").get("relationships").get("comments").get("links").isEmpty()
+  }
+
+  private static ResourceObject expectedArticle(
+      Links resourceLinks,
+      Links commentsLinks,
+      RelationshipData authorData,
+      RelationshipData commentsData) {
+    new ResourceObject(
+        "articles",
+        "1",
+        null,
+        Attributes.ofAttributes([title: "Title", "body-text": "Body"]),
+        Relationships.ofRelationships([
+          author: new Relationship(authorData, null, null, Map.of()),
+          comments: new Relationship(commentsData, commentsLinks, null, Map.of())
+        ]),
+        resourceLinks,
+        null,
+        Map.of())
+  }
+
+  private static ResourceObject expectedPerson(Links links) {
+    new ResourceObject(
+        "people",
+        "p1",
+        null,
+        Attributes.ofAttributes([name: "Alice"]),
+        null,
+        links,
+        null,
+        Map.of())
+  }
+
+  private static RelationshipData nullLinkage() {
+    RelationshipData.NullLinkage.INSTANCE
+  }
+
+  private static RelationshipData emptyCommentsLinkage() {
+    RelationshipData.IdentifierCollectionLinkage.empty()
+  }
+
+  private static RelationshipData commentsLinkage() {
+    new RelationshipData.IdentifierCollectionLinkage([
+      new ResourceIdentifier("comments", "c1", null, null, Map.of())
+    ])
+  }
+
+  private static RelationshipData authorLinkage() {
+    new RelationshipData.SingleLinkage(
+        new ResourceIdentifier("people", "p1", null, null, Map.of()))
   }
 }

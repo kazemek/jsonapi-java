@@ -17,13 +17,24 @@ import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage
+import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.LinksContext
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
+import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
+import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument
+import io.github.kazemek.jsonapi.jackson.representation.IncludePath
+import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 
 import spock.lang.Shared
 import spock.lang.Specification
@@ -71,6 +82,168 @@ class DocumentWriterContractSpec extends Specification {
     "a relationship linkage" | directRelationshipDocument() | '{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9"}}}}}'
     "a compound document" | directCompoundDocument() | '{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"9"}}}},"included":[{"type":"people","id":"9","attributes":{"name":"Dan"}}]}'
     "explicit null data and meta" | directNullDataDocument() | '{"data":null,"meta":{"reason":"deleted"}}'
+  }
+
+  def "mapped provenance composes through every write sink"() {
+    given:
+    def resourceMapper = JsonApiJackson3.resourceMapper(mapper)
+    def mapped = resourceMapper.toMappedDocument(
+        new Article("1", "Title", "Body", List.of(), new Person("9", "Dan")),
+        null,
+        RepresentationSelection.builder()
+        .include(IncludePath.of("author"))
+        .fields("articles", "title")
+        .build(),
+        RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()))
+    def writer = JsonApiJackson3.writer(mapper)
+    def expected = mapper.readTree(
+        '{"data":{"type":"articles","id":"1","attributes":{"title":"Title"}},' +
+        '"included":[{"type":"people","id":"9","attributes":{"name":"Dan"}}]}')
+    def bytesOut = new ByteArrayOutputStream()
+    def charsOut = new StringWriter()
+    def generatorOut = new ByteArrayOutputStream()
+
+    when:
+    def asString = writer.writeValueAsString(mapped)
+    def asBytes = writer.writeValueAsBytes(mapped)
+    writer.writeValue(bytesOut, mapped)
+    writer.writeValue(charsOut, mapped)
+    def generator = writer.mapper().createGenerator(generatorOut)
+    try {
+      writer.writeValue(generator, mapped)
+    } finally {
+      generator.close()
+    }
+
+    then:
+    mapped.sparseFieldsetLinkageExemptions() == Set.of(ResourceIdentity.ofId("people", "9"))
+    mapper.readTree(asString) == expected
+    mapper.readTree(asBytes) == expected
+    mapper.readTree(bytesOut.toByteArray()) == expected
+    mapper.readTree(charsOut.toString()) == expected
+    mapper.readTree(generatorOut.toByteArray()) == expected
+    new String(asBytes, StandardCharsets.UTF_8) == asString
+    new String(bytesOut.toByteArray(), StandardCharsets.UTF_8) == asString
+    charsOut.toString() == asString
+
+    when:
+    writer.writeValueAsString(mapped.document())
+
+    then:
+    def exception = thrown(JsonApiValidationException)
+    exception.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+  }
+
+  def "mapped writing preserves unrelated caller validation settings"() {
+    given:
+    def resourceMapper = JsonApiJackson3.resourceMapper(mapper)
+    def mapped = resourceMapper.toMappedDocument(
+        new Article("1", "Title", "Body", List.of(), new Person("9", "Dan")),
+        new DocumentEnvelope(null, Meta.of(["myext:version": "1.0"]), null),
+        RepresentationSelection.builder()
+        .include(IncludePath.of("author"))
+        .fields("articles", "title")
+        .build(),
+        RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()))
+    def base = new ValidationContext(
+        DocumentUsage.RESPONSE_OR_OTHER,
+        Set.of("myext"),
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        LinksContext.TOP_LEVEL,
+        Map.of(),
+        null)
+
+    when:
+    JsonApiJackson3.writer(mapper, base).writeValueAsString(mapped)
+
+    then:
+    noExceptionThrown()
+
+    when:
+    JsonApiJackson3.writer(mapper).writeValueAsString(mapped)
+
+    then:
+    def exception = thrown(JsonApiValidationException)
+    exception.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+  }
+
+  def "mapped writing unions bound and mapped linkage exemptions"() {
+    given:
+    def article = ResourceObject.of("articles", "1")
+    def boundOrphan = ResourceObject.of("people", "9")
+    def mappedOrphan = ResourceObject.of("people", "10")
+    def mapped = new MappedDocument(
+        new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null,
+        null,
+        null,
+        null,
+        List.of(boundOrphan, mappedOrphan),
+        Map.of()),
+        Set.of(ResourceIdentity.ofId("people", "10")))
+    def base = ValidationContext.defaults()
+        .withSparseFieldsetLinkageExemptions(Set.of(ResourceIdentity.ofId("people", "9")))
+
+    when:
+    JsonApiJackson3.writer(mapper, base).writeValueAsString(mapped)
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "mapped provenance exempts only mapped roots and preserves full-linkage validation"() {
+    given:
+    def primary = ResourceObject.of("articles", "1")
+    def exemptedAuthor = ResourceObject.of("people", "9")
+    def unrelatedOrphan = ResourceObject.of("tags", "7")
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(primary),
+        null,
+        null,
+        null,
+        null,
+        List.of(exemptedAuthor, unrelatedOrphan),
+        Map.of())
+    def writer = JsonApiJackson3.writer(mapper)
+
+    when:
+    writer.writeValueAsString(new MappedDocument(
+        document, Set.of(ResourceIdentity.ofId("people", "9"))))
+
+    then:
+    def exception = thrown(JsonApiValidationException)
+    exception.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
+
+    when:
+    def subtreeAuthor = new ResourceObject(
+        "people",
+        "9",
+        null,
+        null,
+        Relationships.ofRelationships([
+          editor: Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "10")))
+        ]),
+        null,
+        null,
+        Map.of())
+    def childOfExempted = ResourceObject.of("people", "10")
+    def subtreeDocument = new JsonApiDocument(
+        new DocumentData.SingleResource(primary),
+        null,
+        null,
+        null,
+        null,
+        List.of(subtreeAuthor, childOfExempted),
+        Map.of())
+    writer.writeValueAsString(new MappedDocument(
+        subtreeDocument, Set.of(ResourceIdentity.ofId("people", "9"))))
+
+    then:
+    noExceptionThrown()
   }
 
   def "roundtrips fixture #path through reader and writer"() {

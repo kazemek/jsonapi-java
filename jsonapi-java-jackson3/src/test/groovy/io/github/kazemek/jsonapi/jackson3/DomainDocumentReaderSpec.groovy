@@ -20,15 +20,18 @@ import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson.mapping.DomainData
+import io.github.kazemek.jsonapi.jackson.mapping.IncludedResources
 import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatLidArticle
 import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
+import io.github.kazemek.jsonapi.fixtures.enveloperead.EmptyResourceType
 import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatNode
 import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatStrictArticle
 import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatThrowingArticle
+import io.github.kazemek.jsonapi.fixtures.enveloperead.InvalidResourceType
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
@@ -105,10 +108,18 @@ class DomainDocumentReaderSpec extends Specification {
     given:
     def mapper = JsonMapper.builder().build()
     def reader = JsonApiJackson3.reader(mapper, DocumentReadContext.resourceDefaults())
-    def envelope = newReader().fromDocument(
-        reader.readValue(
+    def decoded = reader.readValue(
         '{"errors":[{"status":"400"}],"meta":{"note":"n"},' +
-        '"jsonapi":{"version":"1.1"},"links":{"self":"/errors"}}'))
+        '"jsonapi":{"version":"1.1"},"links":{"self":"/errors"}}')
+    def envelope = newReader().fromDocument(
+        new JsonApiDocument(
+        decoded.data(),
+        decoded.errors(),
+        decoded.meta(),
+        decoded.jsonapi(),
+        decoded.links(),
+        decoded.included(),
+        ['@request-id': 'req-1']))
 
     expect:
     envelope.errors().size() == 1
@@ -116,6 +127,64 @@ class DomainDocumentReaderSpec extends Specification {
     envelope.meta().members() == [note: 'n']
     envelope.jsonapi().version() == '1.1'
     envelope.links().links().get('self').href() == '/errors'
+    envelope.additionalMembers() == ['@request-id': 'req-1']
+  }
+
+  def "domain envelope errors are unmodifiable"() {
+    given:
+    def envelope = newReader().readValue('{"errors":[{"status":"400"}]}')
+
+    when:
+    envelope.errors().clear()
+
+    then:
+    thrown(UnsupportedOperationException)
+  }
+
+  def "domain envelope additional members are unmodifiable"() {
+    given:
+    def envelope = newReader().readValue('{"errors":[{"status":"400"}],"@request-id":"req-1"}')
+
+    when:
+    envelope.additionalMembers().put('@other', 'value')
+
+    then:
+    thrown(UnsupportedOperationException)
+  }
+
+  def "domain envelope included resources are unmodifiable"() {
+    given:
+    def envelope = newReader(FlatArticle, Person).readValue(
+        corpusText('documents/compound-document.json'))
+
+    when:
+    envelope.included().resources().clear()
+
+    then:
+    thrown(UnsupportedOperationException)
+  }
+
+  def "included resources defensively copy construction inputs"() {
+    given:
+    def identity = ResourceIdentity.ofId('people', '9')
+    def person = new Person('9', 'Dan')
+    def resources = new ArrayList([person])
+    def identities = new ArrayList([new LinkedHashSet([identity])])
+    def included = IncludedResources.of(resources, identities)
+
+    when:
+    resources.clear()
+    identities[0].clear()
+
+    then:
+    included.resources() == [person]
+    included.find(identity).get().is(person)
+
+    when:
+    included.resources().clear()
+
+    then:
+    thrown(UnsupportedOperationException)
   }
 
   @Unroll
@@ -646,6 +715,24 @@ class DomainDocumentReaderSpec extends Specification {
     def missing = thrown(JsonApiMappingException)
     missing.diagnostic() == MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
     missing.location() == null
+  }
+
+  @Unroll
+  def "registry rejects #resourceClass with an invalid resource type"() {
+    when:
+    ResourceTypeRegistry.builder().register(resourceClass).build()
+
+    then:
+    def exception = thrown(JsonApiMappingException)
+    exception.diagnostic() == MappingDiagnostic.INVALID_RESOURCE_TYPE
+    exception.resourceClass() == resourceClass
+    exception.location() == null
+
+    where:
+    resourceClass << [
+      EmptyResourceType,
+      InvalidResourceType
+    ]
   }
 
   @JsonApiResource(type = "loc-articles")
