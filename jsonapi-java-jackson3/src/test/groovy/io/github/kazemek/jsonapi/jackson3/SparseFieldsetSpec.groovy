@@ -1,8 +1,11 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
@@ -51,30 +54,39 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(article(), null, selection, RepresentationPolicy.defaults())
 
     then:
-    assertFieldsetResource(
-        primaryResource(mapped),
-        "articles",
-        "1",
-        expectedAttributeNames,
-        expectedAttributes,
-        expectedRelationshipNames,
-        expectedLinkage)
+    primaryResource(mapped) == expectedResource
     mapped.document().included() == null
     mapped.sparseFieldsetLinkageExemptions().isEmpty()
 
     where:
-    description | fieldsets | expectedAttributeNames | expectedAttributes | expectedRelationshipNames | expectedLinkage
-    "an absent type fieldset as unrestricted" | [:] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["comments", "author"] | ["comments": commentsLinkage(), "author": personLinkage(dan())]
-    "an attribute-only fieldset" | ["articles": ["title"]] | ["title"] | ["title": "Title"] | null | [:]
-    "a relationship-only fieldset" | ["articles": ["author"]] | null | [:] | ["author"] | ["author": personLinkage(dan())]
-    "a mixed attribute and relationship fieldset" | ["articles": ["title", "author"]] | ["title"] | ["title": "Title"] | ["author"] | ["author": personLinkage(dan())]
-    "a present-empty fieldset as no fields" | ["articles": []] | null | [:] | null | [:]
-    "the renamed body-text attribute" | ["articles": ["body-text"]] | ["body-text"] | ["body-text": "Body"] | null | [:]
-    "a fieldset in mapping-definition order" | ["articles": [
+    description | fieldsets | expectedResource
+    "an absent type fieldset as unrestricted" | [:] | unrestrictedArticleResource()
+    "an attribute-only fieldset" | ["articles": ["title"]] | titleOnlyArticleResource()
+    "a relationship-only fieldset" | ["articles": ["author"]] | authorOnlyArticleResource()
+    "a mixed attribute and relationship fieldset" | ["articles": ["title", "author"]] | mixedArticleResource()
+    "a present-empty fieldset as no fields" | ["articles": []] | resourceObject("articles", "1", null, null)
+    "the renamed body-text attribute" | ["articles": ["body-text"]] | resourceObject("articles", "1", Attributes.ofAttributes(["body-text": "Body"]), null)
+  }
+
+  def "toMappedDocument emits selected fields in mapping-definition order, not fieldset order"() {
+    given:
+    def selection = selectionFor(["articles": [
         "author",
         "body-text",
         "title"
-      ]] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["author"] | ["author": personLinkage(dan())]
+      ]])
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, RepresentationPolicy.defaults())
+
+    then:
+    def resource = primaryResource(mapped)
+    List.copyOf(resource.attributes().attributes().keySet()) == ["title", "body-text"]
+    resource.attributes().attributes() == ["title": "Title", "body-text": "Body"]
+    List.copyOf(resource.relationships().relationships().keySet()) == ["author"]
+    resource.relationships().relationships()["author"].data() == personLinkage(dan())
+    mapped.document().included() == null
+    mapped.sparseFieldsetLinkageExemptions().isEmpty()
   }
 
   @Unroll
@@ -87,31 +99,22 @@ class SparseFieldsetSpec extends Specification {
         List.of(article()), null, selection, RepresentationPolicy.defaults())
 
     then:
-    def resources = primaryResources(mapped)
-    resources.size() == 1
-    assertFieldsetResource(
-        resources[0],
-        "articles",
-        "1",
-        expectedAttributeNames,
-        expectedAttributes,
-        expectedRelationshipNames,
-        expectedLinkage)
+    primaryResources(mapped) == [expectedResource]
     mapped.document().included() == null
     mapped.sparseFieldsetLinkageExemptions().isEmpty()
 
     where:
-    description | fieldsets | expectedAttributeNames | expectedAttributes | expectedRelationshipNames | expectedLinkage
-    "an attribute-only fieldset" | ["articles": ["title"]] | ["title"] | ["title": "Title"] | null | [:]
-    "a relationship-only fieldset" | ["articles": ["comments"]] | null | [:] | ["comments"] | ["comments": commentsLinkage()]
-    "a to-one relationship fieldset" | ["articles": ["author"]] | null | [:] | ["author"] | ["author": personLinkage(dan())]
-    "a present-empty fieldset" | ["articles": []] | null | [:] | null | [:]
+    description | fieldsets | expectedResource
+    "an attribute-only fieldset" | ["articles": ["title"]] | titleOnlyArticleResource()
+    "a relationship-only fieldset" | ["articles": ["comments"]] | resourceObject("articles", "1", null, Relationships.ofRelationships(["comments": Relationship.withData(commentsLinkage())]))
+    "a to-one relationship fieldset" | ["articles": ["author"]] | authorOnlyArticleResource()
+    "a present-empty fieldset" | ["articles": []] | resourceObject("articles", "1", null, null)
     "a full fieldset" | ["articles": [
         "title",
         "body-text",
         "comments",
         "author"
-      ]] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["comments", "author"] | ["comments": commentsLinkage(), "author": personLinkage(dan())]
+      ]] | unrestrictedArticleResource()
   }
 
   @Unroll
@@ -124,30 +127,16 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(article(), null, selection, policy)
 
     then:
-    assertFieldsetResource(
-        primaryResource(mapped),
-        "articles",
-        "1",
-        expectedPrimaryAttributeNames,
-        expectedPrimaryAttributes,
-        expectedPrimaryRelationshipNames,
-        expectedPrimaryLinkage)
-    assertIncludedResource(
-        mapped,
-        "people",
-        "9",
-        expectedIncludedAttributeNames,
-        expectedIncludedAttributes,
-        null,
-        [:])
+    primaryResource(mapped) == expectedPrimary
+    mapped.document().included() == [expectedIncluded]
     mapped.sparseFieldsetLinkageExemptions() == expectedExemptions
 
     where:
-    description | fieldsets | expectedPrimaryAttributeNames | expectedPrimaryAttributes | expectedPrimaryRelationshipNames | expectedPrimaryLinkage | expectedIncludedAttributeNames | expectedIncludedAttributes | expectedExemptions
-    "an absent people fieldset" | ["articles": ["title"]] | ["title"] | ["title": "Title"] | null | [:] | ["name"] | ["name": "Dan"] | Set.of(ResourceIdentity.ofId("people", "9"))
-    "a present-empty people fieldset" | ["articles": ["title"], "people": []] | ["title"] | ["title": "Title"] | null | [:] | null | [:] | Set.of(ResourceIdentity.ofId("people", "9"))
-    "a relationship-only primary fieldset" | ["articles": ["author"]] | null | [:] | ["author"] | ["author": personLinkage(dan())] | ["name"] | ["name": "Dan"] | Set.of()
-    "an unrestricted primary fieldset" | [:] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["comments", "author"] | ["comments": commentsLinkage(), "author": personLinkage(dan())] | ["name"] | ["name": "Dan"] | Set.of()
+    description | fieldsets | expectedPrimary | expectedIncluded | expectedExemptions
+    "an absent people fieldset" | ["articles": ["title"]] | titleOnlyArticleResource() | danResource() | Set.of(ResourceIdentity.ofId("people", "9"))
+    "a present-empty people fieldset" | ["articles": ["title"], "people": []] | titleOnlyArticleResource() | resourceObject("people", "9", null, null) | Set.of(ResourceIdentity.ofId("people", "9"))
+    "a relationship-only primary fieldset" | ["articles": ["author"]] | authorOnlyArticleResource() | danResource() | Set.of()
+    "an unrestricted primary fieldset" | [:] | unrestrictedArticleResource() | danResource() | Set.of()
   }
 
   def "toMappedDocument keeps included absent when no include path is requested"() {
@@ -186,9 +175,8 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(article(), null, selection, policy)
 
     then:
-    assertFieldsetResource(
-        primaryResource(mapped), "articles", "1", ["title"], ["title": "Title"], null, [:])
-    assertIncludedResource(mapped, "people", "9", ["name"], ["name": "Dan"], null, [:])
+    primaryResource(mapped) == titleOnlyArticleResource()
+    mapped.document().included() == [danResource()]
     mapped.sparseFieldsetLinkageExemptions() == Set.of(ResourceIdentity.ofId("people", "9"))
   }
 
@@ -271,14 +259,7 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(article(), null, selection, RepresentationPolicy.defaults())
 
     then:
-    assertFieldsetResource(
-        primaryResource(mapped),
-        "articles",
-        "1",
-        ["title"],
-        ["title": "Title"],
-        ["author"],
-        ["author": personLinkage(dan())])
+    primaryResource(mapped) == mixedArticleResource()
   }
 
   def "field policy alone does not select fields"() {
@@ -290,14 +271,7 @@ class SparseFieldsetSpec extends Specification {
         article(), null, RepresentationSelection.none(), policy)
 
     then:
-    assertFieldsetResource(
-        primaryResource(mapped),
-        "articles",
-        "1",
-        ["title", "body-text"],
-        ["title": "Title", "body-text": "Body"],
-        ["comments", "author"],
-        ["comments": commentsLinkage(), "author": personLinkage(dan())])
+    primaryResource(mapped) == unrestrictedArticleResource()
     mapped.sparseFieldsetLinkageExemptions().isEmpty()
   }
 
@@ -384,16 +358,13 @@ class SparseFieldsetSpec extends Specification {
         RepresentationPolicy.defaults())
 
     then:
-    assertFieldsetResource(
-        primaryResource(blog), "blogs", "b1", ["blog_title"], ["blog_title": "Hello"], null, [:])
-    assertFieldsetResource(
-        primaryResource(article),
+    primaryResource(blog) == resourceObject(
+        "blogs", "b1", Attributes.ofAttributes(["blog_title": "Hello"]), null)
+    primaryResource(article) == resourceObject(
         "articles",
         "1",
         null,
-        [:],
-        ["written-by"],
-        ["written-by": personLinkage(dan())])
+        Relationships.ofRelationships(["written-by": Relationship.withData(personLinkage(dan()))]))
   }
 
   def "a renamed relationship rejects its Java logical name in a fieldset"() {
@@ -421,20 +392,13 @@ class SparseFieldsetSpec extends Specification {
     def mapped = mapper.toMappedDocument(article(), null, selection, policy)
 
     then:
-    assertFieldsetResource(
-        primaryResource(mapped),
-        "articles",
-        "1",
-        ["title", "body-text"],
-        ["title": "Title", "body-text": "Body"],
-        ["comments", "author"],
-        ["comments": commentsLinkage(), "author": personLinkage(dan())])
-    def included = mapped.document().included()
-    included.size() == 4
-    assertFieldsetResource(included[0], "comments", "5", ["body"], ["body": "First!"], null, [:])
-    assertFieldsetResource(included[1], "comments", "12", ["body"], ["body": "I like XML better"], null, [:])
-    assertFieldsetResource(included[2], "people", "2", ["name"], ["name": "Ezra"], null, [:])
-    assertFieldsetResource(included[3], "people", "9", ["name"], ["name": "Dan"], null, [:])
+    primaryResource(mapped) == unrestrictedArticleResource()
+    mapped.document().included() == [
+      resourceObject("comments", "5", Attributes.ofAttributes(["body": "First!"]), null),
+      resourceObject("comments", "12", Attributes.ofAttributes(["body": "I like XML better"]), null),
+      resourceObject("people", "2", Attributes.ofAttributes(["name": "Ezra"]), null),
+      danResource()
+    ]
     mapped.sparseFieldsetLinkageExemptions() == Set.of(
         ResourceIdentity.ofId("people", "2"), ResourceIdentity.ofId("people", "9"))
   }
@@ -556,56 +520,44 @@ class SparseFieldsetSpec extends Specification {
     ((DocumentData.ResourceCollection) data).resources()
   }
 
-  private static void assertIncludedResource(
-      MappedDocument mapped,
-      String expectedType,
-      String expectedId,
-      List<String> expectedAttributeNames,
-      Map<String, Object> expectedAttributes,
-      List<String> expectedRelationshipNames,
-      Map<String, RelationshipData> expectedLinkage) {
-    def included = mapped.document().included()
-    assert included != null
-    assert included.size() == 1
-    assertFieldsetResource(
-        included[0],
-        expectedType,
-        expectedId,
-        expectedAttributeNames,
-        expectedAttributes,
-        expectedRelationshipNames,
-        expectedLinkage)
+  private static ResourceObject resourceObject(
+      String type, String id, Attributes attributes, Relationships relationships) {
+    new ResourceObject(type, id, null, attributes, relationships, null, null, Map.of())
   }
 
-  private static void assertFieldsetResource(
-      ResourceObject actual,
-      String expectedType,
-      String expectedId,
-      List<String> expectedAttributeNames,
-      Map<String, Object> expectedAttributes,
-      List<String> expectedRelationshipNames,
-      Map<String, RelationshipData> expectedLinkage) {
-    assert actual.type() == expectedType
-    assert actual.id() == expectedId
+  private static ResourceObject unrestrictedArticleResource() {
+    resourceObject(
+        "articles",
+        "1",
+        Attributes.ofAttributes(["title": "Title", "body-text": "Body"]),
+        Relationships.ofRelationships([
+          "comments": Relationship.withData(commentsLinkage()),
+          "author": Relationship.withData(personLinkage(dan()))
+        ]))
+  }
 
-    if (expectedAttributeNames == null) {
-      assert actual.attributes() == null
-    } else {
-      assert actual.attributes() != null
-      assert List.copyOf(actual.attributes().attributes().keySet()) == expectedAttributeNames
-      assert actual.attributes().attributes() == expectedAttributes
-    }
+  private static ResourceObject titleOnlyArticleResource() {
+    resourceObject("articles", "1", Attributes.ofAttributes(["title": "Title"]), null)
+  }
 
-    if (expectedRelationshipNames == null) {
-      assert actual.relationships() == null
-    } else {
-      assert actual.relationships() != null
-      assert List.copyOf(actual.relationships().relationships().keySet()) == expectedRelationshipNames
-      expectedLinkage.each { name, expectedData ->
-        assert actual.relationships().relationships().get(name) != null
-        assert actual.relationships().relationships().get(name).data() == expectedData
-      }
-    }
+  private static ResourceObject authorOnlyArticleResource() {
+    resourceObject(
+        "articles",
+        "1",
+        null,
+        Relationships.ofRelationships(["author": Relationship.withData(personLinkage(dan()))]))
+  }
+
+  private static ResourceObject mixedArticleResource() {
+    resourceObject(
+        "articles",
+        "1",
+        Attributes.ofAttributes(["title": "Title"]),
+        Relationships.ofRelationships(["author": Relationship.withData(personLinkage(dan()))]))
+  }
+
+  private static ResourceObject danResource() {
+    resourceObject("people", "9", Attributes.ofAttributes(["name": "Dan"]), null)
   }
 
   private static Article article() {

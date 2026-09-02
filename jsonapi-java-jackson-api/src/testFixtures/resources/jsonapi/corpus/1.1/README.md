@@ -8,20 +8,16 @@ this corpus; do not fork major-specific copies. The files ship as classpath reso
 
 | Path                           | Role                                                                                          |
 |--------------------------------|-----------------------------------------------------------------------------------------------|
-| `manifest.json`                | Ordered inventory of valid fixture ids, JSON paths, and notes                                 |
-| `ambiguous-manifest.json`      | Ordered inventory of shared dual-success ambiguous primary-data inputs                        |
-| `negative-manifest.json`       | Ordered inventory of read-only negative inputs                                                |
 | `documents/*.json`             | Pretty-printed canonical wire fixtures                                                        |
 | `documents/*.compact.json`     | Compact canonical wire fixtures for member-order-sensitive inputs                             |
 | `negative/*.json`              | Read-only inputs for the negative corpus (malformed or context-invalid documents)             |
 | `envelope-binding/*.json`      | Named typed-envelope binding-variant documents (stable names; not codec corpus entries)       |
 | `patch/*.json`                 | Named PATCH request documents; one resource serves both low-level and typed PATCH tests wherever the request wire form is identical |
-| `domain-read/*.json`           | Named flat-read wire documents (currently the included-isolation pair)                        |
 
-The manifest files are resource inventories only. Adapter tests select the files they need locally
-and own diagnostics, locations, policies, decoded values, and other behavioral expectations in their
-own specs. Documents under `envelope-binding/` and `patch/` are named directly by their resource
-paths rather than through a shared runtime registry.
+The corpus is passive and holds no manifest or registry files. Adapter tests name the resource files
+they need directly and own diagnostics, locations, policies, decoded values, and other behavioral
+expectations in their own specs. Resource filenames are the stable fixture identifiers, including
+the named documents under `envelope-binding/` and `patch/`.
 
 ## Usage
 
@@ -41,12 +37,12 @@ loading.
 
 ## Negative corpus
 
-`negative-manifest.json` records only the ids, paths, and notes for read-only inputs that must fail.
-Each adapter owns the expected failure category, JSON pointer, validation rule code, source-location
-expectations, and other diagnostics. Keep the inventory and its referenced files synchronized when
-changing the negative corpus.
+Read-only negative inputs live under `negative/`. Each adapter names the files it exercises and owns
+the expected failure category, JSON pointer, validation rule code, source-location expectations, and
+other diagnostics.
 
 ## Ambiguous primary data
 
-`ambiguous-manifest.json` lists valid dual-success inputs whose decoded model depends on the explicit
-primary-data kind. Each adapter proves both readings locally with the expected models.
+Dual-success inputs whose decoded model depends on the explicit primary-data kind are ordinary
+corpus documents. Each adapter names them directly and proves both readings locally with the
+expected models.

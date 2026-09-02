@@ -34,6 +34,10 @@
   belong in each adapter's own tests. Do not introduce shared test orchestration, expected-outcome
   descriptors, scenario registries, or assertion frameworks.
 - Before changing shared fixtures or corpora, read the affected corpus/schema resource READMEs; those files own fixture-specific invariants.
+- Keep orthogonal concerns orthogonal: test semantic behavior through one representative entry
+  point, and test overload/sink parity with representative data; do not cross-product both
+  dimensions, and prefer explicit table rows and direct assertions over case catalogs,
+  nullable expectation parameters, or assertion interpreters.
 
 # Task Routing
 

@@ -101,7 +101,7 @@ Spring adapters remain deferred.
 | Golden fixture write comparisons                 | supported | Jackson 3 adapter-owned writer checks cover direct core models, canonical corpus round trips, sink parity, and exact UTF-8; paths and resources remain in Jackson API test fixtures |
 | JSON deserialization                             | supported | Token-driven decode via public core constructors; explicit `PrimaryDataKind`                          |
 | Malformed input diagnostics with source location | supported | `JsonApiDocumentReadException` with category, pointer, and safe location                              |
-| Shared read-only negative corpus                 | supported | `negative-manifest.json`: closed reader-failure inventory with version-neutral expectations          |
+| Shared read-only negative corpus                 | supported | Closed read-only `negative/` corpus; each adapter names its fixture files directly with version-neutral expectations |
 | Ambiguous primary data requires explicit kind    | supported | Shared dual-success object/empty-array cases decode under both `PrimaryDataKind` values               |
 
 ## Draft-schema cross-check (supplemental)

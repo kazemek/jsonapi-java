@@ -1,5 +1,7 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import java.io.ByteArrayOutputStream
+import java.io.StringWriter
 import java.nio.charset.StandardCharsets
 
 import tools.jackson.databind.json.JsonMapper
@@ -7,17 +9,23 @@ import tools.jackson.databind.json.JsonMapper
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.Link
+import io.github.kazemek.jsonapi.core.model.Links
+import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.Relationship
+import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
-import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument
 
 import spock.lang.Specification
 
 class DocumentWriterSinkSpec extends Specification {
 
-  def "all write sinks emit equivalent JSON and expose bound context"() {
+  def "all write sinks emit structurally identical JSON for a representative document and expose the bound context"() {
     given:
     def mapper = JsonMapper.builder().build()
     def context = ValidationContext.defaults()
@@ -26,20 +34,34 @@ class DocumentWriterSinkSpec extends Specification {
         '1',
         null,
         Attributes.ofAttributes(['title': 'JSON:API paints my bikeshed!']),
-        null,
+        Relationships.ofRelationships([
+          'author': Relationship.withData(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of('people', '9')))
+        ]),
         null,
         null,
         [:])
-    def document = JsonApiDocument.withData(new DocumentData.SingleResource(resource))
+    def document = new JsonApiDocument(
+        new DocumentData.SingleResource(resource),
+        null,
+        Meta.of(['count': '1']),
+        null,
+        Links.ofLinks(['self': new Link.StringLink('http://example.com/articles/1')]),
+        null,
+        [:])
     def writer = JsonApiJackson3.writer(mapper, context)
     def expected = mapper.readTree(
-        TestFixtureResources.readCorpusUtf8('documents/single-resource.json'))
+        '{"data":{"type":"articles","id":"1","attributes":{"title":"JSON:API paints my bikeshed!"},' +
+        '"relationships":{"author":{"data":{"type":"people","id":"9"}}}},' +
+        '"links":{"self":"http://example.com/articles/1"},"meta":{"count":"1"}}')
 
     def bytesOut = new ByteArrayOutputStream()
     def charsOut = new StringWriter()
     def generatorOut = new ByteArrayOutputStream()
 
     when:
+    def asString = writer.writeValueAsString(document)
+    def asBytes = writer.writeValueAsBytes(document)
     writer.writeValue(bytesOut, document)
     writer.writeValue(charsOut, document)
     def generator = writer.mapper().createGenerator(generatorOut)
@@ -51,11 +73,13 @@ class DocumentWriterSinkSpec extends Specification {
 
     then:
     writer.context().is(context)
-    mapper.readTree(writer.writeValueAsString(document)) == expected
-    mapper.readTree(writer.writeValueAsBytes(document)) == expected
+    mapper.readTree(asString) == expected
+    mapper.readTree(asBytes) == expected
     mapper.readTree(bytesOut.toByteArray()) == expected
     mapper.readTree(charsOut.toString()) == expected
     mapper.readTree(generatorOut.toByteArray()) == expected
+    new String(asBytes, StandardCharsets.UTF_8) ==
+        new String(bytesOut.toByteArray(), StandardCharsets.UTF_8)
     new String(bytesOut.toByteArray(), StandardCharsets.UTF_8) == charsOut.toString()
   }
 
@@ -97,5 +121,64 @@ class DocumentWriterSinkSpec extends Specification {
     mapper.readTree(stringValue) == mapper.readTree(charsOut.toString())
     mapper.readTree(stringValue) == mapper.readTree(generatorOut.toByteArray())
     writer.writeValueAsString(plainMapped) == stringValue
+  }
+
+  def "output is fully visible in caller OutputStream and Writer immediately after writing without an explicit flush"() {
+    given:
+    def mapper = JsonMapper.builder().build()
+    def resource = new ResourceObject(
+        'articles',
+        '1',
+        null,
+        Attributes.ofAttributes(['title': 'JSON:API paints my bikeshed!']),
+        null,
+        null,
+        null,
+        [:])
+    def document = JsonApiDocument.withData(new DocumentData.SingleResource(resource))
+    def writer = JsonApiJackson3.writer(mapper, ValidationContext.defaults())
+    def expected = mapper.readTree(
+        '{"data":{"type":"articles","id":"1","attributes":{"title":"JSON:API paints my bikeshed!"}}}')
+    def bytesOut = new ByteArrayOutputStream()
+    def charsOut = new StringWriter()
+
+    when:
+    writer.writeValue(bytesOut, document)
+    writer.writeValue(charsOut, document)
+
+    then:
+    mapper.readTree(bytesOut.toByteArray()) == expected
+    mapper.readTree(charsOut.toString()) == expected
+  }
+
+  def "writer leaves a caller-created JsonGenerator open for the caller to close"() {
+    given:
+    def mapper = JsonMapper.builder().build()
+    def resource = new ResourceObject(
+        'articles',
+        '1',
+        null,
+        Attributes.ofAttributes(['title': 'JSON:API paints my bikeshed!']),
+        null,
+        null,
+        null,
+        [:])
+    def document = JsonApiDocument.withData(new DocumentData.SingleResource(resource))
+    def writer = JsonApiJackson3.writer(mapper, ValidationContext.defaults())
+    def sink = new ByteArrayOutputStream()
+    def generator = writer.mapper().createGenerator(sink)
+
+    when:
+    writer.writeValue(generator, document)
+
+    then:
+    !generator.isClosed()
+
+    when:
+    generator.close()
+
+    then:
+    mapper.readTree(sink.toByteArray()) == mapper.readTree(
+        '{"data":{"type":"articles","id":"1","attributes":{"title":"JSON:API paints my bikeshed!"}}}')
   }
 }

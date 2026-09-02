@@ -1,8 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import java.io.ByteArrayOutputStream
-import java.io.StringWriter
-import java.nio.charset.StandardCharsets
 import java.util.LinkedHashMap
 import java.util.List
 import java.util.Map
@@ -46,35 +43,16 @@ class DocumentWriterContractSpec extends Specification {
   JsonMapper mapper = JsonMapper.builder().build()
 
   @Unroll
-  def "writes independently constructed #description through every sink"() {
+  def "writes independently constructed #description"() {
     given:
     def writer = JsonApiJackson3.writer(mapper, ValidationContext.defaults())
     def expected = mapper.readTree(expectedJson)
-    def bytesOut = new ByteArrayOutputStream()
-    def charsOut = new StringWriter()
-    def generatorOut = new ByteArrayOutputStream()
 
     when:
-    def asString = writer.writeValueAsString(document)
-    def asBytes = writer.writeValueAsBytes(document)
-    writer.writeValue(bytesOut, document)
-    writer.writeValue(charsOut, document)
-    def generator = writer.mapper().createGenerator(generatorOut)
-    try {
-      writer.writeValue(generator, document)
-    } finally {
-      generator.close()
-    }
+    def json = writer.writeValueAsString(document)
 
     then:
-    mapper.readTree(asString) == expected
-    mapper.readTree(asBytes) == expected
-    mapper.readTree(bytesOut.toByteArray()) == expected
-    mapper.readTree(charsOut.toString()) == expected
-    mapper.readTree(generatorOut.toByteArray()) == expected
-    new String(asBytes, StandardCharsets.UTF_8) == asString
-    new String(bytesOut.toByteArray(), StandardCharsets.UTF_8) == asString
-    charsOut.toString() == asString
+    mapper.readTree(json) == expected
 
     where:
     description | document | expectedJson
@@ -84,7 +62,7 @@ class DocumentWriterContractSpec extends Specification {
     "explicit null data and meta" | directNullDataDocument() | '{"data":null,"meta":{"reason":"deleted"}}'
   }
 
-  def "mapped provenance composes through every write sink"() {
+  def "mapped provenance composes into mapped writing"() {
     given:
     def resourceMapper = JsonApiJackson3.resourceMapper(mapper)
     def mapped = resourceMapper.toMappedDocument(
@@ -99,32 +77,13 @@ class DocumentWriterContractSpec extends Specification {
     def expected = mapper.readTree(
         '{"data":{"type":"articles","id":"1","attributes":{"title":"Title"}},' +
         '"included":[{"type":"people","id":"9","attributes":{"name":"Dan"}}]}')
-    def bytesOut = new ByteArrayOutputStream()
-    def charsOut = new StringWriter()
-    def generatorOut = new ByteArrayOutputStream()
 
     when:
-    def asString = writer.writeValueAsString(mapped)
-    def asBytes = writer.writeValueAsBytes(mapped)
-    writer.writeValue(bytesOut, mapped)
-    writer.writeValue(charsOut, mapped)
-    def generator = writer.mapper().createGenerator(generatorOut)
-    try {
-      writer.writeValue(generator, mapped)
-    } finally {
-      generator.close()
-    }
+    def json = writer.writeValueAsString(mapped)
 
     then:
     mapped.sparseFieldsetLinkageExemptions() == Set.of(ResourceIdentity.ofId("people", "9"))
-    mapper.readTree(asString) == expected
-    mapper.readTree(asBytes) == expected
-    mapper.readTree(bytesOut.toByteArray()) == expected
-    mapper.readTree(charsOut.toString()) == expected
-    mapper.readTree(generatorOut.toByteArray()) == expected
-    new String(asBytes, StandardCharsets.UTF_8) == asString
-    new String(bytesOut.toByteArray(), StandardCharsets.UTF_8) == asString
-    charsOut.toString() == asString
+    mapper.readTree(json) == expected
 
     when:
     writer.writeValueAsString(mapped.document())
@@ -265,6 +224,7 @@ class DocumentWriterContractSpec extends Specification {
     path                                               | context                     | primaryDataKind
     'documents/single-resource.json'                   | ValidationContext.defaults() | PrimaryDataKind.RESOURCE
     'documents/resource-collection.json'               | ValidationContext.defaults() | PrimaryDataKind.RESOURCE
+    'documents/ambiguous-empty-array-primary-data.json' | ValidationContext.defaults() | PrimaryDataKind.RESOURCE
     'documents/single-identifier.json'                 | ValidationContext.defaults() | PrimaryDataKind.RESOURCE_IDENTIFIER
     'documents/identifier-collection.json'             | ValidationContext.defaults() | PrimaryDataKind.RESOURCE_IDENTIFIER
     'documents/null-data.json'                         | ValidationContext.defaults() | null
@@ -289,7 +249,7 @@ class DocumentWriterContractSpec extends Specification {
     'documents/member-order.json'                      | extContext()                | PrimaryDataKind.RESOURCE
   }
 
-  def "emits exact UTF-8 member order"() {
+  def "emits exact member order"() {
     given:
     def context = extContext()
     def reader = JsonApiJackson3.reader(
@@ -300,7 +260,6 @@ class DocumentWriterContractSpec extends Specification {
 
     expect:
     writer.writeValueAsString(document) == expected
-    new String(writer.writeValueAsBytes(document), StandardCharsets.UTF_8) == expected
   }
 
   def "emits array-form hreflang"() {

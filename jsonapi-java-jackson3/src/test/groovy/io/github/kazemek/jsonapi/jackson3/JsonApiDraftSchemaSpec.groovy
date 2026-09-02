@@ -95,20 +95,6 @@ class JsonApiDraftSchemaSpec extends Specification {
     "updateRelationship" | "schema_update_relationship.json"
   }
 
-  def "fixture streams expose the same bytes as direct resource reads"() {
-    expect:
-    TestFixtureResources.corpusExists(corpus)
-    TestFixtureResources.openCorpus(corpus).withCloseable { it.readAllBytes().toList() } ==
-    TestFixtureResources.readCorpusBytes(corpus).toList()
-    TestFixtureResources.schemaExists(schema)
-    TestFixtureResources.openSchema(schema).withCloseable { it.readAllBytes().toList() } ==
-    TestFixtureResources.readSchemaBytes(schema).toList()
-
-    where:
-    corpus                         | schema
-    "documents/single-resource.json" | "schema.json"
-  }
-
   def "vendored draft schemas match the recorded sha256 pin"() {
     given:
     def checksums = sha256sums()
@@ -140,7 +126,7 @@ class JsonApiDraftSchemaSpec extends Specification {
 
   def "writable corpus document #corpusPath validates against #schemaKind draft schema"() {
     given:
-    def json = mapper.readTree(TestFixtureResources.readCorpusBytes(corpusPath))
+    def json = mapper.readTree(TestFixtureResources.readCorpusUtf8(corpusPath))
     def errors = schemas[schemaKind].validate(json)
 
     expect:

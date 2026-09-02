@@ -20,7 +20,7 @@ import java.util.Optional
 class DomainResourceWriterDiagnosticsSpec extends Specification {
 
   @Unroll
-  def "write diagnostic #expectedDiagnostic for #carrier.class.simpleName at #propertyPath"() {
+  def "resource-shape write diagnostic #expectedDiagnostic for #carrier.class.simpleName reports no property path or location"() {
     given:
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
@@ -29,30 +29,45 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
 
     then:
     def ex = thrown(JsonApiMappingException)
-    assert ex.diagnostic() == expectedDiagnostic
-    assert ex.propertyPath() == propertyPath
-    if (propertyPath == null) {
-      assert ex.location() == null
-    } else {
-      assert ex.location() != null
-    }
+    ex.diagnostic() == expectedDiagnostic
+    ex.propertyPath() == null
+    ex.location() == null
+
+    where:
+    carrier | expectedDiagnostic
+    new Object() | MappingDiagnostic.MISSING_RESOURCE_ANNOTATION
+    new WriteDiagnosticsFixtures.EmptyTypeEntity("1") | MappingDiagnostic.INVALID_RESOURCE_TYPE
+    new WriteDiagnosticsFixtures.InvalidTypeEntity("1") | MappingDiagnostic.INVALID_RESOURCE_TYPE
+    new WriteDiagnosticsFixtures.NoIdEntity("test") | MappingDiagnostic.MISSING_IDENTIFIER
+    new WriteDiagnosticsFixtures.DuplicateRoleEntity("1") | MappingDiagnostic.DUPLICATE_ROLE
+    new WriteDiagnosticsFixtures.NameCollisionEntity("1", "a", "b") | MappingDiagnostic.NAME_COLLISION
+    new WriteDiagnosticsFixtures.FieldOnlyNameCollisionEntity("1", "a", "b") | MappingDiagnostic.NAME_COLLISION
+    new WriteDiagnosticsFixtures.InvalidAttrNameEntity("1", "v") | MappingDiagnostic.INVALID_ATTRIBUTE_NAME
+    new WriteDiagnosticsFixtures.ReservedAttrNameEntity("1", "v") | MappingDiagnostic.INVALID_ATTRIBUTE_NAME
+    new WriteDiagnosticsFixtures.InvalidRelNameEntity("1", "o") | MappingDiagnostic.INVALID_RELATIONSHIP_NAME
+    new WriteDiagnosticsFixtures.ReservedRelNameEntity("1", "o") | MappingDiagnostic.NAME_COLLISION
+    new WholeMetaTargetFixtures.UnmappedRelationshipMetaArticle("1", new AuthorMeta("x")) | MappingDiagnostic.UNRESOLVED_RELATIONSHIP_META
+  }
+
+  @Unroll
+  def "value-level write diagnostic #expectedDiagnostic for #carrier.class.simpleName at #propertyPath reports a location"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
+
+    when:
+    mapper.toResource(carrier)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == expectedDiagnostic
+    ex.propertyPath() == propertyPath
+    ex.location() != null
 
     where:
     carrier | expectedDiagnostic | propertyPath
-    new Object() | MappingDiagnostic.MISSING_RESOURCE_ANNOTATION | null
-    new WriteDiagnosticsFixtures.EmptyTypeEntity("1") | MappingDiagnostic.INVALID_RESOURCE_TYPE | null
-    new WriteDiagnosticsFixtures.InvalidTypeEntity("1") | MappingDiagnostic.INVALID_RESOURCE_TYPE | null
-    new WriteDiagnosticsFixtures.NoIdEntity("test") | MappingDiagnostic.MISSING_IDENTIFIER | null
     new WriteDiagnosticsFixtures.NullIdEntity(null) | MappingDiagnostic.MISSING_IDENTIFIER | "/id"
-    new WriteDiagnosticsFixtures.DuplicateRoleEntity("1") | MappingDiagnostic.DUPLICATE_ROLE | null
-    new WriteDiagnosticsFixtures.NameCollisionEntity("1", "a", "b") | MappingDiagnostic.NAME_COLLISION | null
-    new WriteDiagnosticsFixtures.FieldOnlyNameCollisionEntity("1", "a", "b") | MappingDiagnostic.NAME_COLLISION | null
     new WriteDiagnosticsFixtures.DuplicateAttrNameEntity("1", "a", "b") | MappingDiagnostic.NAME_COLLISION | "/attributes/same"
     new WriteDiagnosticsFixtures.DuplicateRelNameEntity("1", "a", "b") | MappingDiagnostic.NAME_COLLISION | "/relationships/same/data"
-    new WriteDiagnosticsFixtures.InvalidAttrNameEntity("1", "v") | MappingDiagnostic.INVALID_ATTRIBUTE_NAME | null
-    new WriteDiagnosticsFixtures.ReservedAttrNameEntity("1", "v") | MappingDiagnostic.INVALID_ATTRIBUTE_NAME | null
-    new WriteDiagnosticsFixtures.InvalidRelNameEntity("1", "o") | MappingDiagnostic.INVALID_RELATIONSHIP_NAME | null
-    new WriteDiagnosticsFixtures.ReservedRelNameEntity("1", "o") | MappingDiagnostic.NAME_COLLISION | null
     new WriteDiagnosticsFixtures.FailingAttrEntity("1", "anything") | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/badAttr"
     new WriteDiagnosticsFixtures.RenamedFailingAttrEntity("1", "anything") | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/body-text"
     new WriteDiagnosticsFixtures.FailingIdEntity("1") | MappingDiagnostic.MISSING_IDENTIFIER | "/id"
@@ -74,7 +89,6 @@ class DomainResourceWriterDiagnosticsSpec extends Specification {
     new WriteDiagnosticsFixtures.RenamedMixedRelEntity("1", List.of(new Object(), ResourceIdentifier.of("comments", "1"))) | MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE | "/relationships/ext-items/data"
     new WholeMetaTargetFixtures.DuplicateMetaArticle("1", "a", "b") | MappingDiagnostic.DUPLICATE_ROLE | "/meta"
     new WholeMetaTargetFixtures.DuplicateRelationshipMetaArticle("1", ResourceIdentifier.of("people", "p1"), "a", "b") | MappingDiagnostic.DUPLICATE_ROLE | "/relationships/author/meta"
-    new WholeMetaTargetFixtures.UnmappedRelationshipMetaArticle("1", new AuthorMeta("x")) | MappingDiagnostic.UNRESOLVED_RELATIONSHIP_META | null
     new WholeMetaTargetFixtures.ScalarMetaArticle("1", "x") | MappingDiagnostic.INVALID_META_TARGET | "/meta"
     new WholeMetaTargetFixtures.ListMetaArticle("1", List.of("x")) | MappingDiagnostic.INVALID_META_TARGET | "/meta"
     new WholeMetaTargetFixtures.UuidMetaArticle("1", null) | MappingDiagnostic.INVALID_META_TARGET | "/meta"
