@@ -1,42 +1,33 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.Meta
-import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
-import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.core.validation.DocumentUsage
-import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
-import io.github.kazemek.jsonapi.core.validation.LinksContext
-import io.github.kazemek.jsonapi.core.validation.ValidationContext
-import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument
 import io.github.kazemek.jsonapi.jackson.representation.FieldAllowance
 import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy
 import io.github.kazemek.jsonapi.jackson.representation.IncludePath
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
-import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
-import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument
-import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Article
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person
-import io.github.kazemek.jsonapi.testsupport.fixtures.sparsefieldset.AccessCountingFieldsetArticle
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.FieldsetResourceState
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetExpectation
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetOperation
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetRequest
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetScenario
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetScenarios
-import io.github.kazemek.jsonapi.testsupport.sparsefieldset.SparseFieldsetSide
-import java.io.ByteArrayOutputStream
-import java.io.StringWriter
-import java.nio.charset.StandardCharsets
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMeta
+import io.github.kazemek.jsonapi.fixtures.domainwrite.BlogWithJsonProperty
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.fixtures.sparsefieldset.ArticleWithRenamedAuthor
+import io.github.kazemek.jsonapi.fixtures.sparsefieldset.AccessCountingFieldsetArticle
+import java.util.ArrayList
+import java.util.LinkedHashMap
+import java.util.List
+import java.util.Map
+import java.util.Set
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -46,511 +37,603 @@ import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
-// Shared sparse-fieldset cases live in SparseFieldsetScenarios. This spec runs every catalog
-// entry directly through this adapter's mapper; adding a scenario to the shared catalog is picked
-// up automatically. Adapter-local scenario content remains empty unless a major-mapper-only case
-// appears; suite-local harness assertions (fieldset-map and FieldAllowance mutation isolation,
-// duplicate collapse, FIELDSETS_REQUIRE_MAPPED_DOCUMENT message composition, exact single-read
-// counts, and writer-owned provenance composition/validation) stay here.
 class SparseFieldsetSpec extends Specification {
 
   @Shared
   JsonApiResourceMapper mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
-  @Shared
-  def jackson = JsonMapper.builder().build()
-
   @Unroll
-  def "sparse fieldset #scenario.id from the shared catalog"() {
+  def "toMappedDocument applies #description"() {
+    given:
+    def selection = selectionFor(fieldsets)
+
     when:
-    def thrownException = null
-    def mapped = null
-    def document = null
-    try {
-      def result = execute(scenario)
-      if (result instanceof MappedDocument) {
-        mapped = result
-      } else {
-        document = result
-      }
-    } catch (Exception e) {
-      thrownException = e
-    }
+    def mapped = mapper.toMappedDocument(article(), null, selection, RepresentationPolicy.defaults())
 
     then:
-    verify(scenario, mapped, document, thrownException)
+    assertFieldsetResource(
+        primaryResource(mapped),
+        "articles",
+        "1",
+        expectedAttributeNames,
+        expectedAttributes,
+        expectedRelationshipNames,
+        expectedLinkage)
+    mapped.document().included() == null
+    mapped.sparseFieldsetLinkageExemptions().isEmpty()
 
     where:
-    scenario << SparseFieldsetScenarios.catalog().all()
+    description | fieldsets | expectedAttributeNames | expectedAttributes | expectedRelationshipNames | expectedLinkage
+    "an absent type fieldset as unrestricted" | [:] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["comments", "author"] | ["comments": commentsLinkage(), "author": personLinkage(dan())]
+    "an attribute-only fieldset" | ["articles": ["title"]] | ["title"] | ["title": "Title"] | null | [:]
+    "a relationship-only fieldset" | ["articles": ["author"]] | null | [:] | ["author"] | ["author": personLinkage(dan())]
+    "a mixed attribute and relationship fieldset" | ["articles": ["title", "author"]] | ["title"] | ["title": "Title"] | ["author"] | ["author": personLinkage(dan())]
+    "a present-empty fieldset as no fields" | ["articles": []] | null | [:] | null | [:]
+    "the renamed body-text attribute" | ["articles": ["body-text"]] | ["body-text"] | ["body-text": "Body"] | null | [:]
+    "a fieldset in mapping-definition order" | ["articles": [
+        "author",
+        "body-text",
+        "title"
+      ]] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["author"] | ["author": personLinkage(dan())]
   }
 
-  def "defensive copy isolates the caller's fieldset map after selection construction"() {
+  @Unroll
+  def "toMappedResourceCollection applies #description"() {
+    given:
+    def selection = selectionFor(fieldsets)
+
+    when:
+    def mapped = mapper.toMappedResourceCollection(
+        List.of(article()), null, selection, RepresentationPolicy.defaults())
+
+    then:
+    def resources = primaryResources(mapped)
+    resources.size() == 1
+    assertFieldsetResource(
+        resources[0],
+        "articles",
+        "1",
+        expectedAttributeNames,
+        expectedAttributes,
+        expectedRelationshipNames,
+        expectedLinkage)
+    mapped.document().included() == null
+    mapped.sparseFieldsetLinkageExemptions().isEmpty()
+
+    where:
+    description | fieldsets | expectedAttributeNames | expectedAttributes | expectedRelationshipNames | expectedLinkage
+    "an attribute-only fieldset" | ["articles": ["title"]] | ["title"] | ["title": "Title"] | null | [:]
+    "a relationship-only fieldset" | ["articles": ["comments"]] | null | [:] | ["comments"] | ["comments": commentsLinkage()]
+    "a to-one relationship fieldset" | ["articles": ["author"]] | null | [:] | ["author"] | ["author": personLinkage(dan())]
+    "a present-empty fieldset" | ["articles": []] | null | [:] | null | [:]
+    "a full fieldset" | ["articles": [
+        "title",
+        "body-text",
+        "comments",
+        "author"
+      ]] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["comments", "author"] | ["comments": commentsLinkage(), "author": personLinkage(dan())]
+  }
+
+  @Unroll
+  def "toMappedDocument includes an author with #description"() {
+    given:
+    def selection = selectionFor(fieldsets, ["author"])
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, policy)
+
+    then:
+    assertFieldsetResource(
+        primaryResource(mapped),
+        "articles",
+        "1",
+        expectedPrimaryAttributeNames,
+        expectedPrimaryAttributes,
+        expectedPrimaryRelationshipNames,
+        expectedPrimaryLinkage)
+    assertIncludedResource(
+        mapped,
+        "people",
+        "9",
+        expectedIncludedAttributeNames,
+        expectedIncludedAttributes,
+        null,
+        [:])
+    mapped.sparseFieldsetLinkageExemptions() == expectedExemptions
+
+    where:
+    description | fieldsets | expectedPrimaryAttributeNames | expectedPrimaryAttributes | expectedPrimaryRelationshipNames | expectedPrimaryLinkage | expectedIncludedAttributeNames | expectedIncludedAttributes | expectedExemptions
+    "an absent people fieldset" | ["articles": ["title"]] | ["title"] | ["title": "Title"] | null | [:] | ["name"] | ["name": "Dan"] | Set.of(ResourceIdentity.ofId("people", "9"))
+    "a present-empty people fieldset" | ["articles": ["title"], "people": []] | ["title"] | ["title": "Title"] | null | [:] | null | [:] | Set.of(ResourceIdentity.ofId("people", "9"))
+    "a relationship-only primary fieldset" | ["articles": ["author"]] | null | [:] | ["author"] | ["author": personLinkage(dan())] | ["name"] | ["name": "Dan"] | Set.of()
+    "an unrestricted primary fieldset" | [:] | ["title", "body-text"] | ["title": "Title", "body-text": "Body"] | ["comments", "author"] | ["comments": commentsLinkage(), "author": personLinkage(dan())] | ["name"] | ["name": "Dan"] | Set.of()
+  }
+
+  def "toMappedDocument keeps included absent when no include path is requested"() {
+    given:
+    def selection = selectionFor(["articles": ["title"]])
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, RepresentationPolicy.defaults())
+
+    then:
+    mapped.document().included() == null
+    !mapped.document().hasIncludedMember()
+  }
+
+  def "toMappedDocument emits present-empty included when an include resolves to no resources"() {
+    given:
+    def selection = selectionFor([:], ["author"])
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(
+        articleWithNullAuthor(), null, selection, policy)
+
+    then:
+    mapped.document().included() != null
+    mapped.document().included().isEmpty()
+    mapped.document().hasIncludedMember()
+  }
+
+  def "fieldset provenance identifies included resources whose linkage was omitted"() {
+    given:
+    def selection = selectionFor(["articles": ["title"]], ["author"])
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, policy)
+
+    then:
+    assertFieldsetResource(
+        primaryResource(mapped), "articles", "1", ["title"], ["title": "Title"], null, [:])
+    assertIncludedResource(mapped, "people", "9", ["name"], ["name": "Dan"], null, [:])
+    mapped.sparseFieldsetLinkageExemptions() == Set.of(ResourceIdentity.ofId("people", "9"))
+  }
+
+  def "fieldset provenance is empty when the linking relationship survives"() {
+    given:
+    def selection = selectionFor(["articles": ["title", "author"]], ["author"])
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, policy)
+
+    then:
+    mapped.sparseFieldsetLinkageExemptions().isEmpty()
+    primaryResource(mapped).relationships().relationships().keySet() == ["author"] as Set
+  }
+
+  @Unroll
+  def "fieldset #description does not read excluded properties"() {
+    given:
+    def counting = new AccessCountingFieldsetArticle(
+        "1", "Title", "Body", dan(), List.of(comment5()))
+    def selection = selectionFor(fieldsets, includePaths)
+    def policy = includePaths.isEmpty()
+        ? RepresentationPolicy.defaults()
+        : RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(counting, null, selection, policy)
+
+    then:
+    mapped != null
+    counting.titleReads == titleReads
+    counting.bodyReads == bodyReads
+    counting.authorReads == authorReads
+    counting.commentsReads == commentsReads
+
+    where:
+    description | fieldsets | includePaths | titleReads | bodyReads | authorReads | commentsReads
+    "title-only without inclusion" | ["articles": ["title"]] | [] | 1 | 0 | 0 | 0
+    "title-only with author inclusion" | ["articles": ["title"]] | ["author"] | 1 | 0 | 1 | 0
+    "author-only without inclusion" | ["articles": ["author"]] | [] | 0 | 0 | 1 | 0
+    "empty without inclusion" | ["articles": []] | [] | 0 | 0 | 0 | 0
+  }
+
+  def "selection snapshots the caller fieldset map and lists"() {
     given:
     def mutableFields = new ArrayList<>(["title", "title", "author"])
-    def mutableMap = new LinkedHashMap<String, List<String>>()
-    mutableMap.put("articles", mutableFields)
-    def selection = RepresentationSelection.builder().fields("articles", mutableFields).build()
+    def mutableFieldsets = new LinkedHashMap<String, List<String>>()
+    mutableFieldsets.put("articles", mutableFields)
+    def selection = selectionFor(mutableFieldsets)
 
     when:
     mutableFields.add("body-text")
-    mutableMap.put("people", ["name"])
+    mutableFieldsets.put("people", ["name"])
 
     then:
-    selection.fieldsets().get("articles") == ["title", "author"]
-    !selection.fieldsets().containsKey("people")
-  }
-
-  def "duplicate fieldset names collapse to first-seen order"() {
-    given:
-    def scenario = SparseFieldsetScenarios.catalog().byId(
-        "duplicate-free multi-field fieldset keeps title and author")
-    def selection = ((SparseFieldsetRequest.Single) scenario.request()).selection()
-
-    expect:
-    selection.fieldsets().get("articles") == ["title", "author"]
-  }
-
-  def "FieldAllowance caller set mutation does not enlarge the policy"() {
-    given:
-    def allowances = new HashSet<>([
-      FieldAllowance.of("articles", "title")
-    ])
-    def policy = FieldPolicy.allowing(allowances)
-    def selection = RepresentationSelection.builder().fields("articles", ["title"]).build()
-    def representationPolicy = RepresentationPolicy.defaults().withFieldPolicy(policy)
+    selection.fieldsets() == ["articles": ["title", "author"]]
 
     when:
-    allowances.add(FieldAllowance.of("articles", "author"))
-    def mapped = mapper.toMappedDocument(
-        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.catalog().byId(
-        "FieldAllowance-satisfied fieldset succeeds").request()).supplier().get(),
-        null,
-        selection,
-        representationPolicy)
+    selection.fieldsets().get("articles").add("body-text")
 
     then:
-    mapped.document() != null
+    thrown(UnsupportedOperationException)
+  }
+
+  def "duplicate fieldset names collapse to first-seen order and map once"() {
+    given:
+    def fieldsets = ["articles": [
+        "title",
+        "title",
+        "author",
+        "title"
+      ]]
+    def selection = selectionFor(fieldsets)
+
+    expect:
+    selection.fieldsets() == ["articles": ["title", "author"]]
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, RepresentationPolicy.defaults())
+
+    then:
+    assertFieldsetResource(
+        primaryResource(mapped),
+        "articles",
+        "1",
+        ["title"],
+        ["title": "Title"],
+        ["author"],
+        ["author": personLinkage(dan())])
+  }
+
+  def "field policy alone does not select fields"() {
+    given:
+    def policy = RepresentationPolicy.defaults().withFieldPolicy(FieldPolicy.denyAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(
+        article(), null, RepresentationSelection.none(), policy)
+
+    then:
+    assertFieldsetResource(
+        primaryResource(mapped),
+        "articles",
+        "1",
+        ["title", "body-text"],
+        ["title": "Title", "body-text": "Body"],
+        ["comments", "author"],
+        ["comments": commentsLinkage(), "author": personLinkage(dan())])
+    mapped.sparseFieldsetLinkageExemptions().isEmpty()
+  }
+
+  def "unmapped document rejects non-empty fieldsets"() {
+    given:
+    def selection = selectionFor(["articles": ["title"]])
+
+    when:
+    mapper.toDocument(article(), null, selection, RepresentationPolicy.defaults())
+
+    then:
+    def exception = thrown(JsonApiMappingException)
+    exception.diagnostic() == MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT
+    exception.propertyPath() == null
+    exception.resourceClass() == null
+    exception.message.contains("types: [articles]")
+  }
+
+  def "unmapped resource collection rejects non-empty fieldsets"() {
+    given:
+    def selection = selectionFor(["articles": ["title"]])
+
+    when:
+    mapper.toResourceCollection(
+        [article()], null, selection, RepresentationPolicy.defaults())
+
+    then:
+    def exception = thrown(JsonApiMappingException)
+    exception.diagnostic() == MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT
+    exception.propertyPath() == null
+    exception.resourceClass() == null
+  }
+
+  def "FieldAllowance permits selected wire fields and rejects other fields"() {
+    given:
+    def fieldPolicy = FieldPolicy.allowing(Set.of(FieldAllowance.of("articles", "title")))
+    def allowedPolicy = RepresentationPolicy.defaults().withFieldPolicy(fieldPolicy)
+
+    when:
+    def mapped = mapper.toMappedDocument(
+        article(), null, selectionFor(["articles": ["title"]]), allowedPolicy)
+
+    then:
+    primaryResource(mapped).attributes().attributes() == ["title": "Title"]
 
     when:
     mapper.toMappedDocument(
-        ((SparseFieldsetRequest.Single) SparseFieldsetScenarios.catalog().byId(
-        "FieldAllowance denies a present field not in the allowance set").request()).supplier().get(),
+        article(),
         null,
-        RepresentationSelection.builder().fields("articles", ["author"]).build(),
-        RepresentationPolicy.defaults().withFieldPolicy(policy))
+        selectionFor(["articles": ["author"]]),
+        allowedPolicy)
 
     then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.DENIED_FIELDSET_FIELD
+    def exception = thrown(JsonApiMappingException)
+    exception.diagnostic() == MappingDiagnostic.DENIED_FIELDSET_FIELD
+    exception.resourceClass() == Article.class
   }
 
-  def "toDocument FIELDSETS_REQUIRE_MAPPED_DOCUMENT message names the fieldset types"() {
+  def "unknown field names win over field-policy denial"() {
     given:
-    def scenario = SparseFieldsetScenarios.catalog().byId(
-        "three-argument toDocument rejects non-empty fieldsets")
-    def request = (SparseFieldsetRequest.Single) scenario.request()
+    def selection = selectionFor(["articles": ["nope", "title"]])
+    def policy = RepresentationPolicy.defaults().withFieldPolicy(FieldPolicy.denyAll())
 
     when:
-    mapper.toDocument(request.supplier().get(), null, request.selection(), request.policy())
+    mapper.toMappedDocument(article(), null, selection, policy)
 
     then:
-    def e = thrown(JsonApiMappingException)
-    e.diagnostic() == MappingDiagnostic.FIELDSETS_REQUIRE_MAPPED_DOCUMENT
-    e.message.contains("types: [articles]")
+    def exception = thrown(JsonApiMappingException)
+    exception.diagnostic() == MappingDiagnostic.INVALID_FIELDSET_FIELD
+    exception.resourceClass() == Article.class
   }
 
-  def "access counting exact single-read counts remain Jackson 3 suite-local"() {
-    given:
-    def scenario = SparseFieldsetScenarios.catalog().byId(
-        "access counting proves linkage vs traversal split")
-    def request = (SparseFieldsetRequest.Single) scenario.request()
-    def counting = (AccessCountingFieldsetArticle) request.supplier().get()
-
+  def "renamed fieldsets use configured Jackson wire names"() {
     when:
-    mapper.toMappedDocument(counting, null, request.selection(), request.policy())
-
-    then:
-    counting.titleReads == 1
-    counting.authorReads == 1
-    counting.bodyReads == 0
-    counting.commentsReads == 0
-  }
-
-  def "writer composes sparse-fieldset provenance without caller choreography"() {
-    given:
-    def scenario = SparseFieldsetScenarios.catalog().byId(
-        "include author with fields articles title omits linkage and sets exception")
-    def request = (SparseFieldsetRequest.Single) scenario.request()
-    def mapped = mapper.toMappedDocument(
-        request.supplier().get(), null, request.selection(), request.policy())
-
-    when:
-    JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
-
-    then:
-    noExceptionThrown()
-
-    when:
-    JsonApiJackson3.writer(jackson).writeValueAsString(mapped.document())
-
-    then:
-    def ex = thrown(JsonApiValidationException)
-    ex.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
-  }
-
-  def "mapped writing preserves unrelated caller validation settings"() {
-    given:
-    def article = new Article("1", "Title", "Body", List.of(), new Person("9", "Dan"))
-    def envelope = new DocumentEnvelope(
+    def blog = mapper.toMappedDocument(
+        new BlogWithJsonProperty("b1", "Hello"),
         null,
-        Meta.of(["myext:version": "1.0"]),
+        selectionFor(["blogs": ["blog_title"]]),
+        RepresentationPolicy.defaults())
+    def article = mapper.toMappedDocument(
+        new ArticleWithRenamedAuthor("1", "Title", dan()),
+        null,
+        selectionFor(["articles": ["written-by"]]),
+        RepresentationPolicy.defaults())
+
+    then:
+    assertFieldsetResource(
+        primaryResource(blog), "blogs", "b1", ["blog_title"], ["blog_title": "Hello"], null, [:])
+    assertFieldsetResource(
+        primaryResource(article),
+        "articles",
+        "1",
+        null,
+        [:],
+        ["written-by"],
+        ["written-by": personLinkage(dan())])
+  }
+
+  def "a renamed relationship rejects its Java logical name in a fieldset"() {
+    when:
+    mapper.toMappedDocument(
+        new ArticleWithRenamedAuthor("1", "Title", dan()),
+        null,
+        selectionFor(["articles": ["author"]]),
+        RepresentationPolicy.defaults())
+
+    then:
+    def exception = thrown(JsonApiMappingException)
+    exception.diagnostic() == MappingDiagnostic.INVALID_FIELDSET_FIELD
+    exception.resourceClass() == ArticleWithRenamedAuthor.class
+  }
+
+  def "nested included resources apply their own fieldset by type"() {
+    given:
+    def selection = selectionFor(
+        ["comments": ["body"]],
+        ["comments.author"])
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(article(), null, selection, policy)
+
+    then:
+    assertFieldsetResource(
+        primaryResource(mapped),
+        "articles",
+        "1",
+        ["title", "body-text"],
+        ["title": "Title", "body-text": "Body"],
+        ["comments", "author"],
+        ["comments": commentsLinkage(), "author": personLinkage(dan())])
+    def included = mapped.document().included()
+    included.size() == 4
+    assertFieldsetResource(included[0], "comments", "5", ["body"], ["body": "First!"], null, [:])
+    assertFieldsetResource(included[1], "comments", "12", ["body"], ["body": "I like XML better"], null, [:])
+    assertFieldsetResource(included[2], "people", "2", ["name"], ["name": "Ezra"], null, [:])
+    assertFieldsetResource(included[3], "people", "9", ["name"], ["name": "Dan"], null, [:])
+    mapped.sparseFieldsetLinkageExemptions() == Set.of(
+        ResourceIdentity.ofId("people", "2"), ResourceIdentity.ofId("people", "9"))
+  }
+
+  @Unroll
+  def "fieldset #description preserves primary identity"() {
+    when:
+    def mapped = mapper.toMappedDocument(
+        article(), null, selectionFor(fieldsets), RepresentationPolicy.defaults())
+
+    then:
+    primaryResource(mapped).type() == "articles"
+    primaryResource(mapped).id() == "1"
+
+    where:
+    description | fieldsets
+    "no fieldset" | [:]
+    "an empty fieldset" | ["articles": []]
+    "an attribute-only fieldset" | ["articles": ["title"]]
+    "a relationship-only fieldset" | ["articles": ["author"]]
+  }
+
+  def "empty fieldsets retain resource meta independently of field policy"() {
+    given:
+    def article = new ArticleWithMeta(
+        "1",
+        "T",
+        ResourceIdentifier.of("people", "p1"),
+        new ArticleMeta("cms", "n"),
         null)
+    def policy = RepresentationPolicy.defaults().withFieldPolicy(FieldPolicy.denyAll())
+
+    when:
     def mapped = mapper.toMappedDocument(
-        article,
-        envelope,
-        RepresentationSelection.builder()
-        .include(IncludePath.of("author"))
-        .fields("articles", ["title"])
-        .build(),
-        RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()))
-    def base = new ValidationContext(
-        DocumentUsage.RESPONSE_OR_OTHER,
-        Set.of("myext"),
-        Set.of(),
-        Set.of(),
-        Set.of(),
-        LinksContext.TOP_LEVEL,
-        Map.of(),
-        null)
-
-    when:
-    JsonApiJackson3.writer(jackson, base).writeValueAsString(mapped)
+        article, null, selectionFor(["articles": []]), policy)
 
     then:
-    noExceptionThrown()
-
-    when:
-    JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
-
-    then:
-    def ex = thrown(JsonApiValidationException)
-    ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+    primaryResource(mapped).attributes() == null
+    primaryResource(mapped).relationships() == null
+    primaryResource(mapped).meta() == Meta.of(["source": "cms", "note": "n"])
   }
 
-  def "mapped writing unions bound and mapped linkage exemptions"() {
+  def "concurrent fieldset mappings isolate documents and linkage exemptions"() {
     given:
-    def article = ResourceObject.of("articles", "1")
-    def boundOrphan = ResourceObject.of("people", "9")
-    def mappedOrphan = ResourceObject.of("people", "10")
-    def mapped = new MappedDocument(
-        new JsonApiDocument(
-        new DocumentData.SingleResource(article),
-        null, null, null, null,
-        [boundOrphan, mappedOrphan],
-        [:]),
-        Set.of(ResourceIdentity.ofId("people", "10")))
-    def base = ValidationContext.defaults()
-        .withSparseFieldsetLinkageExemptions(Set.of(ResourceIdentity.ofId("people", "9")))
-
-    when:
-    JsonApiJackson3.writer(jackson, base).writeValueAsString(mapped)
-
-    then:
-    noExceptionThrown()
-  }
-
-  def "exempted sparse-fieldset orphans stay valid while unrelated full-linkage defects fail"() {
-    given:
-    def fieldsetOrphanArticle = ResourceObject.of("articles", "1")
-    def exemptedAuthor = ResourceObject.of("people", "9")
-    def unrelatedOrphan = ResourceObject.of("tags", "7")
-    def document = new JsonApiDocument(
-        new DocumentData.SingleResource(fieldsetOrphanArticle),
-        null, null, null, null,
-        [
-          exemptedAuthor,
-          unrelatedOrphan
-        ],
-        [:])
-    def mapped = new MappedDocument(
-        document, Set.of(ResourceIdentity.ofId("people", "9")))
-
-    when:
-    JsonApiJackson3.writer(jackson).writeValueAsString(mapped)
-
-    then:
-    def ex = thrown(JsonApiValidationException)
-    ex.ruleCode() == ValidationRuleCode.FULL_LINKAGE_VIOLATION
-
-    when:
-    def subtreeAuthor = new ResourceObject(
-        "people", "9", null, null,
-        Relationships.ofRelationships([
-          editor: Relationship.withData(
-          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "10")))
-        ]),
-        null, null, [:])
-    def childOfExempted = ResourceObject.of("people", "10")
-    def subtreeDocument = new JsonApiDocument(
-        new DocumentData.SingleResource(fieldsetOrphanArticle),
-        null, null, null, null,
-        [
-          subtreeAuthor,
-          childOfExempted
-        ],
-        [:])
-    JsonApiJackson3.writer(jackson).writeValueAsString(
-        new MappedDocument(subtreeDocument, Set.of(ResourceIdentity.ofId("people", "9"))))
-
-    then:
-    noExceptionThrown()
-  }
-
-  def "all output variants compose provenance consistently"() {
-    given:
-    def scenario = SparseFieldsetScenarios.catalog().byId(
-        "include author with fields articles title omits linkage and sets exception")
-    def request = (SparseFieldsetRequest.Single) scenario.request()
-    def mapped = mapper.toMappedDocument(
-        request.supplier().get(), null, request.selection(), request.policy())
-    def writer = JsonApiJackson3.writer(jackson)
-    def manualWriter = JsonApiJackson3.writer(
-        jackson,
-        ValidationContext.defaults()
-        .withSparseFieldsetLinkageExemptions(mapped.sparseFieldsetLinkageExemptions()))
-
-    expect:
-    def composedJson = writer.writeValueAsString(mapped)
-    composedJson == manualWriter.writeValueAsString(mapped.document())
-    writer.writeValueAsBytes(mapped) ==
-        composedJson.getBytes(StandardCharsets.UTF_8)
-    with(new ByteArrayOutputStream()) { stream ->
-      writer.writeValue(stream, mapped)
-      stream.toByteArray() == writer.writeValueAsBytes(mapped)
-    }
-    with(new StringWriter()) { out ->
-      writer.writeValue(out, mapped)
-      out.toString() == composedJson
-    }
-    with(new ByteArrayOutputStream()) { stream ->
-      def generator = jackson.createGenerator(stream)
-      writer.writeValue(generator, mapped)
-      generator.close()
-      stream.toByteArray() == writer.writeValueAsBytes(mapped)
-    }
-  }
-
-  def "no-provenance mappings write under the unchanged base context"() {
-    given:
-    def scenario = SparseFieldsetScenarios.catalog().byId(
-        "full field list keeps the unrestricted resource state")
-    def request = (SparseFieldsetRequest.Single) scenario.request()
-    def mapped = mapper.toMappedDocument(
-        request.supplier().get(), null, request.selection(), request.policy())
-
-    expect:
-    mapped.sparseFieldsetLinkageExemptions().isEmpty()
-    JsonApiJackson3.writer(jackson).writeValueAsString(mapped) ==
-        JsonApiJackson3.writer(jackson).writeValueAsString(mapped.document())
-  }
-
-  private Object execute(SparseFieldsetScenario scenario) {
-    def request = scenario.request()
-    if (request instanceof SparseFieldsetRequest.Concurrent) {
-      executeConcurrent(
-          request, (SparseFieldsetExpectation.ConcurrentIsolation) scenario.expectation())
-      return null
-    }
-    if (request instanceof SparseFieldsetRequest.IdentityPreservation) {
-      executeIdentity(request, (SparseFieldsetExpectation.IdentityPreservation) scenario.expectation())
-      return null
-    }
-    return invoke(scenario.operation(), request)
-  }
-
-  private Object invoke(SparseFieldsetOperation operation, SparseFieldsetRequest request) {
-    switch (operation) {
-      case SparseFieldsetOperation.TO_DOCUMENT:
-        def documentRequest = (SparseFieldsetRequest.Single) request
-        return mapper.toDocument(
-            documentRequest.supplier().get(),
-            null,
-            documentRequest.selection(),
-            documentRequest.policy())
-      case SparseFieldsetOperation.TO_RESOURCE_COLLECTION:
-        def collectionRequest = (SparseFieldsetRequest.Collection) request
-        return mapper.toResourceCollection(
-            collectionRequest.supplier().get(),
-            null,
-            collectionRequest.selection(),
-            collectionRequest.policy())
-      case SparseFieldsetOperation.TO_MAPPED_DOCUMENT:
-        def mappedDocumentRequest = (SparseFieldsetRequest.Single) request
-        return mapper.toMappedDocument(
-            mappedDocumentRequest.supplier().get(),
-            null,
-            mappedDocumentRequest.selection(),
-            mappedDocumentRequest.policy())
-      case SparseFieldsetOperation.TO_MAPPED_RESOURCE_COLLECTION:
-        def mappedCollectionRequest = (SparseFieldsetRequest.Collection) request
-        return mapper.toMappedResourceCollection(
-            mappedCollectionRequest.supplier().get(),
-            null,
-            mappedCollectionRequest.selection(),
-            mappedCollectionRequest.policy())
-      default:
-        throw new IllegalArgumentException("Unknown operation: " + operation)
-    }
-  }
-
-  private void executeIdentity(
-      SparseFieldsetRequest.IdentityPreservation request,
-      SparseFieldsetExpectation.IdentityPreservation expectation) {
-    request.sides().each { side ->
-      def mapped = mapper.toMappedDocument(
-          request.supplier().get(), null, side.selection(), side.policy())
-      def resource = (mapped.document().data() as DocumentData.SingleResource).resource()
-      assert resource.type() == expectation.type()
-      assert resource.id() == expectation.id()
-    }
-  }
-
-  private void executeConcurrent(
-      SparseFieldsetRequest.Concurrent request,
-      SparseFieldsetExpectation.ConcurrentIsolation isolation) {
-    def pool = Executors.newFixedThreadPool(2)
+    def shared = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
     def start = new CountDownLatch(1)
     def done = new CountDownLatch(2)
-    def omitResult = new AtomicReference<MappedDocument>()
-    def linkResult = new AtomicReference<MappedDocument>()
-    def error = new AtomicReference<Throwable>()
-    try {
-      pool.submit(concurrentTask(request.first(), omitResult, start, done, error) as Runnable)
-      pool.submit(concurrentTask(request.second(), linkResult, start, done, error) as Runnable)
-      start.countDown()
-      assert done.await(10, TimeUnit.SECONDS)
-      assert error.get() == null
-      verifyMapped(isolation.first(), omitResult.get())
-      verifyMapped(isolation.second(), linkResult.get())
-    } finally {
-      pool.shutdownNow()
-    }
-  }
+    def firstResult = new AtomicReference<MappedDocument>()
+    def secondResult = new AtomicReference<MappedDocument>()
+    def failure = new AtomicReference<Throwable>()
+    def pool = Executors.newFixedThreadPool(2)
 
-  private Closure concurrentTask(
-      SparseFieldsetSide side,
-      AtomicReference<MappedDocument> result,
-      CountDownLatch start,
-      CountDownLatch done,
-      AtomicReference<Throwable> error) {
-    return {
+    when:
+    pool.submit({
       try {
         start.await()
-        result.set(mapper.toMappedDocument(
-            side.supplier().get(), null, side.selection(), side.policy()))
-      } catch (Throwable t) {
-        error.compareAndSet(null, t)
+        100.times {
+          firstResult.set(shared.toMappedDocument(
+              article(),
+              null,
+              selectionFor(["articles": ["title"]], ["author"]),
+              RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())))
+        }
+      } catch (Throwable throwable) {
+        failure.compareAndSet(null, throwable)
       } finally {
         done.countDown()
       }
-    }
+    } as Runnable)
+    pool.submit({
+      try {
+        start.await()
+        100.times {
+          secondResult.set(shared.toMappedDocument(
+              article(),
+              null,
+              selectionFor(["articles": ["title", "author", "comments"]], ["author"]),
+              RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())))
+        }
+      } catch (Throwable throwable) {
+        failure.compareAndSet(null, throwable)
+      } finally {
+        done.countDown()
+      }
+    } as Runnable)
+    start.countDown()
+
+    then:
+    done.await(10, TimeUnit.SECONDS)
+    failure.get() == null
+    firstResult.get().sparseFieldsetLinkageExemptions() == Set.of(ResourceIdentity.ofId("people", "9"))
+    secondResult.get().sparseFieldsetLinkageExemptions().isEmpty()
+    primaryResource(firstResult.get()).attributes().attributes() == ["title": "Title"]
+    primaryResource(secondResult.get()).attributes().attributes() == ["title": "Title"]
+
+    cleanup:
+    pool.shutdownNow()
   }
 
-  private void verify(
-      SparseFieldsetScenario scenario,
+  private static RepresentationSelection selectionFor(
+      Map<String, List<String>> fieldsets, List<String> includePaths = []) {
+    def builder = RepresentationSelection.builder()
+    includePaths.each { path -> builder.include(IncludePath.of(path as String)) }
+    fieldsets.each { type, fields ->
+      builder.fields(type as String, fields as List<String>)
+    }
+    builder.build()
+  }
+
+  private static ResourceObject primaryResource(MappedDocument mapped) {
+    def data = mapped.document().data()
+    assert data instanceof DocumentData.SingleResource
+    ((DocumentData.SingleResource) data).resource()
+  }
+
+  private static List<ResourceObject> primaryResources(MappedDocument mapped) {
+    def data = mapped.document().data()
+    assert data instanceof DocumentData.ResourceCollection
+    ((DocumentData.ResourceCollection) data).resources()
+  }
+
+  private static void assertIncludedResource(
       MappedDocument mapped,
-      def document,
-      Throwable thrownException) {
-    def expectation = scenario.expectation()
-    if (expectation instanceof SparseFieldsetExpectation.Failure) {
-      assert thrownException instanceof JsonApiMappingException
-      def ex = (JsonApiMappingException) thrownException
-      assert ex.diagnostic() == expectation.diagnostic()
-      assert ex.propertyPath() == expectation.propertyPath()
-      assert ex.resourceClass() == expectation.resourceClass()
-      return
+      String expectedType,
+      String expectedId,
+      List<String> expectedAttributeNames,
+      Map<String, Object> expectedAttributes,
+      List<String> expectedRelationshipNames,
+      Map<String, RelationshipData> expectedLinkage) {
+    def included = mapped.document().included()
+    assert included != null
+    assert included.size() == 1
+    assertFieldsetResource(
+        included[0],
+        expectedType,
+        expectedId,
+        expectedAttributeNames,
+        expectedAttributes,
+        expectedRelationshipNames,
+        expectedLinkage)
+  }
+
+  private static void assertFieldsetResource(
+      ResourceObject actual,
+      String expectedType,
+      String expectedId,
+      List<String> expectedAttributeNames,
+      Map<String, Object> expectedAttributes,
+      List<String> expectedRelationshipNames,
+      Map<String, RelationshipData> expectedLinkage) {
+    assert actual.type() == expectedType
+    assert actual.id() == expectedId
+
+    if (expectedAttributeNames == null) {
+      assert actual.attributes() == null
+    } else {
+      assert actual.attributes() != null
+      assert List.copyOf(actual.attributes().attributes().keySet()) == expectedAttributeNames
+      assert actual.attributes().attributes() == expectedAttributes
     }
-    if (expectation instanceof SparseFieldsetExpectation.ConcurrentIsolation
-        || expectation instanceof SparseFieldsetExpectation.IdentityPreservation) {
-      assert thrownException == null
-      return
-    }
-    assert thrownException == null
-    if (expectation instanceof SparseFieldsetExpectation.UnmappedSuccess) {
-      assert document != null
-      def resource = primaryResource(document.data())
-      assertResource(expectation.primary(), resource)
-      assertIncluded(document.included(), expectation.included())
-      return
-    }
-    def success = (SparseFieldsetExpectation.MappedSuccess) expectation
-    verifyMapped(success, mapped)
-    def request = scenario.request()
-    if (success.zeroReads() != null && request instanceof SparseFieldsetRequest.Single) {
-      // Catalog iteration already consumed a fresh instance; re-run to observe counters.
-      def supplied = request.supplier().get()
-      assert supplied instanceof AccessCountingFieldsetArticle,
-      "zeroReads expectations require AccessCountingFieldsetArticle: " + supplied?.class
-      def counting = (AccessCountingFieldsetArticle) supplied
-      mapper.toMappedDocument(counting, null, request.selection(), request.policy())
-      success.zeroReads().unreadAttributes().each { name ->
-        assert readsFor(counting, name) == 0
+
+    if (expectedRelationshipNames == null) {
+      assert actual.relationships() == null
+    } else {
+      assert actual.relationships() != null
+      assert List.copyOf(actual.relationships().relationships().keySet()) == expectedRelationshipNames
+      expectedLinkage.each { name, expectedData ->
+        assert actual.relationships().relationships().get(name) != null
+        assert actual.relationships().relationships().get(name).data() == expectedData
       }
-      success.zeroReads().unreadRelationships().each { name ->
-        assert readsFor(counting, name) == 0
-      }
     }
   }
 
-  private static void verifyMapped(
-      SparseFieldsetExpectation.MappedSuccess success, MappedDocument mapped) {
-    assert mapped != null
-    assert mapped.sparseFieldsetLinkageExemptions().isEmpty() == !success.expectsLinkageExemptions()
-    def resource = primaryResource(mapped.document().data())
-    assertResource(success.primary(), resource)
-    assertIncluded(mapped.document().included(), success.included())
+  private static Article article() {
+    new Article("1", "Title", "Body", List.of(comment5(), comment12()), dan())
   }
 
-  private static ResourceObject primaryResource(def data) {
-    if (data instanceof DocumentData.SingleResource) {
-      return data.resource()
-    }
-    if (data instanceof DocumentData.ResourceCollection) {
-      assert data.resources().size() == 1
-      return data.resources()[0]
-    }
-    throw new IllegalArgumentException("Unsupported primary data: " + data)
+  private static Article articleWithNullAuthor() {
+    new Article("1", "Title", "Body", List.of(comment5()), null)
   }
 
-  private static void assertResource(FieldsetResourceState expected, ResourceObject actual) {
-    expected.assertMatches(actual)
+  private static Person dan() {
+    new Person("9", "Dan")
   }
 
-  private static void assertIncluded(
-      List<ResourceObject> actual, List<FieldsetResourceState> expected) {
-    if (expected == null) {
-      assert actual == null
-      return
-    }
-    assert actual != null
-    assert actual.size() == expected.size()
-    expected.eachWithIndex { FieldsetResourceState state, int i ->
-      assertResource(state, actual[i])
-    }
+  private static Comment comment5() {
+    new Comment("5", "First!", new Person("2", "Ezra"))
   }
 
-  private static int readsFor(AccessCountingFieldsetArticle counting, String field) {
-    switch (field) {
-      case "title":
-        return counting.titleReads
-      case "body":
-        return counting.bodyReads
-      case "author":
-        return counting.authorReads
-      case "comments":
-        return counting.commentsReads
-      default:
-        throw new IllegalArgumentException("Unknown access-count field: " + field)
-    }
+  private static Comment comment12() {
+    new Comment("12", "I like XML better", dan())
+  }
+
+  private static RelationshipData personLinkage(Person person) {
+    new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", person.id()))
+  }
+
+  private static RelationshipData commentsLinkage() {
+    new RelationshipData.IdentifierCollectionLinkage(
+        List.of(ResourceIdentifier.of("comments", "5"), ResourceIdentifier.of("comments", "12")))
   }
 }

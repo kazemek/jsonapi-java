@@ -1,51 +1,161 @@
 package io.github.kazemek.jsonapi.jackson3
 
+import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.Link
 import io.github.kazemek.jsonapi.core.model.Links
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.mapping.RelationshipDecoration
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecoration
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecorator
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecoratorRegistry
-import io.github.kazemek.jsonapi.testsupport.decoration.DecorationScenarios
-import io.github.kazemek.jsonapi.testsupport.decoration.DecorationVerifier
+import io.github.kazemek.jsonapi.jackson.representation.FieldPolicy
+import io.github.kazemek.jsonapi.jackson.representation.IncludePath
+import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
 class ResourceDecorationSpec extends Specification {
 
+  @Shared
   Links resourceLinks = Links.ofLinks([self: new Link.StringLink("https://example.test/articles/1")])
+
+  @Shared
   Links commentsLinks = Links.ofLinks([self: new Link.StringLink("https://example.test/articles/1/relationships/comments"), related: new Link.StringLink("https://example.test/articles/1/comments")])
 
+  @Shared
+  Links personLinks = Links.ofLinks([self: new Link.StringLink("https://example.test/people/p1")])
+
   @Unroll
-  def "shared catalog #scenario.id"() {
+  def "decorates #id"() {
     given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), scenario.decorators())
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), registry)
 
     when:
-    def result = null
-    def thrown = null
-    try {
-      def domain = scenario.domainSupplier().get()
-      def outcome = scenario.outcome()
-      if (outcome instanceof io.github.kazemek.jsonapi.testsupport.decoration.DecorationOutcome.ResourceSuccess) {
-        result = mapper.toResource(domain)
-      } else if (outcome instanceof io.github.kazemek.jsonapi.testsupport.decoration.DecorationOutcome.DocumentSuccess) {
-        result = mapper.toDocument(domain, null, scenario.selection(), scenario.policy())
-      } else if (outcome instanceof io.github.kazemek.jsonapi.testsupport.decoration.DecorationOutcome.MappedDocumentSuccess) {
-        result = mapper.toMappedDocument(domain, null, scenario.selection(), scenario.policy())
-      } else if (outcome instanceof io.github.kazemek.jsonapi.testsupport.decoration.DecorationOutcome.Failure) {
-        result = mapper.toResource(domain)
-      }
-    } catch (Throwable t) {
-      thrown = t
-    }
+    def resource = mapper.toResource(input)
 
     then:
-    DecorationVerifier.verify(scenario, result, thrown)
+    resource.type() == "articles"
+    resource.id() == "1"
+    resource.links() == expectedResourceLinks
+    def relationships = resource.relationships()?.relationships()
+    if (expectedCommentsLinks == null) {
+      if (relationships?.containsKey("comments")) {
+        assert relationships.get("comments").links() == null
+      }
+    } else {
+      assert relationships != null
+      assert relationships.containsKey("comments")
+      assert relationships.get("comments").links() == expectedCommentsLinks
+      assert relationships.get("comments").data() != null
+    }
 
     where:
-    scenario << DecorationScenarios.catalog().all()
+    id | input | registry | expectedResourceLinks | expectedCommentsLinks
+    "resource links preserve attributes and linkage" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.ofLinks(resourceLinks) } as ResourceDecorator).build() | resourceLinks | null
+    "relationship links preserve linkage" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | null | commentsLinks
+    "resource and relationship links together preserve author linkage" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), new Person("p1", "Alice")) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().links(resourceLinks).relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | resourceLinks | commentsLinks
+    "present-empty resource links are preserved" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.ofLinks(Links.empty()) } as ResourceDecorator).build() | Links.empty() | null
+    "present-empty relationship links are preserved" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(Links.empty())).build() } as ResourceDecorator).build() | null | Links.empty()
+  }
+
+  @Unroll
+  def "decorates #id fails"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), registry)
+
+    when:
+    mapper.toResource(input)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == expectedDiagnostic
+
+    where:
+    id | input | registry | expectedDiagnostic
+    "unknown relationship target is invalid" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("unknown", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | MappingDiagnostic.INVALID_DECORATION_TARGET
+    "non-relationship target is invalid" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("title", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | MappingDiagnostic.INVALID_DECORATION_TARGET
+    "decorator returns null is invalid" | new Article("1", "Title", "Body", List.of(), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> null } as ResourceDecorator).build() | MappingDiagnostic.INVALID_DECORATION_STATE
+  }
+
+  @Unroll
+  def "decorates document #id"() {
+    given:
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), registry)
+
+    when:
+    def document = mapper.toDocument(input, null, selection, policy)
+    def primary = (document.data() as DocumentData.SingleResource).resource()
+
+    then:
+    primary.type() == "articles"
+    primary.links() == expectedPrimaryLinks
+    if (expectedCommentsLinks == null) {
+      if (primary.relationships()?.relationships()?.containsKey("comments")) {
+        assert primary.relationships().relationships().get("comments").links() == null
+      }
+    } else {
+      assert primary.relationships() != null
+      assert primary.relationships().relationships().containsKey("comments")
+      assert primary.relationships().relationships().get("comments").links() == expectedCommentsLinks
+    }
+    if (expectedIncludedLinks != null) {
+      assert document.included() != null
+      assert document.included().size() == 1
+      assert document.included().get(0).links() == expectedIncludedLinks
+      assert document.included().get(0).type() == "people"
+    } else {
+      assert document.included() == null || document.included().isEmpty()
+    }
+
+    where:
+    id | input | registry | selection | policy | expectedPrimaryLinks | expectedCommentsLinks | expectedIncludedLinks
+    "included resource receives decoration" | new Article("1", "Title", "Body", List.of(), new Person("p1", "Alice")) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.empty() } as ResourceDecorator).register(Person, { Person p -> ResourceDecoration.ofLinks(personLinks) } as ResourceDecorator).build() | RepresentationSelection.builder().include(IncludePath.of("author")).build() | RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll()) | null | null | personLinks
+    "decorated relationship survives without inclusion" | new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null) | ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build() | RepresentationSelection.none() | RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll()) | null | commentsLinks | null
+  }
+
+  def "decorated relationship does not resurrect fieldset-omitted relationship"() {
+    given:
+    def registry = ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build()
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), registry)
+    def article = new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null)
+    def selection = RepresentationSelection.builder().fields("articles", "title").build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(article, null, selection, policy)
+    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
+
+    then:
+    primary.relationships() == null
+    primary.attributes().attributes().size() == 1
+    primary.attributes().attributes().containsKey("title")
+  }
+
+  def "decorated relationship survives when selected via fieldset"() {
+    given:
+    def registry = ResourceDecoratorRegistry.builder().register(Article, { Article a -> ResourceDecoration.builder().relationship("comments", RelationshipDecoration.of(commentsLinks)).build() } as ResourceDecorator).build()
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build(), registry)
+    def article = new Article("1", "Title", "Body", List.of(new Comment("c1", "Nice", null)), null)
+    def selection = RepresentationSelection.builder().fields("articles", "title", "comments").build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll()).withFieldPolicy(FieldPolicy.allowAll())
+
+    when:
+    def mapped = mapper.toMappedDocument(article, null, selection, policy)
+    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
+
+    then:
+    primary.relationships() != null
+    primary.relationships().relationships().containsKey("comments")
+    primary.relationships().relationships().get("comments").links() == commentsLinks
+    primary.relationships().relationships().get("comments").data().identifiers().size() == 1
   }
 
   def "configured Jackson rename follows logical identity"() {

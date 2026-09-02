@@ -23,7 +23,7 @@ import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.SnakeIdentifier
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.WrappedMappedArticle
 import io.github.kazemek.jsonapi.jackson3.IdentifierMetaFixtures.WrappedMappedSetArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.AuthorIdMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorIdMeta
 import spock.lang.Specification
 import tools.jackson.databind.JavaType
 import tools.jackson.databind.PropertyNamingStrategies
@@ -32,7 +32,7 @@ import tools.jackson.databind.json.JsonMapper
 // Jackson 3 mechanism probes for identifier-meta: JavaType preservation, naming strategies,
 // custom serializers (including non-emission and invalid scalar emission), and linkage-mapper
 // wiring. Major-neutral RelationshipLinkage container, overlay, inclusion, and PATCH semantics
-// live in the shared test-support catalogs.
+// live in direct adapter-owned cases.
 class IdentifierMetaMappingSpec extends Specification {
 
   static def mapper() {

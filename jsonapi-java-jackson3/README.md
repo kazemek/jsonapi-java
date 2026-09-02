@@ -415,7 +415,7 @@ artifact; both majors share the neutral contracts of
 - [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
 - [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
 - [ADR-017 — Opt-in RelationshipLinkage for resource identifier meta](../docs/adr/017-resource-identifier-meta-mapping.md)
-- [Canonical fixtures](../jsonapi-java-test-support/src/main/resources/jsonapi/corpus/1.1/README.md)
+- [Canonical fixtures](../jsonapi-java-jackson-api/src/testFixtures/resources/jsonapi/corpus/1.1/README.md)
 - [Jackson API module](../jsonapi-java-jackson-api/README.md)
 - [Root agent workflow](../AGENTS.md)
 
@@ -536,33 +536,4 @@ artifact; both majors share the neutral contracts of
   packages, annotations, the common contracts package, `tools.jackson..`, and this module; bans
   `core.internal` and Jackson 2 (`com.fasterxml.jackson..`) in production sources, and asserts no
   moved common-contract type is re-declared here (ADR-010).
-- **Tests:** Spock specs under `src/test/groovy/`; Jackson-major-specific fixture shapes live in
-  small `*Fixtures.java` containers with static nested classes next to the specs that own them.
-  There is no generic adapter-wide test-model package: shared cross-adapter semantics come from
-  `jsonapi-java-test-support` catalogs, and each catalog runner iterates the complete shared
-  catalog directly (`catalog().all()`), so a new scenario is picked up without runner changes;
-  catalog completeness and stable ids are owned by the test-support catalog integrity specs.
-  Shared semantic comparison lives in test-support (`DomainWriteVerifier`, `DomainReadVerifier`,
-  `PatchVerifier`, `PatchDtoVerifier`, `FieldsetResourceState.assertMatches`). Shared catalogs own
-  cross-major JSON:API / application-shaped semantics. Jackson 3 mechanism probes stay in
-  `IdentifierMetaMappingSpec`, `FlatMetaMappingSpec`, and `ResourceMappingJacksonFeaturesSpec`:
-  naming strategies, mix-ins, `@JsonIgnore`, `@JsonCreator`, custom serializers/deserializers,
-  `JavaType`, TypeDeserializer, linkage mappers, `IdentifierConverter` injection, `fromDocument`
-  data-less relationship meta, and wire-level codec rejection of `meta: null`.
-  Flat binder contract cases come from `DomainReadScenarios` (`ResourceBinderSpec` uses
-  `DomainReadVerifier` and keeps Jackson-API-specific cases local). Compound-inclusion contract cases come from
-  `CompoundWriteScenarios` (`CompoundSerializationSpec`). Sparse-fieldset contract cases come from
-  `SparseFieldsetScenarios` (`SparseFieldsetSpec` uses `FieldsetResourceState.assertMatches` and keeps harness-level assertions such as
-  mutation isolation, duplicate collapse, exact access counts, and writer-owned provenance
-  composition and validation local). Typed envelope contract cases come from
-  `EnvelopeReadScenarios` (`DomainDocumentReaderSpec`, which keeps `metaAs`, `JavaType`
-  registrations, mapper-instance factory forms, custom linkage mappers, caller-owned streams,
-  malformed input, and validation failures local). Presence-aware PATCH contract cases come from
-  `PatchScenarios` (`PatchBindingSpec` uses `PatchVerifier` and keeps custom deserializers, custom linkage
-  conversion, Optional attribute null, `fromDocument` missing id, factory overloads, ownership,
-  and illegal primary-data matrices local). Direct typed PATCH DTO contract cases come from
-  `PatchDtoScenarios` (`PatchDtoBindingSpec` uses `PatchDtoVerifier` and keeps generics/`JavaType`, wrapper-level
-  `@JsonDeserialize`/`@JsonSerialize` rejection, inner-type customization, custom linkage mappers,
-  naming strategy, `fromDocument`, and construction robustness under `NON_ABSENT`/`NON_EMPTY`
-  local). Domain-write catalog cases come from `DomainWriteScenarios` (`ResourceMapperSpec` uses
-  `DomainWriteVerifier`).
+- **Tests:** Spock specs under `src/test/groovy/` are boring and explicit: setup, invoke the production API, assert directly. Shared test fixtures contain passive DTOs, canonical JSON/schema resources, and the neutral `TestFixtureResources` loader via `jsonapi-java-jackson-api` test fixtures. Behavioral assertions belong in each adapter's own tests. Do not introduce shared test orchestration, scenario registries, or assertion frameworks. Small duplication between adapter test suites is acceptable. Keep Jackson-major-specific fixture shapes in small `*Fixtures.java` containers next to the owning spec.

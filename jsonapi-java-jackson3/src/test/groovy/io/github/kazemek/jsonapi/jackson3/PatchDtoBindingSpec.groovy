@@ -1,7 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoScenarios
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoVerifier
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
@@ -13,26 +11,69 @@ import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage
 import io.github.kazemek.jsonapi.core.validation.EndpointIdentity
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
+import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage
 import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericPatch
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.ArticlePatch
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.OptionalPatch
-import io.github.kazemek.jsonapi.testsupport.domainpatch.PatchDtoScenario
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AddressWithContainersPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AddressWithGeoPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AddressWithOptionalCityPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AddressWithTagsPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticlePatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleMetaPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithAddressTagsPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithBoxPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithContainerAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithDirectPresentAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithGeoPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMapMetaPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMetaPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMixedAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalCityPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithOptionalMetaPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithRawAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithRelationshipLinkagePatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorIdMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.AuthorMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.BoxPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.CommentIdMeta
+import io.github.kazemek.jsonapi.fixtures.domainpatch.ConventionalIdPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.DirectPresentPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.GeoPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.IntIdPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.MutableAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.MutableArticleWithAddressPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.NonPatchPresencePatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.OptionalPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.PresenceIdPatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.RawPatchPresencePatch
+import io.github.kazemek.jsonapi.fixtures.domainpatch.UnannotatedPatch
+import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 import java.io.ByteArrayInputStream
 import java.io.FilterInputStream
 import java.io.InputStream
+import java.util.Arrays
+import java.util.List
+import java.util.Map
 import java.util.Optional
+import java.util.Set
 import spock.lang.Specification
+import spock.lang.Unroll
 import tools.jackson.core.JsonParser
 import tools.jackson.core.JsonToken
 import tools.jackson.core.JsonGenerator
@@ -50,18 +91,118 @@ import tools.jackson.databind.util.Converter
 
 class PatchDtoBindingSpec extends Specification {
 
-  def "shared patch dto catalog scenario: #scenario.id"() {
+  @Unroll
+  def "binds typed patch dto #id into an explicit DTO"() {
     given:
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
     def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
 
     when:
-    def result = execute(scenario, reader)
+    def actual = reader.readValue(json, targetType)
 
     then:
-    PatchDtoVerifier.verify(scenario, result)
+    actual == expected
 
     where:
-    scenario << PatchDtoScenarios.catalog().all()
+    id | resource | targetType | expected
+    "patch-dto-omitted-and-supplied-attributes" | "omitted-and-supplied-attributes" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.present("Hello"), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted())
+    "patch-dto-explicit-null-attribute" | "explicit-null-attribute" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.present(null), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted())
+    "patch-dto-explicit-null-optional-inner" | "subtitle-explicit-null" | OptionalPatch.class | new OptionalPatch("1", PatchPresence.present(Optional.empty()))
+    "patch-dto-attribute-rename" | "attribute-rename" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.omitted(), PatchPresence.present("Content"), PatchPresence.omitted(), PatchPresence.omitted())
+    "patch-dto-relationship-null-linkage" | "relationship-null-linkage" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.present(null), PatchPresence.omitted())
+    "patch-dto-relationship-single-linkage" | "relationship-single-linkage" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.present(ResourceIdentifier.of("people", "p1")), PatchPresence.omitted())
+    "patch-dto-relationship-empty-collection" | "relationship-empty-collection" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.present([]))
+    "patch-dto-relationship-non-empty-collection" | "relationship-non-empty-collection" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.present([
+      ResourceIdentifier.of("comments", "c1"),
+      ResourceIdentifier.of("comments", "c2")
+    ]))
+    "patch-dto-identity-only" | "identity-other-id" | ArticlePatch.class | new ArticlePatch("7", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted())
+    "patch-dto-conventional-id" | "title-only" | ConventionalIdPatch.class | new ConventionalIdPatch("1", PatchPresence.present("T"))
+    "patch-dto-nested-partial-structured-object" | "address-street-new-street" | ArticleWithAddressPatch.class | new ArticleWithAddressPatch("1", PatchPresence.present(new AddressPatch(PatchPresence.present("New Street"), PatchPresence.omitted())))
+    "patch-dto-nested-empty-structured-object" | "address-empty-object" | ArticleWithAddressPatch.class | new ArticleWithAddressPatch("1", PatchPresence.present(new AddressPatch(PatchPresence.omitted(), PatchPresence.omitted())))
+    "patch-dto-nested-explicit-null" | "address-explicit-null" | ArticleWithAddressPatch.class | new ArticleWithAddressPatch("1", PatchPresence.present(null))
+    "patch-dto-nested-omitted" | "identity-only" | ArticleWithAddressPatch.class | new ArticleWithAddressPatch("1", PatchPresence.omitted())
+    "patch-dto-nested-multi-level" | "address-street-and-geo-lat" | ArticleWithGeoPatch.class | new ArticleWithGeoPatch("1", PatchPresence.present(new AddressWithGeoPatch(PatchPresence.present("S"), PatchPresence.present(new GeoPatch(PatchPresence.present("1"), PatchPresence.omitted())))))
+    "patch-dto-nested-optional-object" | "address-street" | ArticleWithOptionalAddressPatch.class | new ArticleWithOptionalAddressPatch("1", PatchPresence.present(Optional.of(new AddressPatch(PatchPresence.present("S"), PatchPresence.omitted()))))
+    "patch-dto-nested-optional-null" | "address-explicit-null" | ArticleWithOptionalAddressPatch.class | new ArticleWithOptionalAddressPatch("1", PatchPresence.present(Optional.empty()))
+    "patch-dto-nested-optional-member-null" | "address-street-city-null" | ArticleWithOptionalCityPatch.class | new ArticleWithOptionalCityPatch("1", PatchPresence.present(new AddressWithOptionalCityPatch(PatchPresence.present("S"), PatchPresence.present(Optional.empty()))))
+    "patch-dto-nested-container-atomic" | "address-street-tags" | ArticleWithAddressTagsPatch.class | new ArticleWithAddressTagsPatch("1", PatchPresence.present(new AddressWithTagsPatch(PatchPresence.present("S"), PatchPresence.present(["a", "b"]))))
+    "patch-dto-nested-generic-javatype" | "box-numbers" | ArticleWithBoxPatch.class | new ArticleWithBoxPatch("1", PatchPresence.present(new BoxPatch<Integer>(PatchPresence.present([1, 2]))))
+    "patch-dto-nested-container-atomic-set" | "address-street-aliases" | ArticleWithContainerAddressPatch.class | new ArticleWithContainerAddressPatch("1", PatchPresence.present(new AddressWithContainersPatch(PatchPresence.present("S"), PatchPresence.present(["a", "b"] as Set), PatchPresence.omitted(), PatchPresence.omitted())))
+    "patch-dto-nested-container-atomic-map" | "address-street-scores" | ArticleWithContainerAddressPatch.class | new ArticleWithContainerAddressPatch("1", PatchPresence.present(new AddressWithContainersPatch(PatchPresence.present("S"), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.present([x: 1, y: 2]))))
+    "patch-dto-nested-invalid-shape-omitted" | "identity-only" | ArticleWithMixedAddressPatch.class | new ArticleWithMixedAddressPatch("1", PatchPresence.omitted())
+    "patch-dto-javabean-nested-partial" | "address-street" | MutableArticleWithAddressPatch.class | new MutableArticleWithAddressPatch("1", PatchPresence.present(new MutableAddressPatch(PatchPresence.present("S"), PatchPresence.omitted())))
+    "patch-dto-meta-recursive-resource-and-relationship" | "meta-source-note-author-meta" | ArticleWithMetaPatch.class | new ArticleWithMetaPatch("1", PatchPresence.present("T"), PatchPresence.present(ResourceIdentifier.of("people", "p1")), PatchPresence.present(new ArticleMetaPatch(PatchPresence.present("cms"), PatchPresence.present("n"))), PatchPresence.present(new AuthorMeta("Alice")))
+    "patch-dto-meta-atomic-map" | "meta-map-with-relationship" | ArticleWithMapMetaPatch.class | new ArticleWithMapMetaPatch("1", PatchPresence.present("T"), identifierPresence(ResourceIdentifier.of("people", "p1")), mapPresence(objectMap("source", "cms")), mapPresence(objectMap("displayName", "Alice")))
+    "patch-dto-meta-optional-object" | "title-with-meta-source-note" | ArticleWithOptionalMetaPatch.class | new ArticleWithOptionalMetaPatch("1", PatchPresence.present("T"), PatchPresence.omitted(), PatchPresence.present(Optional.of(new ArticleMeta("cms", "n"))))
+    "patch-dto-meta-empty-object" | "meta-empty-object" | ArticleWithMetaPatch.class | new ArticleWithMetaPatch("1", PatchPresence.present("T"), PatchPresence.omitted(), PatchPresence.present(new ArticleMetaPatch(PatchPresence.omitted(), PatchPresence.omitted())), PatchPresence.omitted())
+    "patch-dto-meta-omitted" | "identity-only" | ArticleWithMetaPatch.class | new ArticleWithMetaPatch("1", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted())
+    "patch-dto-whole-linkage-to-one-identifier-meta" | "author-identifier-meta" | ArticlePatch.class | expectedArticleWithAuthorIdentifierMeta()
+    "patch-dto-whole-linkage-to-many-identifier-meta" | "comments-identifier-meta" | ArticlePatch.class | new ArticlePatch("1", PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.omitted(), PatchPresence.present([
+      identifier("comments", "c1", objectMap("pinned", true)),
+      ResourceIdentifier.of("comments", "c2")
+    ]))
+    "patch-dto-wrapper-whole-linkage-to-one-identifier-meta" | "author-identifier-meta" | ArticleWithRelationshipLinkagePatch.class | new ArticleWithRelationshipLinkagePatch("1", PatchPresence.omitted(), authorLinkagePresence(new RelationshipLinkage(identifier("people", "p1", objectMap("role", "editor")), new AuthorIdMeta("editor"))), PatchPresence.omitted())
+    "patch-dto-wrapper-whole-linkage-to-many-identifier-meta" | "comments-identifier-meta" | ArticleWithRelationshipLinkagePatch.class | expectedWrapperWithCommentsIdentifierMeta()
+    "patch-dto-object-meta-atomic" | "meta-source-only" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.ObjectMetaPatch.class | new io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.ObjectMetaPatch("1", PatchPresence.present([source: "cms"]))
+  }
+
+  @Unroll
+  def "rejects typed patch dto #id with a mapping diagnostic"() {
+    given:
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+
+    when:
+    reader.readValue(json, targetType)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == expectedDiagnostic
+    ex.propertyPath() == expectedPath
+
+    where:
+    id | resource | targetType | expectedDiagnostic | expectedPath
+    "patch-dto-resource-type-mismatch" | "resource-type-mismatch" | ArticlePatch.class | MappingDiagnostic.RESOURCE_TYPE_MISMATCH | "/type"
+    "patch-dto-unknown-attribute" | "attribute-unknown-member" | ArticlePatch.class | MappingDiagnostic.UNKNOWN_PATCH_MEMBER | "/attributes/bogus"
+    "patch-dto-unknown-relationship" | "relationship-unknown-member" | ArticlePatch.class | MappingDiagnostic.UNKNOWN_PATCH_MEMBER | "/relationships/bogus"
+    "patch-dto-identifier-conversion-failure" | "things-identifier-not-an-integer" | IntIdPatch.class | MappingDiagnostic.IDENTIFIER_CONVERSION_FAILED | "/id"
+    "patch-dto-relationship-cardinality-mismatch" | "relationship-cardinality-mismatch" | ArticlePatch.class | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data"
+    "patch-dto-declaration-non-patch-presence" | "title-only" | NonPatchPresencePatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/title"
+    "patch-dto-declaration-raw-patch-presence" | "title-only" | RawPatchPresencePatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/title"
+    "patch-dto-declaration-direct-present" | "title-only" | DirectPresentPatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/title"
+    "patch-dto-declaration-unannotated-member" | "note-attribute" | UnannotatedPatch.class | MappingDiagnostic.UNKNOWN_PATCH_MEMBER | "/attributes/note"
+    "patch-dto-declaration-presence-id" | "identity-only" | PresenceIdPatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/id"
+    "patch-dto-nested-non-object-wire" | "address-scalar-wire" | ArticleWithAddressPatch.class | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/attributes/address"
+    "patch-dto-nested-unknown-member" | "address-unknown-member" | ArticleWithAddressPatch.class | MappingDiagnostic.UNKNOWN_PATCH_MEMBER | "/attributes/address/bogus"
+    "patch-dto-nested-declaration-mixed" | "address-street-city" | ArticleWithMixedAddressPatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/address"
+    "patch-dto-nested-declaration-raw" | "address-street-city" | ArticleWithRawAddressPatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/address"
+    "patch-dto-nested-declaration-direct-present" | "address-street-city" | ArticleWithDirectPresentAddressPatch.class | MappingDiagnostic.INVALID_PATCH_PROPERTY_TYPE | "/attributes/address"
+    "patch-dto-unknown-resource-meta" | "title-with-meta-source" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.NoMetaPatch.class | MappingDiagnostic.UNKNOWN_PATCH_MEMBER | "/meta"
+    "patch-dto-unknown-relationship-meta" | "author-meta-with-data" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.NoRelMetaPatch.class | MappingDiagnostic.UNKNOWN_PATCH_MEMBER | "/relationships/author/meta"
+    "patch-dto-scalar-meta-target" | "title-with-meta-source" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.ScalarMetaPatch.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+    "patch-dto-nested-presence-meta-target" | "title-with-meta-source" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.NestedPresenceMetaPatch.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+    "patch-dto-uuid-meta-target" | "identity-only" | io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.UuidMetaPatch.class | MappingDiagnostic.INVALID_META_TARGET | "/meta"
+    "patch-dto-meta-conversion-failure" | "meta-source-object" | ArticleWithMetaPatch.class | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE | "/meta/source"
+  }
+
+  @Unroll
+  def "rejects typed patch dto #id during document validation"() {
+    given:
+    def reader = JsonApiJackson3.patchDtoReader(JsonMapper.builder().build())
+    def json = TestFixtureResources.readCorpusUtf8("patch/${resource}.json")
+
+    when:
+    reader.readValue(json, targetType)
+
+    then:
+    def ex = thrown(JsonApiDocumentReadException)
+    ex.ruleCode() == expectedRule
+    ex.jsonPointer() == expectedPointer
+
+    where:
+    id | resource | targetType | expectedRule | expectedPointer
+    "patch-dto-wrong-primary-shape" | "wrong-primary-shape" | ArticlePatch.class | ValidationRuleCode.UPDATE_REQUIRES_SINGLE_RESOURCE | "/data"
   }
 
   def "generic PATCH DTO binds through a parameterized JavaType"() {
@@ -432,7 +573,7 @@ class PatchDtoBindingSpec extends Specification {
         '{"data":{"type":"articles","id":"1","relationships":{"author":{"data":{"type":"people","id":"p1"},"meta":{"displayName":"Alice"}}}}}'
 
     when:
-    reader.readValue(json, io.github.kazemek.jsonapi.testsupport.fixtures.domainpatch.WholeMetaTargetFixtures.NoRelMetaPatch)
+    reader.readValue(json, io.github.kazemek.jsonapi.fixtures.domainpatch.WholeMetaTargetFixtures.NoRelMetaPatch)
 
     then:
     def e = thrown(JsonApiMappingException)
@@ -636,12 +777,75 @@ class PatchDtoBindingSpec extends Specification {
     JsonApiJackson3.patchDtoReader(builder.build())
   }
 
-  private static Object execute(PatchDtoScenario scenario, JsonApiPatchDtoReader reader) {
-    try {
-      return reader.readValue(scenario.documentJson(), scenario.targetType())
-    } catch (JsonApiDocumentReadException | JsonApiMappingException ex) {
-      return ex
-    }
+  private static Map<String, Object> objectMap(String key, Object value) {
+    return [(key): value] as Map<String, Object>
+  }
+
+  private static ResourceIdentifier identifier(String type, String id, Map<String, Object> meta) {
+    return new ResourceIdentifier(type, id, null, Meta.of(meta), Map.of())
+  }
+
+  private static PatchPresence<Map<String, Object>> mapPresence(Map<String, Object> value) {
+    return PatchPresence.present(value)
+  }
+
+  private static PatchPresence<ResourceIdentifier> identifierPresence(ResourceIdentifier value) {
+    return PatchPresence.present(value)
+  }
+
+  private static PatchPresence<String> omittedString() {
+    return PatchPresence.omitted()
+  }
+
+  private static PatchPresence<List<ResourceIdentifier>> omittedIdentifierList() {
+    return PatchPresence.omitted()
+  }
+
+  private static PatchPresence<RelationshipLinkage<ResourceIdentifier, AuthorIdMeta>> omittedAuthorLinkage() {
+    return PatchPresence.omitted()
+  }
+
+  private static ArticlePatch expectedArticleWithAuthorIdentifierMeta() {
+    return new ArticlePatch(
+        "1",
+        omittedString(),
+        omittedString(),
+        identifierPresence(authorIdentifierWithMeta()),
+        omittedIdentifierList())
+  }
+
+  private static ArticleWithRelationshipLinkagePatch expectedWrapperWithCommentsIdentifierMeta() {
+    return new ArticleWithRelationshipLinkagePatch(
+        "1",
+        omittedString(),
+        omittedAuthorLinkage(),
+        commentLinkages(
+        commentLinkage(commentIdentifierWithMeta(), new CommentIdMeta(true)),
+        commentLinkage(ResourceIdentifier.of("comments", "c2"), null)))
+  }
+
+  private static ResourceIdentifier authorIdentifierWithMeta() {
+    return identifier("people", "p1", objectMap("role", "editor"))
+  }
+
+  private static ResourceIdentifier commentIdentifierWithMeta() {
+    return identifier("comments", "c1", objectMap("pinned", true))
+  }
+
+  private static PatchPresence<RelationshipLinkage<ResourceIdentifier, AuthorIdMeta>> authorLinkagePresence(
+      RelationshipLinkage<ResourceIdentifier, AuthorIdMeta> value) {
+    return PatchPresence.present(value)
+  }
+
+  private static RelationshipLinkage<ResourceIdentifier, CommentIdMeta> commentLinkage(
+      ResourceIdentifier target, CommentIdMeta meta) {
+    return new RelationshipLinkage<>(target, meta)
+  }
+
+  private static PatchPresence<List<RelationshipLinkage<ResourceIdentifier, CommentIdMeta>>> commentLinkages(
+      RelationshipLinkage<ResourceIdentifier, CommentIdMeta> first,
+      RelationshipLinkage<ResourceIdentifier, CommentIdMeta> second) {
+    return PatchPresence.present(Arrays.asList(first, second))
   }
 
   private static JsonApiDocument decodeUpdateDocument(String json) {

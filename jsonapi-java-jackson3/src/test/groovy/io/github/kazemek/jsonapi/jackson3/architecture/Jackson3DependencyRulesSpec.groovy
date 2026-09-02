@@ -27,6 +27,10 @@ class Jackson3DependencyRulesSpec extends Specification {
   .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
   .importPackages("io.github.kazemek.jsonapi.jackson..")
 
+  @Shared
+  JavaClasses sharedFixtureClasses = new ClassFileImporter()
+  .importPackages("io.github.kazemek.jsonapi.fixtures..")
+
   def "jackson3 production types depend only on allowed packages"() {
     expect:
     classes()
@@ -76,6 +80,47 @@ class Jackson3DependencyRulesSpec extends Specification {
     def error = thrown(AssertionError)
     error.message.contains("DocumentEnvelope")
     error.message.contains("public Jackson API contract")
+  }
+
+  def "shared test fixtures are available through the test-fixtures variant"() {
+    expect:
+    sharedFixtureClasses.size() > 0
+  }
+
+  def "shared test fixtures depend only on allowed application-shaped packages"() {
+    expect:
+    classes()
+        .that()
+        .resideInAPackage("io.github.kazemek.jsonapi.fixtures..")
+        .should()
+        .onlyDependOnClassesThat()
+        .resideInAnyPackage(
+        "java..",
+        "org.jspecify.annotations..",
+        "io.github.kazemek.jsonapi.annotation..",
+        "io.github.kazemek.jsonapi.core.model..",
+        "io.github.kazemek.jsonapi.jackson..",
+        "io.github.kazemek.jsonapi.fixtures..",
+        "com.fasterxml.jackson.annotation..")
+        .check(sharedFixtureClasses)
+  }
+
+  def "shared test fixtures never depend on adapter majors, core.internal, or Groovy"() {
+    expect:
+    noClasses()
+        .that()
+        .resideInAPackage("io.github.kazemek.jsonapi.fixtures..")
+        .should()
+        .dependOnClassesThat()
+        .resideInAnyPackage(
+        "tools.jackson..",
+        "com.fasterxml.jackson.databind..",
+        "io.github.kazemek.jsonapi.jackson2..",
+        "io.github.kazemek.jsonapi.jackson3..",
+        "io.github.kazemek.jsonapi.core.internal..",
+        "groovy..",
+        "org.codehaus.groovy..")
+        .check(sharedFixtureClasses)
   }
 
   private static ArchRule noCommonContractRedeclarations(JavaClasses commonClasses) {

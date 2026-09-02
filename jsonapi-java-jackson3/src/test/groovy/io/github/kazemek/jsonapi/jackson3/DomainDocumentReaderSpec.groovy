@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadScenarios
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
@@ -9,32 +8,27 @@ import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.RelationshipData
+import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
+import io.github.kazemek.jsonapi.core.model.ResourceIdentity
 import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
+import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.jackson.diagnostic.CodecFailureCategory
-import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.mapping.DomainData
-import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiDocumentReadException
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
-import io.github.kazemek.jsonapi.testsupport.TestSupportResources
-import io.github.kazemek.jsonapi.testsupport.codec.CodecScenario
-import io.github.kazemek.jsonapi.testsupport.codec.CodecScenarios
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatArticle
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Comment
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainwrite.Person
-import io.github.kazemek.jsonapi.testsupport.fixtures.domainread.FlatLidArticle
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeBindingDocument
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeEntryPoint
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadCase
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadExpectation
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadInput
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadScenario
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReadVariant
-import io.github.kazemek.jsonapi.testsupport.enveloperead.EnvelopeReaderContext
-import io.github.kazemek.jsonapi.testsupport.fixtures.enveloperead.FlatThrowingArticle
+import io.github.kazemek.jsonapi.jackson.mapping.DomainData
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
+import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatLidArticle
+import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
+import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatNode
+import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatStrictArticle
+import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatThrowingArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
@@ -51,23 +45,152 @@ import tools.jackson.databind.deser.std.StdDeserializer
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.module.SimpleModule
 
-// Shared typed-envelope cases live in EnvelopeReadScenarios. This spec runs every catalog entry
-// directly through this adapter's domain document reader; adding a scenario to the shared catalog
-// is picked up automatically. Adapter-local cases stay here (no shared manifest): metaAs, JavaType
-// registrations, mapper-instance factory forms, custom linkage mappers, caller-owned streams,
-// malformed input, and validation failures.
 class DomainDocumentReaderSpec extends Specification {
 
   @Unroll
-  def "envelope read #scenario.id from the shared catalog"() {
+  def "binds #path into DomainData and IncludedResources"() {
+    given:
+    def reader = domainReader(resourceTypes, context)
+
     when:
-    def results = execute(scenario)
+    def envelope = readEnvelope(reader, path, sourceDocument)
 
     then:
-    verify(scenario, results)
+    envelope.data() == expectedData
+    includedResources(envelope) == expectedIncludedResources
+    envelope.additionalMembers() == expectedAdditionalMembers
 
     where:
-    scenario << EnvelopeReadScenarios.catalog().all()
+    path                                                     | resourceTypes                         | context                                   | sourceDocument                                    | expectedData                                                                                                                                                                                                                       | expectedIncludedResources                  | expectedAdditionalMembers
+    'envelope-binding/single-resource.json'                  | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', 'JSON:API paints my bikeshed!', 'Content', ResourceIdentifier.of('people', 'p1'), [
+      ResourceIdentifier.of('comments', 'c1')
+    ]))                         | null                                       | Map.of()
+    'envelope-binding/heterogeneous-collection.json'         | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+      new FlatArticle('1', 'First', null, null, null),
+      new Person('9', 'Dan')
+    ])                                                                                            | null                                       | Map.of()
+    'envelope-binding/at-member-document.json'               | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', 'Hello', null, null, null))                                                                                                                               | null                                       | Map.of('@request-id', 'req-1')
+    'envelope-binding/cyclic-linkage.json'                   | [FlatNode]                             | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatNode('1', ResourceIdentifier.of('nodes', '2')))                                                                                                                         | [
+      new FlatNode('2', ResourceIdentifier.of('nodes', '1'))
+    ] | Map.of()
+    'envelope-binding/shared-identity-id-and-lid.json'       | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | readCoreDocument('envelope-binding/shared-identity-id-and-lid.json', 'people', '9') | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | [new Person('9', 'Dan')]                    | Map.of()
+    'envelope-binding/independent-envelopes-matching.json'   | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | readCoreDocument('envelope-binding/independent-envelopes-matching.json', 'people', '9') | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('9', 'Dan')]                    | Map.of()
+    'envelope-binding/independent-envelopes-unrelated.json'  | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | readCoreDocument('envelope-binding/independent-envelopes-unrelated.json', 'people', '99') | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('99', 'Other')]                 | Map.of()
+    'documents/resource-collection.json'                     | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+      new FlatArticle('1', 'First', null, null, null),
+      new FlatArticle('2', 'Second', null, null, null)
+    ])                                                                      | null                                       | Map.of()
+    'documents/empty-included.json'                          | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | []                                         | Map.of()
+    'documents/null-data.json'                               | []                                    | DocumentReadContext.resourceDefaults()   | null                                              | DomainData.NullData.INSTANCE                                                                                                                                                                                        | null                                       | Map.of()
+    'documents/meta-only.json'                               | []                                    | DocumentReadContext.resourceDefaults()   | null                                              | null                                                                                                                                                                                                                         | null                                       | Map.of()
+    'documents/single-identifier.json'                       | []                                    | DocumentReadContext.identifierDefaults() | null                                              | new DomainData.SingleIdentifier(ResourceIdentifier.of('articles', '1'))                                                                                                                                       | null                                       | Map.of()
+    'documents/identifier-collection.json'                   | []                                    | DocumentReadContext.identifierDefaults() | null                                              | new DomainData.IdentifierCollection([
+      ResourceIdentifier.of('articles', '1'),
+      ResourceIdentifier.of('articles', '2')
+    ])                                                                                       | null                                       | Map.of()
+    'documents/empty-identifier-collection.json'             | []                                    | DocumentReadContext.identifierDefaults() | null                                              | new DomainData.IdentifierCollection([])                                                                                                                                                                             | null                                       | Map.of()
+    'documents/errors-document.json'                         | []                                    | DocumentReadContext.resourceDefaults()   | null                                              | null                                                                                                                                                                                                                         | null                                       | Map.of()
+    'documents/compound-document.json'                       | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null))                                                                                                  | [new Person('9', 'Dan')]                    | Map.of()
+    'documents/compound-shared-identity.json'                | [FlatArticle, Person]                   | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+      new FlatArticle('1', null, null, ResourceIdentifier.of('people', '9'), null),
+      new FlatArticle('2', null, null, ResourceIdentifier.of('people', '9'), null)
+    ]) | [new Person('9', 'Dan')] | Map.of()
+    'documents/string-and-object-links.json'                 | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.ResourceCollection([
+      new FlatArticle('1', null, null, null, null)
+    ])                                                                                                                               | null                                       | Map.of()
+    'documents/empty-wrappers.json'                           | [FlatArticle]                          | DocumentReadContext.resourceDefaults()   | null                                              | new DomainData.SingleResource(new FlatArticle('1', null, null, null, null))                                                                                                                                    | null                                       | Map.of()
+  }
+
+  def "exposes decoded document-level members"() {
+    given:
+    def mapper = JsonMapper.builder().build()
+    def reader = JsonApiJackson3.reader(mapper, DocumentReadContext.resourceDefaults())
+    def envelope = newReader().fromDocument(
+        reader.readValue(
+        '{"errors":[{"status":"400"}],"meta":{"note":"n"},' +
+        '"jsonapi":{"version":"1.1"},"links":{"self":"/errors"}}'))
+
+    expect:
+    envelope.errors().size() == 1
+    envelope.errors().get(0).status() == '400'
+    envelope.meta().members() == [note: 'n']
+    envelope.jsonapi().version() == '1.1'
+    envelope.links().links().get('self').href() == '/errors'
+  }
+
+  @Unroll
+  def "reports #expectedDiagnostic while binding #path"() {
+    given:
+    def reader = domainReader(resourceTypes, DocumentReadContext.resourceDefaults())
+
+    when:
+    reader.readValue(corpusText(path))
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == expectedDiagnostic
+    ex.propertyPath() == expectedPropertyPath
+    ex.resourceClass() == expectedResourceClass
+
+    where:
+    path                                                    | resourceTypes                         | expectedDiagnostic                              | expectedPropertyPath                                  | expectedResourceClass
+    'envelope-binding/unregistered-primary-single.json'    | []                                    | MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE   | '/data'                                              | null
+    'envelope-binding/unregistered-primary-collection.json' | []                                    | MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE   | '/data/0'                                            | null
+    'envelope-binding/binder-failure-collection.json'      | [
+      FlatArticle,
+      Person,
+      FlatStrictArticle
+    ] | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | '/data/0/relationships/author/data'              | ResourceIdentifier
+    'envelope-binding/binder-failure-single.json'           | [
+      FlatArticle,
+      Person,
+      FlatStrictArticle
+    ] | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | '/data/relationships/author/data'                | ResourceIdentifier
+    'envelope-binding/binder-failure-included.json'         | [
+      FlatArticle,
+      Person,
+      FlatStrictArticle
+    ] | MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE       | '/included/1/attributes/title'                    | FlatStrictArticle
+    'envelope-binding/root-level-failure.json'              | [FlatThrowingArticle]                | MappingDiagnostic.MISSING_CREATOR_INPUT        | '/data'                                              | FlatThrowingArticle
+    'documents/compound-document.json'                      | [FlatArticle]                         | MappingDiagnostic.UNREGISTERED_RESOURCE_TYPE   | '/included/0'                                       | null
+  }
+
+  @Unroll
+  def "rejects validation-invalid #path before typed envelope binding"() {
+    given:
+    def reader = domainReader(resourceTypes, DocumentReadContext.resourceDefaults())
+
+    when:
+    reader.readValue(corpusText(path))
+
+    then:
+    def ex = thrown(JsonApiDocumentReadException)
+    ex.category() == CodecFailureCategory.AGGREGATE_VALIDATION
+    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
+    ex.jsonPointer() == expectedJsonPointer
+
+    where:
+    path                                                   | resourceTypes       | expectedJsonPointer
+    'envelope-binding/duplicate-included-identities.json' | [FlatArticle, Person] | '/included/1'
+  }
+
+  def "included resources preserve identity aliases and instance identity"() {
+    given:
+    def reader = domainReader([FlatArticle, Person], DocumentReadContext.resourceDefaults())
+
+    when:
+    def envelope =
+        reader.fromDocument(
+        readCoreDocument('envelope-binding/shared-identity-id-and-lid.json', 'people', '9'))
+    def included = envelope.included()
+    def byId = included.find(ResourceIdentity.ofId('people', '9'))
+    def byLid = included.find(ResourceIdentity.ofLid('people', 'tmp-9'))
+
+    then:
+    included.resources() == [new Person('9', 'Dan')]
+    byId.isPresent()
+    byLid.isPresent()
+    byId.get().is(byLid.get())
   }
 
   def "metaAs returns null for both overloads when meta is absent"() {
@@ -75,7 +198,7 @@ class DomainDocumentReaderSpec extends Specification {
     def reader = newReader(FlatArticle)
 
     when:
-    def envelope = reader.readValue(bindingText(EnvelopeBindingDocument.SINGLE_RESOURCE))
+    def envelope = reader.readValue(corpusText('envelope-binding/single-resource.json'))
     def javaType = JsonMapper.builder().build().constructType(MetaPayload)
 
     then:
@@ -130,7 +253,7 @@ class DomainDocumentReaderSpec extends Specification {
         base, DocumentReadContext.resourceDefaults(), registry)
 
     when:
-    def envelope = reader.readValue(bindingText(EnvelopeBindingDocument.HETEROGENEOUS_COLLECTION))
+    def envelope = reader.readValue(corpusText('envelope-binding/heterogeneous-collection.json'))
 
     then:
     ((DomainData.ResourceCollection) envelope.data()).resources() ==
@@ -158,9 +281,9 @@ class DomainDocumentReaderSpec extends Specification {
         Map.of())
 
     when:
-    def fromThree = threeArg.readValue(fixtureText('resource-collection'))
-    def fromFour = fourArg.readValue(fixtureText('resource-collection'))
-    def fromFive = fiveArg.readValue(fixtureText('resource-collection'))
+    def fromThree = threeArg.readValue(corpusText('documents/resource-collection.json'))
+    def fromFour = fourArg.readValue(corpusText('documents/resource-collection.json'))
+    def fromFive = fiveArg.readValue(corpusText('documents/resource-collection.json'))
 
     then:
     ((DomainData.ResourceCollection) fromThree.data()).resources()*.title == ["First", "Second"]
@@ -256,11 +379,11 @@ class DomainDocumentReaderSpec extends Specification {
   def "caller-owned stream and parser remain open on success and failure"() {
     given:
     def reader = newReader(FlatArticle)
-    def successBytes = bindingText(EnvelopeBindingDocument.SINGLE_RESOURCE).bytes
+    def successBytes = corpusText('envelope-binding/single-resource.json').bytes
     def successStream = new CloseTrackingInputStream(new ByteArrayInputStream(successBytes))
     def failureStream = new CloseTrackingInputStream(new ByteArrayInputStream('{"data":'.bytes))
     def parser = JsonMapper.builder().build().createParser(
-        bindingText(EnvelopeBindingDocument.SINGLE_RESOURCE))
+        corpusText('envelope-binding/single-resource.json'))
 
     when:
     def envelope = reader.readValue(successStream)
@@ -301,7 +424,7 @@ class DomainDocumentReaderSpec extends Specification {
     def reader = newReader(FlatArticle, Person)
 
     when:
-    reader.readValue(bindingText(EnvelopeBindingDocument.DUPLICATE_INCLUDED_IDENTITIES))
+    reader.readValue(corpusText('envelope-binding/duplicate-included-identities.json'))
 
     then:
     def ex = thrown(JsonApiDocumentReadException)
@@ -372,161 +495,6 @@ class DomainDocumentReaderSpec extends Specification {
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/data/lid"
     ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
-  }
-
-  private static List execute(EnvelopeReadScenario scenario) {
-    def variant = scenario.variant()
-    if (variant instanceof EnvelopeReadVariant.Registry) {
-      return variant.attempts().collect { attempt -> executeRegistry(attempt) }
-    }
-    def binding = (EnvelopeReadVariant.DocumentBinding) variant
-    return binding.cases().collect { envelopeCase -> executeCase(binding, envelopeCase) }
-  }
-
-  private static Object executeRegistry(EnvelopeReadVariant.RegistryAttempt attempt) {
-    try {
-      def builder = ResourceTypeRegistry.builder()
-      for (Class<?> target : attempt.targetClasses()) {
-        builder.register(target)
-      }
-      builder.build()
-      return null
-    } catch (JsonApiMappingException ex) {
-      return ex
-    }
-  }
-
-  private static Object executeCase(
-      EnvelopeReadVariant.DocumentBinding binding, EnvelopeReadCase envelopeCase) {
-    def reader = readerFor(binding, envelopeCase)
-    try {
-      if (binding.entryPoint() == EnvelopeEntryPoint.FROM_DOCUMENT) {
-        return reader.fromDocument(
-            ((EnvelopeReadInput.CoreDocument) envelopeCase.input()).document())
-      }
-      return reader.readValue(wireText(envelopeCase.input()))
-    } catch (Exception ex) {
-      return ex
-    }
-  }
-
-  private static JsonApiDomainDocumentReader readerFor(
-      EnvelopeReadVariant.DocumentBinding binding, EnvelopeReadCase envelopeCase) {
-    def builder = ResourceTypeRegistry.builder()
-    for (Class<?> target : binding.targetClasses()) {
-      builder.register(target)
-    }
-    JsonApiJackson3.domainDocumentReader(
-        JsonMapper.builder().build(), resolveContext(envelopeCase), builder.build())
-  }
-
-  private static DocumentReadContext resolveContext(EnvelopeReadCase envelopeCase) {
-    switch (envelopeCase.readerContext()) {
-      case EnvelopeReaderContext.RESOURCE_DEFAULTS:
-        return DocumentReadContext.resourceDefaults()
-      case EnvelopeReaderContext.IDENTIFIER_DEFAULTS:
-        return DocumentReadContext.identifierDefaults()
-      case EnvelopeReaderContext.CODEC_DERIVED:
-        CodecScenario fixture =
-        CodecScenarios.catalog().byId(
-        ((EnvelopeReadInput.CodecFixture) envelopeCase.input()).codecScenarioId())
-        return DocumentReadContext.of(
-            fixture.context(),
-            fixture.primaryDataKind() != null ? fixture.primaryDataKind() : PrimaryDataKind.RESOURCE)
-      default:
-        throw new IllegalArgumentException("Unknown reader context: " + envelopeCase.readerContext())
-    }
-  }
-
-  private static void verify(EnvelopeReadScenario scenario, List results) {
-    def variant = scenario.variant()
-    if (variant instanceof EnvelopeReadVariant.Registry) {
-      variant.attempts().eachWithIndex { attempt, index ->
-        def ex = results[index]
-        assert ex instanceof JsonApiMappingException
-        assert ex.diagnostic() == attempt.diagnostic()
-        assert ex.resourceClass() == attempt.resourceClass()
-        assert ex.propertyPath() == attempt.propertyPath()
-      }
-      return
-    }
-    def binding = (EnvelopeReadVariant.DocumentBinding) variant
-    binding.cases().eachWithIndex { envelopeCase, index ->
-      verifyCase(envelopeCase, results[index])
-    }
-  }
-
-  private static void verifyCase(EnvelopeReadCase envelopeCase, Object result) {
-    def expectation = envelopeCase.expectation()
-    if (expectation instanceof EnvelopeReadExpectation.Failure) {
-      assert result instanceof JsonApiMappingException
-      def ex = (JsonApiMappingException) result
-      assert ex.diagnostic() == expectation.diagnostic()
-      assert ex.propertyPath() == expectation.propertyPath()
-      assert ex.resourceClass() == expectation.resourceClass()
-      return
-    }
-    if (expectation instanceof EnvelopeReadExpectation.MutationSafety) {
-      assert result instanceof JsonApiDomainDocument
-      def envelope = (JsonApiDomainDocument) result
-      verifyBound(envelope, expectation.bound())
-      if (expectation.additionalMembers()) {
-        try {
-          envelope.additionalMembers().put("k", "v")
-          assert false: "expected UnsupportedOperationException"
-        } catch (UnsupportedOperationException ignored) {
-        }
-      }
-      if (expectation.errors()) {
-        try {
-          envelope.errors().add(null)
-          assert false: "expected UnsupportedOperationException"
-        } catch (UnsupportedOperationException ignored) {
-        }
-      }
-      if (expectation.includedResources()) {
-        try {
-          envelope.included().resources().add("z")
-          assert false: "expected UnsupportedOperationException"
-        } catch (UnsupportedOperationException ignored) {
-        }
-      }
-      return
-    }
-    assert result instanceof JsonApiDomainDocument
-    verifyBound((JsonApiDomainDocument) result, (EnvelopeReadExpectation.BoundEnvelope) expectation)
-  }
-
-  private static void verifyBound(
-      JsonApiDomainDocument envelope, EnvelopeReadExpectation.BoundEnvelope expected) {
-    assert envelope.data() == expected.data()
-    assert envelope.errors() == expected.errors()
-    assert envelope.jsonapi() == expected.jsonapi()
-    assert envelope.links() == expected.links()
-    assert envelope.meta() == expected.meta()
-    assert envelope.additionalMembers() == expected.additionalMembers()
-    if (expected.included() == null) {
-      assert envelope.included() == null
-      return
-    }
-    assert envelope.included() != null
-    def included = envelope.included()
-    def exp = expected.included()
-    assert included.resources() == exp.resources()
-    def present = []
-    exp.probes().each { probe ->
-      def found = included.find(probe.identity())
-      if (probe.expectedPresent()) {
-        assert found.isPresent()
-        assert exp.resources().contains(found.get())
-        present << found.get()
-      } else {
-        assert found.isEmpty()
-      }
-    }
-    if (exp.sharedInstanceAcrossPresentProbes() && present.size() > 1) {
-      present.tail().each { assert it.is(present.head()) }
-    }
   }
 
   // ============================== MAPPING-LOCATION COMPOSITION ==============================
@@ -702,23 +670,43 @@ class DomainDocumentReaderSpec extends Specification {
     @JsonApiAttribute NestedAddress address
   }
 
-  private static String wireText(EnvelopeReadInput input) {
-    if (input instanceof EnvelopeReadInput.CodecFixture) {
-      return fixtureText(input.codecScenarioId())
-    }
-    if (input instanceof EnvelopeReadInput.BindingDocument) {
-      return bindingText(input.document())
-    }
-    throw new IllegalArgumentException("No wire text for " + input)
+  private static String corpusText(String path) {
+    TestFixtureResources.readCorpusUtf8(path)
   }
 
-  private static String fixtureText(String id) {
-    CodecScenario fixture = CodecScenarios.catalog().byId(id)
-    TestSupportResources.readCorpusUtf8(fixture.expectedPath)
+  private static JsonApiDomainDocument readEnvelope(
+      JsonApiDomainDocumentReader reader, String path, JsonApiDocument sourceDocument) {
+    sourceDocument == null
+        ? reader.readValue(corpusText(path))
+        : reader.fromDocument(sourceDocument)
   }
 
-  private static String bindingText(EnvelopeBindingDocument document) {
-    TestSupportResources.readCorpusUtf8(document.relativePath())
+  private static List<Object> includedResources(JsonApiDomainDocument envelope) {
+    envelope.included() == null ? null : envelope.included().resources()
+  }
+
+  private static JsonApiDocument readCoreDocument(
+      String path, String exemptedType, String exemptedId) {
+    def context =
+        DocumentReadContext.of(
+        ValidationContext.defaults().withSparseFieldsetLinkageExemptions(
+        Set.of(ResourceIdentity.ofId(exemptedType, exemptedId))),
+        PrimaryDataKind.RESOURCE)
+    JsonApiJackson3.reader(JsonMapper.builder().build(), context).readValue(corpusText(path))
+  }
+
+  private static JsonApiDomainDocumentReader domainReader(
+      List<Class<?>> targetClasses, DocumentReadContext context) {
+    JsonApiJackson3.domainDocumentReader(
+        JsonMapper.builder().build(), context, registry(targetClasses))
+  }
+
+  private static ResourceTypeRegistry registry(List<Class<?>> targetClasses) {
+    def builder = ResourceTypeRegistry.builder()
+    for (Class<?> target : targetClasses) {
+      builder.register(target)
+    }
+    builder.build()
   }
 
   private static ResourceTypeRegistry registry(Class<?>... targetClasses) {

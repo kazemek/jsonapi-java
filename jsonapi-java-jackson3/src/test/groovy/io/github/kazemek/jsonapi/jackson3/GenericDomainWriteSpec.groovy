@@ -8,8 +8,8 @@ import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.ModeratedComment
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.PolymorphicArticle
+import io.github.kazemek.jsonapi.fixtures.compoundwrite.ModeratedComment
+import io.github.kazemek.jsonapi.fixtures.compoundwrite.PolymorphicArticle
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.GenericResource
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.GenericRelationship
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.GenericThing
@@ -22,7 +22,7 @@ import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.ScalarValue
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.ScalarView
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.ThingResource
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.WildcardRelationship
-import io.github.kazemek.jsonapi.testsupport.fixtures.compoundwrite.BaseComment
+import io.github.kazemek.jsonapi.fixtures.compoundwrite.BaseComment
 import java.util.Optional
 import spock.lang.Specification
 import tools.jackson.databind.JavaType
