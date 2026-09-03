@@ -78,6 +78,15 @@ JsonApiDocument doc = mapper.toDocument(someAnnotatedPojo);
 String json = JsonApiJackson3.writer(callerMapper).writeValueAsString(doc);
 ```
 
+Identity roles are first-class and independent: `@JsonApiId` maps only `ResourceObject.id`, and
+`@JsonApiLocalId` maps only `ResourceObject.lid`. A domain type may carry either role or both; write
+mapping never promotes a local identifier to `id`, flat reads never bind `lid` into an id property,
+and ambiguous declarations (duplicate roles, or one property claiming both) fail with stable
+`MappingDiagnostic`s. A lid-only mapped resource represents a create/local-identifier state; the
+document writer's validation context — not mapping — decides whether that state is legal for the
+document being produced. The local identifier is a JSON:API protocol concept, not an application
+persistence or transient-entity heuristic.
+
 Resource-link decoration (advanced):
 
 ```java
@@ -137,7 +146,10 @@ Ordinary flat reads use Jackson's effective **deserialization** property model w
 JSON:API role and wire-name metadata from the configured mapper. JSON:API annotations assign
 semantic roles; configured Jackson owns discovery, visibility, and the external member name. A
 Jackson-visible property participates only through a JSON:API role, except the conventional
-identifier whose Jackson external name is `id`. Normal readable/writable,
+identifier whose Jackson external name is `id`. `@JsonApiId` and `@JsonApiLocalId` are independent
+identity roles: wire `id` binds only to the id role, wire `lid` binds only to the local-id role, and
+neither member ever falls back into the other role's property. A wire `lid` on a type without a
+local-id role is ignored, never bound as an identifier. Normal readable/writable,
 setter-only, creator-only/constructor-bound, and Jackson write-only properties are supported. A
 supplied member mapped to a getter-only, read-only, or otherwise non-deserializable property fails
 with `NON_DESERIALIZABLE_PROPERTY` at its JSON:API wire location instead of being silently
@@ -365,7 +377,9 @@ Diagnostic locations for nested failures are engine-accumulated wire-name locati
     linkage, including any identifier meta. There is no identifier-meta `PatchChange` and no
     element-addressed mutation.
 
-By default, `@JsonApiId` values become JSON:API `"id"` strings via `Object.toString()`. Pass an
+By default, `@JsonApiId` and `@JsonApiLocalId` values become the JSON:API `"id"` / `"lid"` strings
+via `Object.toString()`. One `IdentifierConverter` serves both identity roles: their Java scalar
+conversion is equivalent, only the wire member differs. Pass an
 `IdentifierConverter` to `resourceMapper`, `resourceBinder`, `patchReader`, or `patchDtoReader` only
 when you need a different wire form; read binding inverts it through `IdentifierConverter.parse(String)`.
 
@@ -475,15 +489,27 @@ artifact; both majors share the neutral contracts of
   fresh default mapper) and reports the document-relative `/meta` on conversion failure. No
   relationship injection: `included` DTOs are independently listed/indexed only.
 - **Identifier round-trip:** read binding calls `IdentifierConverter.parse(String)` on the wire
-  identifier, then applies the target property's configured Jackson deserializer to the parsed
+  identifier (of either identity role: `/id` for the id role, `/lid` for the local-id role), then
+  applies the target property's configured Jackson deserializer to the parsed
   intermediate (normal flat reads and typed PATCH construction use the synthetic property map;
   low-level PATCH uses the shared property-scoped converter). Custom write converters must override
-  `parse` to invert their wire form.
+  `parse` to invert their wire form. Write mapping emits the id role to `ResourceObject.id` and the
+  local-id role to `ResourceObject.lid` — never promoting a local identifier to `id`; when both
+  identity values are absent the write fails with `MISSING_IDENTIFIER` at the id property's
+  location, or at `/lid` for a lid-only type. A null local-id value means `lid` is absent, so an
+  id-only domain value never needs a local id.
+- **PATCH identity:** identity comes from resource `id` only on both PATCH paths (no `lid`
+  projection); `@JsonApiLocalId` properties never become patchable members.
 - **Opt-in inclusion:** Compound `included` resources require `RepresentationSelection` and
   `RepresentationPolicy` on mapper overloads (`resource`/`collection`, nullable `DocumentEnvelope`,
   selection, policy). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
   full when fieldsets are empty. Empty include paths omit `included`; a non-empty request that
   resolves to nothing emits `included: []`. Defaults are deny-all with finite depth/count limits.
+  Inclusion deduplication is alias-aware: a resource carrying both `id` and `lid` registers both
+  identity keys (matching core validation's id↔lid partner binding), so a primary is recognized
+  under any of its aliases and included occurrences of one resource deduplicate regardless of which
+  alias the reaching occurrence carries; unequal representations sharing an identity alias fail
+  with `CONFLICTING_INCLUDED_REPRESENTATION` at mapping time.
 - **Sparse fieldsets:** `RepresentationSelection.fieldsets()` + `FieldPolicy` select attributes and
   relationships by final JSON:API names (absent type key = unrestricted; present empty list selects
   no attributes/relationships, while non-field resource members such as mapped resource meta remain

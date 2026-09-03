@@ -82,7 +82,7 @@ public final class DomainPatchDtoBinder {
     bindResourceMeta(resource, mapping, properties, rawType);
     bindRelationshipMeta(resource, mapping, properties, rawType);
     Map<String, StructuredValueBinder.ConstructionStart> startsByJacksonName =
-        mapping.constructionStartsByJacksonName(ID_LOCATION);
+        mapping.constructionStartsByJacksonName(ID_LOCATION, null);
     try {
       return BeanConstruction.convertBean(
           mapper,

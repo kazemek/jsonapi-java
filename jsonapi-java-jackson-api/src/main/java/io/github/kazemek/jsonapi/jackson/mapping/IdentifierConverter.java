@@ -7,14 +7,18 @@ import org.jspecify.annotations.Nullable;
 /**
  * Converts a domain identifier value to its JSON:API string representation, and back.
  *
- * <p>Write side: implementations receive the raw identifier value from a {@code @JsonApiId}
- * property and return the string used as {@code "id"} in the resource object. Return {@code null}
- * to signal a missing identifier, which causes a {@link JsonApiMappingException} with {@link
- * MappingDiagnostic#MISSING_IDENTIFIER}.
+ * <p>One conversion authority serves both identity roles: the {@code id} role mapped by
+ * {@code @JsonApiId} and the {@code lid} role mapped by {@code @JsonApiLocalId}. Their Java scalar
+ * conversion semantics are equivalent; only the JSON:API member they land on differs.
+ *
+ * <p>Write side: implementations receive the raw identifier value from the mapped identity property
+ * and return the string used as {@code "id"} or {@code "lid"} in the resource object. Return {@code
+ * null} to signal a missing identifier, which causes a {@link JsonApiMappingException} with {@link
+ * MappingDiagnostic#MISSING_IDENTIFIER} at that role's wire location.
  *
  * <p>Read side: {@link #parse(String)} inverts {@link #convert(Object)}. The flat DTO binder passes
  * the wire identifier string to {@link #parse(String)} and coerces the returned value to the
- * identifier property's Java type. The default implementation returns the wire string unchanged;
+ * identity property's Java type. The default implementation returns the wire string unchanged;
  * custom converters that alter the wire form must override {@link #parse(String)} to invert that
  * form.
  *

@@ -32,6 +32,14 @@ class AnnotationMetaContractSpec extends Specification {
     JsonApiId.declaredMethods.length == 0
   }
 
+  def "JsonApiLocalId is a runtime Documented marker on property targets and is not Inherited"() {
+    expect:
+    assertRuntimeDocumented(JsonApiLocalId)
+    assertPropertyTargets(JsonApiLocalId)
+    JsonApiLocalId.getAnnotation(Inherited) == null
+    JsonApiLocalId.declaredMethods.length == 0
+  }
+
   def "JsonApiAttribute is a runtime Documented marker on property targets and is not Inherited"() {
     expect:
     assertRuntimeDocumented(JsonApiAttribute)

@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3.internal;
 
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
+import io.github.kazemek.jsonapi.annotation.JsonApiLocalId;
 import io.github.kazemek.jsonapi.annotation.JsonApiMeta;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationshipMeta;
@@ -39,6 +40,7 @@ final class MappingDefinitionResolver {
     ClassifiedProperties classified = classifyProperties(propertyDefinitions, rawType);
     validatePropertyRoles(
         classified.identifiers,
+        classified.localIds,
         classified.attributes,
         classified.relationships,
         classified.resourceMeta,
@@ -47,11 +49,13 @@ final class MappingDefinitionResolver {
 
     MappingProperty identifier =
         classified.identifiers.isEmpty() ? null : classified.identifiers.getFirst();
+    MappingProperty localId = classified.localIds.isEmpty() ? null : classified.localIds.getFirst();
     MappingProperty resourceMeta =
         classified.resourceMeta.isEmpty() ? null : classified.resourceMeta.getFirst();
     return new ResourceMapping(
         resourceType,
         identifier,
+        localId,
         List.copyOf(classified.attributes),
         List.copyOf(classified.relationships),
         resourceMeta,
@@ -75,6 +79,7 @@ final class MappingDefinitionResolver {
       Map<String, JavaType> deserializationTypes) {
     String resourceType = validateResourceTypeName(resourceTypeName(resourceMetadata), rawType);
     List<ReadMappingProperty> identifierProperties = new ArrayList<>();
+    List<ReadMappingProperty> localIdProperties = new ArrayList<>();
     List<ReadMappingProperty> attributeProperties = new ArrayList<>();
     List<ReadMappingProperty> relationshipProperties = new ArrayList<>();
     List<ReadMappingProperty> resourceMetaProperties = new ArrayList<>();
@@ -104,6 +109,7 @@ final class MappingDefinitionResolver {
               role);
       switch (role) {
         case ID -> identifierProperties.add(mappingProperty);
+        case LOCAL_ID -> localIdProperties.add(mappingProperty);
         case ATTRIBUTE -> attributeProperties.add(mappingProperty);
         case RELATIONSHIP -> relationshipProperties.add(mappingProperty);
         case RESOURCE_META -> resourceMetaProperties.add(mappingProperty);
@@ -114,6 +120,7 @@ final class MappingDefinitionResolver {
         bindReadRelationshipMeta(relationshipMetaProperties, relationshipProperties, rawType);
     validatePropertyRoles(
         identifierProperties,
+        localIdProperties,
         attributeProperties,
         relationshipProperties,
         resourceMetaProperties,
@@ -122,11 +129,13 @@ final class MappingDefinitionResolver {
 
     ReadMappingProperty identifier =
         identifierProperties.isEmpty() ? null : identifierProperties.getFirst();
+    ReadMappingProperty localId = localIdProperties.isEmpty() ? null : localIdProperties.getFirst();
     ReadMappingProperty resourceMeta =
         resourceMetaProperties.isEmpty() ? null : resourceMetaProperties.getFirst();
     return new ReadResourceMapping(
         resourceType,
         identifier,
+        localId,
         List.copyOf(attributeProperties),
         List.copyOf(relationshipProperties),
         resourceMeta,
@@ -224,6 +233,7 @@ final class MappingDefinitionResolver {
 
   private static final class ClassifiedProperties {
     private final List<MappingProperty> identifiers = new ArrayList<>();
+    private final List<MappingProperty> localIds = new ArrayList<>();
     private final List<MappingProperty> attributes = new ArrayList<>();
     private final List<MappingProperty> relationships = new ArrayList<>();
     private final List<MappingProperty> resourceMeta = new ArrayList<>();
@@ -232,6 +242,7 @@ final class MappingDefinitionResolver {
     private void add(MappingProperty mappingProperty) {
       switch (mappingProperty.role()) {
         case ID -> identifiers.add(mappingProperty);
+        case LOCAL_ID -> localIds.add(mappingProperty);
         case ATTRIBUTE -> attributes.add(mappingProperty);
         case RELATIONSHIP -> relationships.add(mappingProperty);
         case RESOURCE_META -> resourceMeta.add(mappingProperty);
@@ -241,13 +252,14 @@ final class MappingDefinitionResolver {
   }
 
   /**
-   * Resource-relative wire location of one classified member: {@code /id}, {@code
+   * Resource-relative wire location of one classified member: {@code /id}, {@code /lid}, {@code
    * /attributes/<name>}, {@code /relationships/<name>/data}, {@code /meta}, or {@code
    * /relationships/<name>/meta}. The name is escaped as pointer segments per RFC 6901.
    */
   private static MappingLocation wireLocation(PropertyRole role, String jsonapiName) {
     return switch (role) {
       case ID -> MappingLocation.of("id");
+      case LOCAL_ID -> MappingLocation.of("lid");
       case ATTRIBUTE -> attributeLocation(jsonapiName);
       case RELATIONSHIP -> relationshipLocation(jsonapiName);
       case RESOURCE_META -> RelationshipMetaSupport.resourceMetaLocation();
@@ -335,7 +347,7 @@ final class MappingDefinitionResolver {
   private static String resolveJsonapiName(
       RoleAnnotations annotations, String jacksonName, PropertyRole role) {
     return switch (role) {
-      case ID, ATTRIBUTE, RELATIONSHIP -> jacksonName;
+      case ID, LOCAL_ID, ATTRIBUTE, RELATIONSHIP -> jacksonName;
       case RESOURCE_META -> JsonApiMembers.META;
       case RELATIONSHIP_META -> {
         JsonApiRelationshipMeta annotation = annotations.relationshipMeta();
@@ -384,12 +396,13 @@ final class MappingDefinitionResolver {
 
   private static void validatePropertyRoles(
       List<? extends MappingPropertyView> identifierProperties,
+      List<? extends MappingPropertyView> localIdProperties,
       List<? extends MappingPropertyView> attributeProperties,
       List<? extends MappingPropertyView> relationshipProperties,
       List<? extends MappingPropertyView> resourceMetaProperties,
       List<? extends MappingPropertyView> relationshipMetaProperties,
       Class<?> rawType) {
-    requireSingleIdentifier(identifierProperties, rawType);
+    requireSingleIdentityRole(identifierProperties, localIdProperties, rawType);
     rejectDuplicateNames(
         attributeProperties, rawType, "attribute", MappingDefinitionResolver::attributeLocation);
     rejectDuplicateNames(
@@ -402,19 +415,33 @@ final class MappingDefinitionResolver {
     validateRelationshipMetaTargets(relationshipMetaProperties, relationshipProperties, rawType);
   }
 
-  private static void requireSingleIdentifier(
-      List<? extends MappingPropertyView> identifierProperties, Class<?> rawType) {
-    if (identifierProperties.isEmpty()) {
-      throw JsonApiMappingException.withoutLocation(
-          MappingDiagnostic.MISSING_IDENTIFIER,
-          rawType,
-          "No identifier property found for " + rawType.getName());
-    }
+  /**
+   * Validates the two independent identity roles: at most one id property, at most one local-id
+   * property, and at least one of the two overall. {@code id} and {@code lid} are distinct wire
+   * members, so both roles may coexist on different logical properties; a property claiming both
+   * roles fails earlier as conflicting role annotations.
+   */
+  private static void requireSingleIdentityRole(
+      List<? extends MappingPropertyView> identifierProperties,
+      List<? extends MappingPropertyView> localIdProperties,
+      Class<?> rawType) {
     if (identifierProperties.size() > 1) {
       throw JsonApiMappingException.withoutLocation(
           MappingDiagnostic.DUPLICATE_ROLE,
           rawType,
-          "Multiple identifier properties found for " + rawType.getName());
+          "Multiple id properties found for " + rawType.getName());
+    }
+    if (localIdProperties.size() > 1) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.DUPLICATE_ROLE,
+          rawType,
+          "Multiple local-id properties found for " + rawType.getName());
+    }
+    if (identifierProperties.isEmpty() && localIdProperties.isEmpty()) {
+      throw JsonApiMappingException.withoutLocation(
+          MappingDiagnostic.MISSING_IDENTIFIER,
+          rawType,
+          "No id or local-id property found for " + rawType.getName());
     }
   }
 
@@ -674,6 +701,7 @@ final class MappingDefinitionResolver {
 
   private record RoleAnnotations(
       @Nullable JsonApiId id,
+      @Nullable JsonApiLocalId localId,
       @Nullable JsonApiAttribute attribute,
       @Nullable JsonApiRelationship relationship,
       @Nullable JsonApiMeta meta,
@@ -702,6 +730,7 @@ final class MappingDefinitionResolver {
       }
       return new RoleAnnotations(
           findAnnotationAnywhere(members, JsonApiId.class),
+          findAnnotationAnywhere(members, JsonApiLocalId.class),
           findAnnotationAnywhere(members, JsonApiAttribute.class),
           findAnnotationAnywhere(members, JsonApiRelationship.class),
           findAnnotationAnywhere(members, JsonApiMeta.class),
@@ -733,6 +762,7 @@ final class MappingDefinitionResolver {
 
     int count() {
       return (id != null ? 1 : 0)
+          + (localId != null ? 1 : 0)
           + (attribute != null ? 1 : 0)
           + (relationship != null ? 1 : 0)
           + (meta != null ? 1 : 0)
@@ -746,6 +776,9 @@ final class MappingDefinitionResolver {
     @Nullable PropertyRole explicitRole() {
       if (id != null) {
         return PropertyRole.ID;
+      }
+      if (localId != null) {
+        return PropertyRole.LOCAL_ID;
       }
       if (relationship != null) {
         return PropertyRole.RELATIONSHIP;

@@ -73,28 +73,29 @@ public final class DomainResourceBinder {
     validateResourceType(resource, mapping, rawType);
     validateMetaTargets(mapping, rawType);
     Map<String, @Nullable Object> properties = new LinkedHashMap<>();
-    MappingLocation identifierLocation = null;
+    // Strict role mapping: wire id binds only to the id role, wire lid only to the local-id role.
+    // Neither member ever falls back into the other role's property.
+    MappingLocation idLocation = null;
     ReadMappingProperty identifierProperty = mapping.identifierProperty();
-    if (identifierProperty != null) {
-      if (resource.hasId()) {
-        identifierLocation = ID_LOCATION;
-        requireDeserializable(identifierProperty, identifierLocation, rawType);
-        bindIdentifierValue(
-            Objects.requireNonNull(resource.id()), ID_LOCATION, identifierProperty, properties);
-      } else {
-        String lid = resource.lid();
-        if (lid != null) {
-          identifierLocation = LID_LOCATION;
-          requireDeserializable(identifierProperty, identifierLocation, rawType);
-          bindIdentifierValue(lid, LID_LOCATION, identifierProperty, properties);
-        }
-      }
+    if (identifierProperty != null && resource.hasId()) {
+      idLocation = ID_LOCATION;
+      requireDeserializable(identifierProperty, idLocation, rawType);
+      bindIdentifierValue(
+          Objects.requireNonNull(resource.id()), ID_LOCATION, identifierProperty, properties);
+    }
+    MappingLocation lidLocation = null;
+    ReadMappingProperty localIdProperty = mapping.localIdProperty();
+    if (localIdProperty != null && resource.hasLid()) {
+      lidLocation = LID_LOCATION;
+      requireDeserializable(localIdProperty, lidLocation, rawType);
+      bindIdentifierValue(
+          Objects.requireNonNull(resource.lid()), LID_LOCATION, localIdProperty, properties);
     }
     bindAttributes(resource, mapping, properties, rawType);
     bindRelationships(resource, mapping, properties, rawType);
     bindResourceMeta(resource, mapping, properties, rawType);
     bindRelationshipMeta(resource, mapping, properties, rawType);
-    return convertBean(properties, targetType, rawType, mapping, identifierLocation);
+    return convertBean(properties, targetType, rawType, mapping, idLocation, lidLocation);
   }
 
   private void validateResourceType(
@@ -296,9 +297,10 @@ public final class DomainResourceBinder {
       JavaType targetType,
       Class<?> rawType,
       ReadResourceMapping mapping,
-      @Nullable MappingLocation identifierLocation) {
+      @Nullable MappingLocation idLocation,
+      @Nullable MappingLocation lidLocation) {
     Map<String, StructuredValueBinder.ConstructionStart> startsByJacksonName =
-        mapping.constructionStartsByJacksonName(identifierLocation);
+        mapping.constructionStartsByJacksonName(idLocation, lidLocation);
     try {
       return BeanConstruction.convertBean(
           mapper,
@@ -311,11 +313,17 @@ public final class DomainResourceBinder {
     } catch (JsonApiMappingException e) {
       ReadMappingProperty identifierProperty = mapping.identifierProperty();
       if (identifierProperty != null
-          && identifierLocation != null
-          && BeanConstruction.isConstructionFailureForProperty(
-              e, identifierProperty, identifierLocation)) {
+          && idLocation != null
+          && BeanConstruction.isConstructionFailureForProperty(e, identifierProperty, idLocation)) {
         Throwable cause = e.getCause() == null ? e : e.getCause();
-        throw identifierConversionFailed(rawType, identifierLocation, cause);
+        throw identifierConversionFailed(rawType, idLocation, cause);
+      }
+      ReadMappingProperty localIdProperty = mapping.localIdProperty();
+      if (localIdProperty != null
+          && lidLocation != null
+          && BeanConstruction.isConstructionFailureForProperty(e, localIdProperty, lidLocation)) {
+        Throwable cause = e.getCause() == null ? e : e.getCause();
+        throw identifierConversionFailed(rawType, lidLocation, cause);
       }
       throw e;
     }

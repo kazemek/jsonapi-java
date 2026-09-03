@@ -197,6 +197,8 @@ public final class CompoundInclusionEngine {
     private final List<ResourceObject> primaryResources;
     private final Set<ResourceIdentity> primaryIdentities = new HashSet<>();
     private final Map<ResourceIdentity, ResourceObject> includedByIdentity = new LinkedHashMap<>();
+    private final List<ResourceObject> includedInOrder = new ArrayList<>();
+    private int includedResourceCount = 0;
     private final Set<VisitKey> visited = new HashSet<>();
     private final Set<ResourceIdentity> linkageExemptions = new LinkedHashSet<>();
 
@@ -213,9 +215,10 @@ public final class CompoundInclusionEngine {
 
     IncludedResourcesResult run() {
       for (ResourceObject primary : primaryResources) {
-        ResourceIdentity identity = primary.identityKey();
-        if (identity != null) {
-          primaryIdentities.add(identity);
+        // Core validation binds one resource's id and lid as alias partners, so every present
+        // identity member registers; a primary is then recognized under any of its aliases.
+        for (ResourceIdentity key : identityKeysOf(primary.type(), primary.id(), primary.lid())) {
+          primaryIdentities.add(key);
         }
       }
 
@@ -227,8 +230,7 @@ public final class CompoundInclusionEngine {
           walkPath(primaryDomain, primaryType, paths.get(pathIndex), pathIndex);
         }
       }
-      return new IncludedResourcesResult(
-          List.copyOf(includedByIdentity.values()), linkageExemptions);
+      return new IncludedResourcesResult(List.copyOf(includedInOrder), linkageExemptions);
     }
 
     private void walkPath(
@@ -318,13 +320,24 @@ public final class CompoundInclusionEngine {
         String propertyPath,
         Queue<DomainAtSegment> queue) {
       JavaType effectiveRelatedType = writer.effectiveType(relatedDomain, relatedType);
-      ResourceIdentity relatedIdentity = identityOf(relatedDomain, effectiveRelatedType);
-      if (relatedIdentity != null && primaryIdentities.contains(relatedIdentity)) {
+      List<ResourceIdentity> relatedKeys =
+          identityKeysOf(writer.extractIdentifier(relatedDomain, effectiveRelatedType));
+      // A related occurrence matching a primary under any id/lid alias IS the primary resource;
+      // emitting it again would duplicate an identity core validation canonicalizes.
+      boolean matchesPrimary = false;
+      for (ResourceIdentity key : relatedKeys) {
+        if (primaryIdentities.contains(key)) {
+          matchesPrimary = true;
+          break;
+        }
+      }
+      if (matchesPrimary) {
         enqueueNextSegment(relatedDomain, effectiveRelatedType, nextSegment, lastSegment, queue);
         return;
       }
-      if (edgeOmittedByFieldset && relatedIdentity != null) {
-        linkageExemptions.add(relatedIdentity);
+      if (edgeOmittedByFieldset && !relatedKeys.isEmpty()) {
+        // Preferred identity key (id when present, else lid); core expands aliases when matching.
+        linkageExemptions.add(relatedKeys.getFirst());
       }
       ResourceObject relatedResource =
           writer.toResource(relatedDomain, effectiveRelatedType, representation);
@@ -343,40 +356,36 @@ public final class CompoundInclusionEngine {
       }
     }
 
-    private @Nullable ResourceIdentity identityOf(Object domain, JavaType declaredType) {
-      ResourceIdentifier identifier = writer.extractIdentifier(domain, declaredType);
-      if (identifier.hasId()) {
-        return ResourceIdentity.ofId(identifier.type(), Objects.requireNonNull(identifier.id()));
-      }
-      if (identifier.hasLid()) {
-        return ResourceIdentity.ofLid(identifier.type(), Objects.requireNonNull(identifier.lid()));
-      }
-      return null;
-    }
-
     private void offerIncluded(ResourceObject candidate, String propertyPath) {
-      ResourceIdentity identity = candidate.identityKey();
-      if (identity == null) {
+      // Alias-aware dedup: a resource carrying both id and lid is indexed under both keys, so a
+      // later occurrence of the same resource matches whichever identity its occurrence carries.
+      List<ResourceIdentity> keys =
+          identityKeysOf(candidate.type(), candidate.id(), candidate.lid());
+      if (keys.isEmpty()) {
         return;
       }
-      if (primaryIdentities.contains(identity)) {
-        return;
+      ResourceIdentity matchedKey = null;
+      for (ResourceIdentity key : keys) {
+        if (includedByIdentity.containsKey(key)) {
+          matchedKey = key;
+          break;
+        }
       }
-      ResourceObject existing = includedByIdentity.get(identity);
-      if (existing != null) {
-        if (!existing.equals(candidate)) {
+      if (matchedKey != null) {
+        ResourceObject existing = includedByIdentity.get(matchedKey);
+        if (!Objects.requireNonNull(existing).equals(candidate)) {
           throw JsonApiMappingException.withoutLocation(
               MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION,
               null,
               "Conflicting included representation for "
-                  + identity
+                  + matchedKey
                   + " reached via include path '"
                   + propertyPath
                   + "'");
         }
         return;
       }
-      if (includedByIdentity.size() >= representation.policy().maxIncludedResources()) {
+      if (includedResourceCount >= representation.policy().maxIncludedResources()) {
         throw JsonApiMappingException.withoutLocation(
             MappingDiagnostic.INCLUDE_COUNT_EXCEEDED,
             null,
@@ -386,7 +395,46 @@ public final class CompoundInclusionEngine {
                 + propertyPath
                 + "'");
       }
-      includedByIdentity.put(identity, candidate);
+      for (ResourceIdentity key : keys) {
+        includedByIdentity.put(key, candidate);
+      }
+      includedInOrder.add(candidate);
+      includedResourceCount++;
+    }
+
+    private @Nullable ResourceIdentity identityOf(Object domain, JavaType declaredType) {
+      return preferredIdentity(writer.extractIdentifier(domain, declaredType));
+    }
+
+    /**
+     * All identity keys of one resource: the id key and the lid key when both members are present.
+     * Core validation binds an id↔lid pair as alias partners of one resource, so compound-inclusion
+     * bookkeeping must match an occurrence under any of them.
+     */
+    private static List<ResourceIdentity> identityKeysOf(
+        String type, @Nullable String id, @Nullable String lid) {
+      List<ResourceIdentity> keys = new ArrayList<>(2);
+      if (id != null) {
+        keys.add(ResourceIdentity.ofId(type, id));
+      }
+      if (lid != null) {
+        keys.add(ResourceIdentity.ofLid(type, lid));
+      }
+      return keys;
+    }
+
+    private static List<ResourceIdentity> identityKeysOf(ResourceIdentifier identifier) {
+      return identityKeysOf(identifier.type(), identifier.id(), identifier.lid());
+    }
+
+    private static @Nullable ResourceIdentity preferredIdentity(ResourceIdentifier identifier) {
+      if (identifier.hasId()) {
+        return ResourceIdentity.ofId(identifier.type(), Objects.requireNonNull(identifier.id()));
+      }
+      if (identifier.hasLid()) {
+        return ResourceIdentity.ofLid(identifier.type(), Objects.requireNonNull(identifier.lid()));
+      }
+      return null;
     }
 
     private List<Object> readRelatedDomainObjects(Object domain, MappingProperty property) {
