@@ -505,6 +505,11 @@ artifact; both majors share the neutral contracts of
   selection, policy). `IncludePolicy` gates inclusion traversal only; linkage on selected resources remains
   full when fieldsets are empty. Empty include paths omit `included`; a non-empty request that
   resolves to nothing emits `included: []`. Defaults are deny-all with finite depth/count limits.
+  Inclusion deduplication is alias-aware: a resource carrying both `id` and `lid` registers both
+  identity keys (matching core validation's id↔lid partner binding), so a primary is recognized
+  under any of its aliases and included occurrences of one resource deduplicate regardless of which
+  alias the reaching occurrence carries; unequal representations sharing an identity alias fail
+  with `CONFLICTING_INCLUDED_REPRESENTATION` at mapping time.
 - **Sparse fieldsets:** `RepresentationSelection.fieldsets()` + `FieldPolicy` select attributes and
   relationships by final JSON:API names (absent type key = unrestricted; present empty list selects
   no attributes/relationships, while non-field resource members such as mapped resource meta remain

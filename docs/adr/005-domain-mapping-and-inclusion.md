@@ -103,3 +103,10 @@ that is legal for create/local-identifier usage; core document validation remain
 for whether that state is legal in a given document usage. Configured Jackson remains the sole
 authority for the underlying Java property, and identifier conversion stays shared between the two
 roles through the existing `IdentifierConverter`.
+
+Compound-inclusion identity bookkeeping is alias-aware to match core validation's id↔lid partner
+binding: a resource carrying both members is registered under both its id and lid keys, a primary
+is recognized under any of its aliases, and included occurrences of one resource deduplicate no
+matter which alias the reaching occurrence carries. Unequal representations that share an identity
+alias still fail with `CONFLICTING_INCLUDED_REPRESENTATION` at mapping time; core duplicate policy
+is unchanged.

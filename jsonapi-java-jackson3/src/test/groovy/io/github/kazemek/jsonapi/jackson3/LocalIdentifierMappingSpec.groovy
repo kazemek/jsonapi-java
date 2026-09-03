@@ -347,6 +347,67 @@ class LocalIdentifierMappingSpec extends Specification {
     document.included() == []
   }
 
+  def "an id+lid primary is not re-included through a lid-only alias occurrence"() {
+    given:
+    def primary =
+        new AliasArticle("1", "local-1", "Primary", new AliasArticle(null, "local-1", "Alias", null))
+    def selection = RepresentationSelection.builder().include(IncludePath.of("related")).build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def document = mapper.toDocument(primary, null, selection, policy)
+
+    then:
+    // The alias occurrence is the primary resource itself (core binds id and lid as alias
+    // partners), so it must not enter included; the linkage still points at the primary's lid.
+    document.included() == []
+    def primaryResource = ((io.github.kazemek.jsonapi.core.model.DocumentData.SingleResource)
+        document.data()).resource()
+    primaryResource.relationships().relationships().related.data() ==
+        new RelationshipData.SingleLinkage(
+        new ResourceIdentifier("alias-articles", null, "local-1", null, Map.of()))
+  }
+
+  def "included occurrences of one id+lid resource deduplicate across alias identities"() {
+    given:
+    def shared = new IdentifiedComment("99", "local-comment-1", "Nice")
+    def article = new DualRefArticle("1", shared, [shared])
+    def selection = RepresentationSelection.builder()
+        .include(IncludePath.of("featured"))
+        .include(IncludePath.of("comments"))
+        .build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    def document = mapper.toDocument(article, null, selection, policy)
+
+    then:
+    document.included() == [mapper.toResource(shared)]
+  }
+
+  def "included occurrences sharing a lid with unequal representations conflict"() {
+    given:
+    def article =
+        new DualRefArticle(
+        "1",
+        new IdentifiedComment("99", "local-comment-1", "Nice"),
+        [
+          new IdentifiedComment(null, "local-comment-1", "Nice")
+        ])
+    def selection = RepresentationSelection.builder()
+        .include(IncludePath.of("featured"))
+        .include(IncludePath.of("comments"))
+        .build()
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+
+    when:
+    mapper.toDocument(article, null, selection, policy)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.CONFLICTING_INCLUDED_REPRESENTATION
+  }
+
   // ============================== DECLARATIONS ==============================
 
   def "duplicate id roles fail with DUPLICATE_ROLE"() {
@@ -549,6 +610,34 @@ class LocalIdentifierMappingSpec extends Specification {
 
     DualIdentityArticle(String id, List<IdentifiedComment> comments) {
       this.id = id
+      this.comments = comments
+    }
+  }
+
+  @JsonApiResource(type = "alias-articles")
+  static class AliasArticle {
+    @JsonApiId String id
+    @JsonApiLocalId String localId
+    @JsonApiAttribute String title
+    @JsonApiRelationship AliasArticle related
+
+    AliasArticle(String id, String localId, String title, AliasArticle related) {
+      this.id = id
+      this.localId = localId
+      this.title = title
+      this.related = related
+    }
+  }
+
+  @JsonApiResource(type = "dual-ref-articles")
+  static class DualRefArticle {
+    @JsonApiId String id
+    @JsonApiRelationship IdentifiedComment featured
+    @JsonApiRelationship List<IdentifiedComment> comments
+
+    DualRefArticle(String id, IdentifiedComment featured, List<IdentifiedComment> comments) {
+      this.id = id
+      this.featured = featured
       this.comments = comments
     }
   }
