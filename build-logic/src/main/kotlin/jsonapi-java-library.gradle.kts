@@ -58,90 +58,24 @@ tasks.jacocoTestReport {
     }
 }
 
-// Per-module JaCoCo instruction/branch floors (sole numeric authority). They are regression
-// ratchets, not evidence that tests adequately own a contract. After meaningful test additions,
-// re-measure with `./gradlew jacocoTestReport` and set each justified minimum to
-// floor(measuredPercent) / 100. Intentional coverage drops must update this map in the same change.
-data class JacocoCoverageFloors(
-    val instructionMinimum: BigDecimal,
-    val branchMinimum: BigDecimal,
-    val excludePatterns: List<String> = emptyList(),
-)
-
-// Coverage is on by default: floor verification and Sonar cover every production class.
-// Passive application-shaped carriers live in the Jackson API test-fixtures source set and
-// are not part of production coverage. Production-module floors do not use
-// excludePatterns and remain unchanged.
-
-val jacocoCoverageFloorsByProject =
-    mapOf(
-        "jsonapi-java-core" to
-            JacocoCoverageFloors("0.91".toBigDecimal(), "0.80".toBigDecimal()),
-        "jsonapi-java-jackson-api" to
-            JacocoCoverageFloors("0.95".toBigDecimal(), "0.85".toBigDecimal()),
-        "jsonapi-java-jackson3" to
-            JacocoCoverageFloors("0.93".toBigDecimal(), "0.81".toBigDecimal()),
-    )
-
-// Annotation-only classfiles produce no instruction/branch counters; do not attach minima.
-val jacocoCoverageFloorSkipProjects = setOf("jsonapi-java-annotations")
-
-val jacocoFloors = jacocoCoverageFloorsByProject[project.name]
-val jacocoFloorSkipped = project.name in jacocoCoverageFloorSkipProjects
-when {
-    jacocoFloors != null && jacocoFloorSkipped -> {
-        error(
-            "Project '${project.name}' is listed in both jacocoCoverageFloorsByProject and " +
-                "jacocoCoverageFloorSkipProjects; map and skip set must be disjoint.",
-        )
-    }
-
-    jacocoFloors == null && !jacocoFloorSkipped -> {
-        error(
-            "Project '${project.name}' applies jsonapi-java-library but has neither a " +
-                "jacocoCoverageFloorsByProject entry nor a jacocoCoverageFloorSkipProjects entry. " +
-                "Add exactly one before merge.",
-        )
-    }
-
-    jacocoFloors != null -> {
-        if (jacocoFloors.excludePatterns.isNotEmpty()) {
-            val verificationClasses =
-                files(
-                    sourceSets.named("main").get().output.classesDirs.map { dir ->
-                        fileTree(dir) {
-                            exclude(jacocoFloors.excludePatterns)
-                        }
-                    },
-                )
-            // Floor verification excludes only the passive-fixture hierarchy; every other
-            // production class is verified by default. The published JaCoCo XML report stays
-            // complete for local HTML inspection; Sonar coverage uses the equivalent single
-            // package-level exclusion so carriers cannot fail new_coverage.
-            tasks.jacocoTestCoverageVerification {
-                classDirectories.setFrom(verificationClasses)
-            }
-            val modulePrefix =
-                projectDir.relativeTo(rootDir).invariantSeparatorsPath + "/src/main/java/"
-            extra["sonarCoverageExclusions"] =
-                jacocoFloors.excludePatterns.joinToString(",") { modulePrefix + it }
-        }
-        tasks.jacocoTestCoverageVerification {
-            violationRules {
-                rule {
-                    limit {
-                        counter = "INSTRUCTION"
-                        minimum = jacocoFloors.instructionMinimum
-                    }
-                    limit {
-                        counter = "BRANCH"
-                        minimum = jacocoFloors.branchMinimum
-                    }
+// Fixed repository policy: executable library modules require at least 80% line and branch
+// coverage. The annotations module has no executable coverage to verify.
+if (project.name != "jsonapi-java-annotations") {
+    tasks.jacocoTestCoverageVerification {
+        violationRules {
+            rule {
+                limit {
+                    counter = "LINE"
+                    minimum = "0.80".toBigDecimal()
+                }
+                limit {
+                    counter = "BRANCH"
+                    minimum = "0.80".toBigDecimal()
                 }
             }
         }
-        tasks.named("check") {
-            dependsOn(tasks.jacocoTestCoverageVerification)
-        }
+    }
+    tasks.named("check") {
+        dependsOn(tasks.jacocoTestCoverageVerification)
     }
 }

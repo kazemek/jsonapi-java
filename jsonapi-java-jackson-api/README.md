@@ -154,5 +154,5 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
   mapping-location contract. Do not introduce new failure types without an implementation plan.
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout; unit/contract
   tests of moved types live here, while Jackson-bound integration suites stay in the adapters.
-  JaCoCo floors are regression ratchets after meaningful ownership tests, not proof that a contract
-  has an adequate direct test strategy.
+  The repository enforces a fixed 80% JaCoCo line and branch coverage floor; coverage failures
+  require meaningful tests rather than threshold tuning.
