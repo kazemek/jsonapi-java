@@ -23,7 +23,6 @@ import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.ScalarView
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.ThingResource
 import io.github.kazemek.jsonapi.jackson3.GenericDomainWriteFixtures.WildcardRelationship
 import io.github.kazemek.jsonapi.fixtures.compoundwrite.BaseComment
-import java.util.Optional
 import spock.lang.Specification
 import tools.jackson.databind.JavaType
 import tools.jackson.databind.json.JsonMapper

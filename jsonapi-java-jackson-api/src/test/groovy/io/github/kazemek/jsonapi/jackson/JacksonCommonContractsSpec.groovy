@@ -38,8 +38,6 @@ import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.jackson.representation.RelationshipAllowance
 import spock.lang.Specification
 
-import java.util.Collections
-
 class JacksonCommonContractsSpec extends Specification {
 
   // RepresentationSelection / RepresentationPolicy

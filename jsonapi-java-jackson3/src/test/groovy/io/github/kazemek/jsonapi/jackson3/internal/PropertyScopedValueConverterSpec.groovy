@@ -1,6 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3.internal
 
-import java.math.BigDecimal
 import spock.lang.Specification
 import tools.jackson.core.JsonGenerator
 import tools.jackson.databind.BeanDescription

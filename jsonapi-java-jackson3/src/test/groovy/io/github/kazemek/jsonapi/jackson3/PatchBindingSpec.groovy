@@ -3,7 +3,6 @@ package io.github.kazemek.jsonapi.jackson3
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
-import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
@@ -58,14 +57,6 @@ import io.github.kazemek.jsonapi.fixtures.domainread.FlatIntIdArticle
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatThingWithIgnored
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatUnregisteredRelationshipsArticle
 import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
-import java.io.ByteArrayInputStream
-import java.io.FilterInputStream
-import java.io.InputStream
-import java.util.Arrays
-import java.util.List
-import java.util.Map
-import java.util.Optional
-import java.util.Set
 import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.core.JsonParser

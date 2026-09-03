@@ -1,8 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import java.io.ByteArrayOutputStream
-import java.io.StringWriter
-
 import tools.jackson.databind.json.JsonMapper
 
 import io.github.kazemek.jsonapi.core.model.DocumentData

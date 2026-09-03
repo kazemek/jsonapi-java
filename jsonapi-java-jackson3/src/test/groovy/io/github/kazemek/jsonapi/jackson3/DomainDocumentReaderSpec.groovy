@@ -34,10 +34,6 @@ import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatThrowingArticle
 import io.github.kazemek.jsonapi.fixtures.enveloperead.InvalidResourceType
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
-import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
-import java.io.ByteArrayInputStream
-import java.io.FilterInputStream
-import java.io.InputStream
 import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.core.JsonParser

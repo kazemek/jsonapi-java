@@ -1,9 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import java.io.ByteArrayInputStream
-import java.io.FilterInputStream
-import java.io.InputStream
-import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 
 import tools.jackson.databind.json.JsonMapper
