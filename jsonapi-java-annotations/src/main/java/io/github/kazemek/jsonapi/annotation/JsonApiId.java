@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks the JSON:API resource identifier on a domain property.
+ * Marks the JSON:API resource identifier ({@code id}) on a domain property.
  *
  * <p>An explicit {@code @JsonApiId}, or a Jackson-visible property whose configured Jackson
  * external name is {@code id}, supplies the identifier. That conventional {@code id} property is
@@ -15,6 +15,10 @@ import java.lang.annotation.Target;
  * properties do not participate. Identifier properties never become attributes. Annotations never
  * make Jackson-ignored properties visible; Jackson mapping resolves visibility through Jackson's
  * logical property model and owns identifier conversion and conflict diagnostics.
+ *
+ * <p>{@code @JsonApiId} maps only the {@code id} member. The local identifier {@code lid} is an
+ * independent identity member mapped by {@link JsonApiLocalId}; neither role ever falls back to the
+ * other.
  *
  * <p>The JSON:API document member for the identifier remains {@code id}. Configured Jackson may
  * still rename the Java property used to construct or access that identifier; such a rename does

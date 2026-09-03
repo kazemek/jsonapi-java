@@ -112,7 +112,7 @@ JSON:API representation and configured Jackson are both authoritative, in differ
 |---------|-----------|
 | Document envelope, member presence, sealed explicit-null vs Java absence, identifier wire strings, relationship linkage, `PatchPresence` state | JSON:API / this library |
 | Aggregate document rules (identity uniqueness, full linkage, update-request shape, endpoint identity) | `jsonapi-java-core` validation |
-| JSON:API property roles (identifier, attribute, relationship, resource meta, relationship meta) | JSON:API annotations. Unannotated Jackson-visible properties do not participate, except the conventional identifier whose configured Jackson external name is `id`. |
+| JSON:API property roles (identifier, local identifier, attribute, relationship, resource meta, relationship meta) | JSON:API annotations. `@JsonApiId` maps only `id` and `@JsonApiLocalId` maps only `lid`; neither identity role falls back to the other. Unannotated Jackson-visible properties do not participate, except the conventional identifier whose configured Jackson external name is `id`. |
 | `@JsonApiResource(type)` | Explicit JSON:API semantic data (the resource `type` member), not a Jackson property name. Class-level mix-ins still supply or override the annotation through configured Jackson introspection. |
 | Property discovery, visibility, mix-ins, creators, serializers/deserializers, and external JSON:API member names | Configured Jackson |
 | Ordinary attribute and resource/relationship-meta property serialization and deserialization; `RelationshipLinkage` identifier-meta conversion | Configured Jackson at the mapped property / wrapper meta `JavaType` |
@@ -265,6 +265,7 @@ These names are adjacent and easy to conflate. They are not synonyms.
 | Term | Meaning |
 |------|---------|
 | Presence-aware PATCH | The update contract that distinguishes omitted members, explicit JSON `null`, and supplied values. |
+| Local identifier (`lid`) | JSON:API protocol member identifying a resource only within its document (for example client-generated identifiers in creation requests). Distinct from `id` and from application/database identity; mapped only by `@JsonApiLocalId` and never promoted to or from `id`. |
 | Presence-aware nested PATCH shape | Typed-path declaration: every visible member of a nested type is `PatchPresence<…>`. Ordinary beans on the low-level path are not this. |
 | `PatchCommand` | Low-level projection: identity plus a list of supplied `PatchChange`s. |
 | `PatchPresence<T>` | Typed DTO member projection of the same tri-state. |

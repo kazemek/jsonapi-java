@@ -33,6 +33,7 @@ final class ResolvedTypeSupport {
   static MappingLocation location(MappingProperty property) {
     return switch (property.role()) {
       case ID -> MappingLocation.of("id");
+      case LOCAL_ID -> MappingLocation.of("lid");
       case ATTRIBUTE -> MappingLocation.of("attributes", property.jsonapiName());
       case RELATIONSHIP -> MappingLocation.of("relationships", property.jsonapiName(), "data");
       case RESOURCE_META -> MappingLocation.of("meta");
@@ -52,6 +53,9 @@ final class ResolvedTypeSupport {
     java.util.List<MappingProperty> properties = new java.util.ArrayList<>();
     if (mapping.identifierProperty() != null) {
       properties.add(mapping.identifierProperty());
+    }
+    if (mapping.localIdProperty() != null) {
+      properties.add(mapping.localIdProperty());
     }
     properties.addAll(mapping.attributes());
     properties.addAll(mapping.relationships());

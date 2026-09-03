@@ -25,8 +25,10 @@
  * annotations assign property roles only; configured Jackson is the sole authority for property
  * discovery, visibility, and external member names. Unannotated Jackson-visible properties do not
  * participate, except the conventional identifier whose Jackson external name is {@code id}.
- * Mapping diagnostics use {@link MappingDiagnostic} stable codes; identifier conversion is
- * pluggable through {@link IdentifierConverter}. Read-side flat DTO binding uses {@link
+ * {@code @JsonApiId} maps only {@code ResourceObject.id} and {@code @JsonApiLocalId} maps only
+ * {@code ResourceObject.lid}; the two identity roles never fall back to each other. Mapping
+ * diagnostics use {@link MappingDiagnostic} stable codes; identifier conversion is pluggable
+ * through {@link IdentifierConverter}. Read-side flat DTO binding uses {@link
  * JsonApiJackson3#resourceBinder} to derive a {@link JsonApiResourceBinder}; relationship linkage
  * conversion is pluggable through {@link RelationshipLinkageMapper}. Convenience domain writes
  * infer a root {@link tools.jackson.databind.JavaType} from a concrete runtime class. Directly

@@ -2,7 +2,8 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-26  
-**Amendment:** 2026-08-31 — relationship annotation is role-only; Jackson owns the member name; representation selection is separated from application policy
+**Amendment:** 2026-08-31 — relationship annotation is role-only; Jackson owns the member name; representation selection is separated from application policy  
+**Amendment:** 2026-09-03 — `@JsonApiLocalId` adds an independent local-identifier domain role; `id` and `lid` never fall back to each other
 
 ## Context
 
@@ -81,3 +82,24 @@ serialization, relationship linkage, and recursive include traversal. Mapping ca
 distinct for distinct parameterizations. This keeps generic scalar properties and `T`,
 `Optional<T>`, and `List<T>` relationships on the same configured Jackson authority as ordinary
 writes; the relationship/inclusion separation above is unchanged.
+
+## Amendment (2026-09): First-class local identifier domain mapping
+
+JSON:API `id` and `lid` are independent identity members, and domain mapping now represents them
+that way. `@JsonApiId` is the role for the resource `id` member; the new `@JsonApiLocalId` is a
+role-only annotation for the `lid` member. Neither role falls back to the other: write mapping
+emits the id role to `ResourceObject.id` and the local-id role to `ResourceObject.lid`, flat reads
+bind wire `id` only to the id role and wire `lid` only to the local-id role, and relationship
+linkage preserves id-only, lid-only, and id+lid identity without promoting a local identifier to
+`id`. Mapping metadata tracks the two roles as separate optional properties; at most one property
+per role, never both roles on one property, and at least one identity role per mapped type.
+Violations fail deterministically with the existing mapping diagnostics (`DUPLICATE_ROLE`,
+`MISSING_IDENTIFIER`).
+
+The local identifier is a JSON:API protocol concept for resources identified only within their
+document, not an application persistence or transient-entity heuristic, and mapping never infers
+role from value shape, nullness, or database state. A mapped lid-only resource represents a state
+that is legal for create/local-identifier usage; core document validation remains the authority
+for whether that state is legal in a given document usage. Configured Jackson remains the sole
+authority for the underlying Java property, and identifier conversion stays shared between the two
+roles through the existing `IdentifierConverter`.

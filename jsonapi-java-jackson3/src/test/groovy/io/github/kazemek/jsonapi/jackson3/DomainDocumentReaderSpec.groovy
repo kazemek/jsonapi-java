@@ -25,7 +25,7 @@ import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
-import io.github.kazemek.jsonapi.fixtures.domainread.FlatLidArticle
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatNullableIdArticle
 import io.github.kazemek.jsonapi.fixtures.TestFixtureResources
 import io.github.kazemek.jsonapi.fixtures.enveloperead.EmptyResourceType
 import io.github.kazemek.jsonapi.fixtures.enveloperead.FlatNode
@@ -555,16 +555,16 @@ class DomainDocumentReaderSpec extends Specification {
     ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
   }
 
-  def "typed envelope binding rejects a supplied getter-only identifier at /data/lid"() {
+  def "typed envelope binding rejects a supplied getter-only local-id at /data/lid"() {
     given:
     def registry = ResourceTypeRegistry.builder()
-        .register(DirectionalityReadFixtures.GetterOnlyIdentifier)
+        .register(LocalIdFixtures.GetterOnlyLocalId)
         .build()
     def reader = JsonApiJackson3.domainDocumentReader(
         JsonMapper.builder().build(), DocumentReadContext.resourceDefaults(), registry)
     def document = new JsonApiDocument(
         new DocumentData.SingleResource(
-        new ResourceObject("getter-only-id", null, "client-lid", null, null, null, null, Map.of())),
+        new ResourceObject("getter-only-lid", null, "client-lid", null, null, null, null, Map.of())),
         null,
         null,
         null,
@@ -579,7 +579,7 @@ class DomainDocumentReaderSpec extends Specification {
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/data/lid"
-    ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
+    ex.resourceClass() == LocalIdFixtures.GetterOnlyLocalId
   }
 
   // ============================== MAPPING-LOCATION COMPOSITION ==============================
@@ -716,7 +716,7 @@ class DomainDocumentReaderSpec extends Specification {
     when:
     ResourceTypeRegistry.builder()
         .register(FlatArticle)
-        .register(FlatLidArticle)
+        .register(FlatNullableIdArticle)
         .build()
 
     then:

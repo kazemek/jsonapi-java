@@ -5,7 +5,9 @@ import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import org.jspecify.annotations.Nullable;
 
-/** Flat read-side DTO bound from a lid-only resource object. */
+/**
+ * Flat read-side DTO whose nullable id role may stay unbound when no wire {@code id} is present.
+ */
 @JsonApiResource(type = "articles")
-public record FlatLidArticle(
+public record FlatNullableIdArticle(
     @JsonApiId @Nullable String id, @JsonApiAttribute @Nullable String title) {}

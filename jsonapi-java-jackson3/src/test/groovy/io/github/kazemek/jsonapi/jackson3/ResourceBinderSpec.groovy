@@ -33,7 +33,7 @@ import io.github.kazemek.jsonapi.fixtures.domainread.FlatCreatorArticle
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatDefaultedArticle
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatInheritedBlog
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatIntIdArticle
-import io.github.kazemek.jsonapi.fixtures.domainread.FlatLidArticle
+import io.github.kazemek.jsonapi.fixtures.domainread.FlatNullableIdArticle
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatMetaArticle
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatMutableArticle
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatRelationshipLinkageArticle
@@ -48,6 +48,7 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContain
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle
+import io.github.kazemek.jsonapi.fixtures.localid.LocalIdentityArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedOptionalArticle
@@ -91,8 +92,9 @@ class ResourceBinderSpec extends Specification {
     ])
     "mutable DTO" | resource(ARTICLES, "1", attrs("title", "Hello"), rels(AUTHOR, single(PEOPLE, "p1"))) | FlatMutableArticle | new FlatMutableArticle("1", "Hello", ResourceIdentifier.of(PEOPLE, "p1"))
     "immutable creator DTO" | resource(ARTICLES, "42", attrs("title", "Creator"), null) | FlatCreatorArticle | new FlatCreatorArticle("42", "Creator")
-    "lid-only resource" | resourceWithLid(ARTICLES, "lid-1", attrs("title", "T")) | FlatLidArticle | new FlatLidArticle("lid-1", "T")
-    "resource without id or lid" | resourceWithLid(ARTICLES, null, attrs("title", "T")) | FlatLidArticle | new FlatLidArticle(null, "T")
+    "lid-only resource never binds into the id role" | resourceWithLid(ARTICLES, "lid-1", attrs("title", "T")) | FlatNullableIdArticle | new FlatNullableIdArticle(null, "T")
+    "resource without id or lid" | resourceWithLid(ARTICLES, null, attrs("title", "T")) | FlatNullableIdArticle | new FlatNullableIdArticle(null, "T")
+    "id and lid bind independently" | new ResourceObject(ARTICLES, "42", "lid-1", Attributes.ofAttributes(attrs("title", "T")), null, null, null, Map.of()) | LocalIdentityArticle | new LocalIdentityArticle("42", "lid-1", "T")
     "present Optional relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, single(PEOPLE, "p1"))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.of(ResourceIdentifier.of(PEOPLE, "p1")))
     "explicit null Optional relationship" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.empty())
     "array relationship" | resource(ARTICLES, "1", null, rels(COMMENTS, collection(COMMENTS, ["c1", "c2"]))) | FlatArticleWithArray | new FlatArticleWithArray("1", null, [
@@ -225,7 +227,7 @@ class ResourceBinderSpec extends Specification {
     "empty collection linkage on to-one" | resource(ARTICLES, "1", null, rels(AUTHOR, collection(PEOPLE, []))) | FlatArticle | MappingDiagnostic.RELATIONSHIP_CARDINALITY_MISMATCH | "/relationships/author/data" | ResourceIdentifier
     "getter-only attribute" | resource("getter-only", "1", attrs("title", "supplied"), null) | DirectionalityReadFixtures.GetterOnly | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/attributes/title" | DirectionalityReadFixtures.GetterOnly
     "getter-only identifier from id" | resource("getter-only-id", "supplied", null, null) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/id" | DirectionalityReadFixtures.GetterOnlyIdentifier
-    "getter-only identifier from lid" | resourceWithLid("getter-only-id", "client-lid", null) | DirectionalityReadFixtures.GetterOnlyIdentifier | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/lid" | DirectionalityReadFixtures.GetterOnlyIdentifier
+    "getter-only local-id from lid" | resourceWithLid("getter-only-lid", "client-lid", null) | LocalIdFixtures.GetterOnlyLocalId | MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY | "/lid" | LocalIdFixtures.GetterOnlyLocalId
   }
 
   def "throwing converter produces the expected diagnostic"() {
@@ -457,19 +459,19 @@ class ResourceBinderSpec extends Specification {
     ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
   }
 
-  def "supplied getter-only identifier is rejected at /lid"() {
+  def "supplied getter-only local-id is rejected at /lid"() {
     given:
     def localBinder = JsonApiJackson3.resourceBinder(JsonMapper.builder().build())
-    def resource = resourceWithLid("getter-only-id", "client-lid", null)
+    def resource = resourceWithLid("getter-only-lid", "client-lid", null)
 
     when:
-    localBinder.fromResource(resource, DirectionalityReadFixtures.GetterOnlyIdentifier)
+    localBinder.fromResource(resource, LocalIdFixtures.GetterOnlyLocalId)
 
     then:
     def ex = thrown(JsonApiMappingException)
     ex.diagnostic() == MappingDiagnostic.NON_DESERIALIZABLE_PROPERTY
     ex.propertyPath() == "/lid"
-    ex.resourceClass() == DirectionalityReadFixtures.GetterOnlyIdentifier
+    ex.resourceClass() == LocalIdFixtures.GetterOnlyLocalId
   }
 
   def "supplied property excluded by the default deserialization view is rejected"() {

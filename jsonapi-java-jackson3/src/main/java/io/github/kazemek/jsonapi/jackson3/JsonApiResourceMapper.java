@@ -33,7 +33,9 @@ import tools.jackson.databind.JavaType;
  * definitions by type and configuration identity. JSON:API annotations assign semantic roles;
  * configured Jackson owns property discovery, visibility, external naming, mix-ins, creators, and
  * value conversion. Unannotated Jackson-visible properties do not participate, except the
- * conventional identifier whose Jackson external name is {@code id}.
+ * conventional identifier whose Jackson external name is {@code id}. {@code @JsonApiId} maps only
+ * {@link ResourceObject#id()} and {@code @JsonApiLocalId} maps only {@link ResourceObject#lid()};
+ * the two identity roles never fall back to each other.
  *
  * <p>Mapping is write-only: this mapper produces core model objects. Feed them to a {@link
  * JsonApiDocumentWriter} for serialization. Read-side flat DTO binding is provided by {@link

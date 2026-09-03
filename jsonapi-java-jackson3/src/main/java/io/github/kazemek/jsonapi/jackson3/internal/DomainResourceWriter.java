@@ -80,11 +80,13 @@ public final class DomainResourceWriter {
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
     validateMetaTargets(mapping, resource.getClass());
-    String id = extractId(resource, mapping);
+    IdentityValues identity = extractIdentity(resource, mapping);
     Attributes attributes = buildAttributes(resource, mapping, null);
     Relationships relationships = buildRelationships(resource, mapping, null);
     Meta meta = buildResourceMeta(resource, mapping);
-    ResourceObject base = buildResourceObject(mapping, id, attributes, relationships, meta);
+    ResourceObject base =
+        buildResourceObject(
+            mapping, identity.id(), identity.localId(), attributes, relationships, meta);
     return decorateResource(resource, declaredType, mapping, base, null);
   }
 
@@ -113,12 +115,14 @@ public final class DomainResourceWriter {
       ResourceMapping mapping,
       @Nullable List<String> fields) {
     validateMetaTargets(mapping, resource.getClass());
-    String id = extractId(resource, mapping);
+    IdentityValues identity = extractIdentity(resource, mapping);
     Set<String> allowedFields = fields == null ? null : Set.copyOf(fields);
     Attributes attributes = buildAttributes(resource, mapping, allowedFields);
     Relationships relationships = buildRelationships(resource, mapping, allowedFields);
     Meta meta = buildResourceMeta(resource, mapping);
-    ResourceObject base = buildResourceObject(mapping, id, attributes, relationships, meta);
+    ResourceObject base =
+        buildResourceObject(
+            mapping, identity.id(), identity.localId(), attributes, relationships, meta);
     return decorateResource(resource, declaredType, mapping, base, allowedFields);
   }
 
@@ -171,16 +175,22 @@ public final class DomainResourceWriter {
     }
   }
 
+  /**
+   * Emits the mapped identity roles into their own core members: the id role becomes {@link
+   * ResourceObject#id()} and the local-id role becomes {@link ResourceObject#lid()}. {@code lid}
+   * never substitutes for a missing {@code id} and vice versa.
+   */
   private static ResourceObject buildResourceObject(
       ResourceMapping mapping,
       @Nullable String id,
+      @Nullable String lid,
       Attributes attributes,
       Relationships relationships,
       @Nullable Meta meta) {
     return new ResourceObject(
         mapping.resourceType(),
         id,
-        null,
+        lid,
         attributes.isEmpty() ? null : attributes,
         relationships.isEmpty() ? null : relationships,
         null,
@@ -342,6 +352,10 @@ public final class DomainResourceWriter {
     if (identifierProperty != null) {
       nonRelationshipKind.put(identifierProperty.logicalName(), "identifier");
     }
+    MappingProperty localIdProperty = mapping.localIdProperty();
+    if (localIdProperty != null) {
+      nonRelationshipKind.put(localIdProperty.logicalName(), "identifier");
+    }
     for (MappingProperty property : mapping.attributes()) {
       nonRelationshipKind.put(property.logicalName(), "attribute");
     }
@@ -412,6 +426,32 @@ public final class DomainResourceWriter {
     wholeMetaTarget.validateReadWriteTargets(mapping, rawType);
   }
 
+  /**
+   * Reads the mapped id and local-id roles independently. A null Java value on either role means
+   * that member is absent; only when both roles yield nothing does the resource lack identity and
+   * fail with {@link MappingDiagnostic#MISSING_IDENTIFIER}. A present value that fails conversion
+   * fails at its own role's wire location.
+   */
+  private IdentityValues extractIdentity(Object resource, ResourceMapping mapping) {
+    String id = extractId(resource, mapping);
+    String localId = extractLocalId(resource, mapping);
+    if (id == null && localId == null) {
+      MappingProperty idProperty = mapping.identifierProperty();
+      if (idProperty != null) {
+        throw missingIdentifier(
+            resource.getClass(),
+            MappingLocation.of("id"),
+            "Identifier property '" + idProperty.logicalName() + "' is null");
+      }
+      MappingProperty localIdProperty = Objects.requireNonNull(mapping.localIdProperty());
+      throw missingIdentifier(
+          resource.getClass(),
+          MappingLocation.of("lid"),
+          "Local-id property '" + localIdProperty.logicalName() + "' is null");
+    }
+    return new IdentityValues(id, localId);
+  }
+
   @Nullable String extractId(Object resource, ResourceMapping mapping) {
     MappingProperty identifierProperty = mapping.identifierProperty();
     if (identifierProperty == null) {
@@ -419,20 +459,49 @@ public final class DomainResourceWriter {
     }
     Object identifierValue =
         unwrapOptional(readValue(resource, identifierProperty, PropertyRole.ID));
+    if (identifierValue == null) {
+      return null;
+    }
     return requireIdentifierString(resource.getClass(), identifierProperty, identifierValue);
+  }
+
+  @Nullable String extractLocalId(Object resource, ResourceMapping mapping) {
+    MappingProperty localIdProperty = mapping.localIdProperty();
+    if (localIdProperty == null) {
+      return null;
+    }
+    Object localIdValue =
+        unwrapOptional(readValue(resource, localIdProperty, PropertyRole.LOCAL_ID));
+    if (localIdValue == null) {
+      return null;
+    }
+    return requireLocalIdString(resource.getClass(), localIdProperty, localIdValue);
   }
 
   private String requireIdentifierString(
       Class<?> type, MappingProperty property, @Nullable Object identifierValue) {
-    if (identifierValue == null) {
-      throw missingIdentifier(type, "Identifier property '" + property.logicalName() + "' is null");
-    }
+    // Callers guarantee a present value; null identity state is decided by extractIdentity.
     String identifierString = identifierConverter.convert(identifierValue);
     if (identifierString == null) {
       throw missingIdentifier(
-          type, "Identifier converter returned null for property '" + property.logicalName() + "'");
+          type,
+          MappingLocation.of("id"),
+          "Identifier converter returned null for property '" + property.logicalName() + "'");
     }
     return identifierString;
+  }
+
+  private String requireLocalIdString(
+      Class<?> type, MappingProperty property, @Nullable Object localIdValue) {
+    // Callers guarantee a present value; null identity state is decided by extractIdentity.
+    String localIdString = identifierConverter.convert(localIdValue);
+    if (localIdString == null) {
+      throw missingIdentifier(
+          type,
+          MappingLocation.of("lid"),
+          "Local-id converter returned null for property '" + property.logicalName() + "'");
+    }
+    return localIdString;
   }
 
   public ResourceIdentifier extractIdentifier(Object resource, JavaType declaredType) {
@@ -440,8 +509,9 @@ public final class DomainResourceWriter {
     Objects.requireNonNull(declaredType, DECLARED_TYPE);
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
-    String id = extractId(resource, mapping);
-    return new ResourceIdentifier(mapping.resourceType(), id, null, null, Map.of());
+    IdentityValues identity = extractIdentity(resource, mapping);
+    return new ResourceIdentifier(
+        mapping.resourceType(), identity.id(), identity.localId(), null, Map.of());
   }
 
   /** Resolves the cached mapping definition for a complete declared type. */
@@ -960,9 +1030,10 @@ public final class DomainResourceWriter {
     return new RelationshipData.IdentifierCollectionLinkage(identifiers);
   }
 
-  private static JsonApiMappingException missingIdentifier(Class<?> type, String message) {
+  private static JsonApiMappingException missingIdentifier(
+      Class<?> type, MappingLocation location, String message) {
     return new JsonApiMappingException(
-        MappingDiagnostic.MISSING_IDENTIFIER, type, MappingLocation.of("id"), message);
+        MappingDiagnostic.MISSING_IDENTIFIER, type, location, message);
   }
 
   private static JsonApiMappingException mixedToManyElements(
@@ -1002,6 +1073,7 @@ public final class DomainResourceWriter {
   private static MappingLocation memberLocation(MappingProperty property, PropertyRole role) {
     return switch (role) {
       case ID -> MappingLocation.of("id");
+      case LOCAL_ID -> MappingLocation.of("lid");
       case ATTRIBUTE -> MappingLocation.of("attributes", property.jsonapiName());
       case RELATIONSHIP -> MappingLocation.of("relationships", property.jsonapiName(), "data");
       case RESOURCE_META -> RelationshipMetaSupport.resourceMetaLocation();
@@ -1012,7 +1084,7 @@ public final class DomainResourceWriter {
 
   private static MappingDiagnostic diagnosticFor(PropertyRole role) {
     return switch (role) {
-      case ID -> MappingDiagnostic.MISSING_IDENTIFIER;
+      case ID, LOCAL_ID -> MappingDiagnostic.MISSING_IDENTIFIER;
       case ATTRIBUTE -> MappingDiagnostic.UNSUPPORTED_ATTRIBUTE_VALUE;
       case RELATIONSHIP -> MappingDiagnostic.UNSUPPORTED_RELATIONSHIP_VALUE;
       case RESOURCE_META, RELATIONSHIP_META -> MappingDiagnostic.INVALID_META_TARGET;
@@ -1058,6 +1130,9 @@ public final class DomainResourceWriter {
   }
 
   private sealed interface ToManyClassification permits ResourceIdentifiers, DomainObjects, Mixed {}
+
+  /** Extracted identity-role values; either may be null when its member is absent. */
+  private record IdentityValues(@Nullable String id, @Nullable String localId) {}
 
   private record ResourceIdentifiers(List<ResourceIdentifier> identifiers)
       implements ToManyClassification {}

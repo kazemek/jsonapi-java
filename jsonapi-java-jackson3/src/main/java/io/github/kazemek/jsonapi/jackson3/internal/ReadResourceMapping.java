@@ -17,6 +17,7 @@ import tools.jackson.databind.JavaType;
 record ReadResourceMapping(
     String resourceType,
     @Nullable ReadMappingProperty identifierProperty,
+    @Nullable ReadMappingProperty localIdProperty,
     List<ReadMappingProperty> attributes,
     List<ReadMappingProperty> relationships,
     @Nullable ReadMappingProperty resourceMeta,
@@ -25,18 +26,23 @@ record ReadResourceMapping(
 
   /**
    * Maps configured Jackson external names to resource-relative wire locations for
-   * construction-failure translation. The declared type remains available for serialization-only
-   * properties so a missing member never creates a synthetic input value merely by being present in
-   * the mapping.
+   * construction-failure translation. A supplied id role starts at {@code /id} and a supplied
+   * local-id role at {@code /lid}; a null location leaves that role out of the map. The declared
+   * type remains available for serialization-only properties so a missing member never creates a
+   * synthetic input value merely by being present in the mapping.
    */
   Map<String, StructuredValueBinder.ConstructionStart> constructionStartsByJacksonName(
-      @Nullable MappingLocation identifierLocation) {
+      @Nullable MappingLocation idLocation, @Nullable MappingLocation lidLocation) {
     Map<String, StructuredValueBinder.ConstructionStart> starts = new LinkedHashMap<>();
-    if (identifierProperty != null && identifierLocation != null) {
+    if (identifierProperty != null && idLocation != null) {
       starts.put(
           identifierProperty.jacksonName(),
-          new StructuredValueBinder.ConstructionStart(
-              identifierLocation, identifierProperty.type()));
+          new StructuredValueBinder.ConstructionStart(idLocation, identifierProperty.type()));
+    }
+    if (localIdProperty != null && lidLocation != null) {
+      starts.put(
+          localIdProperty.jacksonName(),
+          new StructuredValueBinder.ConstructionStart(lidLocation, localIdProperty.type()));
     }
     for (ReadMappingProperty property : attributes) {
       starts.put(

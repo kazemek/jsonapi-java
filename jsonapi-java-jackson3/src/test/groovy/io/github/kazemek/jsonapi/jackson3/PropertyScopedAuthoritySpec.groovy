@@ -2,6 +2,7 @@ package io.github.kazemek.jsonapi.jackson3
 
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute
 import io.github.kazemek.jsonapi.annotation.JsonApiId
+import io.github.kazemek.jsonapi.annotation.JsonApiLocalId
 import io.github.kazemek.jsonapi.annotation.JsonApiMeta
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
@@ -194,7 +195,7 @@ class PropertyScopedAuthoritySpec extends Specification {
         JsonMapper.builder().build(), identifierConverter())
 
     when:
-    binder.fromResource(resourceWithLid("articles", "local-1"), FailingIdArticle)
+    binder.fromResource(resourceWithLid("articles", "local-1"), FailingLocalIdArticle)
 
     then:
     def ex = thrown(JsonApiMappingException)
@@ -809,6 +810,13 @@ class PropertyScopedAuthoritySpec extends Specification {
   @JsonApiResource(type = "articles")
   static class FailingIdArticle {
     @JsonApiId @JsonDeserialize(using = FailingIdentifierDeserializer) String id
+    @JsonApiAttribute String title
+  }
+
+  @JsonApiResource(type = "articles")
+  static class FailingLocalIdArticle {
+    @JsonApiId String id
+    @JsonApiLocalId @JsonDeserialize(using = FailingIdentifierDeserializer) String localId
     @JsonApiAttribute String title
   }
 
