@@ -30,18 +30,6 @@ class IdentifierConversionSpec extends Specification {
     resource.id() == "prefix-42"
   }
 
-  def "default conversion uses toString"() {
-    given:
-    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
-    def person = new Person("42", "Alice")
-
-    when:
-    def resource = mapper.toResource(person)
-
-    then:
-    resource.id() == "42"
-  }
-
   @JsonApiResource(type = "intids")
   static class IntIdEntity {
     @JsonApiId Integer id

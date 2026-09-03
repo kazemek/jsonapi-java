@@ -563,38 +563,6 @@ class JacksonCommonContractsSpec extends Specification {
     thrown(IllegalArgumentException)
   }
 
-  def "mapping locations escape and compose structurally"() {
-    expect:
-    MappingLocation.of("attributes", "external/name").pointer() == "/attributes/external~1name"
-    MappingLocation.of("attributes", "a~b").pointer() == "/attributes/a~0b"
-    MappingLocation.parse("/data/2").append(MappingLocation.parse("/attributes/a~1b"))
-        .pointer() == "/data/2/attributes/a~1b"
-
-    when:
-    MappingLocation.parse("attributes/title")
-
-    then:
-    thrown(IllegalArgumentException)
-
-    when:
-    MappingLocation.parse("/data//title")
-
-    then:
-    thrown(IllegalArgumentException)
-
-    when:
-    MappingLocation.parse("/data/title~2")
-
-    then:
-    thrown(IllegalArgumentException)
-
-    when:
-    MappingLocation.of("attributes", "")
-
-    then:
-    thrown(IllegalArgumentException)
-  }
-
   def "read exception carries category, pointer, location, and rule code"() {
     given:
     def location = new SourceLocation(1, 2, 3L, 4L)

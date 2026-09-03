@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson.architecture
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 
 import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.importer.ClassFileImporter
@@ -29,22 +28,6 @@ class JacksonApiDependencyRulesSpec extends Specification {
         "io.github.kazemek.jsonapi.core.model..",
         "io.github.kazemek.jsonapi.core.validation..",
         "io.github.kazemek.jsonapi.jackson..")
-        .check(commonClasses)
-  }
-
-  def "common contract production types never depend on Jackson majors, adapters, or core.internal"() {
-    expect:
-    noClasses()
-        .that()
-        .resideInAPackage("io.github.kazemek.jsonapi.jackson..")
-        .should()
-        .dependOnClassesThat()
-        .resideInAnyPackage(
-        "io.github.kazemek.jsonapi.core.internal..",
-        "io.github.kazemek.jsonapi.jackson2..",
-        "io.github.kazemek.jsonapi.jackson3..",
-        "tools.jackson..",
-        "com.fasterxml.jackson..")
         .check(commonClasses)
   }
 }

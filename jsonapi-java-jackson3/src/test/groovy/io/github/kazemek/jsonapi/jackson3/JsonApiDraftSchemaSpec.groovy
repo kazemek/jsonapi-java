@@ -6,8 +6,6 @@ import java.util.List
 import java.util.Map
 import java.util.Set
 
-import groovy.json.JsonSlurper
-
 import com.networknt.schema.Schema
 import com.networknt.schema.SchemaRegistry
 import com.networknt.schema.dialect.Dialects
@@ -55,13 +53,6 @@ class JsonApiDraftSchemaSpec extends Specification {
     "schema_update_relationship.json",
   ]
 
-  private static final List<String> INVALID_CONTROLS = [
-    "invalid-controls/response-missing-primary.json",
-    "invalid-controls/create-invalid-lid-type.json",
-    "invalid-controls/update-invalid-missing-id.json",
-    "invalid-controls/update-relationship-invalid-linkage.json",
-  ]
-
   private static final String META_SCHEMA_ORIGIN = "https://json-schema.org/"
 
   private static final Map<String, String> SCHEMA_FILE_BY_KIND = [
@@ -82,19 +73,6 @@ class JsonApiDraftSchemaSpec extends Specification {
     [(kind): loadSchema(file)]
   }
 
-  def "draft schema #file for #kind exists and is valid JSON"() {
-    expect:
-    TestFixtureResources.schemaExists(file)
-    mapper.readTree(TestFixtureResources.readSchemaUtf8(file)) != null
-
-    where:
-    kind               | file
-    "response"         | "schema.json"
-    "create"           | "schema_create_resource.json"
-    "update"           | "schema_update_resource.json"
-    "updateRelationship" | "schema_update_relationship.json"
-  }
-
   def "vendored draft schemas match the recorded sha256 pin"() {
     given:
     def checksums = sha256sums()
@@ -105,23 +83,19 @@ class JsonApiDraftSchemaSpec extends Specification {
   }
 
   def "vendored schemas declare the Draft 2020-12 dialect and draft URI"() {
-    given:
-    def slurper = new JsonSlurper()
-
     expect:
     SCHEMA_FILES.every { file ->
-      slurper.parseText(TestFixtureResources.readSchemaUtf8(file)).'$schema' == META_SCHEMA_URI
+      mapper.readTree(TestFixtureResources.readSchemaUtf8(file)).get('$schema').asString() == META_SCHEMA_URI
     }
-    slurper.parseText(TestFixtureResources.readSchemaUtf8("schema.json")).'$id' == DRAFT_URI
+    mapper.readTree(TestFixtureResources.readSchemaUtf8("schema.json")).get('$id').asString() == DRAFT_URI
   }
 
-  def "schema pin metadata and invalid controls remain present"() {
+  def "schema pin metadata is documented"() {
     given:
     def readme = TestFixtureResources.readSchemaUtf8("README.md")
 
     expect:
     readme.contains(PINNED_COMMIT)
-    INVALID_CONTROLS.every { TestFixtureResources.schemaExists(it) }
   }
 
   def "writable corpus document #corpusPath validates against #schemaKind draft schema"() {

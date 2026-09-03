@@ -25,8 +25,7 @@ dependencies {
     errorprone(libs.findLibrary("errorprone-core").get())
     errorprone(libs.findLibrary("nullaway").get())
     testImplementation(libs.findLibrary("spock-core").get())
-    testImplementation(libs.findLibrary("groovy-all").get())
-    testImplementation(libs.findLibrary("bytebuddy").get())
+    testRuntimeOnly(libs.findLibrary("junit-platform-launcher").get())
 }
 
 nullaway {
@@ -47,7 +46,6 @@ tasks.named<JavaCompile>("compileJava").configure {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
-    finalizedBy(tasks.jacocoTestReport)
 }
 
 tasks.jacocoTestReport {
@@ -58,10 +56,15 @@ tasks.jacocoTestReport {
     }
 }
 
+tasks.named("check") {
+    dependsOn(tasks.jacocoTestReport)
+}
+
 // Fixed repository policy: executable library modules require at least 80% line and branch
 // coverage. The annotations module has no executable coverage to verify.
 if (project.name != "jsonapi-java-annotations") {
     tasks.jacocoTestCoverageVerification {
+        dependsOn(tasks.test)
         violationRules {
             rule {
                 limit {

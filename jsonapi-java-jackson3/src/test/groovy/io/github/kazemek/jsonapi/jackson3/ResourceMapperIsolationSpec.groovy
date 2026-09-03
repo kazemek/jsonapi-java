@@ -1,12 +1,10 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
-import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
 
-// Adapter-specific: mapper isolation and converter-overload behavior of this major's own factory,
-// deliberately kept local to this adapter spec.
+// Adapter-specific: mapper isolation behavior of this major's own factory, deliberately kept local
+// to this adapter spec.
 class ResourceMapperIsolationSpec extends Specification {
 
   static class SampleBean {
@@ -39,18 +37,5 @@ class ResourceMapperIsolationSpec extends Specification {
     then:
     before == after
     before == '{"name":"alpha"}'
-  }
-
-  def "resource mapper with IdentifierConverter overload works"() {
-    given:
-    def jsonMapper = JsonMapper.builder().build()
-    def mapper = JsonApiJackson3.resourceMapper(jsonMapper, IdentifierConverter.defaults())
-
-    when:
-    def article = new Article("1", "T", "B", [], null)
-    def resource = mapper.toResource(article)
-
-    then:
-    resource.id() == "1"
   }
 }

@@ -6,6 +6,16 @@ import spock.lang.Specification
 
 class JsonApiObjectSpec extends Specification {
 
+  def "version factory and additional members are preserved"() {
+    when:
+    def object = new JsonApiObject("1.1", null, null, Meta.of([count: 1]), ["ext:trace": "abc"])
+
+    then:
+    JsonApiObject.ofVersion("1.1").version() == "1.1"
+    object.meta().members().count == 1
+    object.additionalMembers()["ext:trace"] == "abc"
+  }
+
   def "invalid extension uri fails with stable code"() {
     when:
     new JsonApiObject("1.1", ["not a uri"], null, null, [:])

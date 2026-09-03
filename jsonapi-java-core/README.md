@@ -50,6 +50,6 @@ This module does not provide Jackson codecs, HTTP adapters, query-parameter pars
   `RESERVED_FIELD_NAME`.
 - **Diagnostics:** Failures use `JsonApiValidationException` with a stable `ValidationRuleCode` and a JSON Pointer-like path—not bare `IllegalArgumentException`. The three diagnostic families (core validation, codec/read, mapping) are summarized in [architecture](../docs/architecture.md).
 - **Nullness:** Production packages are `@NullMarked` (JSpecify only). Use `@Nullable` for member absence and intentionally null map/list values. Explicit JSON `null` stays a sealed variant (`DocumentData.NullData`, etc.), not a bare nullable reference. Keep `LocalValidation.requireNonNull` for construction; do not use JetBrains/JSR-305/Checker nullness annotations. Groovy tests are not annotated.
-- **Architectural tests:** `CoreDependencyRulesSpec` (ArchUnit) enforces JDK + JSpecify + self type dependencies for production sources (ADR-010). Do not weaken the allowlist without updating the ADR; add ArchUnit rules when adding modules.
+- **Architectural tests:** This dependency-free module relies on the compiler and its declared classpath for its dependency boundary. ArchUnit protects the cross-module boundaries where the compiler cannot express the invariant (ADR-010).
 - **Tests:** Spock specs under `src/test/groovy/` mirror the main package layout.
 - **Extensions:** Preserve valid extension and `@` members; do not interpret extension semantics in core.

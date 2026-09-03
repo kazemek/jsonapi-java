@@ -6,6 +6,28 @@ import spock.lang.Specification
 
 class ErrorSourceSpec extends Specification {
 
+  def "source retains pointer, parameter, header, and additional members"() {
+    when:
+    def source = new ErrorSource("/data", "include", "Authorization", ["ext:source": true])
+
+    then:
+    source.pointer() == "/data"
+    source.parameter() == "include"
+    source.header() == "Authorization"
+    source.additionalMembers()["ext:source"] == true
+  }
+
+  def "ofParameter creates a parameter-only source"() {
+    when:
+    def source = ErrorSource.ofParameter("include")
+
+    then:
+    source.pointer() == null
+    source.parameter() == "include"
+    source.header() == null
+    source.additionalMembers().isEmpty()
+  }
+
   def "null pointer remains valid"() {
     when:
     def source = new ErrorSource(null, "include", null, [:])
