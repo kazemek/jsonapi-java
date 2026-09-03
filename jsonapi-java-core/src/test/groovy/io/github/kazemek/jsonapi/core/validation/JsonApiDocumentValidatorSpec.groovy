@@ -868,6 +868,28 @@ class JsonApiDocumentValidatorSpec extends Specification {
     noExceptionThrown()
   }
 
+  def "to-many linkage validates each identifier with indexed pointer"() {
+    given:
+    def article = new ResourceObject(
+        "articles", "1", null, null,
+        Relationships.ofRelationships([
+          tags: Relationship.withData(new RelationshipData.IdentifierCollectionLinkage([
+            ResourceIdentifier.of("tags", "1"),
+            new ResourceIdentifier("tags", "2", null, null, ["ext:bad": 1])
+          ]))
+        ]),
+        null, null, [:])
+    def doc = JsonApiDocument.withData(new DocumentData.SingleResource(article))
+
+    when:
+    validator.validate(doc, ValidationContext.defaults())
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+    ex.jsonPointer() == "/data/relationships/tags/data/1/ext:bad"
+  }
+
   def "to-one relationship pagination is rejected"() {
     given:
     def article = new ResourceObject(

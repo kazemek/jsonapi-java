@@ -48,7 +48,8 @@ class Jackson3DependencyRulesSpec extends Specification {
   def "jackson3 exposes no duplicate public common contract types"() {
     given:
     def commonContractNames = commonClasses.findAll { JavaClass candidate ->
-      candidate.packageName.startsWith("io.github.kazemek.jsonapi.jackson.") &&
+      (candidate.packageName == "io.github.kazemek.jsonapi.jackson" ||
+          candidate.packageName.startsWith("io.github.kazemek.jsonapi.jackson.")) &&
           candidate.modifiers.contains(JavaModifier.PUBLIC) && candidate.topLevelClass
     }.collect { JavaClass candidate -> candidate.simpleName }.toSet()
     def jackson3TypeNames = jackson3Classes.findAll { JavaClass candidate ->

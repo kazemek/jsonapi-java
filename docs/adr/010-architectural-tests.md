@@ -13,7 +13,7 @@ JSpecify (`org.jspecify.annotations`) is an intentional compile-only exception (
 ## Decision
 
 - Enforce package and type dependency rules with [ArchUnit](https://www.archunit.org/) as a **`testImplementation`** dependency on library modules whose boundaries cannot be expressed by the compiler or Gradle. ArchUnit must never appear on the published runtime classpath.
-- ArchUnit is the project-wide architectural test tool—not core-only. New modules add ArchUnit rules alongside their production packages; do not reinvent coupling checks with classpath or source-import scanners.
+- ArchUnit is the project-wide architectural test tool—not core-only. New modules add ArchUnit rules alongside their production packages only when they have a package or type boundary that cannot be enforced by the compiler or Gradle; dependency-free modules without such a boundary do not require ArchUnit. Do not reinvent coupling checks with classpath or source-import scanners.
 - Current allowlists:
   - `io.github.kazemek.jsonapi.jackson..` (jackson-api) → `java..`, `org.jspecify.annotations..`,
     `io.github.kazemek.jsonapi.core.model..`, `io.github.kazemek.jsonapi.core.validation..`, and
