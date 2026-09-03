@@ -6,48 +6,46 @@ import io.github.kazemek.jsonapi.annotation.JsonApiRelationship;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 @JsonApiResource(type = "articles")
 public class FlatMutableArticle {
 
-  @JsonApiId private @Nullable String id;
+  @JsonApiId private String id;
 
-  private @Nullable String title;
+  private String title;
 
-  @JsonApiRelationship private @Nullable ResourceIdentifier author;
+  @JsonApiRelationship private ResourceIdentifier author;
 
   public FlatMutableArticle() {}
 
-  public FlatMutableArticle(
-      @Nullable String id, @Nullable String title, @Nullable ResourceIdentifier author) {
+  public FlatMutableArticle(String id, String title, ResourceIdentifier author) {
     this.id = id;
     this.title = title;
     this.author = author;
   }
 
-  public @Nullable String getId() {
+  public String getId() {
     return id;
   }
 
-  public void setId(@Nullable String id) {
+  public void setId(String id) {
     this.id = id;
   }
 
   @JsonApiAttribute
-  public @Nullable String getTitle() {
+  public String getTitle() {
     return title;
   }
 
-  public void setTitle(@Nullable String title) {
+  public void setTitle(String title) {
     this.title = title;
   }
 
-  public @Nullable ResourceIdentifier getAuthor() {
+  public ResourceIdentifier getAuthor() {
     return author;
   }
 
-  public void setAuthor(@Nullable ResourceIdentifier author) {
+  public void setAuthor(ResourceIdentifier author) {
     this.author = author;
   }
 

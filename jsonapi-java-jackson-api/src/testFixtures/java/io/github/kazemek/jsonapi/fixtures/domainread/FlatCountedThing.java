@@ -4,27 +4,26 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 @JsonApiResource(type = "things")
 public class FlatCountedThing {
 
-  @JsonApiId private @Nullable String id;
+  @JsonApiId private String id;
 
   private int count;
 
   public FlatCountedThing() {}
 
-  public FlatCountedThing(@Nullable String id, int count) {
+  public FlatCountedThing(String id, int count) {
     this.id = id;
     this.count = count;
   }
 
-  public @Nullable String getId() {
+  public String getId() {
     return id;
   }
 
-  public void setId(@Nullable String id) {
+  public void setId(String id) {
     this.id = id;
   }
 

@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.fixtures.domainpatch;
 
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Ordinary non-record JavaBean-style structured domain value type proving the low-level
@@ -10,8 +9,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class MutableAddress {
 
-  private @Nullable String street;
-  private @Nullable String city;
+  private String street;
+  private String city;
 
   public MutableAddress() {}
 
@@ -20,7 +19,7 @@ public final class MutableAddress {
     this.city = city;
   }
 
-  public @Nullable String getStreet() {
+  public String getStreet() {
     return street;
   }
 
@@ -28,7 +27,7 @@ public final class MutableAddress {
     this.street = street;
   }
 
-  public @Nullable String getCity() {
+  public String getCity() {
     return city;
   }
 

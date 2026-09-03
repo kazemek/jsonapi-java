@@ -6,51 +6,49 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 @JsonApiResource(type = "things")
 public class FlatThingWithIgnored {
 
-  @JsonApiId private @Nullable String id;
+  @JsonApiId private String id;
 
   @JsonIgnore
   @JsonApiAttribute
   @JsonProperty("secret")
-  private @Nullable String confidential;
+  private String confidential;
 
-  private @Nullable String name;
+  private String name;
 
   public FlatThingWithIgnored() {}
 
-  public FlatThingWithIgnored(
-      @Nullable String id, @Nullable String name, @Nullable String confidential) {
+  public FlatThingWithIgnored(String id, String name, String confidential) {
     this.id = id;
     this.name = name;
     this.confidential = confidential;
   }
 
-  public @Nullable String getId() {
+  public String getId() {
     return id;
   }
 
-  public void setId(@Nullable String id) {
+  public void setId(String id) {
     this.id = id;
   }
 
-  public @Nullable String getConfidential() {
+  public String getConfidential() {
     return confidential;
   }
 
-  public void setConfidential(@Nullable String confidential) {
+  public void setConfidential(String confidential) {
     this.confidential = confidential;
   }
 
   @JsonApiAttribute
-  public @Nullable String getName() {
+  public String getName() {
     return name;
   }
 
-  public void setName(@Nullable String name) {
+  public void setName(String name) {
     this.name = name;
   }
 

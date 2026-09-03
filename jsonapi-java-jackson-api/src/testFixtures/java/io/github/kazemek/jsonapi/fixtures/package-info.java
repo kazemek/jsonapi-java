@@ -7,7 +7,4 @@
  * schemas. Adapter invocation, expected behavioral outcomes, assertions, scenario selection, and
  * test orchestration remain in adapter-owned tests.
  */
-@NullMarked
 package io.github.kazemek.jsonapi.fixtures;
-
-import org.jspecify.annotations.NullMarked;
