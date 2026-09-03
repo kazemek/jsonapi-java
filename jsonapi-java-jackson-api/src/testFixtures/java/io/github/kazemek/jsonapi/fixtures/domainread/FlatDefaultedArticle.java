@@ -4,39 +4,38 @@ import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 @JsonApiResource(type = "articles")
 public class FlatDefaultedArticle {
 
-  @JsonApiId private @Nullable String id;
+  @JsonApiId private String id;
 
-  private @Nullable String title = "default";
+  private String title = "default";
 
   private String body = "default";
 
   public FlatDefaultedArticle() {}
 
-  public FlatDefaultedArticle(@Nullable String id, @Nullable String title, String body) {
+  public FlatDefaultedArticle(String id, String title, String body) {
     this.id = id;
     this.title = title;
     this.body = body;
   }
 
-  public @Nullable String getId() {
+  public String getId() {
     return id;
   }
 
-  public void setId(@Nullable String id) {
+  public void setId(String id) {
     this.id = id;
   }
 
   @JsonApiAttribute
-  public @Nullable String getTitle() {
+  public String getTitle() {
     return title;
   }
 
-  public void setTitle(@Nullable String title) {
+  public void setTitle(String title) {
     this.title = title;
   }
 

@@ -2,7 +2,6 @@ package io.github.kazemek.jsonapi.fixtures.domainpatch;
 
 import io.github.kazemek.jsonapi.jackson.patch.PatchPresence;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Ordinary JavaBean-style presence-aware PATCH shape (private fields, default constructor,
@@ -11,8 +10,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class MutableAddressPatch {
 
-  private @Nullable PatchPresence<String> street;
-  private @Nullable PatchPresence<String> city;
+  private PatchPresence<String> street;
+  private PatchPresence<String> city;
 
   public MutableAddressPatch() {}
 
@@ -21,7 +20,7 @@ public final class MutableAddressPatch {
     this.city = city;
   }
 
-  public @Nullable PatchPresence<String> getStreet() {
+  public PatchPresence<String> getStreet() {
     return street;
   }
 
@@ -29,7 +28,7 @@ public final class MutableAddressPatch {
     this.street = street;
   }
 
-  public @Nullable PatchPresence<String> getCity() {
+  public PatchPresence<String> getCity() {
     return city;
   }
 

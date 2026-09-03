@@ -4,9 +4,6 @@
  * beans, accessors and mutators, and simple value equality.
  *
  * <p>This package contains passive carriers only. Scenario catalogs, descriptors, resource loading,
- * invariants, and other executable support remain outside this package. @NullMarked
+ * invariants, and other executable support remain outside this package.
  */
-@NullMarked
 package io.github.kazemek.jsonapi.fixtures.domainwrite;
-
-import org.jspecify.annotations.NullMarked;

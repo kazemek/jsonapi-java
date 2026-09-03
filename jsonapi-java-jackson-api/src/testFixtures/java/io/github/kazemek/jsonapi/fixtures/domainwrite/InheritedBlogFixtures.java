@@ -3,7 +3,6 @@ package io.github.kazemek.jsonapi.fixtures.domainwrite;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import io.github.kazemek.jsonapi.annotation.JsonApiResource;
-import org.jspecify.annotations.Nullable;
 
 /**
  * JavaBean inheritance on the write path: mapped properties declared on a non-resource base type
@@ -15,31 +14,31 @@ public final class InheritedBlogFixtures {
 
   public abstract static class BaseBlog {
 
-    protected @Nullable String id;
-    protected @Nullable String name;
+    protected String id;
+    protected String name;
 
     protected BaseBlog() {}
 
-    protected BaseBlog(@Nullable String id, @Nullable String name) {
+    protected BaseBlog(String id, String name) {
       this.id = id;
       this.name = name;
     }
 
     @JsonApiId
-    public @Nullable String getId() {
+    public String getId() {
       return id;
     }
 
-    public void setId(@Nullable String id) {
+    public void setId(String id) {
       this.id = id;
     }
 
     @JsonApiAttribute
-    public @Nullable String getName() {
+    public String getName() {
       return name;
     }
 
-    public void setName(@Nullable String name) {
+    public void setName(String name) {
       this.name = name;
     }
   }
@@ -47,21 +46,21 @@ public final class InheritedBlogFixtures {
   @JsonApiResource(type = "blogs")
   public static final class ExtendedBlog extends BaseBlog {
 
-    private @Nullable String description;
+    private String description;
 
     public ExtendedBlog() {}
 
-    public ExtendedBlog(@Nullable String id, @Nullable String name, @Nullable String description) {
+    public ExtendedBlog(String id, String name, String description) {
       super(id, name);
       this.description = description;
     }
 
     @JsonApiAttribute
-    public @Nullable String getDescription() {
+    public String getDescription() {
       return description;
     }
 
-    public void setDescription(@Nullable String description) {
+    public void setDescription(String description) {
       this.description = description;
     }
   }

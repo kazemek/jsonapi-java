@@ -5,9 +5,6 @@
  *
  * <p>This package contains passive carriers only. Scenario catalogs, variant/expectation
  * descriptors, resource loading, invariants, and other executable support remain outside this
- * package. @NullMarked
+ * package.
  */
-@NullMarked
 package io.github.kazemek.jsonapi.fixtures.enveloperead;
-
-import org.jspecify.annotations.NullMarked;

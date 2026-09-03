@@ -44,6 +44,12 @@ tasks.named<JavaCompile>("compileJava").configure {
     }
 }
 
+plugins.withId("java-test-fixtures") {
+    tasks.named<JavaCompile>("compileTestFixturesJava").configure {
+        options.errorprone.enabled.set(false)
+    }
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }

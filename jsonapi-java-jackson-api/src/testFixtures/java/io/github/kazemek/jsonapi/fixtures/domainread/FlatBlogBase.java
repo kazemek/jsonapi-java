@@ -3,35 +3,34 @@ package io.github.kazemek.jsonapi.fixtures.domainread;
 import io.github.kazemek.jsonapi.annotation.JsonApiAttribute;
 import io.github.kazemek.jsonapi.annotation.JsonApiId;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 public class FlatBlogBase {
 
-  @JsonApiId private @Nullable String id;
+  @JsonApiId private String id;
 
-  private @Nullable String name;
+  private String name;
 
   public FlatBlogBase() {}
 
-  public FlatBlogBase(@Nullable String id, @Nullable String name) {
+  public FlatBlogBase(String id, String name) {
     this.id = id;
     this.name = name;
   }
 
-  public @Nullable String getId() {
+  public String getId() {
     return id;
   }
 
-  public void setId(@Nullable String id) {
+  public void setId(String id) {
     this.id = id;
   }
 
   @JsonApiAttribute
-  public @Nullable String getName() {
+  public String getName() {
     return name;
   }
 
-  public void setName(@Nullable String name) {
+  public void setName(String name) {
     this.name = name;
   }
 
