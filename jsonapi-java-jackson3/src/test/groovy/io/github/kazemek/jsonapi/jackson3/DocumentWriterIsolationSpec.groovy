@@ -4,12 +4,6 @@ import java.lang.reflect.Modifier
 
 import tools.jackson.databind.json.JsonMapper
 
-import io.github.kazemek.jsonapi.core.model.DocumentData
-import io.github.kazemek.jsonapi.core.model.JsonApiDocument
-import io.github.kazemek.jsonapi.core.model.ResourceObject
-import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
-import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-
 import spock.lang.Specification
 
 class DocumentWriterIsolationSpec extends Specification {
@@ -59,28 +53,5 @@ class DocumentWriterIsolationSpec extends Specification {
     def method = JsonApiDocumentWriter.getDeclaredMethod('mapper')
     !Modifier.isPublic(method.modifiers)
     JsonApiDocumentWriter.methods.every { it.name != 'mapper' }
-  }
-
-  def "aggregate-invalid documents cannot be written through public writer APIs"() {
-    given:
-    def writer = JsonApiJackson3.writer(JsonMapper.builder().build())
-    def invalid = new JsonApiDocument(
-        new DocumentData.ResourceCollection([
-          ResourceObject.of('articles', '1'),
-          ResourceObject.of('articles', '1'),
-        ]),
-        null,
-        null,
-        null,
-        null,
-        null,
-        [:])
-
-    when:
-    writer.writeValueAsString(invalid)
-
-    then:
-    def ex = thrown(JsonApiValidationException)
-    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
   }
 }

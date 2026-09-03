@@ -3,6 +3,7 @@ package io.github.kazemek.jsonapi.core.validation
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.ErrorObject
+import io.github.kazemek.jsonapi.core.model.ErrorSource
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.JsonApiObject
 import io.github.kazemek.jsonapi.core.model.Link
@@ -190,6 +191,70 @@ class JsonApiDocumentValidatorSpec extends Specification {
 
     when:
     validator.validate(doc, context)
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "nested extension members pass when their namespace is allowed"() {
+    given:
+    def article = new ResourceObject(
+        "articles", "1", null,
+        Attributes.of([title: "t"], ["ext:attribute": 1]),
+        Relationships.of([
+          author: new Relationship(
+          new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "9")),
+          null,
+          Meta.of(["ext:relationship": 1]),
+          [:])
+        ], ["ext:relationships": 1]),
+        Links.ofLinks([self: new Link.StringLink("https://example.com/a/1")]),
+        Meta.of(["ext:resource": 1]),
+        ["ext:resource-member": 1])
+    def doc = new JsonApiDocument(
+        new DocumentData.SingleResource(article),
+        null,
+        Meta.of(["ext:document-meta": 1]),
+        JsonApiObject.ofVersion("1.1"),
+        Links.ofLinks([self: new Link.StringLink("https://example.com")]),
+        null,
+        ["ext:document-member": 1])
+    def context = new ValidationContext(
+        DocumentUsage.RESPONSE_OR_OTHER,
+        Set.of("ext"),
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        LinksContext.TOP_LEVEL,
+        Map.of(),
+        null)
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    noExceptionThrown()
+  }
+
+  def "disallowed extension members in document meta are rejected"() {
+    given:
+    def doc = JsonApiDocument.withMeta(Meta.of(["ext:value": 1]))
+
+    when:
+    validator.validate(doc, ValidationContext.defaults())
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+  }
+
+  def "at members are accepted without profile policy"() {
+    given:
+    def doc = new JsonApiDocument(
+        null, null, Meta.of([count: 1]), null, null, null, ["@context": "x"])
+
+    when:
+    validator.validate(doc, ValidationContext.defaults())
 
     then:
     noExceptionThrown()
@@ -490,6 +555,36 @@ class JsonApiDocumentValidatorSpec extends Specification {
     noExceptionThrown()
   }
 
+  def "error meta and nested additional members pass when allowed"() {
+    given:
+    def error = new ErrorObject(
+        null,
+        null,
+        null,
+        null,
+        "Title",
+        null,
+        new ErrorSource(null, "include", null, [:]),
+        Meta.of([count: 1]),
+        ["ext:error": 1])
+    def doc = JsonApiDocument.withErrors([error])
+    def context = new ValidationContext(
+        DocumentUsage.RESPONSE_OR_OTHER,
+        Set.of("ext"),
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        LinksContext.TOP_LEVEL,
+        Map.of(),
+        null)
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    noExceptionThrown()
+  }
+
   def "disallowed profile uri is rejected"() {
     given:
     def doc = new JsonApiDocument(
@@ -514,6 +609,34 @@ class JsonApiDocumentValidatorSpec extends Specification {
     then:
     def ex = thrown(JsonApiValidationException)
     ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+  }
+
+  def "allowed profile uri passes when configured"() {
+    given:
+    def uri = "https://example.com/profiles/a"
+    def doc = new JsonApiDocument(
+        null,
+        null,
+        Meta.empty(),
+        new JsonApiObject("1.1", null, [uri], null, [:]),
+        null,
+        null,
+        [:])
+    def context = new ValidationContext(
+        DocumentUsage.RESPONSE_OR_OTHER,
+        Set.of(),
+        Set.of(uri),
+        Set.of(),
+        Set.of(),
+        LinksContext.TOP_LEVEL,
+        Map.of(),
+        null)
+
+    when:
+    validator.validate(doc, context)
+
+    then:
+    noExceptionThrown()
   }
 
   def "lid alias resolves full linkage for included resource with id and lid"() {
@@ -743,6 +866,28 @@ class JsonApiDocumentValidatorSpec extends Specification {
 
     then:
     noExceptionThrown()
+  }
+
+  def "to-many linkage validates each identifier with indexed pointer"() {
+    given:
+    def article = new ResourceObject(
+        "articles", "1", null, null,
+        Relationships.ofRelationships([
+          tags: Relationship.withData(new RelationshipData.IdentifierCollectionLinkage([
+            ResourceIdentifier.of("tags", "1"),
+            new ResourceIdentifier("tags", "2", null, null, ["ext:bad": 1])
+          ]))
+        ]),
+        null, null, [:])
+    def doc = JsonApiDocument.withData(new DocumentData.SingleResource(article))
+
+    when:
+    validator.validate(doc, ValidationContext.defaults())
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DISALLOWED_ADDITIONAL_MEMBER
+    ex.jsonPointer() == "/data/relationships/tags/data/1/ext:bad"
   }
 
   def "to-one relationship pagination is rejected"() {

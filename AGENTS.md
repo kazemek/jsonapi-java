@@ -206,7 +206,7 @@ Classify the final diff; tiers combine when multiple scopes are touched.
   Issues API round-trip before opening a PR. Ordinary `./gradlew clean build` stays token-free; do
   not attach `sonar` to `build`/`check`.
 - CI remains the authority for Sonar. On `main` pushes and PRs, CI runs
-  `./gradlew clean spotlessCheck build jacocoTestReport sonar` (Quality Gate wait) then
+  `./gradlew clean spotlessCheck build sonar` (Quality Gate wait) then
   `.github/scripts/check-new-code-issues.sh --list` so neither agents nor CI can complete on Quality
   Gate alone. The script fails closed by default; do not treat a green Quality Gate or a printed
   non-zero `total` as success. Failed-run details are in the `gradle-reports` artifact and the

@@ -1,7 +1,6 @@
 [versions]
-groovy = "5.1.1"
 spock = "2.4-groovy-5.0"
-bytebuddy = "1.18.13-jdk5"
+junit-platform = "1.14.1"
 sonarqube = "7.5.0.8588"
 spotless = "8.10.1"
 jspecify = "1.0.1"
@@ -15,8 +14,7 @@ json-schema-validator = "3.0.7"
 
 [libraries]
 spock-core = { module = "org.spockframework:spock-core", version.ref = "spock" }
-groovy-all = { module = "org.apache.groovy:groovy-all", version.ref = "groovy" }
-bytebuddy = { module = "net.bytebuddy:byte-buddy", version.ref = "bytebuddy" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 spotless-plugin = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version.ref = "spotless" }
 jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }

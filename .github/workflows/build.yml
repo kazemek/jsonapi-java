@@ -27,7 +27,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew clean spotlessCheck build jacocoTestReport sonar
+        run: ./gradlew clean spotlessCheck build sonar
       # SonarCloud free-tier Quality Gate can stay green with new smells; fail closed on Issues API.
       - name: Verify zero new-code Sonar issues
         env:

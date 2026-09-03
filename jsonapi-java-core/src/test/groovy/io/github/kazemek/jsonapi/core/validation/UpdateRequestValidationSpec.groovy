@@ -426,15 +426,4 @@ class UpdateRequestValidationSpec extends Specification {
     then:
     noExceptionThrown()
   }
-
-  def "response usage still accepts explicit null data"() {
-    given:
-    def doc = JsonApiDocument.withData(DocumentData.NullData.INSTANCE)
-
-    when:
-    validator.validate(doc, ValidationContext.defaults())
-
-    then:
-    noExceptionThrown()
-  }
 }

@@ -7,6 +7,28 @@ import spock.lang.Specification
 
 class JsonApiDocumentSpec extends Specification {
 
+  def "convenience factories expose their document member presence"() {
+    given:
+    def dataDocument = JsonApiDocument.withData(
+        new DocumentData.SingleResource(ResourceObject.of("articles", "1")))
+    def errorsDocument = JsonApiDocument.withErrors([ErrorObject.ofTitle("fail")])
+    def metaDocument = JsonApiDocument.withMeta(Meta.of([count: 1]))
+    def includedDocument = new JsonApiDocument(
+        dataDocument.data(), null, null, null, null,
+        [
+          ResourceObject.of("comments", "1")
+        ], [:])
+
+    expect:
+    dataDocument.hasDataMember()
+    !dataDocument.hasErrorsMember()
+    !dataDocument.hasIncludedMember()
+    errorsDocument.hasErrorsMember()
+    !errorsDocument.hasDataMember()
+    metaDocument.meta().members().count == 1
+    includedDocument.hasIncludedMember()
+  }
+
   def "top-level data and errors cannot coexist"() {
     when:
     new JsonApiDocument(
@@ -162,5 +184,24 @@ class JsonApiDocumentSpec extends Specification {
     then:
     source.additionalMembers()["ext:info"] == 1
     source.additionalMembers()["@ctx"] == "x"
+  }
+
+  def "error object preserves source and meta"() {
+    when:
+    def error = new ErrorObject(
+        "1", null, "400", "bad", "Title", "Detail",
+        new ErrorSource("/data", null, null, [:]), Meta.of([count: 1]), [:])
+
+    then:
+    error.id() == "1"
+    error.source().pointer() == "/data"
+    error.meta().members().count == 1
+  }
+
+  def "meta values support empty and value equality"() {
+    expect:
+    Meta.empty().isEmpty()
+    Meta.of([a: 1]) == Meta.of([a: 1])
+    Meta.of([a: 1]).hashCode() == Meta.of([a: 1]).hashCode()
   }
 }

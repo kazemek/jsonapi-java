@@ -15,6 +15,18 @@ import spock.lang.Specification
 
 class DocumentWriterValidationSpec extends Specification {
 
+  def "invalid aggregate documents fail before string output"() {
+    given:
+    def writer = JsonApiJackson3.writer(JsonMapper.builder().build())
+
+    when:
+    writer.writeValueAsString(invalidDocument())
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
+  }
+
   def "invalid aggregate documents fail before OutputStream output"() {
     given:
     def writer = JsonApiJackson3.writer(JsonMapper.builder().build())

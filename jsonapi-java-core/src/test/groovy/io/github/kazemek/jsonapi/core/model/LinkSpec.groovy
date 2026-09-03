@@ -1,11 +1,57 @@
 package io.github.kazemek.jsonapi.core.model
 
 import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
+import io.github.kazemek.jsonapi.core.validation.LinksContext
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
 import spock.lang.Specification
 
 class LinkSpec extends Specification {
 
+  def "links expose context-specific standard members and flatten empty values"() {
+    expect:
+    Links.empty().isEmpty()
+    Links.empty().flatten().isEmpty()
+    Links.standardMembers(LinksContext.TOP_LEVEL).contains("self")
+    Links.standardMembers(LinksContext.RESOURCE).contains("self")
+    Links.standardMembers(LinksContext.RELATIONSHIP).contains("related")
+    Links.standardMembers(LinksContext.ERROR).contains("about")
+    Links.ofLinks([self: new Link.StringLink("https://example.com")])
+    .hasStandardMember("self", LinksContext.RESOURCE)
+  }
+
+  def "links compare by typed and additional members"() {
+    given:
+    def link = new Link.StringLink("https://example.com")
+    def first = Links.ofLinks([self: link])
+    def equal = Links.ofLinks([self: link])
+    def differentEntries = Links.ofLinks([related: link])
+    def differentAdditional = Links.of([self: link], ["ext:flag": true])
+
+    expect:
+    first == first
+    first == equal
+    first.hashCode() == equal.hashCode()
+    first != differentEntries
+    first != differentAdditional
+    first != (Object) "links"
+    !first.isEmpty()
+    !differentAdditional.isEmpty()
+  }
+
+  def "object link factory and describedby validation are covered"() {
+    when:
+    def link = Link.ObjectLink.ofHref("https://example.com")
+
+    then:
+    link.href() == "https://example.com"
+
+    when:
+    new Link.ObjectLink("https://example.com", null, "bad href", null, null, null, null, [:])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.INVALID_URI_REFERENCE
+  }
   def "hreflang canonical list representation accepts single language"() {
     when:
     def link = Link.ObjectLink.withHreflang("http://example.com", "en")

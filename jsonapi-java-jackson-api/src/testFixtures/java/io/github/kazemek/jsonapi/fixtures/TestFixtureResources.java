@@ -3,10 +3,8 @@ package io.github.kazemek.jsonapi.fixtures;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 
 /** Classpath access to the shared JSON:API corpus and pinned schema resources. */
 public final class TestFixtureResources {
@@ -34,11 +32,6 @@ public final class TestFixtureResources {
     return utf8(readSchemaBytes(relativePath));
   }
 
-  /** Returns whether a pinned schema resource exists. */
-  public static boolean schemaExists(String relativePath) {
-    return resourceUrl(SCHEMA_ROOT + requireRelative(relativePath)) != null;
-  }
-
   private static String utf8(byte[] bytes) {
     return new String(bytes, StandardCharsets.UTF_8);
   }
@@ -58,26 +51,15 @@ public final class TestFixtureResources {
   }
 
   private static byte[] readResource(String resourcePath) {
-    URL url = resourceUrl(resourcePath);
-    if (url == null) {
+    InputStream in = TestFixtureResources.class.getResourceAsStream("/" + resourcePath);
+    if (in == null) {
       throw new IllegalStateException("Missing test-fixture classpath resource: " + resourcePath);
     }
-    try (InputStream in = url.openStream()) {
+    try (in) {
       return in.readAllBytes();
     } catch (IOException e) {
       throw new UncheckedIOException(
           "Failed to read test-fixture classpath resource: " + resourcePath, e);
     }
-  }
-
-  private static @Nullable URL resourceUrl(String resourcePath) {
-    ClassLoader loader = TestFixtureResources.class.getClassLoader();
-    if (loader != null) {
-      URL url = loader.getResource(resourcePath);
-      if (url != null) {
-        return url;
-      }
-    }
-    return TestFixtureResources.class.getResource("/" + resourcePath);
   }
 }

@@ -6,6 +6,22 @@ import spock.lang.Specification
 
 class AttributesRelationshipsSpec extends Specification {
 
+  def "attribute and relationship wrappers preserve values and flatten members"() {
+    given:
+    def attributes = Attributes.ofAttributes([title: "t"])
+    def relationship = Relationship.withData(
+        new RelationshipData.SingleLinkage(ResourceIdentifier.of("people", "9")))
+    def relationships = Relationships.of([author: relationship], ["ext:flag": true])
+
+    expect:
+    attributes == Attributes.ofAttributes([title: "t"])
+    attributes.hashCode() == Attributes.ofAttributes([title: "t"]).hashCode()
+    attributes.flatten().title == "t"
+    relationships == Relationships.of([author: relationship], ["ext:flag": true])
+    relationships.flatten().author == relationship
+    relationships.flatten()["ext:flag"] == true
+  }
+
   def "present-empty attributes differs from absent attributes"() {
     given:
     def withEmpty = new ResourceObject("articles", "1", null, Attributes.empty(), null, null, null, [:])
@@ -114,6 +130,15 @@ class AttributesRelationshipsSpec extends Specification {
     then:
     def ex = thrown(JsonApiValidationException)
     ex.ruleCode() == ValidationRuleCode.MEMBER_NAME_COLLISION
+  }
+
+  def "reserved field names are rejected in relationships"() {
+    when:
+    Relationships.ofRelationships([type: Relationship.metaOnly(Meta.of([x: 1]))])
+
+    then:
+    def ex = thrown(JsonApiValidationException)
+    ex.ruleCode() == ValidationRuleCode.RESERVED_FIELD_NAME
   }
 
   def "flatten rejects collisions between groups"() {
