@@ -3,10 +3,6 @@ package io.github.kazemek.jsonapi.jackson
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingLocation
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import spock.lang.Specification
 
 /** Escaping, parsing, and composition invariants of the mapping-diagnostic location type. */

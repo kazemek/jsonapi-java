@@ -24,7 +24,6 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Tag
-import java.util.Iterator
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit

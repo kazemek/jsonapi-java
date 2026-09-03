@@ -40,16 +40,6 @@ import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
-import java.util.ArrayList
-import java.util.Collections
-import java.util.HashSet
-import java.util.LinkedHashMap
-import java.util.LinkedHashSet
-import java.util.List
-import java.util.Map
-import java.util.Optional
-import java.util.Set
-
 class ResourceMapperSpec extends Specification {
 
   @Shared

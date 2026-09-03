@@ -26,11 +26,6 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.sparsefieldset.ArticleWithRenamedAuthor
 import io.github.kazemek.jsonapi.fixtures.sparsefieldset.AccessCountingFieldsetArticle
-import java.util.ArrayList
-import java.util.LinkedHashMap
-import java.util.List
-import java.util.Map
-import java.util.Set
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit

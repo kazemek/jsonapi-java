@@ -2,7 +2,6 @@ package io.github.kazemek.jsonapi.core.internal
 
 import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.ValidationRuleCode
-import java.math.BigDecimal
 import spock.lang.Specification
 
 import java.util.concurrent.atomic.AtomicInteger

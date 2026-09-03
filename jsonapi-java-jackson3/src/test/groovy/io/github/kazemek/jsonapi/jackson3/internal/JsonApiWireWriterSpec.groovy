@@ -1,9 +1,6 @@
 package io.github.kazemek.jsonapi.jackson3.internal
 
-import java.math.BigDecimal
-import java.math.BigInteger
 import java.nio.charset.StandardCharsets
-import java.util.Map
 import java.util.concurrent.atomic.AtomicInteger
 
 import tools.jackson.core.JsonGenerator

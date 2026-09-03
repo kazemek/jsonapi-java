@@ -13,10 +13,6 @@ import spock.lang.Specification
 import spock.lang.Unroll
 import tools.jackson.databind.json.JsonMapper
 
-import java.util.List
-import java.util.Map
-import java.util.Optional
-
 class DomainResourceWriterDiagnosticsSpec extends Specification {
 
   @Unroll

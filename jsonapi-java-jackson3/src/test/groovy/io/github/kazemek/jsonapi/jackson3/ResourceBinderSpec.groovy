@@ -48,7 +48,6 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContain
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.ArrayRelationshipLinkageArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.OptionalRelationshipLinkageArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures.RenamedRelationshipLinkageArticle
-import io.github.kazemek.jsonapi.jackson3.DirectionalityReadFixtures
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedOptionalArticle
@@ -64,12 +63,6 @@ import tools.jackson.databind.PropertyNamingStrategies
 import tools.jackson.databind.annotation.JsonDeserialize
 import tools.jackson.databind.deser.std.StdDeserializer
 import tools.jackson.databind.json.JsonMapper
-
-import java.util.ArrayList
-import java.util.List
-import java.util.Map
-import java.util.Optional
-import java.util.Set
 
 class ResourceBinderSpec extends Specification {
 
