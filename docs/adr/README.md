@@ -23,3 +23,4 @@ lives in [`docs/architecture.md`](../architecture.md). Stable product direction 
 15. [ADR-015: Flat Whole-Object Mapping for Resource-Side Meta](015-flat-whole-object-meta-mapping.md)
 16. [ADR-016: Mapper-Instance Construction for Jackson Adapters](016-jackson-adapter-construction.md)
 17. [ADR-017: Opt-in RelationshipLinkage for Resource Identifier Meta](017-resource-identifier-meta-mapping.md)
+18. [ADR-018: Ordinary Domain Relationships Remain Linkage-Oriented](018-relationship-data-presence-in-domain-mapping.md)
