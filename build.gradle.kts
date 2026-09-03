@@ -14,16 +14,3 @@ sonar {
         property("sonar.qualitygate.wait", "true")
     }
 }
-
-gradle.projectsEvaluated {
-    val exclusions =
-        subprojects
-            .mapNotNull { it.extensions.extraProperties.properties["sonarCoverageExclusions"] as? String }
-            .filter { it.isNotBlank() }
-            .joinToString(",")
-    if (exclusions.isNotEmpty()) {
-        sonar.properties {
-            property("sonar.coverage.exclusions", exclusions)
-        }
-    }
-}

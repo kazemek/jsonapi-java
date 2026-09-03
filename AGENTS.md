@@ -3,9 +3,12 @@
 - Install JDK 21 locally; the Gradle toolchain requires it, and no resolver is configured to
   download it. Use the committed wrapper.
 - Primary token-free verification: `./gradlew clean build`. It compiles, runs Spock/JUnit and
-  ArchUnit tests, produces JaCoCo reports, enforces per-module JaCoCo instruction/branch floors
+  ArchUnit tests, produces JaCoCo reports, enforces the fixed 80% JaCoCo line/branch floor
   through `check` (numbers only in `build-logic/.../jsonapi-java-library.gradle.kts`; policy in the
   root README Build section), and runs `spotlessCheck` through `check`.
+- Coverage thresholds are repository policy, not measured-value ratchets. Do not raise or lower the
+  fixed coverage floor to match current coverage or make CI pass. Address failures with meaningful
+  tests unless the user explicitly authorizes a policy change.
 - Run one spec with `./gradlew :<module>:test --tests '<spec FQCN>'`, for example
   `./gradlew :jsonapi-java-core:test --tests 'io.github.kazemek.jsonapi.core.validation.UpdateRequestValidationSpec'`.
   Ordinary incremental and scoped test execution is the default once task inputs are correct;
