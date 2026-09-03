@@ -441,15 +441,19 @@ public final class DomainResourceWriter {
         throw missingIdentifier(
             resource.getClass(),
             MappingLocation.of("id"),
-            "Identifier property '" + idProperty.logicalName() + "' is null");
+            nullIdentityMessage("Identifier", idProperty.logicalName()));
       }
       MappingProperty localIdProperty = Objects.requireNonNull(mapping.localIdProperty());
       throw missingIdentifier(
           resource.getClass(),
           MappingLocation.of("lid"),
-          "Local-id property '" + localIdProperty.logicalName() + "' is null");
+          nullIdentityMessage("Local-id", localIdProperty.logicalName()));
     }
     return new IdentityValues(id, localId);
+  }
+
+  private static String nullIdentityMessage(String roleLabel, String logicalName) {
+    return roleLabel + " property '" + logicalName + "' is null";
   }
 
   @Nullable String extractId(Object resource, ResourceMapping mapping) {
