@@ -34,9 +34,10 @@ materializes a `data` member:
 No supported ordinary write path produces a relationship object without `data`. On reads, flat DTO
 binding is linkage-oriented by contract ([ADR-011](011-flat-dto-read-binding.md)): it binds explicit
 null, single, or collection linkage only. A relationship that is present on the wire but carries no
-`data` binds no linkage — the mapped relationship property is left unbound — while that
-relationship's `meta` still binds through `@JsonApiRelationshipMeta`. Presence-aware PATCH treats a
-supplied data-less relationship as Omitted, never as a null replacement ([ADR-012](012-resource-patch-binding.md),
+`data` binds no linkage — the mapped relationship property is left unbound under configured Jackson
+missing-property semantics — while that relationship's `meta` still binds through
+`@JsonApiRelationshipMeta`. Presence-aware PATCH treats a supplied data-less relationship as
+Omitted, never as a null replacement ([ADR-012](012-resource-patch-binding.md),
 [ADR-013](013-direct-typed-patch-dto-binding.md)).
 
 The gap is therefore representational, not structural: a valid JSON:API relationship whose `data`
@@ -82,9 +83,9 @@ Benefits:
 - The smallest possible public API surface before 1.0. The write contract above is already
   implemented, tested, and internally consistent; formalizing it changes no behavior.
 - The advanced escape hatch already exists and is complete: core `Relationship.linkOnly` /
-  `metaOnly` construction, the document codec, and the typed document envelope all preserve
-  data-absence precisely, including through reads. No information is lost to the library — only to
-  one flat DTO view.
+  `metaOnly` construction, the core document model, and the document codec preserve data-absence
+  precisely, including through reads. No information is lost to the library; ordinary linkage
+  properties simply carry no data-presence marker.
 - The Level-1 application contract stays linkage-oriented without a facade-level relationship
   envelope; advanced document APIs cover the uncommon forms.
 
@@ -94,11 +95,11 @@ Costs, evaluated rather than waved away:
   annotation. Acceptable for 1.0: the case is real but uncommon, the escape hatch is small
   (`Relationship.linkOnly` plus a document), and a future additive capability can revisit it without
   breaking the ordinary contract.
-- Flat reads lose the absent-vs-explicit-null distinction in the *bound bean*: for to-one
-  properties both bind as null (plain) or `Optional.empty()` (Optional); for to-many properties
-  both leave the property unbound, which remains distinct from `data: []` binding an empty
-  collection. The distinction survives fully at the document layer; applications that need it read
-  the relationship object, not just the linkage.
+- Ordinary linkage properties carry no data-presence marker on reads. Whether a bound bean can
+  distinguish absent `data` from explicit `"data": null` depends on the DTO shape and configured
+  Jackson: defaulted shapes keep their initializers for absent data but bind explicit null, while
+  shapes without per-property defaults bind both alike. Applications that need the distinction
+  regardless of shape read the relationship object, not just the linkage.
 - A decorator cannot fabricate a links-only relationship from nothing. This is intentional:
   decoration's authority is enrichment of already-mapped members, and letting it synthesize
   relationships would bypass mapping, fieldset validation, and inclusion bookkeeping.
@@ -144,17 +145,21 @@ The 1.0 contract, explicitly:
 - **Write:** every selected mapped relationship emits `data` (never omitted). A null/`Optional.empty()`
   to-one emits `"data": null`; an empty to-many emits `"data": []`. Absence of the whole
   relationship from the resource is achieved by fieldset exclusion, not by a Java value.
-- **Read:** a wire relationship without `data` binds no linkage. The mapped relationship property is
-  left unbound (plain to-one → null; Optional to-one → `Optional.empty()`; to-many → unbound).
-  This binding outcome is deliberately identical to explicit `"data": null` on to-one properties
-  and deliberately distinct from `"data": []` on to-many properties. It is not a rejection, not an
-  error, and not a collapse of the wire states themselves — the document model retains the
-  distinction; only the flat DTO view folds it.
+- **Read:** a wire relationship without `data` binds no linkage. The mapped relationship property
+  is left unbound, and the resulting Java value follows configured Jackson missing-property
+  semantics: field initializers, creator defaults, and null-handling customizations remain in
+  effect. Explicit `"data": null` is separately an explicit null binding through the same
+  configured-Jackson construction, so defaulted DTO shapes can distinguish the two states; shapes
+  without per-property defaults (for example plain records) happen to bind both alike.
+  `"data": null` on a to-many property is invalid linkage cardinality and fails with
+  `RELATIONSHIP_CARDINALITY_MISMATCH`, while `"data": []` binds an empty collection. None of this
+  is a rejection or a wire-state collapse: the document model retains every distinction; the
+  ordinary linkage property simply carries no data-presence marker.
 - **Relationship meta:** a data-less relationship's `meta` still binds through
   `@JsonApiRelationshipMeta` on reads and is still emitted on writes. Meta ownership is unchanged;
   the data-presence contract neither absorbs nor constrains it.
 - **Links-only and meta-only relationships** remain fully supported through core `Relationship`
-  construction, the document codec (both directions), and the typed document envelope. They are
+  construction, the core document model, and the document codec (both directions). They are
   out of scope for ordinary domain properties, for decorators, and for the Level-1 relationship
   facet.
 - **Direction neutrality:** the contract is symmetric for client and server code. It encodes no
@@ -195,12 +200,13 @@ Positive:
 
 Negative / explicit losses:
 
-- A server that wants `related`-link-only relationships must construct the document (or the
-  relationship) through core APIs, or use the typed document envelope, rather than annotating a
-  DTO. This is the accepted 1.0 cost.
-- Flat reads fold absent `data` into "no linkage": to-one properties cannot distinguish it from
-  explicit null linkage, and the distinction is only recoverable at the document layer. To-many
-  properties still distinguish it from empty collection linkage.
+- A server that wants `related`-link-only relationships must construct the relationship or document
+  through core APIs rather than annotating a DTO. This is the accepted 1.0 cost.
+- Ordinary linkage properties carry no data-presence marker. Absent `data` and explicit `"data":
+  null` bind through different construction inputs (missing member vs explicit null), and whether
+  the bound value differs depends on the DTO shape and configured Jackson; defaulted shapes
+  distinguish them, shapes without per-property defaults bind both alike. The distinction is always
+  recoverable at the document layer.
 - If demand justifies it later, an opt-in data-presence capability can be added incrementally
   without breaking this contract; nothing in the 1.0 surface precludes it.
 
@@ -210,8 +216,11 @@ Negative / explicit losses:
   `ResourceIdentifier`, `RelationshipLinkage<T, M>`): all linkage-oriented; all emit `data`; all
   unchanged.
 - **Flat reads:** data-less wire relationships leave the relationship property unbound and bind
-  relationship meta normally (documented above). No diagnostic is raised; the shape is supported,
-  just not expressible in an ordinary linkage property.
+  relationship meta normally. The unbound property follows configured Jackson missing-property
+  semantics; explicit `"data": null` is a separate explicit null binding, and `"data": null` on a
+  to-many property fails as invalid linkage cardinality. No diagnostic is raised for a data-less
+  to-one relationship; the shape is supported, just not expressible as a data-presence marker in
+  an ordinary linkage property.
 - **Relationship links:** owned by core `Relationship.links` and, on writes, by additive decoration.
   A data-presence value — had one existed — would not have known about links; with Option A the
   question does not arise.

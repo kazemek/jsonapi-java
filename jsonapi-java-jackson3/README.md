@@ -159,10 +159,13 @@ local-id role is ignored, never bound as an identifier. Normal readable/writable
 setter-only, creator-only/constructor-bound, and Jackson write-only properties are supported. A
 supplied member mapped to a getter-only, read-only, or otherwise non-deserializable property fails
 with `NON_DESERIALIZABLE_PROPERTY` at its JSON:API wire location instead of being silently
-discarded. A mapped relationship whose wire object carries no `data` member binds no linkage (ADR-018):
-the property stays unbound — to-one properties bind exactly as with explicit null linkage, to-many
-properties stay unbound, distinct from `"data": []` binding an empty collection — while that
-relationship's `meta` still binds through `@JsonApiRelationshipMeta`. The same rule applies to
+discarded. A mapped relationship whose wire object carries no `data` member binds no linkage
+(ADR-018): the property stays unbound and the resulting Java value follows configured Jackson
+missing-property semantics, so field initializers, creator defaults, and null-handling
+customizations remain in effect; explicit `"data": null` binds separately as an explicit null.
+`"data": null` on a to-many property fails as invalid linkage cardinality, while `"data": []` binds
+an empty collection. That relationship's `meta` still binds through `@JsonApiRelationshipMeta`. The
+same rule applies to
 primary and included resources bound through the typed domain envelope; the serialization-oriented
 `ResourceMapping` remains authoritative for writes.
 

@@ -136,7 +136,20 @@ class ResourceBinderSpec extends Specification {
     ])
     "relationship meta without linkage" | resourceWithMeta(attrs("title", "Hello"), rels(AUTHOR, Relationship.metaOnly(Meta.of([displayName: "Alice"]))), null) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", null, null, new AuthorMeta("Alice"))
     "link-only relationship does not bind linkage" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.linkOnly(Links.ofLinks([(RELATED): new Link.StringLink("/articles/1/author")])))) | FlatArticle | new FlatArticle("1", null, null, null, null)
-    "data-absent relationship binds Optional.empty like explicit null" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.metaOnly(Meta.of([note: "x"])))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.empty())
+    "data-absent relationship binds Optional.empty via its missing-property default" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.metaOnly(Meta.of([note: "x"])))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.empty())
+  }
+
+  def "relationship data absence and explicit null follow configured missing-vs-null semantics"() {
+    expect:
+    def type = RelationshipBindingFixtures.DefaultedRelationshipArticle
+    binder.fromResource(
+        resource("defaulted-relationship-articles", "1", null, rels(AUTHOR, Relationship.metaOnly(Meta.of([note: "x"])))),
+        type).getAuthor() == type.defaultAuthor()
+
+    and:
+    binder.fromResource(
+        resource("defaulted-relationship-articles", "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE))),
+        type).getAuthor() == null
   }
 
   def "custom identifier converter converts ids"() {
