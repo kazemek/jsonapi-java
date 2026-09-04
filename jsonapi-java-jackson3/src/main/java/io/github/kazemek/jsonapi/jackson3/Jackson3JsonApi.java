@@ -73,7 +73,6 @@ public final class Jackson3JsonApi implements JsonApi {
     this.resources =
         new Jackson3JsonApiResources(
             baseMapper,
-            documentMapper,
             representationPolicy,
             resourceMapper,
             resourceBinder,

@@ -67,13 +67,17 @@ final class Jackson3JsonApiRelationships implements JsonApiRelationships {
     responseWriter.writeValue(out, linkageDocument(identifier));
   }
 
+  // The wildcard mirrors the neutral contract: it is redundant only because
+  // ResourceIdentifier is final, and lets callers pass lists held through generic APIs.
   @Override
+  @SuppressWarnings("java:S4968")
   public String writeToMany(List<? extends ResourceIdentifier> identifiers) {
     Objects.requireNonNull(identifiers, "identifiers");
     return responseWriter.writeValueAsString(linkageCollectionDocument(identifiers));
   }
 
   @Override
+  @SuppressWarnings("java:S4968")
   public void writeToMany(List<? extends ResourceIdentifier> identifiers, OutputStream out) {
     Objects.requireNonNull(identifiers, "identifiers");
     Objects.requireNonNull(out, "out");

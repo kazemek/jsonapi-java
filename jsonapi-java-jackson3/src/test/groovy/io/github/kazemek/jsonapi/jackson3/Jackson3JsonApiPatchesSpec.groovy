@@ -1,6 +1,5 @@
 package io.github.kazemek.jsonapi.jackson3
 
-import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.validation.DocumentUsage
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
@@ -8,11 +7,11 @@ import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson.patch.PatchPresence
 import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticlePatch
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticle
+import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericPatch
 import spock.lang.Shared
 import spock.lang.Specification
+import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.json.JsonMapper
-
-import java.lang.reflect.Type
 
 class Jackson3JsonApiPatchesSpec extends Specification {
 
@@ -67,6 +66,8 @@ class Jackson3JsonApiPatchesSpec extends Specification {
         ValidationContext.defaults().withDocumentUsage(DocumentUsage.UPDATE_REQUEST),
         PrimaryDataKind.RESOURCE)
     def document = jsonApi.documents().read(json, context)
+    // A ParameterizedType (not a Class) forces runtime dispatch onto the Type overloads.
+    def patchType = new TypeReference<GenericPatch<String>>() {}.getType()
 
     when:
     def patch = jsonApi.patches().bindPatch(document, ArticlePatch)
@@ -75,31 +76,48 @@ class Jackson3JsonApiPatchesSpec extends Specification {
     then:
     patch == jsonApi.patches().readPatch(json, ArticlePatch)
     command == jsonApi.patches().readCommand(json, FlatArticle)
-  }
-
-  def "generic Type overloads mirror the Class paths"() {
-    given:
-    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"New title"}}}'
-    Type dtoType = ArticlePatch
-    Type resourceType = FlatArticle
 
     when:
-    def patch = jsonApi.patches().readPatch(json, dtoType)
-    def command = jsonApi.patches().readCommand(json, resourceType)
+    def genericPatch = jsonApi.patches().bindPatch(document, patchType)
+    def genericCommand = jsonApi.patches().bindCommand(document, patchType)
 
     then:
-    patch == jsonApi.patches().readPatch(json, ArticlePatch)
-    command == jsonApi.patches().readCommand(json, FlatArticle)
+    genericPatch == new GenericPatch("1", PatchPresence.present("New title"))
+    genericCommand.resourceType() == GenericPatch
+    genericCommand.identity() == "1"
+    genericCommand.changes().size() == 1
+  }
+
+  def "generic Type overloads bind through full generic fidelity"() {
+    given:
+    def patchType = new TypeReference<GenericPatch<String>>() {}.getType()
+    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"New title"}}}'
+
+    when:
+    def patch = jsonApi.patches().readPatch(json, patchType)
+    def command = jsonApi.patches().readCommand(json, patchType)
+
+    then:
+    patch == new GenericPatch("1", PatchPresence.present("New title"))
+    command.resourceType() == GenericPatch
+    command.identity() == "1"
   }
 
   def "stream sources mirror string sources without closing caller streams"() {
     given:
     def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"New title"}}}'
+    def patchType = new TypeReference<GenericPatch<String>>() {}.getType()
 
     when:
     def patch = jsonApi.patches().readPatch(new ByteArrayInputStream(json.bytes), ArticlePatch)
+    def genericPatch = jsonApi.patches().readPatch(new ByteArrayInputStream(json.bytes), patchType)
+    def command = jsonApi.patches().readCommand(new ByteArrayInputStream(json.bytes), FlatArticle)
+    def genericCommand = jsonApi.patches().readCommand(new ByteArrayInputStream(json.bytes), patchType)
 
     then:
     patch == jsonApi.patches().readPatch(json, ArticlePatch)
+    genericPatch == new GenericPatch("1", PatchPresence.present("New title"))
+    command == jsonApi.patches().readCommand(json, FlatArticle)
+    genericCommand == jsonApi.patches().readCommand(json, patchType)
   }
 }

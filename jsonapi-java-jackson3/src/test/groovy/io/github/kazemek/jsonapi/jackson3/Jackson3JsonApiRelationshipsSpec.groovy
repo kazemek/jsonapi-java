@@ -84,12 +84,43 @@ class Jackson3JsonApiRelationshipsSpec extends Specification {
   def "stream sinks mirror string results without closing caller streams"() {
     given:
     def identifier = ResourceIdentifier.of("people", "p1")
-    def out = new ByteArrayOutputStream()
+    def identifiers = [
+      ResourceIdentifier.of("comments", "c1")
+    ]
+    def oneOut = new ByteArrayOutputStream()
+    def manyOut = new ByteArrayOutputStream()
 
     when:
-    jsonApi.relationships().writeToOne(identifier, out)
+    jsonApi.relationships().writeToOne(identifier, oneOut)
+    jsonApi.relationships().writeToMany(identifiers, manyOut)
 
     then:
-    jsonApi.relationships().readToOne(new ByteArrayInputStream(out.toByteArray())) == identifier
+    jsonApi.relationships().readToOne(new ByteArrayInputStream(oneOut.toByteArray())) == identifier
+    jsonApi.relationships().readToMany(new ByteArrayInputStream(manyOut.toByteArray())) == identifiers
+  }
+
+  def "linkage reads reject error documents without coercion"() {
+    given:
+    def errors = '{"errors":[{"status":"500","title":"boom"}]}'
+
+    when:
+    jsonApi.relationships().readToOne(errors)
+
+    then:
+    thrown(JsonApiMappingException)
+
+    when:
+    jsonApi.relationships().readToOne('{"meta":{"a":1}}')
+
+    then:
+    thrown(JsonApiMappingException)
+
+    when:
+    jsonApi.relationships().readToMany(errors)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.RESOURCE_TYPE_MISMATCH
+    ex.propertyPath() == "/data"
   }
 }

@@ -18,6 +18,9 @@ import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
+import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
+import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecoration
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecorator
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecoratorRegistry
@@ -25,6 +28,7 @@ import io.github.kazemek.jsonapi.jackson.representation.IncludePath
 import io.github.kazemek.jsonapi.jackson.representation.IncludePolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
+import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.fixtures.domainread.FlatArticle
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
@@ -32,6 +36,9 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.localid.LocalIdentityArticle
 import spock.lang.Shared
 import spock.lang.Specification
+import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericValue
+import tools.jackson.core.type.TypeReference
+import tools.jackson.databind.JavaType
 import tools.jackson.databind.json.JsonMapper
 
 class Jackson3JsonApiResourcesSpec extends Specification {
@@ -232,5 +239,172 @@ class Jackson3JsonApiResourcesSpec extends Specification {
 
     then:
     fromStream == jsonApi.resources().readOne(out.toString("UTF-8"), FlatArticle)
+  }
+
+  def "round-trips a resource collection through writeMany and readMany"() {
+    given:
+    def articles = [
+      new Article("1", "A", "Body a", List.of(), null),
+      new Article("2", "B", "Body b", List.of(), null)
+    ]
+    def options = new ResourceWriteOptions(
+        new DocumentEnvelope(
+        Links.ofLinks([self: new Link.StringLink("https://example.test/articles")]),
+        null,
+        null),
+        RepresentationSelection.none())
+
+    when:
+    def json = jsonApi.resources().writeMany(articles, options)
+    def actual = jsonApi.resources().readMany(json, FlatArticle)
+
+    then:
+    actual*.id() == ["1", "2"]
+    actual*.title() == ["A", "B"]
+  }
+
+  def "readManyDocument retains top-level state for collections"() {
+    given:
+    def json = '{"data":[{"type":"articles","id":"1","attributes":{"title":"A"}},{"type":"articles","id":"2","attributes":{"title":"B"}}],"meta":{"count":2}}'
+
+    when:
+    def document = jsonApi.resources().readManyDocument(json, FlatArticle)
+
+    then:
+    document.resources()*.id() == ["1", "2"]
+    document.meta() == Meta.of([count: 2])
+    document.included() == null
+  }
+
+  def "generic Type overloads bind through full generic fidelity"() {
+    given:
+    // A ParameterizedType (not a Class) forces runtime dispatch onto the Type overloads.
+    def valueType = new TypeReference<GenericValue<String>>() {}.getType()
+    def one = '{"data":{"type":"things","id":"1","attributes":{"value":"v"}}}'
+    def many = '{"data":[{"type":"things","id":"1","attributes":{"value":"v"}}]}'
+
+    when:
+    def single = jsonApi.resources().readOne(one, valueType)
+    def collection = jsonApi.resources().readMany(many, valueType)
+    def streamSingle = jsonApi.resources().readOne(new ByteArrayInputStream(one.bytes), valueType)
+    def streamMany = jsonApi.resources().readMany(new ByteArrayInputStream(many.bytes), valueType)
+
+    then:
+    single == new GenericValue("1", "v")
+    collection == [new GenericValue("1", "v")]
+    streamSingle == single
+    streamMany == collection
+  }
+
+  def "remaining stream overloads mirror their string forms"() {
+    given:
+    def article = new Article("1", "Hello", "B", List.of(), null)
+    def one = jsonApi.resources().writeOne(article)
+    def many = jsonApi.resources().writeMany([article])
+    def manyOut = new ByteArrayOutputStream()
+    def createOut = new ByteArrayOutputStream()
+    def updateOut = new ByteArrayOutputStream()
+    def updateOptionsOut = new ByteArrayOutputStream()
+
+    when:
+    def readMany = jsonApi.resources().readMany(new ByteArrayInputStream(many.bytes), FlatArticle)
+    def oneDocument = jsonApi.resources().readOneDocument(new ByteArrayInputStream(one.bytes), FlatArticle)
+    def manyDocument = jsonApi.resources().readManyDocument(new ByteArrayInputStream(many.bytes), FlatArticle)
+    jsonApi.resources().writeMany([article], manyOut)
+    jsonApi.resources().writeCreateDocument(article, createOut)
+    jsonApi.resources().writeUpdateDocument(article, null, updateOut)
+    jsonApi.resources().writeUpdateDocument(article, null, ResourceWriteOptions.defaults(), updateOptionsOut)
+
+    then:
+    readMany == jsonApi.resources().readMany(many, FlatArticle)
+    oneDocument == jsonApi.resources().readOneDocument(one, FlatArticle)
+    manyDocument == jsonApi.resources().readManyDocument(many, FlatArticle)
+    jsonApi.resources().readMany(new ByteArrayInputStream(manyOut.toByteArray()), FlatArticle) == readMany
+    jsonApi.resources().readOne(new ByteArrayInputStream(createOut.toByteArray()), FlatArticle).id() == "1"
+    jsonApi.resources().readOne(new ByteArrayInputStream(updateOut.toByteArray()), FlatArticle).id() == "1"
+    jsonApi.resources().readOne(new ByteArrayInputStream(updateOptionsOut.toByteArray()), FlatArticle).id() == "1"
+  }
+
+  def "create and update authoring accept write options"() {
+    given:
+    def options = new ResourceWriteOptions(
+        new DocumentEnvelope(null, Meta.of([note: "shaped"]), null),
+        RepresentationSelection.none())
+    def article = new Article("1", "T", "B", List.of(), null)
+
+    when:
+    def created = jsonApi.resources().writeCreateDocument(article, options)
+    def updated = jsonApi.resources().writeUpdateDocument(article, new EndpointIdentity("articles", "1"), options)
+
+    then:
+    jsonApi.documents().read(created, DocumentReadContext.resourceDefaults()).meta() == Meta.of([note: "shaped"])
+    jsonApi.documents().read(updated, DocumentReadContext.resourceDefaults()).meta() == Meta.of([note: "shaped"])
+  }
+
+  def "readOne rejects every non-resource primary shape without coercion"() {
+    when:
+    jsonApi.resources().readOne(json, FlatArticle)
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.RESOURCE_TYPE_MISMATCH
+    ex.propertyPath() == "/data"
+
+    where:
+    json << [
+      '{"data":null}',
+      '{"meta":{"a":1}}',
+      '{"errors":[{"status":"500","title":"boom"}]}',
+    ]
+  }
+
+  def "builder identifier conversion applies in both directions"() {
+    given:
+    def converter = [
+      convert: { Object value -> value == null ? null : "id-" + value },
+      parse: { String wire ->
+        wire == null ? null : wire.substring(3)
+      }
+    ] as IdentifierConverter
+    def runtime = JsonApiJackson3.builder(JsonMapper.builder().build()).identifierConverter(converter).build()
+
+    when:
+    def json = runtime.resources().writeOne(new Article("7", "T", "B", List.of(), null))
+
+    then:
+    json.contains('"id":"id-7"')
+
+    when:
+    def actual = runtime.resources().readOne(json, FlatArticle)
+
+    then:
+    actual.id() == "7"
+  }
+
+  def "builder linkage mappers serve custom relationship targets"() {
+    given:
+    def mapper = { RelationshipData data, JavaType target ->
+      if (data instanceof RelationshipData.SingleLinkage) {
+        def identifier = ((RelationshipData.SingleLinkage) data).identifier()
+        return new FlatAuthor(identifier.type(), identifier.id())
+      }
+      ((RelationshipData.IdentifierCollectionLinkage) data).identifiers().collect {
+        new FlatAuthor(it.type(), it.id())
+      }
+    } as RelationshipLinkageMapper
+    def runtime = JsonApiJackson3.builder(JsonMapper.builder().build())
+        .linkageMappers([(FlatAuthor): mapper]).build()
+    def json = '{"data":{"type":"articles","id":"1","attributes":{"title":"T"},' +
+        '"relationships":{"author":{"data":{"type":"people","id":"p1"}},' +
+        '"contributors":{"data":[{"type":"people","id":"p2"}]}}}}'
+
+    when:
+    def article = runtime.resources().readOne(json, FlatMappedArticle)
+
+    then:
+    article.author() == new FlatAuthor("people", "p1")
+    article.contributors() == [
+      new FlatAuthor("people", "p2")
+    ]
   }
 }

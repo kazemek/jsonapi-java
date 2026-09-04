@@ -64,11 +64,20 @@ class Jackson3JsonApiDocumentsSpec extends Specification {
     given:
     def document = JsonApiDocument.withMeta(Meta.of([count: 2]))
     def out = new ByteArrayOutputStream()
+    def mappedOut = new ByteArrayOutputStream()
+    def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
     when:
     jsonApi.documents().write(document, out)
+    def mapped = mapper.toMappedDocument(
+        new Article("1", "T", "B", List.of(), null),
+        null,
+        RepresentationSelection.none(),
+        RepresentationPolicy.defaults())
+    jsonApi.documents().write(mapped, mappedOut)
 
     then:
     jsonApi.documents().read(new ByteArrayInputStream(out.toByteArray()), DocumentReadContext.resourceDefaults()) == document
+    jsonApi.documents().read(new ByteArrayInputStream(mappedOut.toByteArray()), DocumentReadContext.resourceDefaults()) == mapped.document()
   }
 }

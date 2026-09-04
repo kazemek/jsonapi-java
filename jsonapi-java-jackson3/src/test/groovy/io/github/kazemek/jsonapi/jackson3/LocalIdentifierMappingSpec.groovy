@@ -5,7 +5,7 @@ import io.github.kazemek.jsonapi.annotation.JsonApiId
 import io.github.kazemek.jsonapi.annotation.JsonApiLocalId
 import io.github.kazemek.jsonapi.annotation.JsonApiRelationship
 import io.github.kazemek.jsonapi.annotation.JsonApiResource
-import io.github.kazemek.jsonapi.core.model.Attributes
+import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
@@ -361,8 +361,7 @@ class LocalIdentifierMappingSpec extends Specification {
     // The alias occurrence is the primary resource itself (core binds id and lid as alias
     // partners), so it must not enter included; the linkage still points at the primary's lid.
     document.included() == []
-    def primaryResource = ((io.github.kazemek.jsonapi.core.model.DocumentData.SingleResource)
-        document.data()).resource()
+    def primaryResource = ((DocumentData.SingleResource) document.data()).resource()
     primaryResource.relationships().relationships().related.data() ==
         new RelationshipData.SingleLinkage(
         new ResourceIdentifier("alias-articles", null, "local-1", null, Map.of()))

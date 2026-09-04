@@ -36,8 +36,10 @@ import tools.jackson.databind.json.JsonMapper;
  */
 final class Jackson3JsonApiResources implements JsonApiResources {
 
+  private static final String RESOURCE = "resource";
+  private static final String OPTIONS = "options";
+
   private final JsonMapper baseMapper;
-  private final JsonMapper documentMapper;
   private final RepresentationPolicy representationPolicy;
   private final JsonApiResourceMapper resourceMapper;
   private final JsonApiResourceBinder resourceBinder;
@@ -47,7 +49,6 @@ final class Jackson3JsonApiResources implements JsonApiResources {
 
   Jackson3JsonApiResources(
       JsonMapper baseMapper,
-      JsonMapper documentMapper,
       RepresentationPolicy representationPolicy,
       JsonApiResourceMapper resourceMapper,
       JsonApiResourceBinder resourceBinder,
@@ -55,7 +56,6 @@ final class Jackson3JsonApiResources implements JsonApiResources {
       JsonApiDocumentWriter responseWriter,
       JsonApiDocumentWriter createWriter) {
     this.baseMapper = Objects.requireNonNull(baseMapper, "baseMapper");
-    this.documentMapper = Objects.requireNonNull(documentMapper, "documentMapper");
     this.representationPolicy =
         Objects.requireNonNull(representationPolicy, "representationPolicy");
     this.resourceMapper = Objects.requireNonNull(resourceMapper, "resourceMapper");
@@ -156,8 +156,8 @@ final class Jackson3JsonApiResources implements JsonApiResources {
 
   @Override
   public String writeOne(Object resource, ResourceWriteOptions options) {
-    Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(options, OPTIONS);
     return responseWriter.writeValueAsString(mappedSingle(resource, options));
   }
 
@@ -168,8 +168,8 @@ final class Jackson3JsonApiResources implements JsonApiResources {
 
   @Override
   public void writeOne(Object resource, ResourceWriteOptions options, OutputStream out) {
-    Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(options, OPTIONS);
     Objects.requireNonNull(out, "out");
     responseWriter.writeValue(out, mappedSingle(resource, options));
   }
@@ -182,7 +182,7 @@ final class Jackson3JsonApiResources implements JsonApiResources {
   @Override
   public String writeMany(Iterable<?> resources, ResourceWriteOptions options) {
     Objects.requireNonNull(resources, "resources");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(options, OPTIONS);
     return responseWriter.writeValueAsString(mappedCollection(resources, options));
   }
 
@@ -194,7 +194,7 @@ final class Jackson3JsonApiResources implements JsonApiResources {
   @Override
   public void writeMany(Iterable<?> resources, ResourceWriteOptions options, OutputStream out) {
     Objects.requireNonNull(resources, "resources");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(options, OPTIONS);
     Objects.requireNonNull(out, "out");
     responseWriter.writeValue(out, mappedCollection(resources, options));
   }
@@ -206,8 +206,8 @@ final class Jackson3JsonApiResources implements JsonApiResources {
 
   @Override
   public String writeCreateDocument(Object resource, ResourceWriteOptions options) {
-    Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(options, OPTIONS);
     return createWriter.writeValueAsString(mappedSingle(resource, options));
   }
 
@@ -218,15 +218,15 @@ final class Jackson3JsonApiResources implements JsonApiResources {
 
   @Override
   public void writeCreateDocument(Object resource, ResourceWriteOptions options, OutputStream out) {
-    Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(options, OPTIONS);
     Objects.requireNonNull(out, "out");
     createWriter.writeValue(out, mappedSingle(resource, options));
   }
 
   @Override
   public String writeUpdateDocument(Object resource, @Nullable EndpointIdentity expectedIdentity) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     return updateWriter(expectedIdentity)
         .writeValueAsString(mappedSingle(resource, ResourceWriteOptions.defaults()));
   }
@@ -234,15 +234,15 @@ final class Jackson3JsonApiResources implements JsonApiResources {
   @Override
   public String writeUpdateDocument(
       Object resource, @Nullable EndpointIdentity expectedIdentity, ResourceWriteOptions options) {
-    Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(options, OPTIONS);
     return updateWriter(expectedIdentity).writeValueAsString(mappedSingle(resource, options));
   }
 
   @Override
   public void writeUpdateDocument(
       Object resource, @Nullable EndpointIdentity expectedIdentity, OutputStream out) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(out, "out");
     updateWriter(expectedIdentity)
         .writeValue(out, mappedSingle(resource, ResourceWriteOptions.defaults()));
@@ -254,8 +254,8 @@ final class Jackson3JsonApiResources implements JsonApiResources {
       @Nullable EndpointIdentity expectedIdentity,
       ResourceWriteOptions options,
       OutputStream out) {
-    Objects.requireNonNull(resource, "resource");
-    Objects.requireNonNull(options, "options");
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(options, OPTIONS);
     Objects.requireNonNull(out, "out");
     updateWriter(expectedIdentity).writeValue(out, mappedSingle(resource, options));
   }
@@ -311,8 +311,9 @@ final class Jackson3JsonApiResources implements JsonApiResources {
   }
 
   private JsonApiDocumentWriter updateWriter(@Nullable EndpointIdentity expectedIdentity) {
+    // Update authoring shares the response writer's codec mapper; only the usage changes.
     return new JsonApiDocumentWriter(
-        documentMapper,
+        createWriter.mapper(),
         ValidationContext.defaults()
             .withDocumentUsage(DocumentUsage.UPDATE_REQUEST)
             .withExpectedEndpointIdentity(expectedIdentity));
