@@ -18,8 +18,9 @@ APIs. The historical `jackson-api` rule was effectively "values only". Evolving 
 module to values plus a narrow application-operation contract is an architectural
 change recorded here.
 
-This ADR freezes the Level-1 contract semantics. KAZ-100 implements the contract for
-Jackson 3; a later Jackson 2 artifact provides parity. No runtime is implemented here.
+This ADR freezes the Level-1 contract semantics. No runtime is implemented here; a
+Jackson 3 implementation follows separately, and a later Jackson 2 artifact provides
+parity.
 
 ## Goals
 
@@ -31,9 +32,9 @@ Jackson 3; a later Jackson 2 artifact provides parity. No runtime is implemented
   validation context, codec operations, or PATCH projection.
 - Keep the contract client/server-neutral and bidirectional; framework adapters
   select an operation-specific subset appropriate to their role.
-- Freeze the boundaries decided by KAZ-96 (configured-Jackson authority), KAZ-103
-  (additive decoration), KAZ-104 (id/lid distinction), ADR-018 (relationship data
-  presence), and KAZ-107 (`CREATE_REQUEST` validation) into the Level-1 architecture.
+- Freeze the established boundaries — configured-Jackson authority,
+  additive decoration, id/lid distinction, ADR-018 (relationship data
+  presence), and `CREATE_REQUEST` validation — into the Level-1 architecture.
 
 ## Non-goals
 
@@ -46,7 +47,7 @@ Jackson 3; a later Jackson 2 artifact provides parity. No runtime is implemented
   policy in the neutral contract.
 - Deleting, internalizing, or broadly renaming the advanced capability APIs.
 - Filter/sort/page semantics, persistence/repository behavior, relationship
-  hydration, lazy loading, nested-create semantics, or a KAZ-8 default
+  hydration, lazy loading, nested-create semantics, or an opt-in default
   `jsonapi.version` (the contract only reserves room for it).
 - A second naming registry, facade-level field aliases, or JSON:API property-name
   overrides.
@@ -166,11 +167,11 @@ never orchestrate those phases manually.
   documented defaults; `OutputStream` overloads serve server/Spring emission while
   `String` overloads serve client/test convenience. Generic declared-type writes
   stay advanced via the `JavaType` overloads.
-- KAZ-8 compatibility: an absent per-write `jsonapi` member (null on the
+- Default-version compatibility: an absent per-write `jsonapi` member (null on the
   envelope) is distinct from an explicit per-write `JsonApiObject`, so a future
   application-lifetime default version can apply only when the caller supplied no
   explicit value. Explicit per-write values override future runtime defaults.
-  KAZ-8 itself is not implemented here.
+  That default itself is not implemented here.
 
 ## Create/update authoring
 
@@ -178,7 +179,8 @@ Level 1 provides convenient client-side JSON:API create/update document authorin
 without manual DTO mapping, raw `JsonApiDocument` construction, explicit usage
 selection, validator invocation, or writer orchestration.
 
-- `writeCreateDocument` delegates to the authoritative core KAZ-107 contract by
+- `writeCreateDocument` delegates to the authoritative core create-request contract
+  by
   selecting `DocumentUsage.CREATE_REQUEST`: primary data is exactly one resource
   object, its `id` may be omitted under existing create semantics, `id` and `lid`
   stay independent, every relationship supplied on the primary resource must
@@ -231,14 +233,14 @@ ambiguous document shapes. Reads take `String` or `InputStream` plus an explicit
 context; writes accept `JsonApiDocument` or provenance-carrying `MappedDocument`
 and emit to `String` or `OutputStream`.
 
-## Naming authority (KAZ-96 frozen)
+## Naming authority (frozen)
 
 JSON:API annotations define semantic roles and locations; configured Jackson
 remains the sole authority for property naming, visibility, mix-ins, aliases,
 naming strategies, and ordinary Java binding mechanics. The Level-1 API adds no
 property-name overrides, facade-level field aliases, or second naming registry.
 
-## Local identifiers (KAZ-104 frozen)
+## Local identifiers (frozen)
 
 `id` and `lid` are distinct JSON:API roles across resource reads, resource
 writes, create/update authoring, relationship linkage, and typed document reads.
@@ -306,7 +308,8 @@ Positive:
 - Spring gains a major-neutral seam depending only on the contract artifact.
 - Advanced capability APIs stay available for explicit mechanism/control with no
   behavior change.
-- Frozen decisions (KAZ-96, KAZ-103, KAZ-104, ADR-018, KAZ-107) gain an explicit
+- Frozen decisions (configured-Jackson authority, additive decoration, id/lid
+  distinction, ADR-018, create-request validation) gain an explicit
   architectural home above the mechanics that implement them.
 
 Tradeoffs:
@@ -317,6 +320,6 @@ Tradeoffs:
 - Overload matrices (source-by-target, value-by-options) are systematic but add
   interface surface; each cell exists for Spring/client duality, not convenience
   sprawl.
-- Exact mapping diagnostics for Level-1 shape mismatches are left to the
-  KAZ-100 implementation within the mapping family; this ADR fixes the category,
+- Exact mapping diagnostics for Level-1 shape mismatches are left to the Jackson 3
+  implementation within the mapping family; this ADR fixes the category,
   not the code.

@@ -47,7 +47,7 @@ directly:
 import io.github.kazemek.jsonapi.jackson.api.JsonApi;
 import io.github.kazemek.jsonapi.jackson.api.ResourceWriteOptions;
 
-JsonApi api = /* major-specific implementation, e.g. Jackson 3 from KAZ-100 */;
+JsonApi api = /* major-specific implementation, supplied separately, e.g. Jackson 3 */;
 ArticleDto article = api.resources().readOne(json, ArticleDto.class);
 String created = api.resources().writeCreateDocument(article);
 String represented = api.resources()
@@ -59,7 +59,7 @@ readers/writers, resource mapper/binder, `JavaType` overloads, heterogeneous env
 and low-level contexts remain the advanced mechanism/control seams. The contract is
 client/server-neutral and models no Jackson mechanics. See
 [ADR-019](../docs/adr/019-level-one-application-api-contract.md). The Jackson 3 runtime
-implementation follows in KAZ-100; this module defines the contract only.
+implementation follows in a Jackson 3 implementation; this module defines the contract only.
 
 ## Minimal usage
 
