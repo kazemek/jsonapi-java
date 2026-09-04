@@ -96,10 +96,11 @@ Costs, evaluated rather than waved away:
   (`Relationship.linkOnly` plus a document), and a future additive capability can revisit it without
   breaking the ordinary contract.
 - Ordinary linkage properties carry no data-presence marker on reads. Whether a bound bean can
-  distinguish absent `data` from explicit `"data": null` depends on the DTO shape and configured
-  Jackson: defaulted shapes keep their initializers for absent data but bind explicit null, while
-  shapes without per-property defaults bind both alike. Applications that need the distinction
-  regardless of shape read the relationship object, not just the linkage.
+  distinguish absent `data` from explicit `"data": null` depends on both the DTO shape and the
+  configured Jackson: defaulted shapes keep their initializers for absent data but bind explicit
+  null; shapes without per-property defaults bind alike under Jackson's defaults, while configured
+  null handling, creator rules, or custom deserializers can still distinguish them. Applications
+  that need the distinction regardless of shape read the relationship object, not just the linkage.
 - A decorator cannot fabricate a links-only relationship from nothing. This is intentional:
   decoration's authority is enrichment of already-mapped members, and letting it synthesize
   relationships would bypass mapping, fieldset validation, and inclusion bookkeeping.
@@ -149,12 +150,14 @@ The 1.0 contract, explicitly:
   is left unbound, and the resulting Java value follows configured Jackson missing-property
   semantics: field initializers, creator defaults, and null-handling customizations remain in
   effect. Explicit `"data": null` is separately an explicit null binding through the same
-  configured-Jackson construction, so defaulted DTO shapes can distinguish the two states; shapes
-  without per-property defaults (for example plain records) happen to bind both alike.
-  `"data": null` on a to-many property is invalid linkage cardinality and fails with
-  `RELATIONSHIP_CARDINALITY_MISMATCH`, while `"data": []` binds an empty collection. None of this
-  is a rejection or a wire-state collapse: the document model retains every distinction; the
-  ordinary linkage property simply carries no data-presence marker.
+  configured-Jackson construction, so defaulted DTO shapes can distinguish the two states. Whether
+  shapes without per-property defaults (for example plain records under Jackson's defaults) bind
+  both alike also depends on the configuration: missing-creator and explicit-null inputs can follow
+  separate null-handling or failure rules, and custom null providers or deserializers can
+  distinguish even creator-bound shapes. `"data": null` on a to-many property is invalid linkage
+  cardinality and fails with `RELATIONSHIP_CARDINALITY_MISMATCH`, while `"data": []` binds an
+  empty collection. None of this is a rejection or a wire-state collapse: the document model
+  retains every distinction; the ordinary linkage property simply carries no data-presence marker.
 - **Relationship meta:** a data-less relationship's `meta` still binds through
   `@JsonApiRelationshipMeta` on reads and is still emitted on writes. Meta ownership is unchanged;
   the data-presence contract neither absorbs nor constrains it.
@@ -204,9 +207,10 @@ Negative / explicit losses:
   through core APIs rather than annotating a DTO. This is the accepted 1.0 cost.
 - Ordinary linkage properties carry no data-presence marker. Absent `data` and explicit `"data":
   null` bind through different construction inputs (missing member vs explicit null), and whether
-  the bound value differs depends on the DTO shape and configured Jackson; defaulted shapes
-  distinguish them, shapes without per-property defaults bind both alike. The distinction is always
-  recoverable at the document layer.
+  the bound value differs depends on both the DTO shape and the configured Jackson; defaulted
+  shapes distinguish them, shapes without per-property defaults bind alike under Jackson's
+  defaults, and configured null handling or creator rules can distinguish even those. The
+  distinction is always recoverable at the document layer.
 - If demand justifies it later, an opt-in data-presence capability can be added incrementally
   without breaking this contract; nothing in the 1.0 surface precludes it.
 
