@@ -58,8 +58,9 @@ Level 1 is ordinary application operations; the major-specific document
 readers/writers, resource mapper/binder, `JavaType` overloads, heterogeneous envelopes,
 and low-level contexts remain the advanced mechanism/control seams. The contract is
 client/server-neutral and models no Jackson mechanics. See
-[ADR-019](../docs/adr/019-level-one-application-api-contract.md). The Jackson 3 runtime
-implementation follows in a Jackson 3 implementation; this module defines the contract only.
+[ADR-019](../docs/adr/019-level-one-application-api-contract.md). This module defines the
+contract only; the Jackson 3 implementation is the configured `Jackson3JsonApi` runtime in
+`jsonapi-java-jackson3` (via `JsonApiJackson3.jsonApi`/`builder`).
 
 ## Minimal usage
 

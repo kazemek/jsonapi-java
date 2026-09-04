@@ -1,30 +1,77 @@
 # jsonapi-java-jackson3
 
-Jackson 3 codecs for validating, writing, and reading [JSON:API v1.1](https://jsonapi.org/) documents,
-and for mapping annotated domain types to resource objects.
+Jackson 3 implementation of the major-neutral Level-1 JSON:API application contract, plus the
+advanced capability codecs it is built on: validating, writing, and reading
+[JSON:API v1.1](https://jsonapi.org/) documents, and mapping annotated domain types to resource
+objects.
 
-> Sequencing: the major-neutral Level-1 application contract is defined in
-> `jsonapi-java-jackson-api` ([ADR-019](../docs/adr/019-level-one-application-api-contract.md));
-> the Jackson 3 runtime implementing that contract follows separately. Until then, the
-> advanced capability APIs below remain the runnable surface.
+> Ordinary application code should start with the Level-1 configured runtime below. The
+> major-neutral contract lives in `jsonapi-java-jackson-api`
+> ([ADR-019](../docs/adr/019-level-one-application-api-contract.md)); the capability
+> factories after it are advanced mechanism/control seams that stay public and unchanged.
 
 ## Packages
 
 | Package                                        | Role                                                                  |
 |------------------------------------------------|-----------------------------------------------------------------------|
-| `io.github.kazemek.jsonapi.jackson3`           | Public writer/reader/mapper/binder/PATCH factories and validate-then-codec entry points |
+| `io.github.kazemek.jsonapi.jackson3`           | Public Level-1 configured runtime (`Jackson3JsonApi`), writer/reader/mapper/binder/PATCH factories, and validate-then-codec entry points |
 | `io.github.kazemek.jsonapi.jackson3.internal`  | Streaming serializers/decoders, mapping engine, module registration; not public API |
-| `io.github.kazemek.jsonapi.jackson.*`          | Public Jackson-major-neutral API contracts (in `jsonapi-java-jackson-api`): `document`, `mapping`, `patch`, `representation`, `diagnostic` |
+| `io.github.kazemek.jsonapi.jackson.*`          | Public Jackson-major-neutral API contracts (in `jsonapi-java-jackson-api`): `api`, `document`, `mapping`, `patch`, `representation`, `diagnostic` |
 
 Codec and mapping policy, contexts, diagnostics, domain envelope values, and presence-aware update
 commands (`DocumentReadContext`, `RepresentationSelection`, `RepresentationPolicy`, `IncludePath`,
 `IncludePolicy`, `FieldPolicy`, `MappedDocument`, `IdentifierConverter`, `DomainData`, `IncludedResources`,
 `PatchCommand`, `PatchChange`, and the failure types) live in the Jackson-major-neutral API
-packages `io.github.kazemek.jsonapi.jackson.document`, `mapping`, `patch`, `representation`, and
-`diagnostic` and are imported from `jsonapi-java-jackson-api`; this module holds only Jackson
-3-bound factories, readers, writers, and binders.
+packages `io.github.kazemek.jsonapi.jackson.api`, `document`, `mapping`, `patch`, `representation`,
+and `diagnostic` and are imported from `jsonapi-java-jackson-api`; this module holds only the
+Jackson 3-bound runtime, factories, readers, writers, and binders.
 
-## Minimal usage
+## Level-1 application runtime
+
+```java
+JsonMapper callerMapper = JsonMapper.builder().build();
+
+Jackson3JsonApi jsonApi = JsonApiJackson3.jsonApi(callerMapper);
+
+String json = jsonApi.resources().writeOne(article);
+ArticleDto readBack = jsonApi.resources().readOne(json, ArticleDto.class);
+
+List<ArticleDto> all = jsonApi.resources().readMany(collectionJson, ArticleDto.class);
+
+ResourceIdentifier author = jsonApi.relationships().readToOne(linkageJson);
+String linkageJson = jsonApi.relationships().writeToOne(author);
+
+ArticlePatch patch = jsonApi.patches().readPatch(patchJson, ArticlePatch.class);
+PatchCommand<ArticleDto> command = jsonApi.patches().readCommand(patchJson, ArticleDto.class);
+```
+
+The runtime coordinates mapping, configured decoration, validation, and writing internally, so
+callers never orchestrate those phases. Reads are strict and homogeneous: `readOne` requires
+single-resource primary data and `readMany` requires a collection, and incompatible shapes fail
+with mapping diagnostics rather than coercing. Document-level `links`, `meta`, and `jsonapi`
+travel through `ResourceWriteOptions`, and client-side create/update authoring selects core
+create/update validation without raw-document choreography:
+
+```java
+Jackson3JsonApi jsonApi =
+    JsonApiJackson3.builder(callerMapper)
+        .identifierConverter(identifierConverter)
+        .representationPolicy(policy)
+        .decorators(decorators)
+        .build();
+
+String createJson = jsonApi.resources().writeCreateDocument(draft);
+String updateJson =
+    jsonApi.resources().writeUpdateDocument(article, new EndpointIdentity("articles", "1"));
+```
+
+Only coherent application-lifetime configuration belongs on the builder; representation selection,
+document envelope, and expected update identity stay per-operation arguments. The builder selects
+the same documented defaults as the capability factories when a setting is omitted, and there is
+no base validation-context setting: response, create, update, and linkage operations each select
+their usage internally.
+
+## Advanced capability APIs
 
 Document codec:
 
@@ -46,6 +93,12 @@ The canonical construction seam for every Jackson 3 capability starts with a ful
 cannot be derived safely. The canonical forms are:
 
 ```java
+JsonApiJackson3.builder(mapper)
+    .identifierConverter(identifierConverter)
+    .linkageMappers(linkageMappers)
+    .representationPolicy(representationPolicy)
+    .decorators(decoratorRegistry)
+    .build();
 JsonApiJackson3.writer(mapper, validationContext);
 JsonApiJackson3.reader(mapper, readContext);
 JsonApiJackson3.resourceMapper(mapper, identifierConverter);
@@ -453,6 +506,12 @@ artifact; both majors share the neutral contracts of
 
 ## For contributors / agents
 
+- **Level-1 runtime composes capabilities:** `Jackson3JsonApi` (built via `JsonApiJackson3.builder`
+  or `JsonApiJackson3.jsonApi`) owns no mapping, codec, or validation logic of its own; each facet
+  delegates to the capability above with fixed usages (response defaults, forced create/update, and
+  identifier-kind linkage reads). Strict primary-shape mismatches fail as `JsonApiMappingException`
+  with `RESOURCE_TYPE_MISMATCH` at `/data`. Never add facade-level naming, relationship-presence,
+  or exception types.
 - **Validate then write / read then validate:** `JsonApiDocumentWriter` and `JsonApiDocumentReader`
   are the sole public codec paths. Failures preserve stable diagnostics (`ValidationRuleCode` +
   JSON Pointer-like path; reads also carry `CodecFailureCategory` and safe source location). Do not

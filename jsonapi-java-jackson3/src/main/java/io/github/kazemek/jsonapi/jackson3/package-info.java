@@ -7,6 +7,14 @@
  * {@link JsonApiJackson3#writer} and {@link JsonApiJackson3#reader} as the sole public codec paths;
  * writers validate before emission, and readers validate before returning a document.
  *
+ * <p>Ordinary application code should prefer the Level-1 configured runtime {@link
+ * Jackson3JsonApi}, obtained through {@link JsonApiJackson3#jsonApi} or {@link
+ * JsonApiJackson3#builder}: it implements the major-neutral {@link
+ * io.github.kazemek.jsonapi.jackson.api.JsonApi} contract with strict homogeneous reads,
+ * single/collection writes, create/update authoring, linkage documents, explicit-context raw
+ * documents, and presence-aware PATCH, while the capability factories below remain the advanced
+ * mechanism/control seams.
+ *
  * <p>Jackson-major adapters use a configured {@link tools.jackson.databind.json.JsonMapper} as the
  * canonical construction input. Capability-specific contexts and policy objects remain explicit,
  * and convenience factories choose documented defaults on top of the mapper-instance seam; {@code

@@ -23,10 +23,15 @@ import tools.jackson.databind.json.JsonMapper;
  * builders are intentionally not accepted. Factory construction never mutates or replaces the
  * caller's configuration in place. Token-driven document reading uses the supplied mapper directly.
  * Capabilities that need adapter-specific modules or isolated introspection state derive a mapper
- * via {@link JsonMapper#rebuild()}. Public surface consists of {@link JsonApiDocumentWriter},
- * {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link JsonApiResourceBinder},
- * {@link JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and {@link
- * JsonApiPatchDtoReader}.
+ * via {@link JsonMapper#rebuild()}. Public surface consists of {@link Jackson3JsonApi}, {@link
+ * JsonApiDocumentWriter}, {@link JsonApiDocumentReader}, {@link JsonApiResourceMapper}, {@link
+ * JsonApiResourceBinder}, {@link JsonApiDomainDocumentReader}, {@link JsonApiPatchReader}, and
+ * {@link JsonApiPatchDtoReader}.
+ *
+ * <p>Ordinary application code should prefer the Level-1 configured runtime: {@link
+ * #jsonApi(JsonMapper)} for documented defaults or {@link #builder(JsonMapper)} for coherent
+ * application-lifetime configuration. The capability factories below remain the advanced
+ * mechanism/control seams.
  */
 public final class JsonApiJackson3 {
 
@@ -35,6 +40,25 @@ public final class JsonApiJackson3 {
   private static final String LINKAGE_MAPPERS = "linkageMappers";
 
   private JsonApiJackson3() {}
+
+  /**
+   * Returns a Level-1 configured runtime with documented defaults: default identifier conversion,
+   * no custom linkage mappers, the default representation policy, and no resource decorators.
+   */
+  public static Jackson3JsonApi jsonApi(JsonMapper base) {
+    Objects.requireNonNull(base, "base");
+    return builder(base).build();
+  }
+
+  /**
+   * Returns a builder for a Level-1 configured runtime over the given configured mapper. Only
+   * coherent application-lifetime configuration belongs on the builder; request-scoped values stay
+   * per-operation arguments on the resulting runtime.
+   */
+  public static Jackson3JsonApi.Builder builder(JsonMapper base) {
+    Objects.requireNonNull(base, "base");
+    return new Jackson3JsonApi.Builder(base);
+  }
 
   /**
    * Returns a writer that validates with {@link ValidationContext#defaults()} then serializes

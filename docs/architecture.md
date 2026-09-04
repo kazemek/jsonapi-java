@@ -54,7 +54,7 @@ Shared test fixtures live in the Jackson API `java-test-fixtures` source set as 
 | [`jsonapi-java-core`](../jsonapi-java-core/README.md) | Immutable JSON:API document model and aggregate validation. No Jackson. |
 | [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
 | [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors; the Level-1 application operation contract (`JsonApi` root plus resources, relationships, documents, and patches facets); passive carriers and shared JSON/schema test fixtures. |
-| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. The Jackson 3 implementation of the Level-1 contract is planned and not yet provided. |
+| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding, plus the configured `Jackson3JsonApi` runtime implementing the Level-1 contract (via `JsonApiJackson3.jsonApi`/`builder`). |
 | Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
 
 [ADR-007](adr/007-module-boundaries.md) records why these modules exist.
@@ -126,8 +126,8 @@ or PATCH projection phases manually; advanced capability APIs stay public for ex
 mechanism/control. [ADR-019](adr/019-level-one-application-api-contract.md) freezes the
 full contract, including the frozen configured-Jackson, additive-decoration, id/lid,
 ADR-018, and create-request boundaries
-and the Jackson 2 parity argument. The Jackson 3 runtime implementation follows
-separately; this repository defines the contract only.
+and the Jackson 2 parity argument. The Jackson 3 implementation is the configured
+`Jackson3JsonApi` runtime in `jsonapi-java-jackson3`; Jackson 2 parity follows separately.
 
 Convenience writes infer a root `JavaType` from the concrete runtime class. Directly parameterized
 roots such as `Container<Thing>` use the overloads that accept a complete `JavaType`; that declared
