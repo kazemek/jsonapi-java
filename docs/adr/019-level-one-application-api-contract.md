@@ -231,7 +231,10 @@ documents. Where `DocumentReadContext` / `PrimaryDataKind` cannot be inferred,
 the caller supplies the semantic context explicitly; the facade never guesses
 ambiguous document shapes. Reads take `String` or `InputStream` plus an explicit
 context; writes accept `JsonApiDocument` or provenance-carrying `MappedDocument`
-and emit to `String` or `OutputStream`.
+and emit to `String` or `OutputStream`. Writes validate as response/other usage
+only: raw create/update request writing stays advanced, while ordinary request
+authoring uses `writeCreateDocument` / `writeUpdateDocument`, so no write path
+guesses or smuggles a request usage.
 
 ## Naming authority (frozen)
 
