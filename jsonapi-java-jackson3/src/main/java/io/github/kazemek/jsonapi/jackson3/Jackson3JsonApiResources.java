@@ -208,7 +208,7 @@ final class Jackson3JsonApiResources implements JsonApiResources {
   public String writeCreateDocument(Object resource, ResourceWriteOptions options) {
     Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(options, OPTIONS);
-    return createWriter.writeValueAsString(mappedSingle(resource, options));
+    return createWriter.writeValueAsString(mappedCreate(resource, options));
   }
 
   @Override
@@ -221,7 +221,7 @@ final class Jackson3JsonApiResources implements JsonApiResources {
     Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(options, OPTIONS);
     Objects.requireNonNull(out, "out");
-    createWriter.writeValue(out, mappedSingle(resource, options));
+    createWriter.writeValue(out, mappedCreate(resource, options));
   }
 
   @Override
@@ -302,6 +302,11 @@ final class Jackson3JsonApiResources implements JsonApiResources {
 
   private MappedDocument mappedSingle(Object resource, ResourceWriteOptions options) {
     return resourceMapper.toMappedDocument(
+        resource, options.envelope(), options.selection(), representationPolicy);
+  }
+
+  private MappedDocument mappedCreate(Object resource, ResourceWriteOptions options) {
+    return resourceMapper.toMappedCreateDocument(
         resource, options.envelope(), options.selection(), representationPolicy);
   }
 

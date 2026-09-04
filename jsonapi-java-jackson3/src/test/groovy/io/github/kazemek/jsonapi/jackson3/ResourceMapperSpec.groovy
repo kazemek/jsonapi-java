@@ -11,8 +11,12 @@ import io.github.kazemek.jsonapi.core.model.RelationshipData
 import io.github.kazemek.jsonapi.core.model.Relationships
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceObject
+import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
+import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
 import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.mapping.RelationshipLinkage
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
+import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleMeta
 import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMapMeta
 import io.github.kazemek.jsonapi.fixtures.domainpatch.ArticleWithMeta
@@ -35,6 +39,7 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipContainerFixtu
 import io.github.kazemek.jsonapi.fixtures.domainwrite.RelationshipLinkageContainerFixtures
 import io.github.kazemek.jsonapi.fixtures.domainwrite.SamplePojo
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Tag
+import io.github.kazemek.jsonapi.fixtures.localid.LocalIdentityArticle
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -445,6 +450,28 @@ class ResourceMapperSpec extends Specification {
         null,
         null,
         Map.of())
+  }
+
+  def "toMappedCreateDocument omits absent primary identity while ordinary mapping requires it"() {
+    given:
+    def draft = new LocalIdentityArticle(null, null, "Draft")
+    def declared = JsonMapper.builder().build().constructType(LocalIdentityArticle)
+
+    when:
+    def mapped = mapper.toMappedCreateDocument(
+        draft, declared, null, RepresentationSelection.none(), RepresentationPolicy.defaults())
+
+    then:
+    def primary = (mapped.document().data() as DocumentData.SingleResource).resource()
+    !primary.hasId()
+    !primary.hasLid()
+
+    when:
+    mapper.toMappedDocument(draft, null, RepresentationSelection.none(), RepresentationPolicy.defaults())
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
   }
 
   @SafeVarargs

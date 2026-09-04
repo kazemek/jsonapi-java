@@ -109,13 +109,45 @@ public final class DomainResourceWriter {
     return toResourceSelective(resource, declaredType, mapping, fields);
   }
 
+  /**
+   * Selective create-request emission mirroring {@link #toResourceSelective} except for primary
+   * identity: when both identity roles yield nothing, the resource maps with absent {@code id} and
+   * {@code lid} instead of failing, leaving that leniency to core {@code CREATE_REQUEST}
+   * validation. Related linkage extraction and included resources stay strict.
+   */
+  public ResourceObject toCreateResource(
+      Object resource, JavaType declaredType, EffectiveRepresentation representation) {
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(declaredType, DECLARED_TYPE);
+    Objects.requireNonNull(representation, "representation");
+    requireAssignable(resource, declaredType);
+    ResourceMapping mapping = mappingFor(declaredType);
+    List<String> fields = fieldsFor(representation, mapping.resourceType());
+    if (fields != null) {
+      validateFieldset(resource.getClass(), mapping, fields, representation.policy().fieldPolicy());
+    }
+    return toResourceSelective(resource, declaredType, mapping, fields, true);
+  }
+
   private ResourceObject toResourceSelective(
       Object resource,
       JavaType declaredType,
       ResourceMapping mapping,
       @Nullable List<String> fields) {
+    return toResourceSelective(resource, declaredType, mapping, fields, false);
+  }
+
+  private ResourceObject toResourceSelective(
+      Object resource,
+      JavaType declaredType,
+      ResourceMapping mapping,
+      @Nullable List<String> fields,
+      boolean allowAbsentIdentity) {
     validateMetaTargets(mapping, resource.getClass());
-    IdentityValues identity = extractIdentity(resource, mapping);
+    IdentityValues identity =
+        allowAbsentIdentity
+            ? extractCreateIdentity(resource, mapping)
+            : extractIdentity(resource, mapping);
     Set<String> allowedFields = fields == null ? null : Set.copyOf(fields);
     Attributes attributes = buildAttributes(resource, mapping, allowedFields);
     Relationships relationships = buildRelationships(resource, mapping, allowedFields);
@@ -449,6 +481,18 @@ public final class DomainResourceWriter {
           MappingLocation.of("lid"),
           nullIdentityMessage("Local-id", localIdProperty.logicalName()));
     }
+    return new IdentityValues(id, localId);
+  }
+
+  /**
+   * Reads the mapped id and local-id roles for create-request authoring. Unlike {@link
+   * #extractIdentity}, a resource with neither role value maps with absent identity instead of
+   * failing; core {@code CREATE_REQUEST} validation owns that leniency. Present values convert and
+   * fail exactly as on the ordinary path.
+   */
+  private IdentityValues extractCreateIdentity(Object resource, ResourceMapping mapping) {
+    String id = extractId(resource, mapping);
+    String localId = extractLocalId(resource, mapping);
     return new IdentityValues(id, localId);
   }
 

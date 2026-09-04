@@ -177,6 +177,46 @@ public final class JsonApiResourceMapper {
     return new MappedDocument(document, includedResult.sparseFieldsetLinkageExemptions());
   }
 
+  /**
+   * Maps a domain object for create-request authoring with optional envelope members, compound
+   * inclusion, and sparse fieldsets from {@code selection} governed by {@code policy}. Unlike
+   * {@link #toMappedDocument}, a primary resource with neither {@code id} nor {@code lid} value
+   * maps with both members absent instead of failing; core {@code CREATE_REQUEST} validation owns
+   * that leniency when the document is written. Included resources still require identity, and
+   * related linkage extraction is unchanged. Returns a {@link MappedDocument} carrying
+   * sparse-fieldset linkage provenance like {@link #toMappedDocument}.
+   */
+  public MappedDocument toMappedCreateDocument(
+      Object resource,
+      @Nullable DocumentEnvelope envelope,
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
+    return toMappedCreateDocument(
+        resource, writer.inferredType(resource), envelope, selection, policy);
+  }
+
+  /** Maps a domain object for create-request authoring using a complete declared type. */
+  public MappedDocument toMappedCreateDocument(
+      Object resource,
+      JavaType resourceType,
+      @Nullable DocumentEnvelope envelope,
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
+    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
+    EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
+    List<Object> snapshot = List.of(resource);
+    ResourceObject resourceObject = writer.toCreateResource(resource, resourceType, representation);
+    List<ResourceObject> primary = List.of(resourceObject);
+    IncludedResourcesResult includedResult =
+        inclusionEngine.collectIncluded(
+            snapshot, List.of(resourceType), primary, null, representation);
+    JsonApiDocument document =
+        buildDocument(
+            new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
+    return new MappedDocument(document, includedResult.sparseFieldsetLinkageExemptions());
+  }
+
   public JsonApiDocument toResourceCollection(Iterable<?> resources) {
     return toResourceCollection(resources, null);
   }

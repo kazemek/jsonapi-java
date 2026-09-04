@@ -7,6 +7,7 @@ import io.github.kazemek.jsonapi.core.model.Links
 import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.core.model.ResourceIdentity
+import io.github.kazemek.jsonapi.core.validation.DocumentUsage
 import io.github.kazemek.jsonapi.core.validation.EndpointIdentity
 import io.github.kazemek.jsonapi.core.validation.JsonApiValidationException
 import io.github.kazemek.jsonapi.core.validation.ValidationContext
@@ -150,6 +151,31 @@ class Jackson3JsonApiResourcesSpec extends Specification {
 
     then:
     thrown(JsonApiValidationException)
+  }
+
+  def "writeCreateDocument authors an identity-less create without narrowing core leniency"() {
+    given:
+    def createContext = DocumentReadContext.of(
+        ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST),
+        PrimaryDataKind.RESOURCE)
+
+    when:
+    def json = jsonApi.resources().writeCreateDocument(new LocalIdentityArticle(null, null, "Draft"))
+
+    then:
+    def roundTrip = jsonApi.documents().read(json, createContext)
+    def primary = (roundTrip.data() as DocumentData.SingleResource).resource()
+    !primary.hasId()
+    !primary.hasLid()
+  }
+
+  def "ordinary writes still require identity"() {
+    when:
+    jsonApi.resources().writeOne(new LocalIdentityArticle(null, null, "Draft"))
+
+    then:
+    def ex = thrown(JsonApiMappingException)
+    ex.diagnostic() == MappingDiagnostic.MISSING_IDENTIFIER
   }
 
   def "writeUpdateDocument compares the expected endpoint identity"() {
