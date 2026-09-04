@@ -12,13 +12,14 @@ integrations.
 | `io.github.kazemek.jsonapi.jackson.patch`       | Major-neutral PATCH state and change contracts                       |
 | `io.github.kazemek.jsonapi.jackson.representation` | Representation shaping and inclusion/fieldset contracts           |
 | `io.github.kazemek.jsonapi.jackson.diagnostic`  | Stable mapping/codec diagnostics and failure locations               |
-| `io.github.kazemek.jsonapi.jackson.api`         | Reserved for the future Level-1 facade (no types yet)                |
+| `io.github.kazemek.jsonapi.jackson.api`         | Level-1 application operation contract: `JsonApi` root plus resources, relationships, documents, and patches facets with option/result values |
 
 Conceptual layout:
 
 ```text
 io.github.kazemek.jsonapi.jackson.api
-    future Level-1 facade
+    Level-1 application operations (JsonApi root plus
+    resources/relationships/documents/patches facets)
 
 io.github.kazemek.jsonapi.jackson.document
     document contracts
@@ -35,6 +36,30 @@ io.github.kazemek.jsonapi.jackson.representation
 io.github.kazemek.jsonapi.jackson.diagnostic
     diagnostics
 ```
+
+## Level-1 application contract
+
+Ordinary application code uses the neutral operation contract in
+`io.github.kazemek.jsonapi.jackson.api` rather than coordinating capability phases
+directly:
+
+```java
+import io.github.kazemek.jsonapi.jackson.api.JsonApi;
+import io.github.kazemek.jsonapi.jackson.api.ResourceWriteOptions;
+
+JsonApi api = /* major-specific implementation, supplied separately, e.g. Jackson 3 */;
+ArticleDto article = api.resources().readOne(json, ArticleDto.class);
+String created = api.resources().writeCreateDocument(article);
+String represented = api.resources()
+    .writeOne(article, ResourceWriteOptions.defaults());
+```
+
+Level 1 is ordinary application operations; the major-specific document
+readers/writers, resource mapper/binder, `JavaType` overloads, heterogeneous envelopes,
+and low-level contexts remain the advanced mechanism/control seams. The contract is
+client/server-neutral and models no Jackson mechanics. See
+[ADR-019](../docs/adr/019-level-one-application-api-contract.md). The Jackson 3 runtime
+implementation follows in a Jackson 3 implementation; this module defines the contract only.
 
 ## Minimal usage
 
@@ -119,6 +144,7 @@ artifacts; see [ADR-007](../docs/adr/007-module-boundaries.md).
 - [ADR-015 — Flat whole-object mapping for resource-side meta](../docs/adr/015-flat-whole-object-meta-mapping.md)
 - [ADR-016 — Mapper-instance construction for Jackson adapters](../docs/adr/016-jackson-adapter-construction.md)
 - [ADR-017 — Opt-in RelationshipLinkage for resource identifier meta](../docs/adr/017-resource-identifier-meta-mapping.md)
+- [ADR-019 — Major-neutral Level-1 application API contract](../docs/adr/019-level-one-application-api-contract.md)
 - [Root agent workflow](../AGENTS.md)
 
 ## For contributors / agents

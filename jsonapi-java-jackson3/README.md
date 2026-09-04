@@ -3,6 +3,11 @@
 Jackson 3 codecs for validating, writing, and reading [JSON:API v1.1](https://jsonapi.org/) documents,
 and for mapping annotated domain types to resource objects.
 
+> Sequencing: the major-neutral Level-1 application contract is defined in
+> `jsonapi-java-jackson-api` ([ADR-019](../docs/adr/019-level-one-application-api-contract.md));
+> the Jackson 3 runtime implementing that contract follows separately. Until then, the
+> advanced capability APIs below remain the runnable surface.
+
 ## Packages
 
 | Package                                        | Role                                                                  |

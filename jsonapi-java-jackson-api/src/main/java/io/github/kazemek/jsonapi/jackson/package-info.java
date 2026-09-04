@@ -10,7 +10,8 @@
  *   <li>{@code io.github.kazemek.jsonapi.jackson.patch} — PATCH contracts
  *   <li>{@code io.github.kazemek.jsonapi.jackson.representation} — representation shaping
  *   <li>{@code io.github.kazemek.jsonapi.jackson.diagnostic} — diagnostics
- *   <li>{@code io.github.kazemek.jsonapi.jackson.api} — reserved for the future Level-1 facade
+ *   <li>{@code io.github.kazemek.jsonapi.jackson.api} — Level-1 application operation contract
+ *       ({@code JsonApi} root plus resources/relationships/documents/patches facets)
  * </ul>
  *
  * <p>Mapping-diagnostic locations are major-neutral: a mapping failure carries either an absent

@@ -39,7 +39,13 @@ flowchart TB
   J3 --> ANN
   COMMON --> CORE
   APP --> J3
+  APP -.-> COMMON
 ```
+
+The dotted application-to-`COMMON` edge is the Level-1 contract direction: Spring and
+other framework adapters consume the neutral `JsonApi` operation contract and receive
+a major-specific implementation, rather than depending on major-specific capability
+APIs directly. [ADR-019](adr/019-level-one-application-api-contract.md) owns that seam.
 
 Shared test fixtures live in the Jackson API `java-test-fixtures` source set as passive DTOs and canonical JSON/schema resources. The sole executable fixture type, `TestFixtureResources`, only provides neutral classpath access to those resources.
 
@@ -47,8 +53,8 @@ Shared test fixtures live in the Jackson API `java-test-fixtures` source set as 
 |--------|----------------|
 | [`jsonapi-java-core`](../jsonapi-java-core/README.md) | Immutable JSON:API document model and aggregate validation. No Jackson. |
 | [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
-| [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors; passive carriers and shared JSON/schema test fixtures. |
-| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. |
+| [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors; the Level-1 application operation contract (`JsonApi` root plus resources, relationships, documents, and patches facets); passive carriers and shared JSON/schema test fixtures. |
+| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. The Jackson 3 implementation of the Level-1 contract is planned and not yet provided. |
 | Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
 
 [ADR-007](adr/007-module-boundaries.md) records why these modules exist.
@@ -103,6 +109,25 @@ Public Jackson 3 entry points are created from `JsonApiJackson3`. Codec paths ar
 `JsonApiDocumentReader` / `JsonApiDocumentWriter`. Mapping paths are `JsonApiResourceMapper`
 (write), `JsonApiResourceBinder` (flat read), `JsonApiDomainDocumentReader` (typed envelope),
 `JsonApiPatchReader`, and `JsonApiPatchDtoReader`.
+
+## Level-1 application contract
+
+The neutral `io.github.kazemek.jsonapi.jackson.api` package is the ordinary application
+path above those capability seams. The `JsonApi` root exposes four facets — `JsonApiResources`
+(strict homogeneous reads, single/collection writes, create/update authoring),
+`JsonApiRelationships` (to-one/null/to-many linkage documents), `JsonApiDocuments`
+(raw documents with explicit `DocumentReadContext`), and `JsonApiPatches` (conventional
+typed `PatchPresence<T>` DTO binding plus explicit `PatchCommand<T>`) — with
+`ResourceWriteOptions` (envelope plus representation selection; policy stays
+runtime-owned),
+`ResourceDocument<T>`, and `ResourceCollectionDocument<T>` as the only option/result
+values. Ordinary callers never coordinate mapper, decorator, validator, writer, codec,
+or PATCH projection phases manually; advanced capability APIs stay public for explicit
+mechanism/control. [ADR-019](adr/019-level-one-application-api-contract.md) freezes the
+full contract, including the frozen configured-Jackson, additive-decoration, id/lid,
+ADR-018, and create-request boundaries
+and the Jackson 2 parity argument. The Jackson 3 runtime implementation follows
+separately; this repository defines the contract only.
 
 Convenience writes infer a root `JavaType` from the concrete runtime class. Directly parameterized
 roots such as `Container<Thing>` use the overloads that accept a complete `JavaType`; that declared

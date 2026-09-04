@@ -30,4 +30,31 @@ class JacksonApiDependencyRulesSpec extends Specification {
         "io.github.kazemek.jsonapi.jackson..")
         .check(commonClasses)
   }
+
+  def "level-1 application contract stays free of Jackson implementation types"() {
+    expect:
+    classes()
+        .that()
+        .resideInAPackage("io.github.kazemek.jsonapi.jackson.api..")
+        .should()
+        .onlyDependOnClassesThat()
+        .resideInAnyPackage(
+        "java..",
+        "org.jspecify.annotations..",
+        "io.github.kazemek.jsonapi.core.model..",
+        "io.github.kazemek.jsonapi.core.validation..",
+        "io.github.kazemek.jsonapi.jackson..")
+        .check(commonClasses)
+  }
+
+  def "level-1 application contract exposes no Jackson implementation dependency"() {
+    expect:
+    classes()
+        .that()
+        .resideInAPackage("io.github.kazemek.jsonapi.jackson.api..")
+        .should()
+        .onlyDependOnClassesThat()
+        .resideOutsideOfPackages("tools.jackson..", "com.fasterxml..")
+        .check(commonClasses)
+  }
 }
