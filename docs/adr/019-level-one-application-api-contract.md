@@ -211,7 +211,8 @@ Typed presence-aware PATCH DTO binding is the conventional Level-1 path
 and infrastructure projection (`readCommand`). The distinction is preserved, not
 erased. Neither path depends on global resource-type registration, and PATCH
 itself is not redesigned. `Type` overloads mirror the advanced `JavaType`
-overloads (`Object` / `PatchCommand<?>` results); `bindPatch` / `bindCommand`
+overloads through caller-ensured generic targets at type-inference call sites;
+`bindPatch` / `bindCommand`
 bind an already-validated `JsonApiDocument` without re-parsing or re-validating.
 
 ## Raw/general document facet
