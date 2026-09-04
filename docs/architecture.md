@@ -54,7 +54,7 @@ Shared test fixtures live in the Jackson API `java-test-fixtures` source set as 
 | [`jsonapi-java-core`](../jsonapi-java-core/README.md) | Immutable JSON:API document model and aggregate validation. No Jackson. |
 | [`jsonapi-java-annotations`](../jsonapi-java-annotations/README.md) | Dependency-free mapping-role metadata. No codecs or converters. |
 | [`jsonapi-java-jackson-api`](../jsonapi-java-jackson-api/README.md) | Public Jackson-major-neutral API surface: document, mapping, PATCH, representation, and diagnostic contracts shared by Jackson majors; the Level-1 application operation contract (`JsonApi` root plus resources, relationships, documents, and patches facets); passive carriers and shared JSON/schema test fixtures. |
-| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, domain/PATCH binding, and the Jackson 3 implementation of the Level-1 contract. |
+| [`jsonapi-java-jackson3`](../jsonapi-java-jackson3/README.md) | Jackson 3 factories, token-driven codecs, configured-Jackson introspection, and domain/PATCH binding. The Jackson 3 implementation of the Level-1 contract is planned and not yet provided. |
 | Application code | Persistence, HTTP, authorization, query execution, and applying PATCH commands. |
 
 [ADR-007](adr/007-module-boundaries.md) records why these modules exist.
