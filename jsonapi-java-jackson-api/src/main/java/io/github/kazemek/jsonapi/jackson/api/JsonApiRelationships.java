@@ -47,9 +47,21 @@ public interface JsonApiRelationships {
    */
   void writeToOne(@Nullable ResourceIdentifier identifier, OutputStream out);
 
-  /** Writes a to-many linkage document and returns its JSON. */
-  String writeToMany(List<ResourceIdentifier> identifiers);
+  /**
+   * Writes a to-many linkage document and returns its JSON.
+   *
+   * <p>The wildcard bound lets callers pass lists held through generic APIs; it is redundant only
+   * because {@code ResourceIdentifier} is final.
+   */
+  @SuppressWarnings("java:S4968")
+  String writeToMany(List<? extends ResourceIdentifier> identifiers);
 
-  /** Writes a to-many linkage document to the given stream. The stream is not closed. */
-  void writeToMany(List<ResourceIdentifier> identifiers, OutputStream out);
+  /**
+   * Writes a to-many linkage document to the given stream. The stream is not closed.
+   *
+   * <p>The wildcard bound lets callers pass lists held through generic APIs; it is redundant only
+   * because {@code ResourceIdentifier} is final.
+   */
+  @SuppressWarnings("java:S4968")
+  void writeToMany(List<? extends ResourceIdentifier> identifiers, OutputStream out);
 }

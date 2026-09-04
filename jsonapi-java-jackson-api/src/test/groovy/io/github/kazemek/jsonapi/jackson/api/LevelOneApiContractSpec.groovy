@@ -176,6 +176,7 @@ class LevelOneApiContractSpec extends Specification {
     JsonApiRelationships.getMethod("readToOne", String) != null
     JsonApiRelationships.getMethod("readToMany", String) != null
     JsonApiRelationships.getMethod("writeToOne", io.github.kazemek.jsonapi.core.model.ResourceIdentifier) != null
+    JsonApiRelationships.getMethod("writeToMany", List).genericParameterTypes[0].typeName.endsWith("? extends io.github.kazemek.jsonapi.core.model.ResourceIdentifier>")
     JsonApiDocuments.getMethod("read", String, DocumentReadContext) != null
     JsonApiPatches.getMethod("readPatch", String, Class) != null
     JsonApiPatches.getMethod("readCommand", String, Class) != null
