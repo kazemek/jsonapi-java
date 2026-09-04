@@ -35,6 +35,7 @@ public final class DomainResourceWriter {
 
   private static final String RESOURCE = "resource";
   private static final String DECLARED_TYPE = "declaredType";
+  private static final String REPRESENTATION = "representation";
 
   private final IdentifierConverter identifierConverter;
   private final MappingDefinitionCache cache;
@@ -99,7 +100,7 @@ public final class DomainResourceWriter {
       Object resource, JavaType declaredType, EffectiveRepresentation representation) {
     Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(declaredType, DECLARED_TYPE);
-    Objects.requireNonNull(representation, "representation");
+    Objects.requireNonNull(representation, REPRESENTATION);
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
     List<String> fields = fieldsFor(representation, mapping.resourceType());
@@ -119,7 +120,7 @@ public final class DomainResourceWriter {
       Object resource, JavaType declaredType, EffectiveRepresentation representation) {
     Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(declaredType, DECLARED_TYPE);
-    Objects.requireNonNull(representation, "representation");
+    Objects.requireNonNull(representation, REPRESENTATION);
     requireAssignable(resource, declaredType);
     ResourceMapping mapping = mappingFor(declaredType);
     List<String> fields = fieldsFor(representation, mapping.resourceType());
@@ -165,7 +166,7 @@ public final class DomainResourceWriter {
    */
   public static @Nullable List<String> fieldsFor(
       EffectiveRepresentation representation, String resourceType) {
-    Objects.requireNonNull(representation, "representation");
+    Objects.requireNonNull(representation, REPRESENTATION);
     Objects.requireNonNull(resourceType, "resourceType");
     Map<String, List<String>> fieldsets = representation.selection().fieldsets();
     if (!fieldsets.containsKey(resourceType)) {

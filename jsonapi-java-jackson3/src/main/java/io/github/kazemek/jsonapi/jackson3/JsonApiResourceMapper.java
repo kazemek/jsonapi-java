@@ -69,6 +69,7 @@ public final class JsonApiResourceMapper {
   private static final String SELECTION = "selection";
   private static final String POLICY = "policy";
   private static final String RESOURCES = "resources";
+  private static final String RESOURCE = "resource";
   private static final String RESOURCE_TYPE = "resourceType";
 
   private final DomainResourceWriter writer;
@@ -127,7 +128,7 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       RepresentationSelection selection,
       RepresentationPolicy policy) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
     rejectNonEmptyFieldsets(representation);
@@ -162,7 +163,7 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       RepresentationSelection selection,
       RepresentationPolicy policy) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
     List<Object> snapshot = List.of(resource);
@@ -202,7 +203,7 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       RepresentationSelection selection,
       RepresentationPolicy policy) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
     List<Object> snapshot = List.of(resource);
