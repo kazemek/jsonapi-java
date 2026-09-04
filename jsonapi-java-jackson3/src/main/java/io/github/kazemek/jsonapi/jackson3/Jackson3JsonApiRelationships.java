@@ -73,7 +73,7 @@ final class Jackson3JsonApiRelationships implements JsonApiRelationships {
   @SuppressWarnings("java:S4968")
   public String writeToMany(List<? extends ResourceIdentifier> identifiers) {
     Objects.requireNonNull(identifiers, "identifiers");
-    return responseWriter.writeValueAsString(linkageCollectionDocument(identifiers));
+    return responseWriter.writeValueAsString(linkageCollectionDocument(List.copyOf(identifiers)));
   }
 
   @Override
@@ -81,7 +81,7 @@ final class Jackson3JsonApiRelationships implements JsonApiRelationships {
   public void writeToMany(List<? extends ResourceIdentifier> identifiers, OutputStream out) {
     Objects.requireNonNull(identifiers, "identifiers");
     Objects.requireNonNull(out, "out");
-    responseWriter.writeValue(out, linkageCollectionDocument(identifiers));
+    responseWriter.writeValue(out, linkageCollectionDocument(List.copyOf(identifiers)));
   }
 
   private static @Nullable ResourceIdentifier requireToOne(JsonApiDocument document) {
@@ -110,19 +110,12 @@ final class Jackson3JsonApiRelationships implements JsonApiRelationships {
     return new JsonApiDocument(data, null, null, null, null, null, Map.of());
   }
 
-  private static JsonApiDocument linkageCollectionDocument(
-      List<? extends ResourceIdentifier> identifiers) {
+  private static JsonApiDocument linkageCollectionDocument(List<ResourceIdentifier> identifiers) {
     for (ResourceIdentifier identifier : identifiers) {
       Objects.requireNonNull(identifier, "identifiers element");
     }
     return new JsonApiDocument(
-        new DocumentData.IdentifierCollection(List.copyOf(identifiers)),
-        null,
-        null,
-        null,
-        null,
-        null,
-        Map.of());
+        new DocumentData.IdentifierCollection(identifiers), null, null, null, null, null, Map.of());
   }
 
   private static JsonApiMappingException linkageMismatch(
