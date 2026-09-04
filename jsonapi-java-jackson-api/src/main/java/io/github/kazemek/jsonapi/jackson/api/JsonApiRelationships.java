@@ -48,8 +48,8 @@ public interface JsonApiRelationships {
   void writeToOne(@Nullable ResourceIdentifier identifier, OutputStream out);
 
   /** Writes a to-many linkage document and returns its JSON. */
-  String writeToMany(List<ResourceIdentifier> identifiers);
+  String writeToMany(List<? extends ResourceIdentifier> identifiers);
 
   /** Writes a to-many linkage document to the given stream. The stream is not closed. */
-  void writeToMany(List<ResourceIdentifier> identifiers, OutputStream out);
+  void writeToMany(List<? extends ResourceIdentifier> identifiers, OutputStream out);
 }

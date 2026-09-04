@@ -132,10 +132,13 @@ Level 1 provides an optional typed document result alongside the primary-only
 `readOne` / `readMany` conveniences. `readOneDocument` returns
 `ResourceDocument<T>` and `readManyDocument` returns
 `ResourceCollectionDocument<T>`: the bound primary DTO(s) plus top-level `meta`,
-`links`, `jsonapi`, and independently bound compound `included` state. The
-existing major-specific `JsonApiDomainDocument` is not reused: it is a
-heterogeneous registry-bound envelope in the Jackson 3 adapter, while the Level-1
-result is homogeneous and registry-free.
+`links`, `jsonapi`, and compound `included` state carried as validated core
+`ResourceObject` values. The existing major-specific `JsonApiDomainDocument` is
+not reused: it is a heterogeneous registry-bound envelope in the Jackson 3 adapter,
+while the Level-1 result is homogeneous and registry-free. Included state may be
+heterogeneous, so DTO binding of included resources stays advanced; the Level-1
+envelope deliberately carries included resources unbound rather than promising a
+registry-free way to resolve their Java types.
 
 The typed result is narrowly scoped: it does not hydrate `included` resources into
 relationship properties, it is returned only after complete document validation,
@@ -151,12 +154,15 @@ never orchestrate those phases manually.
 
 - `writeOne` writes one resource; `writeMany` writes a resource collection.
 - Representation behavior is preserved: `RepresentationSelection` (sparse
-  fieldsets, compound inclusion), `RepresentationPolicy`, configured resource
-  decoration, and the document envelope.
+  fieldsets, compound inclusion) applied under the runtime's effective
+  `RepresentationPolicy`, configured resource decoration, and the document
+  envelope. Policy is application/runtime configuration owned by the major-specific
+  runtime, never a per-write value: the options below carry no policy, so a default
+  write always inherits the runtime policy instead of overriding it with a concrete
+  default. Per-call policy overrides remain advanced.
 - Document-level `links`, `meta`, and `jsonapi` travel through the neutral
   `ResourceWriteOptions` value, which composes the existing semantic values
-  (`DocumentEnvelope` plus `RepresentationSelection` plus `RepresentationPolicy`)
-  instead of duplicating them. Convenience overloads without options select
+  (`DocumentEnvelope` plus `RepresentationSelection`) instead of duplicating them. Convenience overloads without options select
   documented defaults; `OutputStream` overloads serve server/Spring emission while
   `String` overloads serve client/test convenience. Generic declared-type writes
   stay advanced via the `JavaType` overloads.
@@ -211,7 +217,8 @@ Typed presence-aware PATCH DTO binding is the conventional Level-1 path
 and infrastructure projection (`readCommand`). The distinction is preserved, not
 erased. Neither path depends on global resource-type registration, and PATCH
 itself is not redesigned. `Type` overloads mirror the advanced `JavaType`
-overloads through caller-ensured generic targets at type-inference call sites;
+overloads (`Object` results for typed DTOs; `PatchCommand<?>` for commands, with a
+local S1452 suppression recording why the wildcard is the honest declaration);
 `bindPatch` / `bindCommand`
 bind an already-validated `JsonApiDocument` without re-parsing or re-validating.
 
@@ -272,10 +279,10 @@ cleanly.
 Every neutral type uses only JDK, JSpecify, core model/validation, and sibling
 neutral contracts: `String`, `InputStream`/`OutputStream`, `Class<T>`,
 `java.lang.reflect.Type`, `List`, core `ResourceIdentifier` / `JsonApiDocument` /
-`EndpointIdentity` / `JsonApiObject` / `Meta` / `Links`, and neutral
-`DocumentEnvelope` / `DocumentReadContext` / `RepresentationSelection` /
-`RepresentationPolicy` / `IncludedResources` / `MappedDocument` /
-`PatchCommand`. No signature requires Jackson 3-only mechanics, smuggles
+`EndpointIdentity` / `JsonApiObject` / `Meta` / `Links` / `ResourceObject`, and
+neutral `DocumentEnvelope` / `DocumentReadContext` / `RepresentationSelection` /
+`MappedDocument` / `PatchCommand` (`RepresentationPolicy` remains the neutral
+application/runtime policy value consumed by major-specific runtimes). No signature requires Jackson 3-only mechanics, smuggles
 `JavaType` or mapper assumptions into the neutral layer, or needs runtime major
 detection. Jackson 2 can implement the same observable semantics later; Jackson 2
 itself is not implemented here.

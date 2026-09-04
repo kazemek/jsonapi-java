@@ -3,47 +3,47 @@ package io.github.kazemek.jsonapi.jackson.api
 import io.github.kazemek.jsonapi.core.model.JsonApiObject
 import io.github.kazemek.jsonapi.core.model.Links
 import io.github.kazemek.jsonapi.core.model.Meta
+import io.github.kazemek.jsonapi.core.model.ResourceObject
 import io.github.kazemek.jsonapi.core.validation.EndpointIdentity
 import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
-import io.github.kazemek.jsonapi.jackson.mapping.IncludedResources
-import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
 import spock.lang.Specification
 
 class LevelOneApiContractSpec extends Specification {
 
-  def "write options defaults compose empty envelope, empty selection, and default policy"() {
+  def "write options defaults compose empty envelope and empty selection"() {
     when:
     def options = ResourceWriteOptions.defaults()
 
     then:
     options.envelope() == new DocumentEnvelope(null, null, null)
     options.selection() == RepresentationSelection.none()
-    options.policy() == RepresentationPolicy.defaults()
+  }
+
+  def "write options carry envelope and selection only, never policy"() {
+    expect:
+    ResourceWriteOptions.recordComponents*.name == ["envelope", "selection"]
   }
 
   def "write options derivations preserve independent values"() {
     given:
     def envelope = new DocumentEnvelope(Links.empty(), Meta.empty(), JsonApiObject.ofVersion("1.1"))
     def selection = RepresentationSelection.builder().include("comments.author").build()
-    def policy = RepresentationPolicy.defaults().withMaxIncludeDepth(2)
 
     when:
     def options = ResourceWriteOptions.defaults()
         .withEnvelope(envelope)
         .withSelection(selection)
-        .withPolicy(policy)
 
     then:
     options.envelope().is(envelope)
     options.selection().is(selection)
-    options.policy().is(policy)
   }
 
   def "write options reject null components"() {
     when:
-    new ResourceWriteOptions(null, RepresentationSelection.none(), RepresentationPolicy.defaults())
+    new ResourceWriteOptions(null, RepresentationSelection.none())
 
     then:
     thrown(NullPointerException)
@@ -59,12 +59,6 @@ class LevelOneApiContractSpec extends Specification {
 
     then:
     thrown(NullPointerException)
-
-    when:
-    ResourceWriteOptions.defaults().withPolicy(null)
-
-    then:
-    thrown(NullPointerException)
   }
 
   def "absent per-write jsonapi stays distinct from an explicit per-write value"() {
@@ -72,8 +66,7 @@ class LevelOneApiContractSpec extends Specification {
     ResourceWriteOptions.defaults().envelope().jsonapi() == null
     new ResourceWriteOptions(
         new DocumentEnvelope(null, null, JsonApiObject.ofVersion("1.1")),
-        RepresentationSelection.none(),
-        RepresentationPolicy.defaults()).envelope().jsonapi() == JsonApiObject.ofVersion("1.1")
+        RepresentationSelection.none()).envelope().jsonapi() == JsonApiObject.ofVersion("1.1")
   }
 
   def "typed single document requires a resource and allows absent top-level members"() {
@@ -118,13 +111,33 @@ class LevelOneApiContractSpec extends Specification {
     thrown(NullPointerException)
   }
 
-  def "included state is preserved by reference on typed documents"() {
+  def "included state is carried as core resources with defensive copies"() {
     given:
-    def included = IncludedResources.of(["x"], [[] as Set])
+    def included = [
+      ResourceObject.of("people", "9")
+    ]
+    def source = new ArrayList<>(included)
 
-    expect:
-    new ResourceDocument<>("dto", null, null, null, included).included().is(included)
-    new ResourceCollectionDocument<>(["dto"], null, null, null, included).included().is(included)
+    when:
+    def single = new ResourceDocument<>("dto", null, null, null, source)
+    def collection = new ResourceCollectionDocument<>(["dto"], null, null, null, source)
+    source.add(ResourceObject.of("people", "10"))
+
+    then:
+    single.included() == included
+    collection.included() == included
+
+    when:
+    single.included().add(ResourceObject.of("people", "11"))
+
+    then:
+    thrown(UnsupportedOperationException)
+
+    when:
+    new ResourceDocument<>("dto", null, null, null, [null])
+
+    then:
+    thrown(NullPointerException)
   }
 
   def "root exposes exactly the four cohesive facets"() {
@@ -187,8 +200,10 @@ class LevelOneApiContractSpec extends Specification {
     def offending = []
     apiTypes.each { type ->
       (type.methods.toList() + type.declaredMethods.toList()).each { method ->
-        ([method.returnType] + method.parameterTypes.toList()).each { param ->
-          def name = param.name
+        ([method.genericReturnType] + method.genericParameterTypes.toList()).each { param ->
+          // typeName renders the full parameterized form, so nested Jackson type arguments
+          // are matched by the same package checks.
+          def name = param.typeName
           if (name.startsWith("tools.jackson.")
               || name.startsWith("com.fasterxml.")
               || name.contains(".jackson2.")

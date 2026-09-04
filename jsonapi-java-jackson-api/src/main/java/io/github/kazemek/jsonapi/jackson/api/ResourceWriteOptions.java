@@ -1,7 +1,6 @@
 package io.github.kazemek.jsonapi.jackson.api;
 
 import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope;
-import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy;
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection;
 import java.util.Objects;
 
@@ -9,44 +8,40 @@ import java.util.Objects;
  * Ordinary resource-write options composing existing neutral semantics.
  *
  * <p>Carries the per-write document envelope (top-level links, meta, and JSON:API object) together
- * with the per-operation representation selection (include paths and sparse fieldsets) and its
- * governing representation policy. An absent per-write {@code jsonapi} member (a null component on
- * the envelope) is distinct from an explicit per-write {@link
- * io.github.kazemek.jsonapi.core.model.JsonApiObject}: explicit values override future
- * application-lifetime document defaults, while absent values leave those defaults in effect.
+ * with the per-operation representation selection (include paths and sparse fieldsets). An absent
+ * per-write {@code jsonapi} member (a null component on the envelope) is distinct from an explicit
+ * per-write {@link io.github.kazemek.jsonapi.core.model.JsonApiObject}: explicit values override
+ * future application-lifetime document defaults, while absent values leave those defaults in
+ * effect.
  *
- * <p>Use {@link #defaults()} for the documented ordinary behavior: no document-level members, no
- * inclusion or fieldsets, and the default representation policy.
+ * <p>Representation policy is application/runtime configuration owned by the major-specific
+ * runtime, not a per-write value: these options deliberately carry no policy, so a default write
+ * always inherits the runtime's effective policy instead of overriding it with a concrete default.
+ * Per-call policy overrides remain advanced.
+ *
+ * <p>Use {@link #defaults()} for the documented ordinary behavior: no document-level members and no
+ * inclusion or fieldsets.
  */
-public record ResourceWriteOptions(
-    DocumentEnvelope envelope, RepresentationSelection selection, RepresentationPolicy policy) {
+public record ResourceWriteOptions(DocumentEnvelope envelope, RepresentationSelection selection) {
 
   public ResourceWriteOptions {
     Objects.requireNonNull(envelope, "envelope");
     Objects.requireNonNull(selection, "selection");
-    Objects.requireNonNull(policy, "policy");
   }
 
-  /** Returns options with no envelope members, no selection, and the default policy. */
+  /** Returns options with no envelope members and no selection. */
   public static ResourceWriteOptions defaults() {
     return new ResourceWriteOptions(
-        new DocumentEnvelope(null, null, null),
-        RepresentationSelection.none(),
-        RepresentationPolicy.defaults());
+        new DocumentEnvelope(null, null, null), RepresentationSelection.none());
   }
 
-  /** Returns options with the given envelope and this selection and policy. */
+  /** Returns options with the given envelope and this selection. */
   public ResourceWriteOptions withEnvelope(DocumentEnvelope envelope) {
-    return new ResourceWriteOptions(envelope, selection, policy);
+    return new ResourceWriteOptions(envelope, selection);
   }
 
-  /** Returns options with the given selection and this envelope and policy. */
+  /** Returns options with the given selection and this envelope. */
   public ResourceWriteOptions withSelection(RepresentationSelection selection) {
-    return new ResourceWriteOptions(envelope, selection, policy);
-  }
-
-  /** Returns options with the given policy and this envelope and selection. */
-  public ResourceWriteOptions withPolicy(RepresentationPolicy policy) {
-    return new ResourceWriteOptions(envelope, selection, policy);
+    return new ResourceWriteOptions(envelope, selection);
   }
 }

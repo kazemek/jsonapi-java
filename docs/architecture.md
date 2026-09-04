@@ -118,7 +118,8 @@ path above those capability seams. The `JsonApi` root exposes four facets — `J
 `JsonApiRelationships` (to-one/null/to-many linkage documents), `JsonApiDocuments`
 (raw documents with explicit `DocumentReadContext`), and `JsonApiPatches` (conventional
 typed `PatchPresence<T>` DTO binding plus explicit `PatchCommand<T>`) — with
-`ResourceWriteOptions` (envelope plus representation selection and policy),
+`ResourceWriteOptions` (envelope plus representation selection; policy stays
+runtime-owned),
 `ResourceDocument<T>`, and `ResourceCollectionDocument<T>` as the only option/result
 values. Ordinary callers never coordinate mapper, decorator, validator, writer, codec,
 or PATCH projection phases manually; advanced capability APIs stay public for explicit

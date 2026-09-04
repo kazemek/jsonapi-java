@@ -61,20 +61,22 @@ public interface JsonApiPatches {
 
   /**
    * Decodes, validates as an update request, and binds only the supplied changes into a {@link
-   * PatchCommand} described by a full generic type. The caller ensures {@code resourceType} denotes
-   * {@code T}.
+   * PatchCommand} described by a full generic type.
    *
-   * @param <T> the annotated DTO type carrying the resource identity
+   * <p>The wildcard is the honest declaration: a plain {@code Type} cannot recover the type
+   * argument, so callers assign or narrow the command themselves.
    */
-  <T> PatchCommand<T> readCommand(String json, Type resourceType);
+  @SuppressWarnings("java:S1452")
+  PatchCommand<?> readCommand(String json, Type resourceType);
 
   /**
-   * Stream variant of {@link #readCommand(String, Type)}. The stream is not closed. The caller
-   * ensures {@code resourceType} denotes {@code T}.
+   * Stream variant of {@link #readCommand(String, Type)}. The stream is not closed.
    *
-   * @param <T> the annotated DTO type carrying the resource identity
+   * <p>The wildcard is the honest declaration: a plain {@code Type} cannot recover the type
+   * argument, so callers assign or narrow the command themselves.
    */
-  <T> PatchCommand<T> readCommand(InputStream json, Type resourceType);
+  @SuppressWarnings("java:S1452")
+  PatchCommand<?> readCommand(InputStream json, Type resourceType);
 
   /**
    * Binds an already-validated update document into the caller's PATCH DTO without re-parsing or
@@ -101,10 +103,11 @@ public interface JsonApiPatches {
 
   /**
    * Binds an already-validated update document into a {@link PatchCommand} described by a full
-   * generic type without re-parsing or re-validating. The caller ensures {@code resourceType}
-   * denotes {@code T}.
+   * generic type without re-parsing or re-validating.
    *
-   * @param <T> the annotated DTO type carrying the resource identity
+   * <p>The wildcard is the honest declaration: a plain {@code Type} cannot recover the type
+   * argument, so callers assign or narrow the command themselves.
    */
-  <T> PatchCommand<T> bindCommand(JsonApiDocument document, Type resourceType);
+  @SuppressWarnings("java:S1452")
+  PatchCommand<?> bindCommand(JsonApiDocument document, Type resourceType);
 }
