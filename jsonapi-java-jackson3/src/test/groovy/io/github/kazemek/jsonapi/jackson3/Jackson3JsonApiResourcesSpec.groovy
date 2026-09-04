@@ -19,6 +19,8 @@ import io.github.kazemek.jsonapi.jackson.document.DocumentEnvelope
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
 import io.github.kazemek.jsonapi.jackson.document.PrimaryDataKind
 import io.github.kazemek.jsonapi.jackson.mapping.IdentifierConverter
+import io.github.kazemek.jsonapi.jackson3.CloseTrackingFixtures.TrackingInputStream
+import io.github.kazemek.jsonapi.jackson3.CloseTrackingFixtures.TrackingOutputStream
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatAuthor
 import io.github.kazemek.jsonapi.jackson3.LinkageMapperFixtures.FlatMappedArticle
 import io.github.kazemek.jsonapi.jackson.mapping.ResourceDecoration
@@ -231,14 +233,18 @@ class Jackson3JsonApiResourcesSpec extends Specification {
   def "stream sinks mirror string results without closing caller streams"() {
     given:
     def article = new Article("1", "Hello", "B", List.of(), null)
-    def out = new ByteArrayOutputStream()
+    def out = new TrackingOutputStream(new ByteArrayOutputStream())
 
     when:
     jsonApi.resources().writeOne(article, out)
-    def fromStream = jsonApi.resources().readOne(new ByteArrayInputStream(out.toByteArray()), FlatArticle)
+    def payload = out.bytes()
+    def input = new TrackingInputStream(payload)
+    def fromStream = jsonApi.resources().readOne(input, FlatArticle)
 
     then:
-    fromStream == jsonApi.resources().readOne(out.toString("UTF-8"), FlatArticle)
+    fromStream == jsonApi.resources().readOne(new String(payload, "UTF-8"), FlatArticle)
+    !out.closed
+    !input.closed
   }
 
   def "round-trips a resource collection through writeMany and readMany"() {
@@ -301,15 +307,18 @@ class Jackson3JsonApiResourcesSpec extends Specification {
     def article = new Article("1", "Hello", "B", List.of(), null)
     def one = jsonApi.resources().writeOne(article)
     def many = jsonApi.resources().writeMany([article])
-    def manyOut = new ByteArrayOutputStream()
-    def createOut = new ByteArrayOutputStream()
-    def updateOut = new ByteArrayOutputStream()
-    def updateOptionsOut = new ByteArrayOutputStream()
+    def manyInput = new TrackingInputStream(many.bytes)
+    def oneDocumentInput = new TrackingInputStream(one.bytes)
+    def manyDocumentInput = new TrackingInputStream(many.bytes)
+    def manyOut = new TrackingOutputStream(new ByteArrayOutputStream())
+    def createOut = new TrackingOutputStream(new ByteArrayOutputStream())
+    def updateOut = new TrackingOutputStream(new ByteArrayOutputStream())
+    def updateOptionsOut = new TrackingOutputStream(new ByteArrayOutputStream())
 
     when:
-    def readMany = jsonApi.resources().readMany(new ByteArrayInputStream(many.bytes), FlatArticle)
-    def oneDocument = jsonApi.resources().readOneDocument(new ByteArrayInputStream(one.bytes), FlatArticle)
-    def manyDocument = jsonApi.resources().readManyDocument(new ByteArrayInputStream(many.bytes), FlatArticle)
+    def readMany = jsonApi.resources().readMany(manyInput, FlatArticle)
+    def oneDocument = jsonApi.resources().readOneDocument(oneDocumentInput, FlatArticle)
+    def manyDocument = jsonApi.resources().readManyDocument(manyDocumentInput, FlatArticle)
     jsonApi.resources().writeMany([article], manyOut)
     jsonApi.resources().writeCreateDocument(article, createOut)
     jsonApi.resources().writeUpdateDocument(article, null, updateOut)
@@ -319,10 +328,17 @@ class Jackson3JsonApiResourcesSpec extends Specification {
     readMany == jsonApi.resources().readMany(many, FlatArticle)
     oneDocument == jsonApi.resources().readOneDocument(one, FlatArticle)
     manyDocument == jsonApi.resources().readManyDocument(many, FlatArticle)
-    jsonApi.resources().readMany(new ByteArrayInputStream(manyOut.toByteArray()), FlatArticle) == readMany
-    jsonApi.resources().readOne(new ByteArrayInputStream(createOut.toByteArray()), FlatArticle).id() == "1"
-    jsonApi.resources().readOne(new ByteArrayInputStream(updateOut.toByteArray()), FlatArticle).id() == "1"
-    jsonApi.resources().readOne(new ByteArrayInputStream(updateOptionsOut.toByteArray()), FlatArticle).id() == "1"
+    jsonApi.resources().readMany(new ByteArrayInputStream(manyOut.bytes()), FlatArticle) == readMany
+    jsonApi.resources().readOne(new ByteArrayInputStream(createOut.bytes()), FlatArticle).id() == "1"
+    jsonApi.resources().readOne(new ByteArrayInputStream(updateOut.bytes()), FlatArticle).id() == "1"
+    jsonApi.resources().readOne(new ByteArrayInputStream(updateOptionsOut.bytes()), FlatArticle).id() == "1"
+    !manyInput.closed
+    !oneDocumentInput.closed
+    !manyDocumentInput.closed
+    !manyOut.closed
+    !createOut.closed
+    !updateOut.closed
+    !updateOptionsOut.closed
   }
 
   def "create and update authoring accept write options"() {

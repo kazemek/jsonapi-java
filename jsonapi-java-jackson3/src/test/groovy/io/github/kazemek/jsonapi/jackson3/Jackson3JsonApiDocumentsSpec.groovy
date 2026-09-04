@@ -4,6 +4,8 @@ import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
 import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.jackson.document.DocumentReadContext
+import io.github.kazemek.jsonapi.jackson3.CloseTrackingFixtures.TrackingInputStream
+import io.github.kazemek.jsonapi.jackson3.CloseTrackingFixtures.TrackingOutputStream
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationPolicy
 import io.github.kazemek.jsonapi.jackson.representation.RepresentationSelection
@@ -63,8 +65,8 @@ class Jackson3JsonApiDocumentsSpec extends Specification {
   def "stream sinks mirror string results without closing caller streams"() {
     given:
     def document = JsonApiDocument.withMeta(Meta.of([count: 2]))
-    def out = new ByteArrayOutputStream()
-    def mappedOut = new ByteArrayOutputStream()
+    def out = new TrackingOutputStream(new ByteArrayOutputStream())
+    def mappedOut = new TrackingOutputStream(new ByteArrayOutputStream())
     def mapper = JsonApiJackson3.resourceMapper(JsonMapper.builder().build())
 
     when:
@@ -75,9 +77,15 @@ class Jackson3JsonApiDocumentsSpec extends Specification {
         RepresentationSelection.none(),
         RepresentationPolicy.defaults())
     jsonApi.documents().write(mapped, mappedOut)
+    def documentInput = new TrackingInputStream(out.bytes())
+    def mappedInput = new TrackingInputStream(mappedOut.bytes())
 
     then:
-    jsonApi.documents().read(new ByteArrayInputStream(out.toByteArray()), DocumentReadContext.resourceDefaults()) == document
-    jsonApi.documents().read(new ByteArrayInputStream(mappedOut.toByteArray()), DocumentReadContext.resourceDefaults()) == mapped.document()
+    jsonApi.documents().read(documentInput, DocumentReadContext.resourceDefaults()) == document
+    jsonApi.documents().read(mappedInput, DocumentReadContext.resourceDefaults()) == mapped.document()
+    !out.closed
+    !mappedOut.closed
+    !documentInput.closed
+    !mappedInput.closed
   }
 }

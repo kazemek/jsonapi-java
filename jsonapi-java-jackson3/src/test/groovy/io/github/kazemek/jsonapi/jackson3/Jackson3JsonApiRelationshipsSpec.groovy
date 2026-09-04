@@ -3,6 +3,8 @@ package io.github.kazemek.jsonapi.jackson3
 import io.github.kazemek.jsonapi.core.model.ResourceIdentifier
 import io.github.kazemek.jsonapi.jackson.diagnostic.JsonApiMappingException
 import io.github.kazemek.jsonapi.jackson.diagnostic.MappingDiagnostic
+import io.github.kazemek.jsonapi.jackson3.CloseTrackingFixtures.TrackingInputStream
+import io.github.kazemek.jsonapi.jackson3.CloseTrackingFixtures.TrackingOutputStream
 import spock.lang.Shared
 import spock.lang.Specification
 import tools.jackson.databind.json.JsonMapper
@@ -87,16 +89,22 @@ class Jackson3JsonApiRelationshipsSpec extends Specification {
     def identifiers = [
       ResourceIdentifier.of("comments", "c1")
     ]
-    def oneOut = new ByteArrayOutputStream()
-    def manyOut = new ByteArrayOutputStream()
+    def oneOut = new TrackingOutputStream(new ByteArrayOutputStream())
+    def manyOut = new TrackingOutputStream(new ByteArrayOutputStream())
 
     when:
     jsonApi.relationships().writeToOne(identifier, oneOut)
     jsonApi.relationships().writeToMany(identifiers, manyOut)
+    def oneInput = new TrackingInputStream(oneOut.bytes())
+    def manyInput = new TrackingInputStream(manyOut.bytes())
 
     then:
-    jsonApi.relationships().readToOne(new ByteArrayInputStream(oneOut.toByteArray())) == identifier
-    jsonApi.relationships().readToMany(new ByteArrayInputStream(manyOut.toByteArray())) == identifiers
+    jsonApi.relationships().readToOne(oneInput) == identifier
+    jsonApi.relationships().readToMany(manyInput) == identifiers
+    !oneOut.closed
+    !manyOut.closed
+    !oneInput.closed
+    !manyInput.closed
   }
 
   def "linkage reads reject error documents without coercion"() {
