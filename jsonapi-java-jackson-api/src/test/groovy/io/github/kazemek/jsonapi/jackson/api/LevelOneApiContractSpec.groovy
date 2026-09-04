@@ -184,6 +184,20 @@ class LevelOneApiContractSpec extends Specification {
     JsonApiPatches.getMethod("bindCommand", io.github.kazemek.jsonapi.core.model.JsonApiDocument, Class) != null
   }
 
+  def "neutrality scan flags forbidden packages anywhere in a rendered signature"() {
+    expect:
+    isForbiddenSignature("tools.jackson.databind.JsonNode")
+    isForbiddenSignature("java.util.List<tools.jackson.databind.JsonNode>")
+    isForbiddenSignature("com.fasterxml.jackson.annotation.JsonProperty")
+    isForbiddenSignature("java.util.Map<java.lang.String, com.fasterxml.jackson.databind.JsonNode>")
+    isForbiddenSignature("io.github.kazemek.jsonapi.jackson3.JsonApiResourceMapper")
+    isForbiddenSignature("io.github.kazemek.jsonapi.jackson2.JsonApiResourceMapper")
+
+    !isForbiddenSignature("java.util.List<java.lang.String>")
+    !isForbiddenSignature("io.github.kazemek.jsonapi.jackson.api.JsonApi")
+    !isForbiddenSignature("java.util.List<io.github.kazemek.jsonapi.core.model.ResourceIdentifier>")
+  }
+
   def "no neutral level-1 signature references Jackson implementation types"() {
     given:
     def apiTypes = [
@@ -202,13 +216,10 @@ class LevelOneApiContractSpec extends Specification {
     apiTypes.each { type ->
       (type.methods.toList() + type.declaredMethods.toList()).each { method ->
         ([method.genericReturnType] + method.genericParameterTypes.toList()).each { param ->
-          // typeName renders the full parameterized form, so nested Jackson type arguments
-          // are matched by the same package checks.
+          // typeName renders the full parameterized form; the forbidden roots are matched
+          // anywhere in it so nested type arguments cannot hide an implementation type.
           def name = param.typeName
-          if (name.startsWith("tools.jackson.")
-              || name.startsWith("com.fasterxml.")
-              || name.contains(".jackson2.")
-              || name.contains(".jackson3.")) {
+          if (isForbiddenSignature(name)) {
             offending.add(type.simpleName + "#" + method.name + " -> " + name)
           }
         }
@@ -217,5 +228,16 @@ class LevelOneApiContractSpec extends Specification {
 
     then:
     offending.isEmpty()
+  }
+
+  private static boolean isForbiddenSignature(String typeName) {
+    return [
+      "tools.jackson.",
+      "com.fasterxml.",
+      ".jackson2.",
+      ".jackson3."
+    ].any {
+      typeName.contains(it)
+    }
   }
 }
