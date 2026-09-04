@@ -1135,20 +1135,18 @@ class JsonApiDocumentValidatorSpec extends Specification {
     ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
   }
 
-  def "lid-only included then later id binding with different resource is rejected"() {
+  def "id binding then later id binding with different resource is rejected"() {
     given:
-    def lidOnly = new ResourceObject(
-        "people", null, "local", Attributes.ofAttributes([name: "a"]), null, null, null, [:])
-    def withId = new ResourceObject(
+    def first = new ResourceObject(
+        "people", "9", "local", Attributes.ofAttributes([name: "a"]), null, null, null, [:])
+    def second = new ResourceObject(
         "people", "9", "local", Attributes.ofAttributes([name: "b"]), null, null, null, [:])
     def doc = new JsonApiDocument(
-        new DocumentData.ResourceCollection([lidOnly, withId]),
+        new DocumentData.ResourceCollection([first, second]),
         null, null, null, null, null, [:])
-    def context = ValidationContext.defaults()
-        .withDocumentUsage(DocumentUsage.CREATE_REQUEST)
 
     when:
-    validator.validate(doc, context)
+    validator.validate(doc, ValidationContext.defaults())
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1420,7 +1418,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
     ex.jsonPointer() == "/data/1"
   }
 
-  def "duplicate primary identifier collection lid-only identities are rejected"() {
+  def "duplicate primary identifier collection lid identities are rejected"() {
     given:
     def doc = new JsonApiDocument(
         new DocumentData.IdentifierCollection([
@@ -1428,10 +1426,9 @@ class JsonApiDocumentValidatorSpec extends Specification {
           ResourceIdentifier.withLid("articles", "local-1")
         ]),
         null, null, null, null, null, [:])
-    def context = ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST)
 
     when:
-    validator.validate(doc, context)
+    validator.validate(doc, ValidationContext.defaults())
 
     then:
     def ex = thrown(JsonApiValidationException)
@@ -1484,7 +1481,7 @@ class JsonApiDocumentValidatorSpec extends Specification {
     ex.jsonPointer() == "/data/relationships/comments/data/1"
   }
 
-  def "cross-alias duplicate primary identifier collection is rejected after binding"() {
+  def "create request reports primary-data shape before aggregate alias binding"() {
     given:
     def binder = new ResourceObject("people", "9", "p-local", null, null, null, null, [:])
     def doc = new JsonApiDocument(
@@ -1502,8 +1499,8 @@ class JsonApiDocumentValidatorSpec extends Specification {
 
     then:
     def ex = thrown(JsonApiValidationException)
-    ex.ruleCode() == ValidationRuleCode.DUPLICATE_RESOURCE_IDENTITY
-    ex.jsonPointer() == "/data/1"
+    ex.ruleCode() == ValidationRuleCode.CREATE_REQUIRES_SINGLE_RESOURCE
+    ex.jsonPointer() == "/data"
   }
 
   def "cross-alias duplicate relationship identifier collection is rejected after binding"() {

@@ -2,7 +2,7 @@
 
 Conformance is reported per feature as: **supported**, **pass-through**, **delegated**, **deferred**, or **out of scope**.
 
-Current capability: `jsonapi-java-core` owns the document model, aggregate validation, update-request
+Current capability: `jsonapi-java-core` owns the document model, aggregate validation, create- and update-request
 shape, error `source.pointer` syntax, and reserved link names. `jsonapi-java-annotations` owns
 metadata-only domain-mapping annotations. `jsonapi-java-jackson3` owns the Jackson 3 document
 writer/reader, domain-to-resource mapping, compound inclusion, sparse fieldsets, flat DTO binding,
@@ -79,6 +79,19 @@ Spring adapters remain deferred.
 | Update rules scoped to the primary resource                                                                     | supported    | `included` resources keep response semantics; full linkage still enforced                    |
 | Command application                                                                                             | out of scope | Applications apply authorized update commands; Jackson 2 binding remains deferred            |
 | HTTP/route identity derivation and mutation                                                                     | out of scope | Application-owned; core compares only a supplied expected identity                           |
+
+## Resource create request validation (supported)
+
+| Rule                                                                                                            | Status       | Notes                                                                                                                     |
+|-----------------------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------------------------------------------------------|
+| Create primary data must be one resource object (absent, null, collection, or identifier primary data rejected) | supported    | `CREATE_REQUIRES_SINGLE_RESOURCE` at `/data`                                                                              |
+| Create resource `id` optional; `id` and `lid` remain independent                                                 | supported    | Aggregate validator; neither substitutes for the other; empty/whitespace strings are present                               |
+| Every relationship supplied on the primary create resource must contain `data`                                  | supported    | Reuses `RELATIONSHIP_DATA_REQUIRED` at `/data/relationships/<name>/data`; primary resource only                           |
+| Relationship linkage preserved: null, single, empty and non-empty collection                                    | supported    | All `RelationshipData` variants valid, including `lid`-based linkage                                                     |
+| Omitted/present-empty relationship wrappers; links/meta coexist with present linkage                             | supported    | Absent vs `Relationships.empty()`; no normalization                                                                       |
+| Create rules scoped to the primary resource                                                                     | supported    | `included` resources keep response semantics; no nested-create interpretation; full linkage still enforced                 |
+| Links-only/meta-only relationships outside create-specific restrictions                                         | supported    | Valid general core/document representations per ADR-018; rejected only on the primary create resource                      |
+| HTTP/method handling and mutation                                                                               | out of scope | Application-owned; a future Spring layer selects `CREATE_REQUEST` from its own operation context; core stays method-neutral |
 
 ## Annotation metadata (supported)
 

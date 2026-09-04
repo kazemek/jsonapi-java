@@ -72,6 +72,12 @@ public final class JsonApiDocumentValidator {
             PATH_DATA,
             "Update request requires primary data as a single resource object");
       }
+      if (context.documentUsage() == DocumentUsage.CREATE_REQUEST) {
+        throw new JsonApiValidationException(
+            ValidationRuleCode.CREATE_REQUIRES_SINGLE_RESOURCE,
+            PATH_DATA,
+            "Create request requires primary data as a single resource object");
+      }
     } else {
       validatePrimaryData(document.data(), context);
     }
@@ -99,6 +105,13 @@ public final class JsonApiDocumentValidator {
           ValidationRuleCode.UPDATE_REQUIRES_SINGLE_RESOURCE,
           PATH_DATA,
           "Update request requires primary data as a single resource object");
+    }
+    if (context.documentUsage() == DocumentUsage.CREATE_REQUEST
+        && !(data instanceof DocumentData.SingleResource)) {
+      throw new JsonApiValidationException(
+          ValidationRuleCode.CREATE_REQUIRES_SINGLE_RESOURCE,
+          PATH_DATA,
+          "Create request requires primary data as a single resource object");
     }
     switch (data) {
       case DocumentData.NullData ignored -> {
@@ -149,6 +162,16 @@ public final class JsonApiDocumentValidator {
     validateAdditionalMembers(resource.additionalMembers(), path, context);
   }
 
+  /**
+   * Operation usages whose primary-resource relationships must carry replacement linkage {@code
+   * data}. This is an operation-specific validation policy: links-only and meta-only relationships
+   * remain valid general document representations outside these usages.
+   */
+  private static boolean isWriteRequestRequiringRelationshipData(ValidationContext context) {
+    return context.documentUsage() == DocumentUsage.UPDATE_REQUEST
+        || context.documentUsage() == DocumentUsage.CREATE_REQUEST;
+  }
+
   private void validateResourceRelationships(
       ResourceObject resource, String path, boolean primary, ValidationContext context) {
     Relationships relationships = Objects.requireNonNull(resource.relationships());
@@ -156,13 +179,15 @@ public final class JsonApiDocumentValidator {
         relationships.additionalMembers(), path + PATH_RELATIONSHIPS, context);
     for (Map.Entry<String, Relationship> entry : relationships.relationships().entrySet()) {
       Relationship relationship = entry.getValue();
-      if (context.documentUsage() == DocumentUsage.UPDATE_REQUEST
+      if (isWriteRequestRequiringRelationshipData(context)
           && primary
           && !relationship.hasDataMember()) {
         throw new JsonApiValidationException(
             ValidationRuleCode.RELATIONSHIP_DATA_REQUIRED,
             JsonPointers.child(path + PATH_RELATIONSHIPS, entry.getKey()) + PATH_DATA,
-            "Update request relationship must contain data");
+            context.documentUsage() == DocumentUsage.CREATE_REQUEST
+                ? "Create request relationship must contain data"
+                : "Update request relationship must contain data");
       }
       validateRelationship(
           relationship,
