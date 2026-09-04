@@ -92,6 +92,13 @@ Decoration is additive: mapped resources (primary and compound `included`) are e
 creates relationships, never affects inclusion traversal, and never resurrects fieldset-omitted
 relationships.
 
+Ordinary domain relationships are linkage-oriented: a selected mapped relationship always emits a
+`data` member (explicit null, single, or collection), and a wire relationship whose `data` member is
+absent binds no linkage on flat reads while its relationship meta still binds. Links-only and
+meta-only relationships remain document-level concerns, preserved by the core model and the document
+codec in both directions. [ADR-018](adr/018-relationship-data-presence-in-domain-mapping.md) owns
+that boundary.
+
 Public Jackson 3 entry points are created from `JsonApiJackson3`. Codec paths are
 `JsonApiDocumentReader` / `JsonApiDocumentWriter`. Mapping paths are `JsonApiResourceMapper`
 (write), `JsonApiResourceBinder` (flat read), `JsonApiDomainDocumentReader` (typed envelope),

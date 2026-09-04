@@ -7,6 +7,9 @@ import io.github.kazemek.jsonapi.annotation.JsonApiResource
 import io.github.kazemek.jsonapi.core.model.Attributes
 import io.github.kazemek.jsonapi.core.model.DocumentData
 import io.github.kazemek.jsonapi.core.model.JsonApiDocument
+import io.github.kazemek.jsonapi.core.model.JsonApiMembers
+import io.github.kazemek.jsonapi.core.model.Link
+import io.github.kazemek.jsonapi.core.model.Links
 import io.github.kazemek.jsonapi.core.model.Meta
 import io.github.kazemek.jsonapi.core.model.Relationship
 import io.github.kazemek.jsonapi.core.model.RelationshipData
@@ -71,6 +74,7 @@ class ResourceBinderSpec extends Specification {
   private static final String AUTHOR = "author"
   private static final String COMMENTS = "comments"
   private static final String PEOPLE = "people"
+  private static final String RELATED = JsonApiMembers.RELATED
   private static final String THINGS = "things"
 
   @Shared
@@ -131,6 +135,21 @@ class ResourceBinderSpec extends Specification {
       ResourceIdentifier.of(COMMENTS, "c1")
     ])
     "relationship meta without linkage" | resourceWithMeta(attrs("title", "Hello"), rels(AUTHOR, Relationship.metaOnly(Meta.of([displayName: "Alice"]))), null) | FlatMetaArticle | new FlatMetaArticle("1", "Hello", null, null, new AuthorMeta("Alice"))
+    "link-only relationship does not bind linkage" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.linkOnly(Links.ofLinks([(RELATED): new Link.StringLink("/articles/1/author")])))) | FlatArticle | new FlatArticle("1", null, null, null, null)
+    "data-absent relationship binds Optional.empty via its missing-property default" | resource(ARTICLES, "1", null, rels(AUTHOR, Relationship.metaOnly(Meta.of([note: "x"])))) | FlatArticleWithOptional | new FlatArticleWithOptional("1", null, Optional.empty())
+  }
+
+  def "relationship data absence and explicit null follow configured missing-vs-null semantics"() {
+    expect:
+    def type = RelationshipBindingFixtures.DefaultedRelationshipArticle
+    binder.fromResource(
+        resource("defaulted-relationship-articles", "1", null, rels(AUTHOR, Relationship.metaOnly(Meta.of([note: "x"])))),
+        type).getAuthor() == type.defaultAuthor()
+
+    and:
+    binder.fromResource(
+        resource("defaulted-relationship-articles", "1", null, rels(AUTHOR, Relationship.withData(RelationshipData.NullLinkage.INSTANCE))),
+        type).getAuthor() == null
   }
 
   def "custom identifier converter converts ids"() {

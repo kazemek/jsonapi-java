@@ -87,6 +87,12 @@ document writer's validation context — not mapping — decides whether that st
 document being produced. The local identifier is a JSON:API protocol concept, not an application
 persistence or transient-entity heuristic.
 
+Ordinary relationships are linkage-oriented (ADR-018): a selected mapped relationship always emits a
+`data` member — a null or `Optional.empty()` to-one emits `"data": null`, and an empty to-many emits
+`"data": []`. A relationship whose `data` member is absent (links-only or meta-only) is a
+document-level construction (`Relationship.linkOnly` / `metaOnly` and the document codec), not an
+ordinary mapped-property state; decoration likewise never creates one.
+
 Resource-link decoration (advanced):
 
 ```java
@@ -153,8 +159,15 @@ local-id role is ignored, never bound as an identifier. Normal readable/writable
 setter-only, creator-only/constructor-bound, and Jackson write-only properties are supported. A
 supplied member mapped to a getter-only, read-only, or otherwise non-deserializable property fails
 with `NON_DESERIALIZABLE_PROPERTY` at its JSON:API wire location instead of being silently
-discarded. The same rule applies to primary and included resources bound through the typed domain
-envelope; the serialization-oriented `ResourceMapping` remains authoritative for writes.
+discarded. A mapped relationship whose wire object carries no `data` member binds no linkage
+(ADR-018): the property stays unbound and the resulting Java value follows configured Jackson
+missing-property semantics, so field initializers, creator defaults, and null-handling
+customizations remain in effect; explicit `"data": null` binds separately as an explicit null.
+`"data": null` on a to-many property fails as invalid linkage cardinality, while `"data": []` binds
+an empty collection. That relationship's `meta` still binds through `@JsonApiRelationshipMeta`. The
+same rule applies to
+primary and included resources bound through the typed domain envelope; the serialization-oriented
+`ResourceMapping` remains authoritative for writes.
 
 Compound inclusion (explicit selection and policy; relationship mapping alone never includes):
 
