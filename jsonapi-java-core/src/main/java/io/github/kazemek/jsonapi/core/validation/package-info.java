@@ -12,7 +12,13 @@
  * single-resource primary data, replacement {@code data} on every relationship supplied by the
  * primary resource, and — when an {@link
  * io.github.kazemek.jsonapi.core.validation.EndpointIdentity} is configured — a primary resource
- * identity matching the expected endpoint. Included resources keep response semantics.
+ * identity matching the expected endpoint. {@link
+ * io.github.kazemek.jsonapi.core.validation.DocumentUsage#CREATE_REQUEST} requires single-resource
+ * primary data, permits an omitted resource {@code id} with {@code id} and {@code lid} kept
+ * independent, and requires {@code data} on every relationship supplied by the primary resource
+ * while accepting null, single, and collection linkage. Included resources are exempt from the
+ * primary-resource relationship-data rule under both write usages; otherwise existing identity and
+ * aggregate rules apply unchanged.
  *
  * <p>Failures carry a stable {@link io.github.kazemek.jsonapi.core.validation.ValidationRuleCode}
  * and a JSON Pointer-like path. See ADR-003, ADR-009, ADR-012, and {@code docs/conformance.md}.
