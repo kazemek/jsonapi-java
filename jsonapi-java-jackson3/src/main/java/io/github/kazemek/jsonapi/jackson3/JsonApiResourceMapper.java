@@ -69,6 +69,7 @@ public final class JsonApiResourceMapper {
   private static final String SELECTION = "selection";
   private static final String POLICY = "policy";
   private static final String RESOURCES = "resources";
+  private static final String RESOURCE = "resource";
   private static final String RESOURCE_TYPE = "resourceType";
 
   private final DomainResourceWriter writer;
@@ -127,7 +128,7 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       RepresentationSelection selection,
       RepresentationPolicy policy) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
     rejectNonEmptyFieldsets(representation);
@@ -162,7 +163,7 @@ public final class JsonApiResourceMapper {
       @Nullable DocumentEnvelope envelope,
       RepresentationSelection selection,
       RepresentationPolicy policy) {
-    Objects.requireNonNull(resource, "resource");
+    Objects.requireNonNull(resource, RESOURCE);
     Objects.requireNonNull(resourceType, RESOURCE_TYPE);
     EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
     List<Object> snapshot = List.of(resource);
@@ -171,6 +172,47 @@ public final class JsonApiResourceMapper {
     IncludedResourcesResult includedResult =
         inclusionEngine.collectIncluded(
             snapshot, List.of(resourceType), primary, null, representation);
+    JsonApiDocument document =
+        buildDocument(
+            new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
+    return new MappedDocument(document, includedResult.sparseFieldsetLinkageExemptions());
+  }
+
+  /**
+   * Maps a domain object for create-request authoring with optional envelope members, compound
+   * inclusion, and sparse fieldsets from {@code selection} governed by {@code policy}. Unlike
+   * {@link #toMappedDocument}, a primary resource with neither {@code id} nor {@code lid} value
+   * maps with both members absent instead of failing; core {@code CREATE_REQUEST} validation owns
+   * that leniency when the document is written. Compound inclusion likewise traverses an
+   * identity-less primary while included resources still require identity, and related linkage
+   * extraction is unchanged. Returns a {@link MappedDocument} carrying sparse-fieldset linkage
+   * provenance like {@link #toMappedDocument}.
+   */
+  public MappedDocument toMappedCreateDocument(
+      Object resource,
+      @Nullable DocumentEnvelope envelope,
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
+    return toMappedCreateDocument(
+        resource, writer.inferredType(resource), envelope, selection, policy);
+  }
+
+  /** Maps a domain object for create-request authoring using a complete declared type. */
+  public MappedDocument toMappedCreateDocument(
+      Object resource,
+      JavaType resourceType,
+      @Nullable DocumentEnvelope envelope,
+      RepresentationSelection selection,
+      RepresentationPolicy policy) {
+    Objects.requireNonNull(resource, RESOURCE);
+    Objects.requireNonNull(resourceType, RESOURCE_TYPE);
+    EffectiveRepresentation representation = effectiveRepresentation(selection, policy);
+    List<Object> snapshot = List.of(resource);
+    ResourceObject resourceObject = writer.toCreateResource(resource, resourceType, representation);
+    List<ResourceObject> primary = List.of(resourceObject);
+    IncludedResourcesResult includedResult =
+        inclusionEngine.collectIncluded(
+            snapshot, List.of(resourceType), primary, null, representation, true);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());

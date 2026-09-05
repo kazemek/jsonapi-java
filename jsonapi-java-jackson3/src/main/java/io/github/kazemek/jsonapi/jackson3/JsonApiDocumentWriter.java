@@ -5,6 +5,8 @@ import io.github.kazemek.jsonapi.core.model.ResourceIdentity;
 import io.github.kazemek.jsonapi.core.validation.JsonApiDocumentValidator;
 import io.github.kazemek.jsonapi.core.validation.ValidationContext;
 import io.github.kazemek.jsonapi.jackson.mapping.MappedDocument;
+import java.io.FilterOutputStream;
+import java.io.FilterWriter;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.util.HashSet;
@@ -62,18 +64,26 @@ public final class JsonApiDocumentWriter {
     return mapper.writeValueAsBytes(document);
   }
 
+  /**
+   * Validates {@code document} against the bound context, then writes it to {@code out}. The stream
+   * is not closed; only the generator created for this call is closed.
+   */
   public void writeValue(OutputStream out, JsonApiDocument document) {
     Objects.requireNonNull(out, "out");
     Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
-    mapper.writeValue(out, document);
+    mapper.writeValue(nonClosing(out), document);
   }
 
+  /**
+   * Validates {@code document} against the bound context, then writes it to {@code out}. The writer
+   * is not closed; only the generator created for this call is closed.
+   */
   public void writeValue(Writer out, JsonApiDocument document) {
     Objects.requireNonNull(out, "out");
     Objects.requireNonNull(document, DOCUMENT_PARAM);
     validator.validate(document, context);
-    mapper.writeValue(out, document);
+    mapper.writeValue(nonClosing(out), document);
   }
 
   public void writeValue(JsonGenerator generator, JsonApiDocument document) {
@@ -101,20 +111,22 @@ public final class JsonApiDocumentWriter {
 
   /**
    * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
-   * sparse-fieldset linkage exemptions, then writes it to {@code out}.
+   * sparse-fieldset linkage exemptions, then writes it to {@code out}. The stream is not closed;
+   * only the generator created for this call is closed.
    */
   public void writeValue(OutputStream out, MappedDocument mapped) {
     Objects.requireNonNull(out, "out");
-    mapper.writeValue(out, validatedDocument(mapped));
+    mapper.writeValue(nonClosing(out), validatedDocument(mapped));
   }
 
   /**
    * Validates {@code mapped.document()} against the bound context composed with {@code mapped}'s
-   * sparse-fieldset linkage exemptions, then writes it to {@code out}.
+   * sparse-fieldset linkage exemptions, then writes it to {@code out}. The writer is not closed;
+   * only the generator created for this call is closed.
    */
   public void writeValue(Writer out, MappedDocument mapped) {
     Objects.requireNonNull(out, "out");
-    mapper.writeValue(out, validatedDocument(mapped));
+    mapper.writeValue(nonClosing(out), validatedDocument(mapped));
   }
 
   /**
@@ -144,5 +156,31 @@ public final class JsonApiDocumentWriter {
     Set<ResourceIdentity> exemptions = new HashSet<>(context.sparseFieldsetLinkageExemptions());
     exemptions.addAll(mappedExemptions);
     return context.withSparseFieldsetLinkageExemptions(exemptions);
+  }
+
+  /**
+   * Wraps a caller-owned stream so Jackson's generator close cannot propagate to it. Mirrors the
+   * reader's non-closing input handling: the caller owns the underlying sink.
+   */
+  private static OutputStream nonClosing(OutputStream delegate) {
+    return new FilterOutputStream(delegate) {
+      @Override
+      public void close() {
+        // Caller owns the underlying stream.
+      }
+    };
+  }
+
+  /**
+   * Wraps a caller-owned writer so Jackson's generator close cannot propagate to it. Mirrors the
+   * reader's non-closing input handling: the caller owns the underlying sink.
+   */
+  private static Writer nonClosing(Writer delegate) {
+    return new FilterWriter(delegate) {
+      @Override
+      public void close() {
+        // Caller owns the underlying writer.
+      }
+    };
   }
 }
