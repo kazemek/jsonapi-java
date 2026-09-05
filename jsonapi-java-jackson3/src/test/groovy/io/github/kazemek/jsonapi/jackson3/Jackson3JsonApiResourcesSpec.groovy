@@ -37,6 +37,7 @@ import io.github.kazemek.jsonapi.fixtures.domainwrite.Article
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Comment
 import io.github.kazemek.jsonapi.fixtures.domainwrite.Person
 import io.github.kazemek.jsonapi.fixtures.localid.LocalIdentityArticle
+import io.github.kazemek.jsonapi.fixtures.localid.LocalIdentityArticleWithAuthor
 import spock.lang.Shared
 import spock.lang.Specification
 import io.github.kazemek.jsonapi.jackson3.ParameterizedBindingFixtures.GenericValue
@@ -167,6 +168,63 @@ class Jackson3JsonApiResourcesSpec extends Specification {
     def primary = (roundTrip.data() as DocumentData.SingleResource).resource()
     !primary.hasId()
     !primary.hasLid()
+  }
+
+  def "identity-less create with inclusion emits requested included resources"() {
+    given:
+    def options = new ResourceWriteOptions(
+        new DocumentEnvelope(null, null, null),
+        RepresentationSelection.builder()
+        .include(IncludePath.of("comments.author"))
+        .fields("articles", "title", "comments")
+        .build())
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+    def runtime = JsonApiJackson3.builder(JsonMapper.builder().build()).representationPolicy(policy).build()
+    def draft = new LocalIdentityArticleWithAuthor(
+        null, null, "Draft", null, [
+          new Comment("c1", "Nice", new Person("p1", "Alice"))
+        ])
+    def createContext = DocumentReadContext.of(
+        ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST),
+        PrimaryDataKind.RESOURCE)
+
+    when:
+    def json = runtime.resources().writeCreateDocument(draft, options)
+
+    then:
+    def roundTrip = runtime.documents().read(json, createContext)
+    def primary = (roundTrip.data() as DocumentData.SingleResource).resource()
+    !primary.hasId()
+    !primary.hasLid()
+    roundTrip.included() != null
+    roundTrip.included().collect { [it.type(), it.id()] } == [
+      ["comments", "c1"],
+      ["people", "p1"]
+    ]
+  }
+
+  def "identified create with inclusion still traverses strictly"() {
+    given:
+    def options = new ResourceWriteOptions(
+        new DocumentEnvelope(null, null, null),
+        RepresentationSelection.builder().include(IncludePath.of("author")).build())
+    def policy = RepresentationPolicy.defaults().withIncludePolicy(IncludePolicy.allowAll())
+    def runtime = JsonApiJackson3.builder(JsonMapper.builder().build()).representationPolicy(policy).build()
+    def draft = new LocalIdentityArticleWithAuthor("9", null, "Draft", new Person("p1", "Alice"), List.of())
+    def createContext = DocumentReadContext.of(
+        ValidationContext.defaults().withDocumentUsage(DocumentUsage.CREATE_REQUEST),
+        PrimaryDataKind.RESOURCE)
+
+    when:
+    def json = runtime.resources().writeCreateDocument(draft, options)
+
+    then:
+    def roundTrip = runtime.documents().read(json, createContext)
+    def primary = (roundTrip.data() as DocumentData.SingleResource).resource()
+    primary.id() == "9"
+    roundTrip.included() != null
+    roundTrip.included().size() == 1
+    roundTrip.included()[0].id() == "p1"
   }
 
   def "ordinary writes still require identity"() {

@@ -53,6 +53,27 @@ public final class CompoundInclusionEngine {
       List<ResourceObject> primaryResources,
       @Nullable JavaType emptyPrimaryType,
       EffectiveRepresentation representation) {
+    return collectIncluded(
+        primarySnapshot, primaryTypes, primaryResources, emptyPrimaryType, representation, false);
+  }
+
+  /**
+   * Collects included resources, additionally allowing identity-less primary roots for
+   * create-request authoring: a primary domain object with neither {@code id} nor {@code lid} value
+   * is traversed without a wire-identity visit key instead of failing. Related and included
+   * resources still require identity wherever linkage semantics need it.
+   *
+   * @return included list {@code null} when no inclusion was requested (empty path list), plus the
+   *     identities of included resources whose inbound linkage was removed by an applied fieldset
+   *     while inclusion still traversed the linking relationship
+   */
+  public IncludedResourcesResult collectIncluded(
+      List<?> primarySnapshot,
+      List<JavaType> primaryTypes,
+      List<ResourceObject> primaryResources,
+      @Nullable JavaType emptyPrimaryType,
+      EffectiveRepresentation representation,
+      boolean allowIdentitylessRoots) {
     Objects.requireNonNull(primarySnapshot, "primarySnapshot");
     Objects.requireNonNull(primaryTypes, "primaryTypes");
     Objects.requireNonNull(primaryResources, "primaryResources");
@@ -75,7 +96,9 @@ public final class CompoundInclusionEngine {
     List<JavaType> distinctTypes = distinctTypesInOrder(validationTypes);
     preValidate(distinctTypes, paths, representation);
 
-    return new Traversal(representation, primarySnapshot, primaryTypes, primaryResources).run();
+    return new Traversal(
+            representation, primarySnapshot, primaryTypes, primaryResources, allowIdentitylessRoots)
+        .run();
   }
 
   private static List<JavaType> distinctTypesInOrder(List<JavaType> primaryTypes) {
@@ -195,6 +218,7 @@ public final class CompoundInclusionEngine {
     private final List<?> primarySnapshot;
     private final List<JavaType> primaryTypes;
     private final List<ResourceObject> primaryResources;
+    private final boolean allowIdentitylessRoots;
     private final Set<ResourceIdentity> primaryIdentities = new HashSet<>();
     private final Map<ResourceIdentity, ResourceObject> includedByIdentity = new LinkedHashMap<>();
     private final List<ResourceObject> includedInOrder = new ArrayList<>();
@@ -206,11 +230,13 @@ public final class CompoundInclusionEngine {
         EffectiveRepresentation representation,
         List<?> primarySnapshot,
         List<JavaType> primaryTypes,
-        List<ResourceObject> primaryResources) {
+        List<ResourceObject> primaryResources,
+        boolean allowIdentitylessRoots) {
       this.representation = representation;
       this.primarySnapshot = primarySnapshot;
       this.primaryTypes = primaryTypes;
       this.primaryResources = primaryResources;
+      this.allowIdentitylessRoots = allowIdentitylessRoots;
     }
 
     IncludedResourcesResult run() {
@@ -250,13 +276,15 @@ public final class CompoundInclusionEngine {
       }
       Object domain = current.domain();
       JavaType declaredType = current.declaredType();
-      ResourceIdentity identity = identityOf(domain, declaredType);
-      if (identity == null) {
-        return;
-      }
-      VisitKey visitKey = new VisitKey(identity, declaredType, pathIndex, current.segmentIndex());
-      if (!visited.add(visitKey)) {
-        return;
+      if (!isLenientRoot(domain, declaredType, current.segmentIndex())) {
+        ResourceIdentity identity = identityOf(domain, declaredType);
+        if (identity == null) {
+          return;
+        }
+        VisitKey visitKey = new VisitKey(identity, declaredType, pathIndex, current.segmentIndex());
+        if (!visited.add(visitKey)) {
+          return;
+        }
       }
 
       String segment = path.segments().get(current.segmentIndex());
@@ -404,6 +432,21 @@ public final class CompoundInclusionEngine {
 
     private @Nullable ResourceIdentity identityOf(Object domain, JavaType declaredType) {
       return preferredIdentity(writer.extractIdentifier(domain, declaredType));
+    }
+
+    /**
+     * Returns {@code true} for a create-request primary root carrying no wire identity. Only the
+     * traversal roots (segment zero) qualify, and only when the invocation allows identity-less
+     * roots; such a root is enqueued exactly once per path, so visit-key dedup is vacuous for it.
+     * Present-but-unconvertible identity values still fail here exactly as on the strict path.
+     */
+    private boolean isLenientRoot(Object domain, JavaType declaredType, int segmentIndex) {
+      if (!allowIdentitylessRoots || segmentIndex != 0) {
+        return false;
+      }
+      ResourceMapping mapping = writer.mappingFor(declaredType);
+      return writer.extractId(domain, mapping) == null
+          && writer.extractLocalId(domain, mapping) == null;
     }
 
     /**

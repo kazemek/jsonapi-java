@@ -183,9 +183,10 @@ public final class JsonApiResourceMapper {
    * inclusion, and sparse fieldsets from {@code selection} governed by {@code policy}. Unlike
    * {@link #toMappedDocument}, a primary resource with neither {@code id} nor {@code lid} value
    * maps with both members absent instead of failing; core {@code CREATE_REQUEST} validation owns
-   * that leniency when the document is written. Included resources still require identity, and
-   * related linkage extraction is unchanged. Returns a {@link MappedDocument} carrying
-   * sparse-fieldset linkage provenance like {@link #toMappedDocument}.
+   * that leniency when the document is written. Compound inclusion likewise traverses an
+   * identity-less primary while included resources still require identity, and related linkage
+   * extraction is unchanged. Returns a {@link MappedDocument} carrying sparse-fieldset linkage
+   * provenance like {@link #toMappedDocument}.
    */
   public MappedDocument toMappedCreateDocument(
       Object resource,
@@ -211,7 +212,7 @@ public final class JsonApiResourceMapper {
     List<ResourceObject> primary = List.of(resourceObject);
     IncludedResourcesResult includedResult =
         inclusionEngine.collectIncluded(
-            snapshot, List.of(resourceType), primary, null, representation);
+            snapshot, List.of(resourceType), primary, null, representation, true);
     JsonApiDocument document =
         buildDocument(
             new DocumentData.SingleResource(resourceObject), envelope, includedResult.included());
